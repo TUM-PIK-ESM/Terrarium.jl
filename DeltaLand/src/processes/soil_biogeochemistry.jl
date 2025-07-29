@@ -5,8 +5,28 @@ Base.@kwdef struct ConstantSoilCarbonDenisty{NF} <: AbstractSoilBiogeochemistry
 
     "Pure organic matter density [kg/m^3]"
     ρ_org::NF = 1300.0
+
+    "Natural porosity of organic material"
+    por_org::NF = 0.90
 end
 
-@inline update_state(i, j, k, state, model, strat::ConstantSoilCarbonDenisty) = nothing
+"""
+    organic_porosity(bgc::ConstantSoilCarbonDenisty)
 
-@inline compute_tendencies(i, j, k, state, model, strat::ConstantSoilCarbonDenisty) = nothing
+Get the prescribed natural porosity of organic soil.
+"""
+organic_porosity(bgc::ConstantSoilCarbonDenisty) = bgc.por_org
+
+"""
+    organic_fraction(bgc::ConstantSoilCarbonDenisty)
+
+Calculate the organic solid fraction based on the prescribed SOC and natural porosity/density of
+the organic material.
+"""
+organic_fraction(bgc::ConstantSoilCarbonDenisty) = bgc.ρ_soc / ((1 - bgc.por_org)*bgc.ρ_org)
+
+@inline organic_fraction(i, j, k, state, model, bgc::ConstantSoilCarbonDenisty) = organic_fraction(bgc)
+
+@inline update_state(i, j, k, state, model, bgc::ConstantSoilCarbonDenisty) = nothing
+
+@inline compute_tendencies(i, j, k, state, model, bgc::ConstantSoilCarbonDenisty) = nothing

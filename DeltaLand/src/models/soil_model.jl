@@ -22,8 +22,11 @@ struct SoilModel{
     biogeochem::Biogeochemistry
 
     "Timestepping type"
-    timestepping::TimeStepper
+    time_stepping::TimeStepper
 end
+
+get_stratigraphy(model::SoilModel) = model.strat
+get_biogeochemistry(model::SoilModel) = model.biogeochem
 
 function initialize(model::SoilModel, initializer; sim_kwargs...)
     # Extract grid from model

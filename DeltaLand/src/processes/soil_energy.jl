@@ -2,16 +2,16 @@ abstract type AbstractHeatOperator end
 struct VerticalHeatConduction <: AbstractHeatOperator end
 
 @kwdef struct SoilThermalProperties{NF}
-    κh_w::NF = 0.57 # thermal conductivity of water [Hillel (1982)]
-    κh_i::NF = 2.2 # thermal conductivity of ice [Hillel (1982)]
-    κh_a::NF = 0.025 # thermal conductivity of air [Hillel (1982)]
-    κh_m::NF = 3.8 # thermal conductivity of mineral soil [Hillel (1982)]
-    κh_o::NF = 0.25 # thermal conductivity of organic soil [Hillel (1982)]
-    ch_w::NF = 4.2e6 # heat capacity of water
-    ch_i::NF = 1.9e6 # heat capacity of ice
-    ch_a::NF = 0.00125e6 # heat capacity of air
-    ch_m::NF = 2.0e6 # heat capacity of mineral soil
-    ch_o::NF = 2.5e6 # heat capacity of organic soil
+    κh_w::NF = 0.57 # thermal conductivity of water [W/m/K] (Hillel 1982)
+    κh_i::NF = 2.2 # thermal conductivity of ice [W/m/K] Hillel (1982)
+    κh_a::NF = 0.025 # thermal conductivity of air [W/m/K] Hillel (1982)
+    κh_m::NF = 3.8 # thermal conductivity of mineral soil constituents [W/m/K] Hillel (1982)
+    κh_o::NF = 0.25 # thermal conductivity of organic soil constituents [W/m/K] Hillel (1982)
+    ch_w::NF = 4.2e6 # volumetric heat capacity of water [J/m^3]
+    ch_i::NF = 1.9e6 # volumetric heat capacity of ice [J/m^3]
+    ch_a::NF = 0.00125e6 # volumetric heat capacity of air [J/m^3]
+    ch_m::NF = 2.0e6 # volumetric heat capacity of mineral soil [J/m^3]
+    ch_o::NF = 2.5e6 # volumetric heat capacity of organic soil [J/m^3]
 end
 
 @kwdef struct SoilEnergyBalance{
@@ -20,6 +20,7 @@ end
     "Heat transport operator"
     operator::HeatOperator = VerticalHeatConduction()
 
+    # Note: Would it make more sense for these properties to be defined in the stratigraphy?
     "Soil thermal properties"
     thermal_properties::SoilThermalProperties = SoilThermalProperties()
 end

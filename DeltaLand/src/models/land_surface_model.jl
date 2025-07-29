@@ -5,11 +5,16 @@ abstract type AbstractEnergyBalanceModel <: AbstractLandModel end
 abstract type AbstractHydrologyModel <: AbstractLandModel end
 
 struct LandSurfaceModel{
+    Grid<:AbstractLandGrid,
     SnowModel<:AbstractSnowModel,
     VegetationModel<:AbstractVegetationModel,
     EnergyBalanceModel<:AbstractEnergyBalanceModel,
     HydrologyModel<:AbstractHydrologyModel,
+    TimeStepper<:AbstractTimeStepper,
 } <: AbstractLandSurfaceModel
+    "Spatial grid"
+    grid::Grid
+
     "Snow scheme"
     snow::SnowModel
 
@@ -21,4 +26,7 @@ struct LandSurfaceModel{
     
     "Hydrology type"
     hydrology::HydrologyModel
+
+    "Time stepping scheme"
+    time_stepping::TimeStepper
 end

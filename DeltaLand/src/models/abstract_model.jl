@@ -97,11 +97,3 @@ abstract type AbstractGroundModel <: AbstractLandModel end
 Base type for soil ground models.
 """
 abstract type AbstractSoilModel <: AbstractGroundModel end
-
-# Base type for processes
-"""
-    AbstractLandProcess
-
-Base type for all land processes which define physics or parameterizations but are not standalone models.
-"""
-abstract type AbstractLandProcess end
