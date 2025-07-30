@@ -2,13 +2,25 @@
     "Material composition of mineral soil componnet"
     texture::SoilTexture{NF,NF,NF} = SoilTexture(:sand)
 
+    "Fraction of pore space that is saturated with water/ice."
+    saturation::NF = 1.0
+
     "Soil freezing characteristic curve"
-    freezecurve::FC = FreeWater()
+    freezecurve::FC = FreezeCurves.FreeWater()
 end
+
+# TODO: This method interface assumes a single freeze curve for the whole stratigraphy;
+# we should ideally relax this assumption for multi-layer stratigraphies, although
+# this probably only matters in permafrost environments.
+freezecurve(strat::HomogeneousSoil) = strat.freezecurve
 
 # SURFEX parameterization of mineral soil porosity (Masson et al. 2013)
 # Maybe we can borrow something better from SINDABD here; this is quite simplistic
-mineral_porosity(soil::HomogeneousSoil) = 0.49 - 0.11*soil.texture.sand
+mineral_porosity(strat::HomogeneousSoil) = 0.49 - 0.11*strat.texture.sand
+
+pore_water_ice_saturation(strat::HomogeneousSoil) = strat.saturation
+
+@inline pore_water_ice_saturation(i, j, k, state, model, strat::HomogeneousSoil) = pore_water_ice_saturation(strat)
 
 @inline function porosity(i, j, k, state, model, strat::HomogeneousSoil)
     bgc = get_biogeochemistry(model)

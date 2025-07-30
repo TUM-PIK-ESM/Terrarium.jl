@@ -22,7 +22,7 @@ Returns the time stepping scheme associated with this `model`.
 function get_time_stepping end
 
 """
-    initialize!(model::AbstractModel, initializer::AbstractInitializer; kwargs...)::Simulation
+    initialize(model::AbstractModel, initializer::AbstractInitializer; kwargs...)::Simulation
 
 Initialize and return a `Simulation` based on the given `model`.
 """
@@ -66,7 +66,7 @@ initialize(model::AbstractModel; kwargs...) = initialize(model, default_initiali
 
 initialize!(state, model::AbstractModel) = update_state!(state, model)
 
-default_initializer(::AbstractModel) = FieldInitializer()
+default_initializer(::AbstractModel) = ModelInitializer()
 
 # TODO: define general method interfaces (as needed) for all land model types
 """

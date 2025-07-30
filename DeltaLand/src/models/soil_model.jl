@@ -1,7 +1,8 @@
-struct SoilModel{
-    GridType<:AbstractLandGrid,
+@kwdef struct SoilModel{
+    NF,
+    GridType<:AbstractLandGrid{NF},
     Stratigraphy<:AbstractStratigraphy,
-    SoilEnergyBalance<:AbstractSoilEnergyBalance,
+    SoilEnergy<:AbstractSoilEnergyBalance,
     SoilHydrology<:AbstractSoilHydrology,
     Biogeochemistry<:AbstractSoilBiogeochemistry,
     TimeStepper<:AbstractTimeStepper,
@@ -10,63 +11,66 @@ struct SoilModel{
     grid::GridType
 
     "Stratigraphy of the soil"
-    strat::Stratigraphy
+    strat::Stratigraphy = HomogeneousSoil()
 
     "Soil energy balance"
-    energy::SoilEnergyBalance
+    energy::SoilEnergy = SoilEnergyBalance()
 
     "Soil hydrology/water balance"
-    hydrology::SoilHydrology
+    hydrology::SoilHydrology = ImmobileSoilWater()
 
     "Soil biogeochemistry"
-    biogeochem::Biogeochemistry
+    biogeochem::Biogeochemistry = ConstantSoilCarbonDenisty()
+
+    "Physical constants"
+    constants::PhysicalConstants{NF} = PhysicalConstants()
 
     "Timestepping type"
-    time_stepping::TimeStepper
+    time_stepping::TimeStepper = ForwardEuler()
 end
 
+# SoilModel getter methods
+
 get_stratigraphy(model::SoilModel) = model.strat
+
+get_energy_balance(model::SoilModel) = model.energy
+
+get_hydrology(model::SoilModel) = model.hydrology
+
 get_biogeochemistry(model::SoilModel) = model.biogeochem
+
+get_constants(model::SoilModel) = model.constants
+
+# Forwarded methods
+
+freezecurve(model::SoilModel) = freezecurve(model.strat)
+
+# Model interface methods
 
 function initialize(model::SoilModel, initializer; sim_kwargs...)
     # Extract grid from model
     grid = get_grid(model)
+    # Initialize state variables (for now just soil energy)
+    # TODO: this is a temporary solution until we find a better one
+    energy_state = initialize(model.energy, grid, initializer)
+    initialize!(energy_state, model)
+    return Simulation(model, energy_state, initializer.clock)
+end
 
-    # Initialize state variables
-    # TODO: this is a temporary solution until we find a better solution;
-    # Ideally we would like these variables to be declared by the individual process
-    # implementations and then merged somehow, similar to what CryoGrid.jl does.
-    enthalpy = initialize3D(initializer, grid, :enthalpy)
-    enthalpy_tendency = initialize3D(initializer, grid, :enthalpy_tendency)
-    temperature = initialize3D(initializer, grid, :temperature)
-    water_ice_saturation = initialize3D(initializer, grid, :water_ice_saturation)
-    water_saturation = initialize3D(initializer, grid, :water_ice_saturation)
-    # 2D boundary variables
-    ground_heat_flux = initialize2D(initializer, grid, :ground_heat_flux)
-    geothermal_heat_flux = initialize2D(initializer, grid, :geothermal_heat_flux)
-    
-    # Create model state and simulation
-    # TODO: it would be cool if we could formally specify constitutive relations like temperature <--> enthalpy
-    state = StateVariables(
-        prognostic=(enthalpy,),
-        tendencies=(enthalpy_tendency,),
-        auxiliary=(temperature, water_ice_saturation, water_saturation, ground_heat_flux, geothermal_heat_flux)
-    )
-    return Simulation(model, state, initializer.clock)
+function initialize!(state, model::SoilModel)
+    # TODO
 end
 
 function update_state!(state, model::SoilModel)
-    fill_halo_regions!(state)
     grid = get_grid(model)
-    # TODO: shouldn't the workspec be determined by the grid type?
-    launch!(grid.architecture, grid, :xyz, _update_state_soil_kernel, state, model)
+    launch!(grid, _update_state_soil_kernel, state, model)
     return nothing
 end
 
 function compute_tendencies!(state, model::SoilModel)
+    fill_halo_regions!(state.temperature)
     grid = get_grid(model)
-    # TODO: shouldn't the workspec be determined by the grid type?
-    launch!(grid.architecture, grid, :xyz, _compute_tendencies_soil_kernel, state, model)
+    launch!(grid, _compute_tendencies_soil_kernel, state, model)
     return nothing
 end
 
@@ -75,7 +79,7 @@ function timestep!(state, model::SoilModel, euler::ForwardEuler, dt=get_dt(euler
     compute_tendencies!(state, model)
     # just timestep energy state for now;
     # ideally, the timestepper should do this automatically for all variables
-    state.enthalpy .+= dt*state.enthalpy_tendency
+    @. state.enthalpy += dt*state.enthalpy_tendency
     return nothing
 end
 
@@ -93,4 +97,27 @@ end
     compute_tendencies(i, j, k, state, model, model.hydrology)
     compute_tendencies(i, j, k, state, model, model.energy)
     compute_tendencies(i, j, k, state, model, model.biogeochem)
+end
+
+@inline function soil_characteristic_fractions(i, j, k, state, model)
+    sat = state.pore_water_ice_saturation[i, j, k]
+    por = porosity(i, j, k, state, model, get_stratigraphy(model))
+    ## there is some slight redundant computation here; consider merging into one method?
+    org = organic_fraction(i, j, k, state, model, get_biogeochemistry(model))
+    return (; sat, por, org)
+end
+
+@inline function soil_volumetric_fractions(i, j, k, state, model)
+    # get characteristic fractions
+    sat, por, org = soil_characteristic_fractions(i, j, k, state, model)
+    # get fraction of unfrozen pore water
+    liq = state.liquid_water_fraction[i, j, k]
+    # calculate volumetric fractions
+    water_ice = sat*por
+    water = water_ice*liq
+    ice = water_ice*(1-liq)
+    air = (1-sat)*por
+    mineral = (1-por)*(1-org)
+    organic = (1-por)*org
+    return (; water, ice, air, mineral, organic)
 end

@@ -12,7 +12,7 @@ within model implementations. This is mostly a stopgap solution and is likely to
 end
 
 """
-    ModelInitializer(vars::Pair{Symbol,NamedTuple}...) 
+    ModelInitializer(vars::Pair{Symbol,<:NamedTuple}...) 
 
 Creates a `ModelInitializer` for the given variables. The first value of the pair is
 the name of the state variable while the second value should be a `NamedTuple` corresponding
@@ -27,7 +27,7 @@ initializer = ModelInitializer(
 simulation = initialize(model, initializer)
 ```
 """
-ModelInitializer(vars::Pair{Symbol,NamedTuple}...; clock=Clock(time=0.0)) = ModelInitializer(; vars=(;vars...), clock)
+ModelInitializer(vars::Pair{Symbol,<:NamedTuple}...; clock=Clock(time=0.0)) = ModelInitializer(; vars=(;vars...), clock)
 
 function initialize(
     ::Type{T},
@@ -36,18 +36,18 @@ function initialize(
     name::Symbol,
     args...;
     kwargs...
-)
+) where {T<:Field}
     # get initialization fields if present
-    fieldinfo = get(init.inits, name, (;))
+    fieldinfo = get(init.vars, name, (;))
     # filter out reserved 'init' field and interpret the rest as Field kwargs
     field_kwargs = Base.structdiff(fieldinfo, NamedTuple{(:init,)})
-    field = T(grid, args...; field_kwargs..., kwargs...)
-    :init ∈ fieldinfo && Oceananigans.set!(field, fieldinfo.init)
+    field = T(get_grid_impl(grid), args...; field_kwargs..., kwargs...)
+    haskey(fieldinfo, :init) && Oceananigans.set!(field, fieldinfo.init)
     return field
 end
 
 # TODO: also need to handle non-centered fields (e.g. boundary conditions)
-initialize1D(init::ModelInitializer, grid::AbstractLandGrid, name::Symbol, args...; kwargs...) = initialize(Field{Nothing,Nothing,Center}, init, grid, args...; kwargs...)
-initialize2D(init::ModelInitializer, grid::AbstractLandGrid, name::Symbol, args...; kwargs...) = initialize(Field{Center,Center,Nothing}, init, grid, args...; kwargs...)
-initialize3D(init::ModelInitializer, grid::AbstractLandGrid, name::Symbol, args...; kwargs...) = initialize(CenterField, grid, name, args...; kwargs...)
+initialize1D(init::ModelInitializer, grid::AbstractLandGrid, name::Symbol, args...; kwargs...) = initialize(Field{Nothing, Nothing, Center}, init, grid, name, args...; kwargs...)
+initialize2D(init::ModelInitializer, grid::AbstractLandGrid, name::Symbol, args...; kwargs...) = initialize(Field{Center, Center, Nothing}, init, grid, name, args...; kwargs...)
+initialize3D(init::ModelInitializer, grid::AbstractLandGrid, name::Symbol, args...; kwargs...) = initialize(Field{Center, Center, Center}, init, grid, name, args...; kwargs...)
 

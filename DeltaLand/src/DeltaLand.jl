@@ -2,17 +2,23 @@ module DeltaLand
 
 using DocStringExtensions
 
+import ConstructionBase: getproperties
+
 import DataStructures: OrderedDict
 
 # Oceananigans numerics
-import Oceananigans
+using Oceananigans
+import Oceananigans.Architectures: AbstractArchitecture
 import Oceananigans.BoundaryConditions: fill_halo_regions!
-import Oceananigans.Operators
-import Oceananigans.TimeSteppers: Clock
+import Oceananigans.Operators: ∂zᵃᵃᶜ, ∂zᵃᵃᶠ, Δzᵃᵃᶜ
+import Oceananigans.TimeSteppers: Clock, tick_time!, reset!
 import Oceananigans.Utils: launch!
 
 # KernelAbstractions for GPU parallelization
 import KernelAbstractions: @kernel, @index
+
+# Freeze curves for soil energy balance
+import FreezeCurves
 
 # temporary dependency on SpeedyWeather until RingGrids is registered
 import SpeedyWeather: RingGrids
@@ -20,13 +26,19 @@ import SpeedyWeather: RingGrids
 # temporary dependency on CryoGrid for soil types and SEB
 import CryoGrid: SoilTexture, SurfaceEnergyBalance
 
+# internal utilities
+include("utils.jl")
+
 # grids
-export GlobalRingGrid, UniformSpacing, ExponentialSpacing, ManualSpacing
+export GlobalRingGrid, UniformSpacing, ExponentialSpacing, ManualSpacing, ModelInitializer
+include("grids/vertical_discretization.jl")
 include("grids/grids.jl")
+include("grids/initializers.jl")
 
 # timestepping
-export Euler
 include("timesteppers/abstract_timestepper.jl")
+
+export ForwardEuler
 include("timesteppers/forward_euler.jl")
 
 # abstract types
@@ -37,11 +49,14 @@ include("models/abstract_model.jl")
 
 # physical processes
 
-export PhyscialConstants
+export PhysicalConstants
 include("processes/physical_constants.jl")
 
 export ImmobileSoilWater, SoilHydraulicProperties
 include("processes/soil_hydrology.jl")
+
+export SoilThermalConductivities, SoilHeatCapacities
+include("processes/soil_thermal_properties.jl")
 
 export SoilEnergyBalance, SoilThermalProperties
 include("processes/soil_energy.jl")
@@ -51,6 +66,9 @@ include("processes/soil_stratigraphy.jl")
 
 export ConstantSoilCarbonDenisty
 include("processes/soil_biogeochemistry.jl")
+
+# state variables
+include("state_variables.jl")
 
 # simulation types
 export Simulation

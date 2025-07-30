@@ -1,5 +1,3 @@
-num_digits(x::Real) = Int(abs(ceil(log10(x))))
-
 abstract type AbstractVerticalSpacing end
 
 """
@@ -26,7 +24,7 @@ end
 Base.@kwdef struct ExponentialSpacing{NF} <: AbstractVerticalSpacing
     Δz_min::NF = 0.1
     Δz_max::NF = 500.0
-    sig::Int = max(num_digits(Δz_min), num_digits(Δz_max))
+    sig::Int = 3
     N::Int = 100
 end
 
