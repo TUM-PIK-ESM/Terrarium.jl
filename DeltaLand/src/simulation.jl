@@ -19,9 +19,9 @@ function initialize!(sim::Simulation)
     reset!(sim.clock)
 end
 
-function timestep!(sim::Simulation, dt=nothing)
+timestep!(sim::Simulation) = timestep!(sim, get_dt(get_time_stepping(sim.model)))
+function timestep!(sim::Simulation, dt)
     timestepper = get_time_stepping(sim.model)
-    dt = isnothing(dt) ? get_dt(timestepper) : dt
     reset_tendencies!(sim.state)
     timestep!(sim.state, sim.model, timestepper, dt)
     tick_time!(sim.clock, dt)

@@ -116,7 +116,7 @@ end
     dHdt += ifelse(k == 1, Qgeo / Δz, zero(grid))
 
     # Accumulate tendencies
-    state.enthalpy_tendency .+= dHdt
+    state.enthalpy_tendency[i, j, k] += dHdt
 end
 
 @inline diffusive_flux(i, j, k, grid, κ, T) = -κ * ∂zᵃᵃᶠ(i, j, k, grid, T)
