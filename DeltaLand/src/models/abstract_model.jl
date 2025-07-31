@@ -68,28 +68,13 @@ initialize!(state, model::AbstractModel) = update_state!(state, model)
 
 default_initializer(::AbstractModel) = ModelInitializer()
 
-# TODO: define general method interfaces (as needed) for all land model types
-"""
-    AbstractLandModel <: AbstractModel
-
-All implementations of `AbstractLandModel` should be fully functional standalone models that define
-their own grid, boundary conditions, and time stepping scheme, per the `AbstractModel` interface.
-"""
-abstract type AbstractLandModel <: AbstractModel end
-
-"""
-    AbstractLandSurfaceModel
-
-Base type for land surface models
-"""
-abstract type AbstractLandSurfaceModel <: AbstractLandModel end
-
+# TODO: define general method interfaces (as needed) for all model types
 """
     AbstractGroundModel
     
 Base type for ground (e.g. soil and rock) models.
 """
-abstract type AbstractGroundModel <: AbstractLandModel end
+abstract type AbstractGroundModel <: AbstractModel end
 
 """
     AbstractSoilModel
@@ -97,3 +82,38 @@ abstract type AbstractGroundModel <: AbstractLandModel end
 Base type for soil ground models.
 """
 abstract type AbstractSoilModel <: AbstractGroundModel end
+
+"""
+    AbstractSnowModel
+
+Base type for snow models.
+"""
+abstract type AbstractSnowModel <: AbstractModel end
+
+"""
+    AbstractVegetationModel
+
+Base type for vegetation/carbon models.
+"""
+abstract type AbstractVegetationModel <: AbstractModel end
+
+"""
+    AbstractEnergyBalanceModel
+
+Base type for surface energy balance models.
+"""
+abstract type AbstractEnergyBalanceModel <: AbstractModel end
+
+"""
+    AbstractHydrologyModel
+
+Base type for surface hydrology models.
+"""
+abstract type AbstractHydrologyModel <: AbstractModel end
+
+"""
+    AbstractLandModel <: AbstractModel
+
+Base type for full land models which couple together multiple component models.
+"""
+abstract type AbstractLandModel <: AbstractModel end

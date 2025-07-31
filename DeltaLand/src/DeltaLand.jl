@@ -78,9 +78,6 @@ include("simulation.jl")
 export SoilModel
 include("models/soil_model.jl")
 
-export LandSurfaceModel
-include("models/land_surface_model.jl")
-
 export LandModel
 include("models/land_model.jl")
 
