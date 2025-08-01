@@ -6,6 +6,9 @@ include("physical_constants.jl")
 export SoilThermalConductivities, SoilHeatCapacities, SoilThermalProperties, InverseQuadratic
 include("soil/soil_thermal_properties.jl")
 
+export SURFEXSoilHydraulics
+include("soil/soil_hydraulic_properties.jl")
+
 export HomogeneousSoil
 include("soil/soil_stratigraphy.jl")
 

@@ -1,12 +1,12 @@
 abstract type AbstractHeatOperator end
-struct VerticalHeatConduction <: AbstractHeatOperator end
+struct ExplicitHeatConduction <: AbstractHeatOperator end
 
 @kwdef struct SoilEnergyBalance{
     HeatOperator<:AbstractHeatOperator,
     ThermalProps<:SoilThermalProperties,
 } <: AbstractSoilEnergyBalance
     "Heat transport operator"
-    operator::HeatOperator = VerticalHeatConduction()
+    operator::HeatOperator = ExplicitHeatConduction()
 
     # Note: Would it make more sense for these properties to be defined in the stratigraphy?
     "Soil thermal properties"
@@ -14,32 +14,34 @@ struct VerticalHeatConduction <: AbstractHeatOperator end
 end
 
 variables(::SoilEnergyBalance) = (
-    prognostic(:temperature, XYZ(), closure=TemperatureEnergyClosure()),
+    prognostic(:temperature, XYZ(), TemperatureEnergyClosure()),
     auxiliary(:pore_water_ice_saturation, XYZ()),
     axuiliary(:liquid_water_fraction, XYZ()),
     auxiliary(:ground_heat_flux, XY()),
     auxiliary(:geothermal_heat_flux, XY()),
 )
 
-@inline function thermalconductivity(i, j, k, state, model::AbstractSoilModel, energy::SoilEnergyBalance)
+@inline function thermalconductivity(idx, state, model::AbstractSoilModel, energy::SoilEnergyBalance)
     conds = getproperties(energy.thermal_properties.cond)
-    fracs = soil_volumetric_fractions(i, j, k, state, model)
+    fracs = soil_volumetric_fractions(idx, state, model)
     # apply bulk conductivity weighting
     return energy.thermal_properties.cond_bulk(conds, fracs)
 end
 
-@inline function heatcapacity(i, j, k, state, model::AbstractSoilModel, energy::SoilEnergyBalance)
+@inline function heatcapacity(idx, state, model::AbstractSoilModel, energy::SoilEnergyBalance)
     heatcaps = getproperties(energy.thermal_properties.heatcap)
-    fracs = soil_volumetric_fractions(i, j, k, state, model)
+    fracs = soil_volumetric_fractions(idx, state, model)
     # for heat capacity, we just do a weighted average
     return sum(fastmap(*, heatcaps, fracs))
 end
 
-@inline function update_state(i, j, k, state, model, energy::SoilEnergyBalance)
-    enthalpyinv(i, j, k, state, model, freezecurve(model))
+@inline function update_state(idx, state, model, energy::SoilEnergyBalance)
+    enthalpyinv(idx, state, model, freezecurve(model))
 end
 
-@inline function compute_tendencies(i, j, k, state, model, energy::SoilEnergyBalance)
+@inline function compute_tendencies(idx, state, model, energy::SoilEnergyBalance)
+    i, j, k = idx
+
     # Get underlying Oceananigans grid
     grid = get_field_grid(get_grid(model))
 
@@ -47,9 +49,9 @@ end
     T = state.temperature
 
     # Get thermal conductivity
-    κ = thermalconductivity(i, j, k, state, model, energy)
+    κ = thermalconductivity(idx, state, model, energy)
     
-    # Interior heat flux
+    # Interior heat fluxes
     dUdt = -∂zᵃᵃᶜ(i, j, k, grid, diffusive_flux, κ, T)
     
     # Ground heat flux (upper boundary)
@@ -67,6 +69,7 @@ end
     state.internal_energy_tendency[i, j, k] += dUdt
 end
 
+# Diffusive heat flux term passed to ∂z operator
 @inline diffusive_flux(i, j, k, grid, κ, T) = -κ * ∂zᵃᵃᶠ(i, j, k, grid, T)
 
 """
@@ -83,12 +86,13 @@ struct TemperatureEnergyClosure end
 
 varname(::TemperatureEnergyClosure) = :internal_energy
 
-@inline function enthalpyinv(i, j, k, state, model, ::FreezeCurves.FreeWater)
+@inline function enthalpyinv(idx, state, model, ::FreezeCurves.FreeWater)
+    i, j, k = idx
     constants = get_constants(model)
     let H = state.enthalpy[i, j, k], # assumed prognostic
-        C = heatcapacity(i, j, k, state, model, get_energy_balance(model)),
+        C = heatcapacity(idx, state, model, get_energy_balance(model)),
         L = constants.ρw*constants.Lsl,
-        por = porosity(i, j, k, state, model, get_stratigraphy(model)),
+        por = porosity(idx, state, model, get_stratigraphy(model)),
         sat = state.pore_water_ice_saturation[i, j, k],
         θwi = sat*por,
         Lθ = L*θwi;

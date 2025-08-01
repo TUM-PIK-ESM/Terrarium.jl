@@ -6,11 +6,18 @@ Base type for all land processes which define physics or parameterizations but a
 """
 abstract type AbstractLandProcess end
 
-update_state!(i, j, k, state, model::AbstractModel, args...) = nothing
+"""
+    $SIGNATURES
+"""
+update_state!(idx, state, model::AbstractModel, process::AbstractLandProcess, args...) = nothing
 
-compute_tendencies!(i, j, k, state, model::AbstractModel, args...) = nothing
+"""
+    $SIGNATURES
+"""
+compute_tendencies!(idx, state, model::AbstractModel, process::AbstractLandProcess, args...) = nothing
 
 # TODO: Think more about these process types and what methods they should have.
+# Also maybe move into respective subfolders.
 abstract type AbstractStratigraphy <: AbstractLandProcess end
 
 abstract type AbstractSoilEnergyBalance <: AbstractLandProcess end

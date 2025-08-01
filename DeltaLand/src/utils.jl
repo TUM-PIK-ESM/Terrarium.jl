@@ -1,3 +1,20 @@
+"""
+    tuplejoin([x, y], z...)
+
+Concatenates one or more tuples together.
+"""
+tuplejoin() = tuple()
+tuplejoin(x) = x
+tuplejoin(x, y) = (x..., y...)
+tuplejoin(x, y, z...) = (x..., tuplejoin(y, z...)...)
+
+"""
+    merge_duplicates(values::Tuple)
+    
+Filters out duplicates from the given tuple. Note that this method is not type stable or allocation-free!
+"""
+merge_duplicates(values::Tuple) = Tuple(unique(values))
+
 # Note that fastmap is borrowed (with self permission!) from CryoGrid.jl:
 # https://github.com/CryoGrid/CryoGrid.jl/blob/master/src/Utils/Utils.jl
 """

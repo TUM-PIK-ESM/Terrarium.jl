@@ -32,6 +32,9 @@ import CryoGrid: SoilTexture, SurfaceEnergyBalance
 # internal utilities
 include("utils.jl")
 
+export PrognosticVariable, AuxiliaryVariable
+include("abstract_variables.jl")
+
 # grids
 export UniformSpacing, ExponentialSpacing, ManualSpacing
 include("grids/vertical_discretization.jl")
@@ -40,18 +43,30 @@ export ColumnGrid, GlobalRingGrid
 include("grids/grids.jl")
 
 # timestepping
+export timestep!, get_dt, is_adaptive
 include("timesteppers/abstract_timestepper.jl")
 
+# model interface
+export get_grid, get_time_stepping, get_boundary_conditions, variables, update_state!, compute_tendencies!
+include("models/abstract_model.jl")
+
+# timestepper implementations
 export ForwardEuler
 include("timesteppers/forward_euler.jl")
 
-export get_grid, get_time_stepping, initialize, update_state!, compute_tendencies!, timestep!
-include("models/abstract_model.jl")
+# default boundary conditions
+export FieldBoundaryConditions, PrescribedFluxes
+include("models/boundary_conditions.jl")
+
+# default initializers
+export FieldInitializer
+include("models/initializers.jl")
 
 # physical processes
 include("processes/processes.jl")
 
 # state variables
+export StateVariables
 include("state_variables.jl")
 
 # simulation types

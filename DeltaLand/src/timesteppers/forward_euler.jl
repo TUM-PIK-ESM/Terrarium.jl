@@ -9,3 +9,7 @@ end
 get_dt(euler::ForwardEuler) = euler.dt
 
 is_adaptive(euler::ForwardEuler) = false
+
+function timestep!(state, model::AbstractModel, euler::ForwardEuler, dt=get_dt(euler))
+    
+end

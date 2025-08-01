@@ -2,30 +2,75 @@ abstract type AbstractStateVariables end
 
 # temporary solution for holding state variables
 @kwdef struct StateVariables{
-    prognames, tendnames, auxnames, namespaces, cnames,
-    ProgVars, TendVars, AuxVars, SubVars, Closures
+    prognames, tendnames, auxnames, subnames, closurenames,
+    ProgVars, TendVars, AuxVars, SubVars, Closures,
+    ClockType <: Clock,
 } <: AbstractStateVariables
     prognostic::NamedTuple{prognames, ProgVars} = (;)
     tendencies::NamedTuple{tendnames, TendVars} = (;)
     auxiliary::NamedTuple{auxnames, AuxVars} = (;)
-    namespaces::NamedTuple{namespaces, SubVars} = (;)
-    closures::NamedTuple{cnames, Closures}
+    namespaces::NamedTuple{subnames, SubVars} = (;)
+    closures::NamedTuple{closurenames, Closures} = (;)
+    clock::ClockType = Clock()
+end
+
+function StateVariables(
+    init::AbstractInitializer,
+    bcs::AbstractBoundaryConditions,
+    grid::AbstractLandGrid,
+    clock::Clock,
+    vars...
+)
+    # check for duplicates
+    varnames = map(varname, vars)
+    @assert merge_duplicates(varnames) == varnames "all state variable names within one namespace must be unique! found one or more duplicates in $(varnames)"
+    # filter out variables from tuple by type
+    prognostic = merge_duplicates(filter(var -> isa(var, PrognosticVariable), vars))
+    auxiliary = merge_duplicates(filter(var -> isa(var, AuxiliaryVariable), vars))
+    namespaces = filter(var -> isa(var, Pair{Symbol}), vars)
+    # get tendencies from prognostic variables
+    tendencies = map(var -> var.tendency, prognostic)
+    # get progvar => closure pairs
+    closures = map(var -> varname(var) => var.closure, filter(hasclosure, prognostic))
+    # intialize fields
+    prognostic_fields = map(var -> varname(var) => create_field(var, init, bcs, grid), prognostic)
+    tendency_fields = map(var -> varname(var) => create_field(var, init, bcs, grid), tendencies)
+    auxiliary_fields = map(var -> varname(var) => create_field(var, init, bcs, grid), auxiliary)
+    # recursively initialize state variables for namespaces
+    namespaces = map(kv -> first(kv) => StateVariables(init, bcs, grid, clock, last(kv)...), namespaces)
+    return StateVariables(
+        prognostic=(; prognostic_fields...),
+        tendencies=(; tendency_fields...),
+        auxiliary=(; auxiliary_fields...),
+        namespaces=(; namespaces...),
+        closures=(; closures...),
+        clock,
+    )
+end
+
+function StateVariables(model::AbstractModel)   
+    init = get_initializer(model)
+    bcs = get_boundary_conditions(model)
+    grid = get_grid(model)
+    vars = variables(model)
+    return StateVariables(init, bcs, grid, clock, vars...)
 end
 
 Base.propertynames(
-    vars::StateVariables{prognames, tendnames, auxnames, namespaces}
-) where {prognames, tendnames, auxnames, namespaces} = (
+    vars::StateVariables{prognames, tendnames, auxnames, namespaces, closures}
+) where {prognames, tendnames, auxnames, namespaces, closures} = (
     prognames...,
     tendnames...,
     auxnames...,
     namespaces...,
+    closures...,
     fieldnames(typeof(vars))...,
 )
 
 function Base.getproperty(
-    vars::StateVariables{prognames, tendnames, auxnames},
+    vars::StateVariables{prognames, tendnames, auxnames, namespaces, closures},
     name::Symbol
-) where {prognames, tendnames, auxnames}
+) where {prognames, tendnames, auxnames, namespaces, closures}
     # forward getproperty calls to variable groups
     if name ∈ prognames
         return getproperty(getfield(vars, :prognostic), name)
@@ -46,62 +91,37 @@ function reset_tendencies!(state::StateVariables)
     end
 end
 
-# Abstract variable types for declaring fields.
+# Field construction
 
-abstract type VarDims end
-"""
-    XYZ <: VarDims
-
-Indicator type for variables that should be assigned a 3D field on their associated grid.
-"""
-struct XYZ <: VarDims end
-"""
-    XY <: VarDims
-
-Indicator type for variables that should be assigned a 2D (lateral only) field on their associated grid.
-"""
-struct XY <: VarDims end
-
-# TODO: do we need to support state variables not defined on a grid?
-
-abstract type AbstractVariable end
-
-abstract type AbstractClosureRelation end
+field_type(::XY) = Field{Center,Center,Nothing}
+field_type(::XYZ) = Field{Center,Center,Center}
 
 """
-    varname(::AbstractVariable)
-    varname(::AbstractClosureRelation)
+    $SIGNATURES
 
-Retrieves the name of the given variable or closure. For closure relations, `varname`
-should return the name of the variable returned by the closure relation.
+Initializes a `Field` on `grid` for the variable, `var`, using the given initializer, `init`, and boundary conditions, `bcs`.
+Additional arguments are passed direclty to the `Field` constructor. The location of the `Field` is determined by the specified
+`VarDims` on `var`.
 """
-varname(var::AbstractVariable) = var.name
-
-struct PrognosticVariable{VD<:VarDims, Closure<:Union{Nothing,AbstractClosureRelation}} <: AbstractVariable
-    "Name of the prognostic variable"
-    name::Symbol
-
-    "Grid dimensions on which the variable is defined."
-    dims::VD
-
-    "Closure relation for the tendency of the prognostic variable"
-    closure::Closure
+function create_field(
+    var::AbstractVariable,
+    init::AbstractInitializer,
+    bcs::AbstractBoundaryConditions,
+    grid::AbstractLandGrid,
+    args...;
+    kwargs...
+)
+    FT = field_type(vardims(var))
+    bcs = get_field_boundary_conditions(bcs, var)
+    field = if !isnothing(bcs)
+        FT(get_field_grid(grid), args...; boundary_conditions=bcs, kwargs...)
+    else
+        FT(get_field_grid(grid), args...; kwargs...)
+    end
+    # Apply initializer if defined
+    inits = get_field_boundary_conditions(init, var)
+    if !isnothing(inits)
+        Oceananigans.set!(field, inits[name])
+    end
+    return field
 end
-
-struct AuxiliaryVariable{VD<:VarDims} <: AbstractVariable
-    "Name of the auxiliary variable"
-    name::Symbol
-
-    "Grid dimensions on which the variable is defined."
-    dims::VD
-end
-
-"""
-Convenience constructor method for `PrognosticVariable`.
-"""
-prognostic(name::Symbol, dims::VarDims; closure::Union{Nothing,<:AbstractClosureRelation} = nothing) = PrognosticVariable(name, dims, closure)
-
-"""
-Convenience constructor method for `AuxiliaryVariable`.
-"""
-auxiliary(name::Symbol, dims::VarDims) = AuxiliaryVariable(name, dims)

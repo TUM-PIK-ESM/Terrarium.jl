@@ -46,6 +46,8 @@ function timestep! end
 
 # Default getter methods for standard `AbstractModel` fields.
 
+variables(::AbstractModel) = ()
+
 """
     get_grid(model::AbstractModel)::AbstractGrid
 

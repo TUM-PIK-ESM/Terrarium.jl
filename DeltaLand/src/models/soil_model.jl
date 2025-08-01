@@ -5,6 +5,8 @@
     SoilEnergy<:AbstractSoilEnergyBalance,
     SoilHydrology<:AbstractSoilHydrology,
     Biogeochemistry<:AbstractSoilBiogeochemistry,
+    BoundaryConditions<:AbstractBoundaryConditions,
+    Initializer<:AbstractInitializer,
     TimeStepper<:AbstractTimeStepper,
 } <: AbstractSoilModel
     "Spatial grid type"
@@ -89,34 +91,34 @@ function timestep!(state, model::SoilModel, euler::ForwardEuler, dt=get_dt(euler
 end
 
 @kernel function _update_state_soil_kernel(state, model::SoilModel)
-    i, j, k = @index(Global, NTuple)
-    update_state!(i, j, k, state, model, model.strat)
-    update_state!(i, j, k, state, model, model.hydrology)
-    update_state!(i, j, k, state, model, model.energy)
-    update_state!(i, j, k, state, model, model.biogeochem)
+    idx = @index(Global, NTuple)
+    update_state!(idx, state, model, model.strat)
+    update_state!(idx, state, model, model.hydrology)
+    update_state!(idx, state, model, model.energy)
+    update_state!(idx, state, model, model.biogeochem)
 end
 
 @kernel function _compute_tendencies_soil_kernel(state, model::SoilModel)
-    i, j, k = @index(Global, NTuple)
-    compute_tendencies!(i, j, k, state, model, model.strat)
-    compute_tendencies!(i, j, k, state, model, model.hydrology)
-    compute_tendencies!(i, j, k, state, model, model.energy)
-    compute_tendencies!(i, j, k, state, model, model.biogeochem)
+    idx = @index(Global, NTuple)
+    compute_tendencies!(idx, state, model, model.strat)
+    compute_tendencies!(idx, state, model, model.hydrology)
+    compute_tendencies!(idx, state, model, model.energy)
+    compute_tendencies!(idx, state, model, model.biogeochem)
 end
 
-@inline function soil_characteristic_fractions(i, j, k, state, model)
-    sat = state.pore_water_ice_saturation[i, j, k]
-    por = porosity(i, j, k, state, model, get_stratigraphy(model))
+@inline function soil_characteristic_fractions(idx, state, model)
+    sat = state.pore_water_ice_saturation[idx...]
+    por = porosity(idx, state, model, get_stratigraphy(model))
     ## there is some slight redundant computation here; consider merging into one method?
-    org = organic_fraction(i, j, k, state, model, get_biogeochemistry(model))
+    org = organic_fraction(idx, state, model, get_biogeochemistry(model))
     return (; sat, por, org)
 end
 
-@inline function soil_volumetric_fractions(i, j, k, state, model)
+@inline function soil_volumetric_fractions(idx, state, model)
     # get characteristic fractions
-    sat, por, org = soil_characteristic_fractions(i, j, k, state, model)
+    sat, por, org = soil_characteristic_fractions(idx, state, model)
     # get fraction of unfrozen pore water
-    liq = state.liquid_water_fraction[i, j, k]
+    liq = state.liquid_water_fraction[idx...]
     # calculate volumetric fractions
     water_ice = sat*por
     water = water_ice*liq

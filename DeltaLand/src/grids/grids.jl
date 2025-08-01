@@ -83,7 +83,7 @@ struct GlobalRingGrid{
     end
 end
 
-get_field_grid(grid::ColumnGrid) = grid.columns.grid
+get_field_grid(grid::GlobalRingGrid) = grid.columns.grid
 
 # Convenience dispatch for Oceananigans.launch!
 function launch!(grid::AbstractLandGrid, args...; kwargs...)

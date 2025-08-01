@@ -3,72 +3,43 @@
 abstract type AbstractInitializer end
 
 """
-    get_initializer(init::AbstractInitializer, var::AbstractVariable)
+    get_field_initializer(init::AbstractInitializer, var::AbstractVariable)
 """
-get_initializer(::AbstractInitializer, ::AbstractVariable) = nothing
-
-# Boundary conditions interface
-
-abstract type AbstractBoundaryConditions end
+get_field_initializer(::AbstractInitializer, ::AbstractVariable) = nothing
 
 """
-    get_boundary_conditions(bcs::AbstractBoundaryConditions, var::AbstractVariable)
-"""
-get_boundary_conditions(::AbstractBoundaryConditions, ::AbstractVariable) = nothing
+    $TYPEDEF
 
-# Field construction
+Initializer type that allows for direct specification of `Field` initializer functions.
 
-function create_field(
-    var::AbstractVariable,
-    init::AbstractInitializer,
-    bcs::AbstractBoundaryConditions,
-    grid::AbstractLandGrid,
-    args...;
-    kwargs...
-)
-    FT = field_type(vardims(var))
-    bcs = get_boundary_conditions(bcs, var)
-    field = if !isnothing(bcs)
-        FT(get_field_grid(grid), args...; boundary_conditions=bcs, kwargs...)
-    else
-        FT(get_field_grid(grid), args...; kwargs...)
-    end
-    # Apply initializer if defined
-    inits = get_initializer(init, var)
-    if !isnothing(inits)
-        Oceananigans.set!(field, inits[name])
-    end
-    return field
-end
-
-field_type(::XY) = Field{Center,Center,Nothing}
-field_type(::XYZ) = Field{Center,Center,Center}
-
-"""
-    FieldInitializer{VarInits<:NamedTuple}
-
-FieldInitializer provides a simple method for bootstrapping `Field` initialization
-within model implementations. This is mostly a stopgap solution and is likely to change.
+Example:
+```julia
+initializer = FieldInitializer(:temperature => )
+```
 """
 struct FieldInitializer{VarInits<:NamedTuple} <: AbstractInitializer
     vars::VarInits
 end
 
 """
-    FieldInitializer(vars::Pair{Symbol,<:NamedTuple}...) 
+    FieldInitializer(vars::Pair{Symbol}...)
 
 Creates a `FieldInitializer` for the given variables. The first value of the pair is
-the name of the state variable while the second value should be a `NamedTuple` corresponding
-of valid keyword arguments for an Oceananigans `Field`. Additionally, a property `init` may
-be provided corresponding to a function which will be passed to `set!`.
+the name of the state variable while the second value should be a `Function` or callable
+struct of the form `f(x,y,z)::Real` where `z` is the vertical coordinate, decreasing with depth.
 
 Example:
 ```julia
 initializer = FieldInitializer(
-    :temperature => (x,y,z) -> sin(z)
+    :temperature => (x,y,z) -> 0.01*abs(z) + exp(z)*sin(2π*z)
 )
 ```
 """
 FieldInitializer(vars::Pair{Symbol}...) = FieldInitializer((;vars...))
 
+"""
+    $SIGNATURES
+
+Retrieves the initializer for the given variable `var` or returns `nothing` if not defined.
+"""
 get_initializer(init::FieldInitializer, var::AbstractVariable) = get(init.vars, varname(var), nothing)
