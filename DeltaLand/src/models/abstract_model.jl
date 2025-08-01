@@ -8,25 +8,13 @@ Base type for all models.
 abstract type AbstractModel end
 
 """
-    get_grid(model::AbstractModel)::AbstractGrid
+    variables(model::AbstractModel)
 
-Return the spatial grid associated with this `model`.
+Return a `Tuple` of `AbstractVariable`s (i.e. `PrognosticVariable`, `AuxiliaryVariable`, etc.)
+defined by the model. For models that consist of one or more sub-models, variables may optionally
+be grouped into namespaces by returning a `NamedTuple` where the keys correspond to the group names.
 """
-function get_grid end
-
-"""
-    get_time_stepping(model::AbstractModel)::AbstractTimeStepper
-
-Returns the time stepping scheme associated with this `model`.
-"""
-function get_time_stepping end
-
-"""
-    initialize(model::AbstractModel, initializer::AbstractInitializer; kwargs...)::Simulation
-
-Initialize and return a `Simulation` based on the given `model`.
-"""
-function initialize end
+function variables end
 
 """
     initialize!(state, model::AbstractModel)
@@ -56,19 +44,41 @@ Advance the model state by one time step, or by `dt` units of time.
 """
 function timestep! end
 
-# default method implementations
+# Default getter methods for standard `AbstractModel` fields.
 
+"""
+    get_grid(model::AbstractModel)::AbstractGrid
+
+Return the spatial grid associated with this `model`.
+"""
 get_grid(model::AbstractModel) = model.grid
 
+"""
+    get_time_stepping(model::AbstractModel)::AbstractTimeStepper
+
+Returns the time stepping scheme associated with this `model`.
+"""
 get_time_stepping(model::AbstractModel) = model.time_stepping
 
-initialize(model::AbstractModel; kwargs...) = initialize(model, default_initializer(model); kwargs...)
+"""
+    get_boundary_conditions(model::AbstractModel)::AbstractBoundaryConditions
 
+Returns the time stepping scheme associated with this `model`.
+"""
+get_boundary_conditions(model::AbstractModel) = model.time_stepping
+
+"""
+    get_initializer(model::AbstractModel)::AbstractInitializer
+
+Returns the time stepping scheme associated with this `model`.
+"""
+get_initializer(model::AbstractModel) = model.time_stepping
+
+# Default implementation of `initialize!` which simply calls `update_state!`.
 initialize!(state, model::AbstractModel) = update_state!(state, model)
 
-default_initializer(::AbstractModel) = ModelInitializer()
-
 # TODO: define general method interfaces (as needed) for all model types
+
 """
     AbstractGroundModel
     

@@ -7,9 +7,12 @@ import ConstructionBase: getproperties
 import DataStructures: OrderedDict
 
 # Oceananigans numerics
-using Oceananigans
-import Oceananigans.Architectures: AbstractArchitecture
+# TODO: Raise an issue on Oceananigans.jl about refactoring numerics
+# into a separate package.
+import Oceananigans
+import Oceananigans.Architectures: AbstractArchitecture, CPU
 import Oceananigans.BoundaryConditions: fill_halo_regions!
+import Oceananigans.Grids: Grids, Periodic, Flat, Bounded
 import Oceananigans.Operators: ∂zᵃᵃᶜ, ∂zᵃᵃᶠ, Δzᵃᵃᶜ
 import Oceananigans.TimeSteppers: Clock, tick_time!, reset!
 import Oceananigans.Utils: launch!

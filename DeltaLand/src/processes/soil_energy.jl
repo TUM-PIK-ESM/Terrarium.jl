@@ -26,23 +26,13 @@ end
     thermal_properties::ThermalProps = SoilThermalProperties()
 end
 
-function initialize(::SoilEnergyBalance, grid::AbstractLandGrid, initializer)
-    # TODO: it would be cool if we could formally specify constitutive relations like temperature <--> enthalpy
-    enthalpy = initialize3D(initializer, grid, :enthalpy)
-    enthalpy_tendency = initialize3D(initializer, grid, :enthalpy_tendency)
-    temperature = initialize3D(initializer, grid, :temperature)
-    pore_water_ice_saturation = initialize3D(initializer, grid, :pore_water_ice_saturation)
-    liquid_water_fraction = initialize3D(initializer, grid, :liquid_water_fraction)
-    # 2D boundary variables
-    ground_heat_flux = initialize2D(initializer, grid, :ground_heat_flux)
-    geothermal_heat_flux = initialize2D(initializer, grid, :geothermal_heat_flux)
-    # return state named tuples
-    prognostic = (; enthalpy)
-    tendencies = (; enthalpy_tendency)
-    auxiliary = (; temperature, pore_water_ice_saturation, liquid_water_fraction)
-    boundary_vars = (; ground_heat_flux, geothermal_heat_flux)
-    return StateVariables(; prognostic, tendencies, auxiliary, boundary_vars)
-end
+variables(::SoilEnergyBalance) = (
+    prognostic(:temperature, XYZ(), closure=TemperatureEnergyClosure()),
+    auxiliary(:pore_water_ice_saturation, XYZ()),
+    axuiliary(:liquid_water_fraction, XYZ()),
+    auxiliary(:ground_heat_flux, XY()),
+    auxiliary(:geothermal_heat_flux, XY()),
+)
 
 @inline function thermalconductivity(i, j, k, state, model::AbstractSoilModel, energy::SoilEnergyBalance)
     conds = getproperties(energy.thermal_properties.cond)
@@ -58,6 +48,54 @@ end
     return sum(fastmap(*, heatcaps, fracs))
 end
 
+@inline function update_state(i, j, k, state, model, energy::SoilEnergyBalance)
+    enthalpyinv(i, j, k, state, model, freezecurve(model))
+end
+
+@inline function compute_tendencies(i, j, k, state, model, energy::SoilEnergyBalance)
+    # Get underlying Oceananigans grid
+    grid = get_field_grid(get_grid(model))
+
+    # Get temperature state
+    T = state.temperature
+
+    # Get thermal conductivity
+    κ = thermalconductivity(i, j, k, state, model, energy)
+    
+    # Interior heat flux
+    dUdt = -∂zᵃᵃᶜ(i, j, k, grid, diffusive_flux, κ, T)
+    
+    # Ground heat flux (upper boundary)
+    Qg = @inbounds state.ground_heat_flux[i, j, k]
+    Δz = Δzᵃᵃᶜ(i, j, k, grid)
+    dUdt += ifelse(k == grid.Nz, -Qg / Δz, zero(grid))
+
+    # Geothermal heat flux (lower boundary)
+    # TODO: should this just be a flux boundary condition on the tendency?
+    Qgeo = @inbounds state.geothermal_heat_flux[i, j, k]
+    Δz = Δzᵃᵃᶜ(i, j, k, grid)
+    dUdt += ifelse(k == 1, Qgeo / Δz, zero(grid))
+
+    # Accumulate tendency
+    state.internal_energy_tendency[i, j, k] += dUdt
+end
+
+@inline diffusive_flux(i, j, k, grid, κ, T) = -κ * ∂zᵃᵃᶠ(i, j, k, grid, T)
+
+"""
+    TemperatureEnergyClosure
+
+Defines the constitutive relationship between temperature and the internal energy of the system, i.e:
+
+```math
+h(T) = T\times C(T) + L_f \theta(T)
+```
+where 
+"""
+struct TemperatureEnergyClosure end
+
+varname(::TemperatureEnergyClosure) = :internal_energy
+
 @inline function enthalpyinv(i, j, k, state, model, ::FreezeCurves.FreeWater)
     constants = get_constants(model)
     let H = state.enthalpy[i, j, k], # assumed prognostic
@@ -71,7 +109,7 @@ end
         liquid_water_frac, _ = FreezeCurves.freewater(H, one(θwi), L)
         state.liquid_water_fraction[i, j, k] = liquid_water_frac
         # calculate temperature
-        state.temperature[i, j, k] = ifelse(
+        T = ifelse(
             H < zero(θwi),
             # Case 1: H < 0 -> frozen
             H / C,
@@ -84,39 +122,6 @@ end
                 zero(eltype(state.temperature))
             )
         )
+        return T
     end
 end
-
-@inline function update_state(i, j, k, state, model, energy::SoilEnergyBalance)
-    enthalpyinv(i, j, k, state, model, freezecurve(model))
-end
-
-@inline function compute_tendencies(i, j, k, state, model, energy::SoilEnergyBalance)
-    # Get underlying Oceananigans grid
-    grid = get_grid_impl(get_grid(model))
-
-    # Get temperature state
-    T = state.temperature
-
-    # Get thermal conductivity
-    κ = thermalconductivity(i, j, k, state, model, energy)
-    
-    # Interior heat flux
-    dHdt = -∂zᵃᵃᶜ(i, j, k, grid, diffusive_flux, κ, T)
-    
-    # Ground heat flux (upper boundary)
-    Qg = @inbounds state.ground_heat_flux[i, j, k]
-    Δz = Δzᵃᵃᶜ(i, j, k, grid)
-    dHdt += ifelse(k == grid.Nz, -Qg / Δz, zero(grid))
-
-    # Geothermal heat flux (lower boundary)
-    # TODO: should this just be a flux boundary condition on the tendency?
-    Qgeo = @inbounds state.geothermal_heat_flux[i, j, k]
-    Δz = Δzᵃᵃᶜ(i, j, k, grid)
-    dHdt += ifelse(k == 1, Qgeo / Δz, zero(grid))
-
-    # Accumulate tendencies
-    state.enthalpy_tendency[i, j, k] += dHdt
-end
-
-@inline diffusive_flux(i, j, k, grid, κ, T) = -κ * ∂zᵃᵃᶠ(i, j, k, grid, T)

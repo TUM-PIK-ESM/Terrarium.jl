@@ -25,6 +25,12 @@
     "Physical constants"
     constants::PhysicalConstants{NF} = PhysicalConstants()
 
+    "Boundary conditions"
+    boundary_conditions::BoundaryConditions = PrescribedFluxes()
+
+    "State variable initializer"
+    initializer::Initializer = FieldInitializer()
+
     "Timestepping type"
     time_stepping::TimeStepper = ForwardEuler()
 end
@@ -47,14 +53,13 @@ freezecurve(model::SoilModel) = freezecurve(model.strat)
 
 # Model interface methods
 
-function initialize(model::SoilModel, initializer; sim_kwargs...)
-    # Extract grid from model
-    grid = get_grid(model)
-    # Initialize state variables (for now just soil energy)
-    # TODO: this is a temporary solution until we find a better one
-    energy_state = initialize(model.energy, grid, initializer)
-    initialize!(energy_state, model)
-    return Simulation(model, energy_state, initializer.clock)
+function variables(model::SoilModel)
+    strat_vars = variables(model.strat)
+    hydrology_vars = variables(model.energy)
+    energy_vars = variables(model.energy)
+    bgc_vars = variables(model.biogeochem)
+    # combine all variables into one tuple
+    return (strat_vars..., hydrology_vars..., energy_vars..., bgc_vars...)
 end
 
 function initialize!(state, model::SoilModel)
@@ -85,18 +90,18 @@ end
 
 @kernel function _update_state_soil_kernel(state, model::SoilModel)
     i, j, k = @index(Global, NTuple)
-    update_state(i, j, k, state, model, model.strat)
-    update_state(i, j, k, state, model, model.hydrology)
-    update_state(i, j, k, state, model, model.energy)
-    update_state(i, j, k, state, model, model.biogeochem)
+    update_state!(i, j, k, state, model, model.strat)
+    update_state!(i, j, k, state, model, model.hydrology)
+    update_state!(i, j, k, state, model, model.energy)
+    update_state!(i, j, k, state, model, model.biogeochem)
 end
 
 @kernel function _compute_tendencies_soil_kernel(state, model::SoilModel)
     i, j, k = @index(Global, NTuple)
-    compute_tendencies(i, j, k, state, model, model.strat)
-    compute_tendencies(i, j, k, state, model, model.hydrology)
-    compute_tendencies(i, j, k, state, model, model.energy)
-    compute_tendencies(i, j, k, state, model, model.biogeochem)
+    compute_tendencies!(i, j, k, state, model, model.strat)
+    compute_tendencies!(i, j, k, state, model, model.hydrology)
+    compute_tendencies!(i, j, k, state, model, model.energy)
+    compute_tendencies!(i, j, k, state, model, model.biogeochem)
 end
 
 @inline function soil_characteristic_fractions(i, j, k, state, model)

@@ -9,6 +9,8 @@
     freezecurve::FC = FreezeCurves.FreeWater()
 end
 
+variables(::HomogeneousSoil) = ()
+
 # TODO: This method interface assumes a single freeze curve for the whole stratigraphy;
 # we should ideally relax this assumption for multi-layer stratigraphies, although
 # this probably only matters in permafrost environments.

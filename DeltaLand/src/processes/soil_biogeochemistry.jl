@@ -10,6 +10,8 @@ Base.@kwdef struct ConstantSoilCarbonDenisty{NF} <: AbstractSoilBiogeochemistry
     por_org::NF = 0.90
 end
 
+variables(::ConstantSoilCarbonDenisty) = ()
+
 """
     organic_porosity(bgc::ConstantSoilCarbonDenisty)
 

@@ -1,5 +1,7 @@
 struct ImmobileSoilWater <: AbstractSoilHydrology end
 
+variables(::ImmobileSoilWater) = ()
+
 @inline function update_state(i, j, k, state, model::AbstractSoilModel, hydrology::ImmobileSoilWater)
     strat = get_stratigraphy(model)
     # set saturation level of pore water/ice to value specified by stratigraphy

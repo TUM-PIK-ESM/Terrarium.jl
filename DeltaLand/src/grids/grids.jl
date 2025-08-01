@@ -1,23 +1,76 @@
+# TODO: These grid types should be replaced with proper implementations of Oceananigans `AbstractGrid`
+# at some point. However, for an intiail prototype, we can just wrap `RectilinearGrid` from Oceananigans.
+
 abstract type AbstractLandGrid{NF} end
 
-# TODO: Replace with custom implementation of Oceananigans grid later
+"""
+    ColumnGrid{RectGrid<:Grids.RectilinearGrid} <: AbstractLandGrid
+
+Represents a set of laterally independent vertical columns with dimensions (x, y, z)
+where `x` is the column dimension, `y=1` is constant, and `z` is the vertical axis.
+"""
+struct ColumnGrid{RectGrid<:Grids.RectilinearGrid} <: AbstractLandGrid
+    "Underlying Oceananigans rectilinear grid on which `Field`s are defined."
+    grid::RectGrid
+
+    """
+        $SIGNATURES
+
+    Creates a `ColumnGrid` from the given `architecture`, numeric type `NF`, and vertical
+    discretization `vert`. The `num_columns` determines the number of laterally independent
+    columns initialized on the grid.
+    """
+    function ColumnGrid(
+        arch::AbstractArchitecture,
+        ::Type{NF},
+        vert::AbstractVerticalSpacing,
+        num_columns::Int = 1,
+    ) where {NF<:AbstractFloat}
+        Nz = get_npoints(vert)
+        # TODO: Need to consider ordering of array dimensions;
+        # using the z-axis here probably results in inefficient memory access patterns
+        # since most or all land computations will be along this axis
+        z_thick = get_spacing(vert)
+        z_coords = vcat(-reverse(cumsum(z_thick)), zero(eltype(z_thick)))
+        grid = Grids.RectilinearGrid(arch, size=(num_columns, Nz), x=(0, 1), z=z_coords, topology=(Periodic, Flat, Bounded))
+        return new{eltype(grid),typeof(rings),typeof(grid)}(rings, grid)
+    end
+end
+
+"""
+    $SIGNATURES
+
+Retrieves the underlying numerical grid on which `Field`s are defined.
+"""
+get_field_grid(grid::ColumnGrid) = grid.grid
+
+"""
+    $TYPEDEF
+
+Convenience wrapper around `ColumnGrid` that defines the columns as points on a global `RingGrid`.
+"""
 struct GlobalRingGrid{
     NF,
     RingGrid<:RingGrids.AbstractGrid,
-    GridImpl<:Oceananigans.AbstractGrid,
+    ColGrid<:Oceananigans.AbstractGrid,
 } <: AbstractLandGrid{NF}
-    "RingGrid representing the lateral spatial discretization of the globe."
+    "RingGrid specfying the lateral spatial discretization of the globe."
     rings::RingGrid
 
-    "Oceananigans grid implementation used for finite volume discretization of the vertical axis."
-    gridimpl::GridImpl
+    "Underlying grid type for all independent vertical columns."
+    columns::ColGrid
     
-    GlobalRingGrid(vert::AbstractVerticalSpacing, rings::RingGrids.AbstractGrid) = GlobalRingGrid(CPU(), vert, rings)
+    GlobalRingGrid(vert::AbstractVerticalSpacing, rings::RingGrids.AbstractGrid) = GlobalRingGrid(CPU(), Float32, vert, rings)
+
+    """
+        $SIGNATURES
+    """
     function GlobalRingGrid(
         arch::AbstractArchitecture,
+        ::Type{NF},
         vert::AbstractVerticalSpacing,
         rings::RingGrids.AbstractGrid
-    )
+    ) where {NF<:AbstractFloat}
         Nh = RingGrids.get_npoints(rings)
         Nz = get_npoints(vert)
         # TODO: Need to consider ordering of array dimensions;
@@ -25,22 +78,15 @@ struct GlobalRingGrid{
         # since most or all land computations will be along this axis
         z_thick = get_spacing(vert)
         z_coords = vcat(-reverse(cumsum(z_thick)), zero(eltype(z_thick)))
-        gridimpl = RectilinearGrid(arch, size=(Nh, Nz), x=(0, 1), z=z_coords, topology=(Periodic, Flat, Bounded))
-        return new{eltype(gridimpl),typeof(rings),typeof(gridimpl)}(rings, gridimpl)
+        grid = Grids.RectilinearGrid(arch, NF, size=(Nh, Nz), x=(0, 1), z=z_coords, topology=(Periodic, Flat, Bounded))
+        return new{NF,typeof(rings),typeof(grid)}(rings, grid)
     end
 end
 
-# this is a temporary workaround to 
-get_grid_impl(grid::GlobalRingGrid) = grid.gridimpl
-
-struct OceananigansGrid{GridImpl<:Oceananigans.AbstractGrid}
-    gridimpl::GridImpl
-end
-
-get_grid_impl(grid::OceananigansGrid) = grid.gridimpl
+get_field_grid(grid::ColumnGrid) = grid.columns.grid
 
 # Convenience dispatch for Oceananigans.launch!
 function launch!(grid::AbstractLandGrid, args...; kwargs...)
-    grid_impl = get_grid_impl(grid)
-    launch!(grid_impl.architecture, grid_impl, :xyz, args...; kwargs...)
+    _grid = get_field_grid(grid)
+    launch!(_grid.architecture, _grid, :xyz, args...; kwargs...)
 end
