@@ -6,8 +6,15 @@ Base type for all land processes which define physics or parameterizations but a
 """
 abstract type AbstractLandProcess end
 
-# TODO: Think more about these process types and what methods they should have
+update_state!(i, j, k, state, model::AbstractModel, args...) = nothing
+
+compute_tendencies!(i, j, k, state, model::AbstractModel, args...) = nothing
+
+# TODO: Think more about these process types and what methods they should have.
 abstract type AbstractStratigraphy <: AbstractLandProcess end
+
 abstract type AbstractSoilEnergyBalance <: AbstractLandProcess end
+
 abstract type AbstractSoilHydrology <: AbstractLandProcess end
+
 abstract type AbstractSoilBiogeochemistry <: AbstractLandProcess end

@@ -1,19 +1,6 @@
 abstract type AbstractHeatOperator end
 struct VerticalHeatConduction <: AbstractHeatOperator end
 
-# TODO: In principle, these types could change for different soil parameterizations.
-# This is something we should ideally allow for.
-@kwdef struct SoilThermalProperties{NF,CondWeighting}
-    "Thermal conductivities for all constituents"
-    cond::SoilThermalConductivities{NF} = SoilThermalConductivities()
-
-    "Thermal conductivity mixing scheme"
-    cond_bulk::CondWeighting = InverseQuadratic()
-
-    "Thermal conductivities for all constituents"
-    heatcap::SoilHeatCapacities{NF} = SoilHeatCapacities()
-end
-
 @kwdef struct SoilEnergyBalance{
     HeatOperator<:AbstractHeatOperator,
     ThermalProps<:SoilThermalProperties,

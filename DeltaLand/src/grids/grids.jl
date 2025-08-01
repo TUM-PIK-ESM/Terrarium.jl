@@ -4,12 +4,12 @@
 abstract type AbstractLandGrid{NF} end
 
 """
-    ColumnGrid{RectGrid<:Grids.RectilinearGrid} <: AbstractLandGrid
+    ColumnGrid{NF,RectGrid<:Grids.RectilinearGrid} <: AbstractLandGrid
 
 Represents a set of laterally independent vertical columns with dimensions (x, y, z)
 where `x` is the column dimension, `y=1` is constant, and `z` is the vertical axis.
 """
-struct ColumnGrid{RectGrid<:Grids.RectilinearGrid} <: AbstractLandGrid
+struct ColumnGrid{NF,RectGrid<:Grids.RectilinearGrid} <: AbstractLandGrid{NF}
     "Underlying Oceananigans rectilinear grid on which `Field`s are defined."
     grid::RectGrid
 
@@ -27,13 +27,13 @@ struct ColumnGrid{RectGrid<:Grids.RectilinearGrid} <: AbstractLandGrid
         num_columns::Int = 1,
     ) where {NF<:AbstractFloat}
         Nz = get_npoints(vert)
-        # TODO: Need to consider ordering of array dimensions;
+        # TODO: Need to eventually consider ordering of array dimensions;
         # using the z-axis here probably results in inefficient memory access patterns
         # since most or all land computations will be along this axis
         z_thick = get_spacing(vert)
         z_coords = vcat(-reverse(cumsum(z_thick)), zero(eltype(z_thick)))
         grid = Grids.RectilinearGrid(arch, size=(num_columns, Nz), x=(0, 1), z=z_coords, topology=(Periodic, Flat, Bounded))
-        return new{eltype(grid),typeof(rings),typeof(grid)}(rings, grid)
+        return new{eltype(grid),typeof(grid)}(rings, grid)
     end
 end
 

@@ -33,10 +33,11 @@ import CryoGrid: SoilTexture, SurfaceEnergyBalance
 include("utils.jl")
 
 # grids
-export GlobalRingGrid, UniformSpacing, ExponentialSpacing, ManualSpacing, ModelInitializer
+export UniformSpacing, ExponentialSpacing, ManualSpacing
 include("grids/vertical_discretization.jl")
+
+export ColumnGrid, GlobalRingGrid
 include("grids/grids.jl")
-include("grids/initializers.jl")
 
 # timestepping
 include("timesteppers/abstract_timestepper.jl")
@@ -44,31 +45,11 @@ include("timesteppers/abstract_timestepper.jl")
 export ForwardEuler
 include("timesteppers/forward_euler.jl")
 
-# abstract types
-include("processes/abstract_types.jl")
-
 export get_grid, get_time_stepping, initialize, update_state!, compute_tendencies!, timestep!
 include("models/abstract_model.jl")
 
 # physical processes
-
-export PhysicalConstants
-include("processes/physical_constants.jl")
-
-export ImmobileSoilWater, SoilHydraulicProperties
-include("processes/soil_hydrology.jl")
-
-export SoilThermalConductivities, SoilHeatCapacities
-include("processes/soil_thermal_properties.jl")
-
-export SoilEnergyBalance, SoilThermalProperties
-include("processes/soil_energy.jl")
-
-export HomogeneousSoil
-include("processes/soil_stratigraphy.jl")
-
-export ConstantSoilCarbonDenisty
-include("processes/soil_biogeochemistry.jl")
+include("processes/processes.jl")
 
 # state variables
 include("state_variables.jl")

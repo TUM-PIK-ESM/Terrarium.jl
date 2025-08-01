@@ -7,6 +7,12 @@
     organic::NF = 0.25 # thermal conductivity of organic soil constituents [W/m/K] Hillel (1982)
 end
 
+"""
+Base type for bulk weighting/mixing schemes that calculate weighted mixture of material properties
+such as conductivities or densities.
+"""
+abstract type AbstractBulkWeightingScheme end
+
 @kwdef struct SoilHeatCapacities{NF}
     water::NF = 4.2e6 # volumetric heat capacity of water [J/m^3]
     ice::NF = 1.9e6 # volumetric heat capacity of ice [J/m^3]
@@ -15,11 +21,18 @@ end
     organic::NF = 2.5e6 # volumetric heat capacity of organic soil [J/m^3]
 end
 
-"""
-Base types for bulk weighting/mixing schemes that calculate weighted mixture of material properties
-such as conductivities or densities.
-"""
-abstract type AbstractBulkWeightingScheme end
+# TODO: In principle, these types could change for different soil parameterizations.
+# This is something we should ideally allow for.
+@kwdef struct SoilThermalProperties{NF,CondWeighting}
+    "Thermal conductivities for all constituents"
+    cond::SoilThermalConductivities{NF} = SoilThermalConductivities()
+
+    "Thermal conductivity mixing scheme"
+    cond_bulk::CondWeighting = InverseQuadratic()
+
+    "Thermal conductivities for all constituents"
+    heatcap::SoilHeatCapacities{NF} = SoilHeatCapacities()
+end
 
 """
 The inverse quadratic (or "quadratic parallel") bulk thermal conductivity formula (Cosenza et al. 2003):
