@@ -1,10 +1,10 @@
 @kwdef struct SoilModel{
     NF,
-    GridType<:AbstractLandGrid{NF},
     Stratigraphy<:AbstractStratigraphy,
     SoilEnergy<:AbstractSoilEnergyBalance,
     SoilHydrology<:AbstractSoilHydrology,
     Biogeochemistry<:AbstractSoilBiogeochemistry,
+    GridType<:AbstractLandGrid{NF},
     BoundaryConditions<:AbstractBoundaryConditions,
     Initializer<:AbstractInitializer,
     TimeStepper<:AbstractTimeStepper,
@@ -61,7 +61,7 @@ function variables(model::SoilModel)
     energy_vars = variables(model.energy)
     bgc_vars = variables(model.biogeochem)
     # combine all variables into one tuple
-    return (strat_vars..., hydrology_vars..., energy_vars..., bgc_vars...)
+    return tuplejoin(strat_vars, hydrology_vars, energy_vars, bgc_vars)
 end
 
 function initialize!(state, model::SoilModel)

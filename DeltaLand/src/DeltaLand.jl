@@ -62,22 +62,25 @@ include("models/boundary_conditions.jl")
 export FieldInitializer
 include("models/initializers.jl")
 
-# physical processes
-include("processes/processes.jl")
-
 # state variables
 export StateVariables
 include("state_variables.jl")
 
-# simulation types
-export Simulation
-include("simulation.jl")
+# physical processes
+include("processes/processes.jl")
 
 # concrete model implementations
 export SoilModel
 include("models/soil_model.jl")
 
+export VegetationModel
+include("models/vegetation_model.jl")
+
 export LandModel
 include("models/land_model.jl")
+
+# simulation types
+export Simulation
+include("simulation.jl")
 
 end # module DeltaLand

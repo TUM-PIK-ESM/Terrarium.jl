@@ -35,11 +35,11 @@ end
     return sum(fastmap(*, heatcaps, fracs))
 end
 
-@inline function update_state(idx, state, model, energy::SoilEnergyBalance)
+@inline function update_state!(idx, state, model, energy::SoilEnergyBalance)
     enthalpyinv(idx, state, model, freezecurve(model))
 end
 
-@inline function compute_tendencies(idx, state, model, energy::SoilEnergyBalance)
+@inline function compute_tendencies!(idx, state, model, energy::SoilEnergyBalance)
     i, j, k = idx
 
     # Get underlying Oceananigans grid

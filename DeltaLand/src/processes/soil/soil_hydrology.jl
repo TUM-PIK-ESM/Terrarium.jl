@@ -39,11 +39,11 @@ pore_water_ice_saturation(hydrology::SoilHydrology) = hydrology.saturation
     return (1 - org)*mineral_porosity(hydrology, texture) + org*organic_porosity(bgc)
 end
 
-@inline function update_state(idx, state, model::AbstractSoilModel, hydrology::SoilHydrology)
+@inline function update_state!(idx, state, model::AbstractSoilModel, hydrology::SoilHydrology)
     i, j, k = idx
     hydrology = get_hydrology(model)
     # set saturation level of pore water/ice to value specified by stratigraphy
     state.pore_water_ice_saturation[i, j, k] = pore_water_ice_saturation(idx, state, model, hydrology)
 end
 
-@inline compute_tendencies(idx, state, model, strat::SoilHydrology{NoFlow}) = nothing
+@inline compute_tendencies!(idx, state, model, strat::SoilHydrology{NoFlow}) = nothing
