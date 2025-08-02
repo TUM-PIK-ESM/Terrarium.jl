@@ -10,7 +10,7 @@ struct NoFlow <: AbstractSoilWaterFluxes end
     fluxes::SoilWaterFluxes = NoFlow()
 
     "Soil hydraulic properties parameterization"
-    hydraulic_properties::SoilHydraulicProperties = SURFEXSoilHydraulics()
+    hydraulic_properties::SoilHydraulicProperties = SURFEXHydraulics()
     
     "Soil freezing characteristic curve"
     freezecurve::FC = FreezeCurves.FreeWater()
