@@ -3,13 +3,17 @@ abstract type AbstractSimulation end
 struct Simulation{
     Model<:AbstractModel,
     StateVars<:AbstractStateVariables,
-    ClockType<:Clock,
 } <: AbstractSimulation
+    "The type of model used for the simulation."
     model::Model
-    
-    state::StateVars
 
-    clock::ClockType
+    "Collection of all state variables defined on the simulation `model`."
+    state::StateVars
+end
+
+function initialize(model::AbstractModel; clock::Clock=Clock(time=0.0))
+    state = StateVariables(model, clock)
+    return Simulation(model, state)
 end
 
 function initialize!(sim::Simulation)

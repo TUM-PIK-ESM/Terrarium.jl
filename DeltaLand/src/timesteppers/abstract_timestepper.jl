@@ -15,3 +15,10 @@ function get_dt end
 Returns `true` if the given time stepper is adaptive, false otherwise.
 """
 function is_adaptive end
+
+"""
+    timestep!(state, model::AbstractModel, timestepper::AbstractTimeStepper, dt)
+
+Implements `timestep!` generically for any given `model` and `dt`.
+"""
+function timestep! end

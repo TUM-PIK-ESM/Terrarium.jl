@@ -8,6 +8,8 @@ end
 
 get_soil_texture(strat::HomogeneousSoil) = strat.texture
 
+variables(strat::HomogeneousSoil) = ()
+
 # do nothing for now
 @inline update_state!(idx, state, model, strat::HomogeneousSoil) = nothing
 

@@ -19,7 +19,7 @@
     energy::SoilEnergy = SoilEnergyBalance()
 
     "Soil hydrology/water balance"
-    hydrology::SoilHydrology = ImmobileSoilWater()
+    hydrology::SoilHydrology = SoilHydrology()
 
     "Soil biogeochemistry"
     biogeochem::Biogeochemistry = ConstantSoilCarbonDenisty()
@@ -57,7 +57,7 @@ freezecurve(model::SoilModel) = freezecurve(model.strat)
 
 function variables(model::SoilModel)
     strat_vars = variables(model.strat)
-    hydrology_vars = variables(model.energy)
+    hydrology_vars = variables(model.hydrology)
     energy_vars = variables(model.energy)
     bgc_vars = variables(model.biogeochem)
     # combine all variables into one tuple

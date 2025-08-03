@@ -12,12 +12,12 @@ struct NoFlow <: AbstractSoilWaterFluxes end
     "Soil hydraulic properties parameterization"
     hydraulic_properties::SoilHydraulicProperties = SURFEXHydraulics()
     
-    "Soil freezing characteristic curve"
+    "Soil freezing and water retention curve(s) from FreezeCurves.jl"
     freezecurve::FC = FreezeCurves.FreeWater()
 end
 
 variables(::SoilHydrology{NoFlow}) = (
-    auxiliary(:pore_water_ice_saturation, XYZ())
+    auxiliary(:pore_water_ice_saturation, XYZ()),
 )
 
 # TODO: This method interface assumes a single freeze curve for the whole stratigraphy;

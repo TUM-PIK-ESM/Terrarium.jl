@@ -17,20 +17,20 @@ end
 
 @inline function mineral_porosity(hydraulics::SURFEXHydraulics, texture::SoilTexture)
     p₀ = hydraulics.porosity
-    β = hydraulics.porosity_sand_coef
-    por = p₀ + β*texture.sand
+    β_s = hydraulics.porosity_sand_coef
+    por = p₀ + β_s*texture.sand
     return por
 end
 
 @inline function mineral_wilting_point(hydraulics::SURFEXHydraulics, texture::SoilTexture)
-    β = hydraulics.wilting_point_coef
-    wp = β*sqrt(texture.clay)
+    β_w = hydraulics.wilting_point_coef
+    wp = β_w*sqrt(texture.clay)
     return wp
 end
 
 @inline function mineral_field_capacity(hydraulics::SURFEXHydraulics, texture::SoilTexture)
     η = hydraulics.field_capacity_exp
-    β = hydraulics.field_capacity_coef
-    fc = β*texture.clay^η
+    β_c = hydraulics.field_capacity_coef
+    fc = β_c*texture.clay^η
     return fc
 end

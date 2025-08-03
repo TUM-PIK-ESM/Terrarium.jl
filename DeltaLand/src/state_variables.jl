@@ -15,45 +15,42 @@ abstract type AbstractStateVariables end
 end
 
 function StateVariables(
-    init::AbstractInitializer,
-    bcs::AbstractBoundaryConditions,
-    grid::AbstractLandGrid,
-    clock::Clock,
-    vars...
+    model::AbstractModel,
+    clock::Clock
 )
-    # check for duplicates
-    varnames = map(varname, vars)
-    @assert merge_duplicates(varnames) == varnames "all state variable names within one namespace must be unique! found one or more duplicates in $(varnames)"
+    vars = variables(model)
     # filter out variables from tuple by type
     prognostic = merge_duplicates(filter(var -> isa(var, PrognosticVariable), vars))
     auxiliary = merge_duplicates(filter(var -> isa(var, AuxiliaryVariable), vars))
     namespaces = filter(var -> isa(var, Pair{Symbol}), vars)
     # get tendencies from prognostic variables
     tendencies = map(var -> var.tendency, prognostic)
+    # create closure variables and add to auxiliary variables
+    closurevars = map(var -> AuxiliaryVariable(varname(var.closure), vardims(var)), prognostic)
+    auxiliary_ext = tuplejoin(auxiliary, closurevars)
+    # merge all variable names
+    varnames = tuplejoin(map(varname, prognostic), map(varname, auxiliary_ext), map(first, namespaces))
+    @assert merge_duplicates(varnames) == varnames "all state variable names within one namespace must be unique! found duplicates in $(varnames)"
     # get progvar => closure pairs
     closures = map(var -> varname(var) => var.closure, filter(hasclosure, prognostic))
+    # get grid, boundary conditions and initializer
+    grid = get_grid(model)
+    init = get_initializer(model)
+    bcs = get_boundary_conditions(model)
     # intialize fields
     prognostic_fields = map(var -> varname(var) => create_field(var, init, bcs, grid), prognostic)
     tendency_fields = map(var -> varname(var) => create_field(var, init, bcs, grid), tendencies)
-    auxiliary_fields = map(var -> varname(var) => create_field(var, init, bcs, grid), auxiliary)
+    auxiliary_fields = map(var -> varname(var) => create_field(var, init, bcs, grid), auxiliary_ext)
     # recursively initialize state variables for namespaces
-    namespaces = map(kv -> first(kv) => StateVariables(init, bcs, grid, clock, last(kv)...), namespaces)
+    namespace_states = map(kv -> first(kv) => StateVariables(getproperty(model, first(kv)), clock, last(kv)...), namespaces)
     return StateVariables(
         prognostic=(; prognostic_fields...),
         tendencies=(; tendency_fields...),
         auxiliary=(; auxiliary_fields...),
-        namespaces=(; namespaces...),
+        namespaces=(; namespace_states...),
         closures=(; closures...),
-        clock,
+        clock=clock,
     )
-end
-
-function StateVariables(model::AbstractModel)   
-    init = get_initializer(model)
-    bcs = get_boundary_conditions(model)
-    grid = get_grid(model)
-    vars = variables(model)
-    return StateVariables(init, bcs, grid, clock, vars...)
 end
 
 Base.propertynames(
@@ -93,6 +90,10 @@ end
 
 # Field construction
 
+## Retrieves the Oceananigans `Field` type for the given variable dimensions.
+## The first three type parameters refer to the location of the variable on the staggered finite volume grid:
+## Center refers to the grid cell centroid, Face to the boundary, and Nothing to a quantity that has no dimensionality
+## in that direction.
 field_type(::XY) = Field{Center,Center,Nothing}
 field_type(::XYZ) = Field{Center,Center,Center}
 
@@ -119,7 +120,7 @@ function create_field(
         FT(get_field_grid(grid), args...; kwargs...)
     end
     # Apply initializer if defined
-    inits = get_field_boundary_conditions(init, var)
+    inits = get_field_initializer(init, var)
     if !isnothing(inits)
         Oceananigans.set!(field, inits[name])
     end

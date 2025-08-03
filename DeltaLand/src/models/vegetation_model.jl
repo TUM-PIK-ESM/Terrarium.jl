@@ -40,7 +40,7 @@ Multiple PFTs can be later handled with a `TiledVegetationModel` type that compo
     vegetation_dynamics::VegetationDynamics # prognostic
 
     "Boundary conditions"
-    boundary_conditions::BoundaryConditions = FieldBoundaryConditions()
+    boundary_conditions::BoundaryConditions = NamedBoundaryConditions()
 
     "State variable initializer"
     initializer::Initializer = FieldInitializer()

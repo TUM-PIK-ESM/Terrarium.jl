@@ -8,7 +8,6 @@ struct ExplicitHeatConduction <: AbstractHeatOperator end
     "Heat transport operator"
     operator::HeatOperator = ExplicitHeatConduction()
 
-    # Note: Would it make more sense for these properties to be defined in the stratigraphy?
     "Soil thermal properties"
     thermal_properties::ThermalProps = SoilThermalProperties()
 end
@@ -16,7 +15,7 @@ end
 variables(::SoilEnergyBalance) = (
     prognostic(:temperature, XYZ(), TemperatureEnergyClosure()),
     auxiliary(:pore_water_ice_saturation, XYZ()),
-    axuiliary(:liquid_water_fraction, XYZ()),
+    auxiliary(:liquid_water_fraction, XYZ()),
     auxiliary(:ground_heat_flux, XY()),
     auxiliary(:geothermal_heat_flux, XY()),
 )
@@ -75,44 +74,60 @@ end
 """
     TemperatureEnergyClosure
 
-Defines the constitutive relationship between temperature and the internal energy of the system, i.e:
+Defines the constitutive relationship between temperature and the internal energy, U, of the system, i.e:
 
 ```math
-h(T) = T\times C(T) + L_f \theta(T)
+U(T) = T\\times C(T) - L_f \\theta_{wi} (1 - F(T))
 ```
-where 
+where T is temperature, C(T) is the temperature-dependent heat capacity, L_f is the
+volumetric latent heat of fusion, and F(T) is the constitutive relation between temperature
+and the unfrozen fraction of pore water. Note that this formulation implies that the zero
 """
-struct TemperatureEnergyClosure end
+struct TemperatureEnergyClosure <: AbstractClosureRelation end
 
 varname(::TemperatureEnergyClosure) = :internal_energy
 
-@inline function enthalpyinv(idx, state, model, ::FreezeCurves.FreeWater)
+@inline function temperature_to_energy(idx, state, model ::FreezeCurves.FreeWater)
     i, j, k = idx
     constants = get_constants(model)
-    let H = state.enthalpy[i, j, k], # assumed prognostic
-        C = heatcapacity(idx, state, model, get_energy_balance(model)),
-        L = constants.ρw*constants.Lsl,
-        por = porosity(idx, state, model, get_stratigraphy(model)),
-        sat = state.pore_water_ice_saturation[i, j, k],
-        θwi = sat*por,
-        Lθ = L*θwi;
-        # calculate unfrozen water content
-        liquid_water_frac, _ = FreezeCurves.freewater(H, one(θwi), L)
-        state.liquid_water_fraction[i, j, k] = liquid_water_frac
-        # calculate temperature
-        T = ifelse(
-            H < zero(θwi),
-            # Case 1: H < 0 -> frozen
-            H / C,
-            # Case 2: H >= 0
-            ifelse(
-                H >= Lθ,
-                # Case 2a: H >= Lθ -> thawed
-                (H - Lθ) / C,
-                # Case 2b: 0 <= H < Lθ -> phase change
-                zero(eltype(state.temperature))
-            )
+    T = state.temperature[i, j, k] # assumed given
+    C = heatcapacity(idx, state, model, get_energy_balance(model))
+    L = constants.ρw*constants.Lsl
+    por = porosity(idx, state, model, get_stratigraphy(model))
+    sat = state.pore_water_ice_saturation[i, j, k]
+    θwi = sat*por
+    Lθ = L*θwi
+    # calculate unfrozen water content
+    liquid_water_frac, _ = FreezeCurves.freewater(H, one(θwi), L)
+    state.liquid_water_fraction[i, j, k] = liquid_water_frac
+end
+
+@inline function energy_to_temperature(idx, state, model, ::FreezeCurves.FreeWater)
+    i, j, k = idx
+    constants = get_constants(model)
+    U = state.internal_energy[i, j, k] # assumed given
+    C = heatcapacity(idx, state, model, get_energy_balance(model))
+    L = constants.ρw*constants.Lsl
+    por = porosity(idx, state, model, get_stratigraphy(model))
+    sat = state.pore_water_ice_saturation[i, j, k]
+    θwi = sat*por
+    Lθ = L*θwi
+    # calculate unfrozen water content
+    liquid_water_frac, _ = FreezeCurves.freewater(H, one(θwi), L)
+    state.liquid_water_fraction[i, j, k] = liquid_water_frac
+    # calculate temperature from internal energy and liquid water fraction
+    T = ifelse(
+        U < -Lθ,
+        # Case 1: U < 0 → frozen
+        (U - Lθ) / C,
+        # Case 2: U ≥ -Lθ
+        ifelse(
+            U >= zero(U),
+            # Case 2a: U ≥ 0 → thawed
+            U / C,
+            # Case 2b: -Lθ ≤ U < 0 → phase change
+            zero(eltype(state.temperature))
         )
-        return T
-    end
+    )
+    return T
 end

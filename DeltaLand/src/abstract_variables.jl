@@ -50,33 +50,12 @@ should return the name of the variable returned by the closure relation.
 varname(var::AbstractVariable) = var.name
 varname(namespace::Pair{Symbol}) = first(namespace)
 
-struct TendencyVariable{VD<:VarDims} <: AbstractVariable
-    "Name of the prognostic variable"
-    name::Symbol
+"""
+    vardims(::AbstractVariable)
 
-    "Grid dimensions on which the variable is defined."
-    dims::VD
-end
-
-struct PrognosticVariable{
-    VD<:VarDims,
-    TendencyVar<:TendencyVariable,
-    Closure<:Union{Nothing,AbstractClosureRelation}
-} <: AbstractVariable
-    "Name of the prognostic variable"
-    name::Symbol
-
-    "Grid dimensions on which the variable is defined."
-    dims::VD
-
-    "Tendency corresponding to this prognostic variable."
-    tendency::TendencyVar
-
-    "Closure relation for the tendency of the prognostic variable."
-    closure::Closure
-end
-
-hasclosure(var::PrognosticVariable) = !isnothing(var.closure)
+Retrieves the grid dimensions on which this variable is defined.
+"""
+vardims(var::AbstractVariable) = var.dims
 
 struct AuxiliaryVariable{VD<:VarDims} <: AbstractVariable
     "Name of the auxiliary variable"
@@ -85,6 +64,26 @@ struct AuxiliaryVariable{VD<:VarDims} <: AbstractVariable
     "Grid dimensions on which the variable is defined."
     dims::VD
 end
+
+struct PrognosticVariable{
+    VD<:VarDims,
+    TendencyVar<:AuxiliaryVariable,
+    Closure<:Union{Nothing, AbstractClosureRelation}
+} <: AbstractVariable
+    "Name of the prognostic variable"
+    name::Symbol
+
+    "Grid dimensions on which the variable is defined."
+    dims::VD
+
+    "Closure relation for the tendency of the prognostic variable."
+    closure::Closure
+
+    "Tendency corresponding to this prognostic variable."
+    tendency::TendencyVar
+end
+
+hasclosure(var::PrognosticVariable) = !isnothing(var.closure)
 
 """
     $SIGNATURES
@@ -95,15 +94,17 @@ prognostic(name::Symbol, dims::VarDims) =
     PrognosticVariable(
         name,
         dims,
-        TendencyVariable(Symbol(name, :_tendency),
-        dims)
+        nothing,
+        AuxiliaryVariable(Symbol(name, :_tendency), dims)
     )
 prognostic(name::Symbol, dims::VarDims, closure::AbstractClosureRelation) =
     PrognosticVariable(
         name,
         dims,
-        TendencyVariable(Symbol(varname(closure), :_tendency)),
-        closure
+        # closure term
+        closure,
+        # tendency variable
+        AuxiliaryVariable(Symbol(varname(closure), :_tendency), dims),
     )
 
 """

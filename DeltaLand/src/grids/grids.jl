@@ -55,7 +55,7 @@ Convenience wrapper around `ColumnGrid` that defines the columns as points on a 
 struct GlobalRingGrid{
     NF,
     RingGrid<:RingGrids.AbstractGrid,
-    RectGrid<:Oceananigans.AbstractGrid,
+    RectGrid<:Grids.AbstractGrid,
 } <: AbstractLandGrid{NF}
     "RingGrid specfying the lateral spatial discretization of the globe."
     rings::RingGrid

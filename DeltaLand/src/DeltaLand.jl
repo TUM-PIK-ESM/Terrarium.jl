@@ -9,7 +9,7 @@ import DataStructures: OrderedDict
 # Oceananigans numerics
 # TODO: Raise an issue on Oceananigans.jl about refactoring numerics
 # into a separate package.
-import Oceananigans
+import Oceananigans: Field, Center, Face
 import Oceananigans.Architectures: AbstractArchitecture, CPU
 import Oceananigans.BoundaryConditions: fill_halo_regions!
 import Oceananigans.Grids: Grids, Periodic, Flat, Bounded
@@ -80,7 +80,7 @@ export LandModel
 include("models/land_model.jl")
 
 # simulation types
-export Simulation
+export Simulation, initialize
 include("simulation.jl")
 
 end # module DeltaLand
