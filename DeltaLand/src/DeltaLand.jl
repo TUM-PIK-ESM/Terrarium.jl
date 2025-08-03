@@ -36,10 +36,10 @@ export PrognosticVariable, AuxiliaryVariable
 include("abstract_variables.jl")
 
 # grids
-export UniformSpacing, ExponentialSpacing, ManualSpacing
+export UniformSpacing, ExponentialSpacing, PrescribedSpacing
 include("grids/vertical_discretization.jl")
 
-export ColumnGrid, GlobalRingGrid
+export ColumnGrid, GlobalRingGrid, get_field_grid
 include("grids/grids.jl")
 
 # timestepping

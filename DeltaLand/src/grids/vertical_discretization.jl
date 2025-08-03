@@ -1,4 +1,4 @@
-abstract type AbstractVerticalSpacing end
+abstract type AbstractVerticalSpacing{NF} end
 
 """
     $SIGNATURES
@@ -14,33 +14,42 @@ Return a `Vector` of vertical layer thicknesses according to the given discretiz
 """
 get_spacing(spacing::AbstractVerticalSpacing) = spacing.(1:get_npoints(spacing))
 
-Base.@kwdef struct UniformSpacing{NF} <: AbstractVerticalSpacing
+Base.@kwdef struct UniformSpacing{NF} <: AbstractVerticalSpacing{NF}
     Δz::NF = 0.5
     N::Int = 100
 end
 
 (spacing::UniformSpacing)(i::Int) = spacing.Δz
 
-Base.@kwdef struct ExponentialSpacing{NF} <: AbstractVerticalSpacing
+Base.@kwdef struct ExponentialSpacing{NF,ST<:Union{Nothing,Integer}} <: AbstractVerticalSpacing{NF}
     Δz_min::NF = 0.1
     Δz_max::NF = 500.0
-    sig::Int = 3
+    sig::ST = 3
     N::Int = 100
+
+    function ExponentialSpacing(Δz_min::NF, Δz_max::NF, sig, N) where {NF}
+        @assert N > 1 "number of grid points for exponential spacing must be > 1"
+        return new{NF,typeof(sig)}(Δz_min, Δz_max, sig, N)
+    end
 end
 
 function (spacing::ExponentialSpacing)(i::Int)
     @assert 0 < i <= get_npoints(spacing) "index $i out of range"
-    Δz₀ = log2(spacing.Δz_min)
-    Δzₙ = log2(spacing.Δz_max)
-    Δzᵢ = Δz₀ + (Δzₙ - Δz₀) / get_npoints(spacing)*i
-    return round(exp2(Δzᵢ); sigdigits=spacing.sig)
+    logΔz₀ = log2(spacing.Δz_min)
+    logΔzₙ = log2(spacing.Δz_max)
+    logΔzᵢ = logΔz₀ + (i-1)*(logΔzₙ - logΔz₀) / (get_npoints(spacing)-1)
+    if isnothing(spacing.sig)
+        return exp2(logΔzᵢ)
+    else
+        return round(exp2(logΔzᵢ); sigdigits=spacing.sig)
+    end
 end
 
-struct ManualSpacing{NF} <: AbstractVerticalSpacing
+@kwdef struct PrescribedSpacing{NF} <: AbstractVerticalSpacing{NF}
     Δz::Vector{NF}
 end
 
-(spacing::ManualSpacing)(i::Int) = spacing.Δz[i]
+(spacing::PrescribedSpacing)(i::Int) = spacing.Δz[i]
 
-get_npoints(spacing::ManualSpacing) = length(spacing.Δz)
+get_npoints(spacing::PrescribedSpacing) = length(spacing.Δz)
 

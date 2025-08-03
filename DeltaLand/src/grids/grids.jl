@@ -33,8 +33,11 @@ struct ColumnGrid{NF,RectGrid<:Grids.RectilinearGrid} <: AbstractLandGrid{NF}
         z_thick = get_spacing(vert)
         z_coords = vcat(-reverse(cumsum(z_thick)), zero(eltype(z_thick)))
         grid = Grids.RectilinearGrid(arch, size=(num_columns, Nz), x=(0, 1), z=z_coords, topology=(Periodic, Flat, Bounded))
-        return new{eltype(grid),typeof(grid)}(rings, grid)
+        return new{NF,typeof(grid)}(grid)
     end
+    # Default constructors
+    ColumnGrid(vert::AbstractVerticalSpacing{NF}, num_columns::Int=1) where {NF} = ColumnGrid(CPU(), NF, vert, num_columns)
+    ColumnGrid(arch::AbstractArchitecture, vert::AbstractVerticalSpacing{NF}, num_columns::Int=1) where {NF} = ColumnGrid(arch, NF, vert, num_columns)
 end
 
 """
@@ -52,13 +55,13 @@ Convenience wrapper around `ColumnGrid` that defines the columns as points on a 
 struct GlobalRingGrid{
     NF,
     RingGrid<:RingGrids.AbstractGrid,
-    ColGrid<:Oceananigans.AbstractGrid,
+    RectGrid<:Oceananigans.AbstractGrid,
 } <: AbstractLandGrid{NF}
     "RingGrid specfying the lateral spatial discretization of the globe."
     rings::RingGrid
 
     "Underlying grid type for all independent vertical columns."
-    columns::ColGrid
+    grid::RectGrid
     
     GlobalRingGrid(vert::AbstractVerticalSpacing, rings::RingGrids.AbstractGrid) = GlobalRingGrid(CPU(), Float32, vert, rings)
 
@@ -83,7 +86,7 @@ struct GlobalRingGrid{
     end
 end
 
-get_field_grid(grid::GlobalRingGrid) = grid.columns.grid
+get_field_grid(grid::GlobalRingGrid) = grid.grid
 
 # Convenience dispatch for Oceananigans.launch!
 function launch!(grid::AbstractLandGrid, args...; kwargs...)

@@ -5,6 +5,8 @@ include("physical_constants.jl")
 
 # Soil
 
+include("soil/abstract_types.jl")
+
 export SoilThermalConductivities, SoilHeatCapacities, SoilThermalProperties, InverseQuadratic
 include("soil/soil_thermal_properties.jl")
 
@@ -24,6 +26,8 @@ export ConstantSoilCarbonDenisty
 include("soil/soil_biogeochemistry.jl")
 
 # Vegetation
+
+include("vegetation/abstract_types.jl")
 
 include("vegetation/photosynthesis.jl")
 
