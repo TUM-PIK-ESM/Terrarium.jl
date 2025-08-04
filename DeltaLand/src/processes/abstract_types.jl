@@ -9,7 +9,7 @@ abstract type AbstractLandProcess end
 """
     $SIGNATURES
 """
-update_state!(idx, state, model::AbstractModel, process::AbstractLandProcess, args...) = nothing
+compute_auxiliary!(idx, state, model::AbstractModel, process::AbstractLandProcess, args...) = nothing
 
 """
     $SIGNATURES

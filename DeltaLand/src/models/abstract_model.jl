@@ -18,17 +18,19 @@ function variables end
 
 """
     initialize!(state, model::AbstractModel)
+    initialize!(state, model::AbstractModel, initializer::AbstractInitializer)
 
-Fully (re-)initialize all state variables for the given `model`.
+Calls `initialize!` on the `model` and its corresponding `initializer`. This method only needs to be
+implemented if initialization routines are necessary in addition to direct field/variable initializers.
 """
 function initialize! end
 
 """
-    update_state!(state, model::AbstractModel)
+    compute_auxiliary!(state, model::AbstractModel)
 
-Fully updates the state of `model` based on the current values of all prognostic variables in `state`.
+Computes updates to all auxiliary variables based on the current prognostic state of the `model`.
 """
-function update_state! end
+function compute_auxiliary! end
 
 """
     compute_tendencies!(state, model::AbstractModel)
@@ -36,13 +38,6 @@ function update_state! end
 Computes tendencies for all prognostic state variables for `model` stored in the given `state`.
 """
 function compute_tendencies! end
-
-"""
-    timestep!(state, model::AbstractModel, timestepper::AbstractTimeStepper, [dt = nothing])
-
-Advance the model state by one time step, or by `dt` units of time.
-"""
-function timestep! end
 
 # Default getter methods for standard `AbstractModel` fields.
 
@@ -75,9 +70,6 @@ get_boundary_conditions(model::AbstractModel) = model.boundary_conditions
 Returns the time stepping scheme associated with this `model`.
 """
 get_initializer(model::AbstractModel) = model.initializer
-
-# Default implementation of `initialize!` which simply calls `update_state!`.
-initialize!(state, model::AbstractModel) = update_state!(state, model)
 
 # TODO: define general method interfaces (as needed) for all model types
 

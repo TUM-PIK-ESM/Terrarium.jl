@@ -40,10 +40,10 @@ Multiple PFTs can be later handled with a `TiledVegetationModel` type that compo
     vegetation_dynamics::VegetationDynamics # prognostic
 
     "Boundary conditions"
-    boundary_conditions::BoundaryConditions = NamedBoundaryConditions()
+    boundary_conditions::BoundaryConditions = FieldBoundaryConditions()
 
     "State variable initializer"
-    initializer::Initializer = FieldInitializer()
+    initializer::Initializer = FieldInitializers()
 
     "Timestepping type"
     time_stepping::TimeStepper = ForwardEuler()
@@ -58,7 +58,7 @@ variables(model::VegetationModel) = (
     variables(model.vegetation_dynamics)...,
 )
 
-function update_state!(state, model::VegetationModel)
+function compute_auxiliary!(state, model::VegetationModel)
 
 end
 

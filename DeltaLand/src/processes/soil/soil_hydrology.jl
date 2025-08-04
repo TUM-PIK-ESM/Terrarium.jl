@@ -16,20 +16,18 @@ struct NoFlow <: AbstractSoilWaterFluxes end
     freezecurve::FC = FreezeCurves.FreeWater()
 end
 
-variables(::SoilHydrology{NoFlow}) = (
-    auxiliary(:pore_water_ice_saturation, XYZ()),
-)
+get_hydraulic_properties(hydrology::SoilHydrology) = hydrology.hydraulic_properties
 
 # TODO: This method interface assumes a single freeze curve for the whole stratigraphy;
 # we should ideally relax this assumption for multi-layer stratigraphies, although
 # this probably only matters in permafrost environments.
-freezecurve(hydrology::SoilHydrology) = hydrology.freezecurve
+get_freezecurve(hydrology::SoilHydrology) = hydrology.freezecurve
 
-pore_water_ice_saturation(hydrology::SoilHydrology) = hydrology.saturation
+variables(::SoilHydrology{NoFlow}) = (
+    auxiliary(:pore_water_ice_saturation, XYZ()),
+)
 
-@inline pore_water_ice_saturation(idx, state, model, hydrology::SoilHydrology) = pore_water_ice_saturation(hydrology)
-
-@inline function porosity(idx, state, model, hydrology::SoilHydrology)
+@inline function porosity(idx, state, model::AbstractSoilModel, hydrology::SoilHydrology)
     bgc = get_biogeochemistry(model)
     strat = get_stratigraphy(model)
     org = organic_fraction(idx, state, model, bgc)
@@ -39,11 +37,6 @@ pore_water_ice_saturation(hydrology::SoilHydrology) = hydrology.saturation
     return (1 - org)*mineral_porosity(hydrology, texture) + org*organic_porosity(bgc)
 end
 
-@inline function update_state!(idx, state, model::AbstractSoilModel, hydrology::SoilHydrology)
-    i, j, k = idx
-    hydrology = get_hydrology(model)
-    # set saturation level of pore water/ice to value specified by stratigraphy
-    state.pore_water_ice_saturation[i, j, k] = pore_water_ice_saturation(idx, state, model, hydrology)
-end
+@inline compute_auxiliary!(idx, state, model::AbstractSoilModel, hydrology::SoilHydrology) = nothing
 
 @inline compute_tendencies!(idx, state, model, strat::SoilHydrology{NoFlow}) = nothing

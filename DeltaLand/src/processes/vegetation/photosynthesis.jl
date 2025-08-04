@@ -6,7 +6,7 @@ variables(photo::PhotosynthesisFarquhar) = (
     auxiliary(:GPP, XY()),
 )
 
-function update_state!(idx, state, model, photo::PhotosynthesisFarquhar)
+function compute_auxiliary!(idx, state, model, photo::PhotosynthesisFarquhar)
     i, j, k = idx
 
     # Add photosynthesis impl here

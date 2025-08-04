@@ -47,7 +47,7 @@ export timestep!, get_dt, is_adaptive
 include("timesteppers/abstract_timestepper.jl")
 
 # model interface
-export get_grid, get_time_stepping, get_boundary_conditions, variables, update_state!, compute_tendencies!
+export get_grid, get_time_stepping, get_boundary_conditions, variables, compute_auxiliary!, compute_tendencies!
 include("models/abstract_model.jl")
 
 # timestepper implementations
@@ -59,7 +59,7 @@ export FieldBoundaryConditions, PrescribedFluxes
 include("models/boundary_conditions.jl")
 
 # default initializers
-export FieldInitializer
+export FieldInitializers
 include("models/initializers.jl")
 
 # state variables

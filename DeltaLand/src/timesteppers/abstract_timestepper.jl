@@ -17,8 +17,8 @@ Returns `true` if the given time stepper is adaptive, false otherwise.
 function is_adaptive end
 
 """
-    timestep!(state, model::AbstractModel, timestepper::AbstractTimeStepper, dt)
+    timestep!(state, model::AbstractModel, timestepper::AbstractTimeStepper, [dt = nothing])
 
-Implements `timestep!` generically for any given `model` and `dt`.
+Advance the model state by one time step, or by `dt` units of time.
 """
 function timestep! end

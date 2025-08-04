@@ -34,8 +34,8 @@ end
     return sum(fastmap(*, heatcaps, fracs))
 end
 
-@inline function update_state!(idx, state, model, energy::SoilEnergyBalance)
-    enthalpyinv(idx, state, model, freezecurve(model))
+@inline function compute_auxiliary!(idx, state, model, energy::SoilEnergyBalance)
+    enthalpy(idx, state, model, freezecurve(model))
 end
 
 @inline function compute_tendencies!(idx, state, model, energy::SoilEnergyBalance)
@@ -87,26 +87,32 @@ struct TemperatureEnergyClosure <: AbstractClosureRelation end
 
 varname(::TemperatureEnergyClosure) = :internal_energy
 
-@inline function temperature_to_energy(idx, state, model ::FreezeCurves.FreeWater)
+closure!(idx, state, model::AbstractSoilModel, ::TemperatureEnergyClosure) = temperature_to_energy!(idx, state, model, get_freezecurve(get_soil_hydrology(model)))
+
+invclosure!(idx, state, model::AbstractSoilModel, ::TemperatureEnergyClosure) = energy_to_temperature!(idx, state, model, get_freezecurve(get_soil_hydrology(model)))
+
+@inline function temperature_to_energy!(idx, state, model ::FreezeCurves.FreeWater)
     i, j, k = idx
     constants = get_constants(model)
     T = state.temperature[i, j, k] # assumed given
-    C = heatcapacity(idx, state, model, get_energy_balance(model))
+    C = heatcapacity(idx, state, model, get_soil_energy_balance(model))
     L = constants.ρw*constants.Lsl
     por = porosity(idx, state, model, get_stratigraphy(model))
     sat = state.pore_water_ice_saturation[i, j, k]
     θwi = sat*por
-    Lθ = L*θwi
     # calculate unfrozen water content
     liquid_water_frac, _ = FreezeCurves.freewater(H, one(θwi), L)
     state.liquid_water_fraction[i, j, k] = liquid_water_frac
+    # compute energy from temperature, heat capacity, and ice fraction
+    U = state.energy[i, j, k] = T*C - L*θwi*(1 - liquid_water_frac)
+    return U
 end
 
-@inline function energy_to_temperature(idx, state, model, ::FreezeCurves.FreeWater)
+@inline function energy_to_temperature!(idx, state, model, ::FreezeCurves.FreeWater)
     i, j, k = idx
     constants = get_constants(model)
     U = state.internal_energy[i, j, k] # assumed given
-    C = heatcapacity(idx, state, model, get_energy_balance(model))
+    C = heatcapacity(idx, state, model, get_soil_energy_balance(model))
     L = constants.ρw*constants.Lsl
     por = porosity(idx, state, model, get_stratigraphy(model))
     sat = state.pore_water_ice_saturation[i, j, k]
@@ -116,7 +122,7 @@ end
     liquid_water_frac, _ = FreezeCurves.freewater(H, one(θwi), L)
     state.liquid_water_fraction[i, j, k] = liquid_water_frac
     # calculate temperature from internal energy and liquid water fraction
-    T = ifelse(
+    T = state.temperature[i, j, k] = ifelse(
         U < -Lθ,
         # Case 1: U < 0 → frozen
         (U - Lθ) / C,

@@ -29,6 +29,6 @@ organic_fraction(bgc::ConstantSoilCarbonDenisty) = bgc.ρ_soc / ((1 - bgc.por_or
 
 @inline organic_fraction(idx, state, model, bgc::ConstantSoilCarbonDenisty) = organic_fraction(bgc)
 
-@inline update_state!(idx, state, model, bgc::ConstantSoilCarbonDenisty) = nothing
+@inline compute_auxiliary!(idx, state, model, bgc::ConstantSoilCarbonDenisty) = nothing
 
 @inline compute_tendencies!(idx, state, model, bgc::ConstantSoilCarbonDenisty) = nothing

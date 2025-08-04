@@ -22,14 +22,14 @@ function StateVariables(
     # filter out variables from tuple by type
     prognostic = merge_duplicates(filter(var -> isa(var, PrognosticVariable), vars))
     auxiliary = merge_duplicates(filter(var -> isa(var, AuxiliaryVariable), vars))
-    namespaces = filter(var -> isa(var, Pair{Symbol}), vars)
+    namespaces = filter(var -> isa(var, Namespace), vars)
     # get tendencies from prognostic variables
     tendencies = map(var -> var.tendency, prognostic)
     # create closure variables and add to auxiliary variables
-    closurevars = map(var -> AuxiliaryVariable(varname(var.closure), vardims(var)), prognostic)
+    closurevars = map(var -> AuxiliaryVariable(varname(var.closure), vardims(var)), filter(hasclosure, prognostic))
     auxiliary_ext = tuplejoin(auxiliary, closurevars)
     # merge all variable names
-    varnames = tuplejoin(map(varname, prognostic), map(varname, auxiliary_ext), map(first, namespaces))
+    varnames = tuplejoin(map(varname, prognostic), map(varname, auxiliary_ext), map(varname, namespaces))
     @assert merge_duplicates(varnames) == varnames "all state variable names within one namespace must be unique! found duplicates in $(varnames)"
     # get progvar => closure pairs
     closures = map(var -> varname(var) => var.closure, filter(hasclosure, prognostic))
@@ -42,7 +42,7 @@ function StateVariables(
     tendency_fields = map(var -> varname(var) => create_field(var, init, bcs, grid), tendencies)
     auxiliary_fields = map(var -> varname(var) => create_field(var, init, bcs, grid), auxiliary_ext)
     # recursively initialize state variables for namespaces
-    namespace_states = map(kv -> first(kv) => StateVariables(getproperty(model, first(kv)), clock, last(kv)...), namespaces)
+    namespace_states = map(ns -> varname(ns) => StateVariables(getproperty(model, varname(ns)), clock), namespaces)
     return StateVariables(
         prognostic=(; prognostic_fields...),
         tendencies=(; tendency_fields...),

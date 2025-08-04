@@ -31,9 +31,9 @@
     boundary_conditions::BoundaryConditions = PrescribedFluxes()
 
     "State variable initializer"
-    initializer::Initializer = FieldInitializer()
+    initializer::Initializer = FieldInitializers()
 
-    "Timestepping type"
+    "Timestepping scheme"
     time_stepping::TimeStepper = ForwardEuler()
 end
 
@@ -41,17 +41,13 @@ end
 
 get_stratigraphy(model::SoilModel) = model.strat
 
-get_energy_balance(model::SoilModel) = model.energy
+get_soil_energy_balance(model::SoilModel) = model.energy
 
-get_hydrology(model::SoilModel) = model.hydrology
+get_soil_hydrology(model::SoilModel) = model.hydrology
 
 get_biogeochemistry(model::SoilModel) = model.biogeochem
 
 get_constants(model::SoilModel) = model.constants
-
-# Forwarded methods
-
-freezecurve(model::SoilModel) = freezecurve(model.strat)
 
 # Model interface methods
 
@@ -65,10 +61,11 @@ function variables(model::SoilModel)
 end
 
 function initialize!(state, model::SoilModel)
-    # TODO
+    initialize!(state, model, get_initializer(model))
+    return nothing
 end
 
-function update_state!(state, model::SoilModel)
+function compute_auxiliary!(state, model::SoilModel)
     grid = get_grid(model)
     launch!(grid, _update_state_soil_kernel, state, model)
     return nothing
@@ -82,7 +79,7 @@ function compute_tendencies!(state, model::SoilModel)
 end
 
 function timestep!(state, model::SoilModel, euler::ForwardEuler, dt=get_dt(euler))
-    update_state!(state, model)
+    compute_auxiliary!(state, model)
     compute_tendencies!(state, model)
     # just timestep energy state for now;
     # ideally, the timestepper should do this automatically for all variables
@@ -92,10 +89,10 @@ end
 
 @kernel function _update_state_soil_kernel(state, model::SoilModel)
     idx = @index(Global, NTuple)
-    update_state!(idx, state, model, model.strat)
-    update_state!(idx, state, model, model.hydrology)
-    update_state!(idx, state, model, model.energy)
-    update_state!(idx, state, model, model.biogeochem)
+    compute_auxiliary!(idx, state, model, model.strat)
+    compute_auxiliary!(idx, state, model, model.hydrology)
+    compute_auxiliary!(idx, state, model, model.energy)
+    compute_auxiliary!(idx, state, model, model.biogeochem)
 end
 
 @kernel function _compute_tendencies_soil_kernel(state, model::SoilModel)
@@ -108,7 +105,7 @@ end
 
 @inline function soil_characteristic_fractions(idx, state, model)
     sat = state.pore_water_ice_saturation[idx...]
-    por = porosity(idx, state, model, get_stratigraphy(model))
+    por = porosity(idx, state, model, get_soil_hydrology(model))
     ## there is some slight redundant computation here; consider merging into one method?
     org = organic_fraction(idx, state, model, get_biogeochemistry(model))
     return (; sat, por, org)
@@ -128,3 +125,5 @@ end
     organic = (1-por)*org
     return (; water, ice, air, mineral, organic)
 end
+
+
