@@ -18,7 +18,7 @@ import Oceananigans.TimeSteppers: Clock, tick_time!, reset!
 import Oceananigans.Utils: launch!
 
 # Adapt and KernelAbstractions for GPU parallelization
-import Adapt
+import Adapt: Adapt, adapt
 import KernelAbstractions: @kernel, @index
 
 # Freeze curves for soil energy balance
@@ -30,8 +30,9 @@ import SpeedyWeather: RingGrids
 # temporary dependency on CryoGrid for soil types and SEB
 import CryoGrid: SoilTexture, SurfaceEnergyBalance
 
-# Re-export important Oceananigans types
+# Re-export important types and methods
 export CPU, GPU, Clock
+export adapt
 
 # internal utilities
 include("utils.jl")

@@ -38,10 +38,6 @@
     time_stepping::TimeStepper = ForwardEuler()
 end
 
-function Adapt.adapt_structure(to, model::SoilModel)
-    return setproperties(model, map(prop -> Adapt.adapt_structure(to, prop), getproperties(model)))
-end
-
 # SoilModel getter methods
 
 get_stratigraphy(model::SoilModel) = model.strat

@@ -40,6 +40,12 @@ struct ColumnGrid{NF,RectGrid<:Grids.RectilinearGrid} <: AbstractLandGrid{NF}
     # Default constructors
     ColumnGrid(vert::AbstractVerticalSpacing{NF}, num_columns::Int=1) where {NF} = ColumnGrid(CPU(), NF, vert, num_columns)
     ColumnGrid(arch::AbstractArchitecture, vert::AbstractVerticalSpacing{NF}, num_columns::Int=1) where {NF} = ColumnGrid(arch, NF, vert, num_columns)
+    ColumnGrid(grid::Grids.RectilinearGrid{NF}) where {NF} = new{NF, typeof(grid)}(grid)
+end
+
+function Adapt.adapt_structure(to, grid::ColumnGrid)
+    inner_grid = Adapt.adapt_structure(to, grid.grid)
+    return ColumnGrid(inner_grid)
 end
 
 """
