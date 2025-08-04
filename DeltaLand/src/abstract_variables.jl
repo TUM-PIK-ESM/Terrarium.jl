@@ -57,6 +57,12 @@ Retrieves the grid dimensions on which this variable is defined.
 """
 vardims(var::AbstractVariable) = var.dims
 
+"""
+    AuxiliaryVariable{VD<:VarDims} <: AbstractVariable
+
+Represents an auxiliary (sometimes called "diagnostic") variable with the given `name`
+and `dims` on the spatial grid.
+"""
 struct AuxiliaryVariable{VD<:VarDims} <: AbstractVariable
     "Name of the auxiliary variable"
     name::Symbol
@@ -86,6 +92,17 @@ end
 hasclosure(var::PrognosticVariable) = !isnothing(var.closure)
 
 """
+    Namespace <: AbstractVariable
+
+Represents a new variable namespace, typically from a subcomponent of the model.
+It is (currently) assumed that tha name of the namesapce corresponds to a property
+defined on the model type.
+"""
+struct Namespace <: AbstractVariable
+    name::Symbol
+end
+
+"""
     $SIGNATURES
 
 Convenience constructor method for `PrognosticVariable`.
@@ -113,3 +130,10 @@ prognostic(name::Symbol, dims::VarDims, closure::AbstractClosureRelation) =
 Convenience constructor method for `AuxiliaryVariable`.
 """
 auxiliary(name::Symbol, dims::VarDims) = AuxiliaryVariable(name, dims)
+
+"""
+    $SIGNATURES
+
+Convenience constructor method for `Namespace` provided only for consistency.
+"""
+namespace(name::Symbol) = Namespace(name)
