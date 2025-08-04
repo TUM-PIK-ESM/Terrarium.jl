@@ -16,7 +16,7 @@ by the timestepping scheme.
 @kwdef struct StateVariables{
     prognames, tendnames, auxnames, subnames, closurenames,
     ProgVars, TendVars, AuxVars, SubVars, Closures,
-    ClockType <: Clock,
+    ClockType,
 } <: AbstractStateVariables
     prognostic::NamedTuple{prognames, ProgVars} = (;)
     tendencies::NamedTuple{tendnames, TendVars} = (;)
@@ -62,6 +62,18 @@ function StateVariables(
         namespaces=(; namespace_states...),
         closures=(; closures...),
         clock=clock,
+    )
+end
+
+# adapt_structure dispatch for GPU compat
+function Adapt.adapt_structure(to, sv::StateVariables)
+    return StateVariables(
+        Adapt.adapt_structure(to, sv.prognostic),
+        Adapt.adapt_structure(to, sv.tendencies),
+        Adapt.adapt_structure(to, sv.auxiliary),
+        Adapt.adapt_structure(to, sv.namespaces),
+        Adapt.adapt_structure(to, sv.closures),
+        Adapt.adapt_structure(to, sv.clock),
     )
 end
 

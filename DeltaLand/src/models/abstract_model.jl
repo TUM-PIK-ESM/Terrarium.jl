@@ -121,3 +121,7 @@ abstract type AbstractHydrologyModel <: AbstractModel end
 Base type for full land models which couple together multiple component models.
 """
 abstract type AbstractLandModel <: AbstractModel end
+
+function Adapt.adapt_structure(to, model::AbstractModel)
+    return setproperties(model, map(prop -> Adapt.adapt_structure(to, prop), getproperties(model)))
+end

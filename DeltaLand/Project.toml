@@ -4,6 +4,7 @@ authors = ["Brian Groenke <brian.groenke@pik-potsdam.de>"]
 version = "0.1.0"
 
 [deps]
+Adapt = "79e6a3ab-5dfb-504d-930d-738a2a938a0e"
 ComponentArrays = "b0b7db55-cfe3-40fc-9ded-d10e2dbeff66"
 ConstructionBase = "187b0558-2788-49d3-abe0-74a17ed4e7c9"
 CryoGrid = "a535b82e-5f3d-4d97-8b0b-d6483f5bebd5"

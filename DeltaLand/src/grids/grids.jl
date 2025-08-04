@@ -66,6 +66,7 @@ struct GlobalRingGrid{
     grid::RectGrid
     
     GlobalRingGrid(vert::AbstractVerticalSpacing, rings::RingGrids.AbstractGrid) = GlobalRingGrid(CPU(), Float32, vert, rings)
+    GlobalRingGrid(arch::AbstractArchitecture, vert::AbstractVerticalSpacing, rings::RingGrids.AbstractGrid) = GlobalRingGrid(arch, Float32, vert, rings)
 
     """
         $SIGNATURES

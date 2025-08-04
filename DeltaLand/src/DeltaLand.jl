@@ -2,7 +2,7 @@ module DeltaLand
 
 using DocStringExtensions
 
-import ConstructionBase: getproperties
+import ConstructionBase: getproperties, setproperties
 
 import DataStructures: OrderedDict
 
@@ -10,14 +10,15 @@ import DataStructures: OrderedDict
 # TODO: Raise an issue on Oceananigans.jl about refactoring numerics
 # into a separate package.
 import Oceananigans: Field, Center, Face, set!
-import Oceananigans.Architectures: AbstractArchitecture, CPU
+import Oceananigans.Architectures: AbstractArchitecture, CPU, GPU
 import Oceananigans.BoundaryConditions: fill_halo_regions!
 import Oceananigans.Grids: Grids, Periodic, Flat, Bounded
 import Oceananigans.Operators: ∂zᵃᵃᶜ, ∂zᵃᵃᶠ, Δzᵃᵃᶜ
 import Oceananigans.TimeSteppers: Clock, tick_time!, reset!
 import Oceananigans.Utils: launch!
 
-# KernelAbstractions for GPU parallelization
+# Adapt and KernelAbstractions for GPU parallelization
+import Adapt
 import KernelAbstractions: @kernel, @index
 
 # Freeze curves for soil energy balance
@@ -28,6 +29,9 @@ import SpeedyWeather: RingGrids
 
 # temporary dependency on CryoGrid for soil types and SEB
 import CryoGrid: SoilTexture, SurfaceEnergyBalance
+
+# Re-export important Oceananigans types
+export CPU, GPU, Clock
 
 # internal utilities
 include("utils.jl")

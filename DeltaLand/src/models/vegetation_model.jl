@@ -45,7 +45,7 @@ Multiple PFTs can be later handled with a `TiledVegetationModel` type that compo
     "State variable initializer"
     initializer::Initializer = FieldInitializers()
 
-    "Timestepping type"
+    "Timestepping scheme"
     time_stepping::TimeStepper = ForwardEuler()
 end
 
