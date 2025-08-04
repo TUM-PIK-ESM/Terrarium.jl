@@ -35,7 +35,8 @@ end
 end
 
 @inline function compute_auxiliary!(idx, state, model, energy::SoilEnergyBalance)
-    enthalpy(idx, state, model, freezecurve(model))
+    # currently nothing to do here
+    return nothing
 end
 
 @inline function compute_tendencies!(idx, state, model, energy::SoilEnergyBalance)
@@ -87,24 +88,51 @@ struct TemperatureEnergyClosure <: AbstractClosureRelation end
 
 varname(::TemperatureEnergyClosure) = :internal_energy
 
-closure!(idx, state, model::AbstractSoilModel, ::TemperatureEnergyClosure) = temperature_to_energy!(idx, state, model, get_freezecurve(get_soil_hydrology(model)))
+function closure!(state, model::AbstractSoilModel, closure::TemperatureEnergyClosure)
+    grid = get_field_grid(get_grid(model))
+    launch!(grid, _closure_kernel, state, model, closure)
+    return nothing
+end
 
-invclosure!(idx, state, model::AbstractSoilModel, ::TemperatureEnergyClosure) = energy_to_temperature!(idx, state, model, get_freezecurve(get_soil_hydrology(model)))
+function invclosure!(state, model::AbstractSoilModel, ::TemperatureEnergyClosure)
+    grid = get_grid(model)
+    launch!(grid, _invclosure_kernel, state, model, closure)
+    return nothing
+end
 
-@inline function temperature_to_energy!(idx, state, model ::FreezeCurves.FreeWater)
+@kernel function _closure_kernel(state, model::AbstractSoilModel, ::TemperatureEnergyClosure)
+    idx = @index(Global, NTuple)
+    temperature_to_energy!(idx, state, model, get_freezecurve(get_soil_hydrology(model)))
+end
+
+@kernel function _invclosure_kernel(state, model, ::TemperatureEnergyClosure)
+    idx = @index(Global, NTuple)
+    energy_to_temperature!(idx, state, model, get_freezecurve(get_soil_hydrology(model)))
+end
+
+@inline function temperature_to_energy!(idx, state, model, ::FreezeCurves.FreeWater)
     i, j, k = idx
     constants = get_constants(model)
     T = state.temperature[i, j, k] # assumed given
     C = heatcapacity(idx, state, model, get_soil_energy_balance(model))
     L = constants.ρw*constants.Lsl
-    por = porosity(idx, state, model, get_stratigraphy(model))
+    por = porosity(idx, state, model, get_soil_hydrology(model))
     sat = state.pore_water_ice_saturation[i, j, k]
     θwi = sat*por
-    # calculate unfrozen water content
-    liquid_water_frac, _ = FreezeCurves.freewater(H, one(θwi), L)
+    Lθ = L*θwi
+    # calculate unfrozen water content from temperature
+    # N.B. For the free water freeze curve, the mapping from temperature to unfrozen water content
+    # within the phase change region is indeterminate since it is assumed that T = 0. As such, we
+    # have to assume here that the liquid water fraction is zero if T <= 0. This method shold therefore
+    # only be used for initialization and should **not** be involved in the calculation of tendencies.
+    liquid_water_frac = ifelse(
+        T > zero(T),
+        θwi,
+        zero(θwi),
+    )
     state.liquid_water_fraction[i, j, k] = liquid_water_frac
     # compute energy from temperature, heat capacity, and ice fraction
-    U = state.energy[i, j, k] = T*C - L*θwi*(1 - liquid_water_frac)
+    U = state.internal_energy[i, j, k] = T*C - L*θwi*(1 - liquid_water_frac)
     return U
 end
 
@@ -114,12 +142,12 @@ end
     U = state.internal_energy[i, j, k] # assumed given
     C = heatcapacity(idx, state, model, get_soil_energy_balance(model))
     L = constants.ρw*constants.Lsl
-    por = porosity(idx, state, model, get_stratigraphy(model))
+    por = porosity(idx, state, model, get_soil_hydrology(model))
     sat = state.pore_water_ice_saturation[i, j, k]
     θwi = sat*por
     Lθ = L*θwi
     # calculate unfrozen water content
-    liquid_water_frac, _ = FreezeCurves.freewater(H, one(θwi), L)
+    liquid_water_frac, _ = FreezeCurves.freewater(U, one(θwi), L)
     state.liquid_water_fraction[i, j, k] = liquid_water_frac
     # calculate temperature from internal energy and liquid water fraction
     T = state.temperature[i, j, k] = ifelse(

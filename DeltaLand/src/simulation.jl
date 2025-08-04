@@ -13,20 +13,27 @@ end
 
 function initialize(model::AbstractModel; clock::Clock=Clock(time=0.0))
     state = StateVariables(model, clock)
-    return Simulation(model, state)
+    sim = Simulation(model, state)
+    initialize!(sim)
+    return sim
 end
 
 function initialize!(sim::Simulation)
     # TODO: reset other variables too?
     reset_tendencies!(sim.state)
     initialize!(sim.state, sim.model)
-    reset!(sim.clock)
+    reset!(sim.state.clock)
+    return sim
 end
 
+"""
+    $SIGNATURES
+
+Advance the simulation forward by one timestep.
+"""
 timestep!(sim::Simulation) = timestep!(sim, get_dt(get_time_stepping(sim.model)))
 function timestep!(sim::Simulation, dt)
-    timestepper = get_time_stepping(sim.model)
     reset_tendencies!(sim.state)
-    timestep!(sim.state, sim.model, timestepper, dt)
-    tick_time!(sim.clock, dt)
+    timestep!(sim.state, sim.model, dt)
+    tick_time!(sim.state.clock, dt)
 end

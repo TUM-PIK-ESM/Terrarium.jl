@@ -9,9 +9,9 @@ abstract type AbstractLandProcess end
 """
     $SIGNATURES
 """
-compute_auxiliary!(idx, state, model::AbstractModel, process::AbstractLandProcess, args...) = nothing
+compute_auxiliary!(idx, state, model, process::AbstractLandProcess, args...) = nothing
 
 """
     $SIGNATURES
 """
-compute_tendencies!(idx, state, model::AbstractModel, process::AbstractLandProcess, args...) = nothing
+compute_tendencies!(idx, state, model, process::AbstractLandProcess, args...) = nothing

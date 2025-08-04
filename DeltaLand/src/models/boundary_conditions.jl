@@ -9,10 +9,7 @@ Retrieve the `Field` boundary conditions for the given variable. Defaults to ret
 """
 get_field_boundary_conditions(::AbstractBoundaryConditions, ::AbstractVariable) = nothing
 
-"""
-
-"""
-struct NoBoundaryConditions <: AbstractBoundaryConditions end
+struct PrescribedFluxes <: AbstractBoundaryConditions end
 
 @kwdef struct FieldBoundaryConditions{BCS<:NamedTuple} <: AbstractBoundaryConditions
     var_bcs::BCS = (;)

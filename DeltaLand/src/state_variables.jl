@@ -1,6 +1,18 @@
 abstract type AbstractStateVariables end
 
-# temporary solution for holding state variables
+"""
+    $TYPEDEF
+
+Container type for all `Field`s corresponding to state variables defined by a model.
+`StateVariables` partitions the fields into three categories: prognostic, tendencies, and
+auxiliary. Prognostic variables are those which characterize the state of the system and
+are assigned tendencies to be integrated by the timestepper. Auxiliary fields are additional
+state variables derived from the prognostic state variables but which are conditionally
+independent of their values at the previous time step given the current prognostic state.
+It is worth noting that tendencies are also treated internally as auxiliary variables;
+however, they are assigned their own category here since they need to be handled separately
+by the timestepping scheme.
+"""
 @kwdef struct StateVariables{
     prognames, tendnames, auxnames, subnames, closurenames,
     ProgVars, TendVars, AuxVars, SubVars, Closures,
@@ -83,8 +95,11 @@ function Base.getproperty(
 end
 
 function reset_tendencies!(state::StateVariables)
-    for var in getfield(state, :tendencies)
+    for var in state.tendencies
         set!(var, zero(eltype(var)))
+    end
+    for substate in state.namespaces
+        reset_tendencies!(substate)
     end
 end
 
@@ -120,9 +135,9 @@ function create_field(
         FT(get_field_grid(grid), args...; kwargs...)
     end
     # Apply initializer if defined
-    inits = get_field_initializer(init, var)
-    if !isnothing(inits)
-        Oceananigans.set!(field, inits[name])
+    field_init = get_field_initializer(init, var)
+    if !isnothing(field_init)
+        set!(field, field_init)
     end
     return field
 end

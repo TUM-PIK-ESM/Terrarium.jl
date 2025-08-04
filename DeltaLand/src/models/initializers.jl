@@ -26,7 +26,7 @@ struct FieldInitializers{VarInits<:NamedTuple} <: AbstractInitializer
 end
 
 """
-    FieldInitializers(vars::Pair{Symbol}...)
+    FieldInitializers(; vars...)
 
 Creates a `FieldInitializers` for the given variables. The first value of the pair is
 the name of the state variable while the second value should be a `Function` or callable
@@ -35,15 +35,15 @@ struct of the form `f(x,y,z)::Real` where `z` is the vertical coordinate, decrea
 Example:
 ```julia
 initializer = FieldInitializers(
-    :temperature => (x,y,z) -> 0.01*abs(z) + exp(z)*sin(2π*z)
+    temperature = (x,y,z) -> 0.01*abs(z) + exp(z)*sin(2π*z)
 )
 ```
 """
-FieldInitializers(vars::Pair{Symbol}...) = FieldInitializers((;vars...))
+FieldInitializers(; vars...) = FieldInitializers((; vars...))
 
 """
     $SIGNATURES
 
 Retrieves the initializer for the given variable `var` or returns `nothing` if not defined.
 """
-get_initializer(init::FieldInitializers, var::AbstractVariable) = get(init.vars, varname(var), nothing)
+get_field_initializer(init::FieldInitializers, var::AbstractVariable) = get(init.vars, varname(var), nothing)

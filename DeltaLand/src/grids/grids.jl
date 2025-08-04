@@ -3,6 +3,8 @@
 
 abstract type AbstractLandGrid{NF} end
 
+Base.eltype(::AbstractLandGrid{NF}) where {NF} = NF
+
 """
     ColumnGrid{NF,RectGrid<:Grids.RectilinearGrid} <: AbstractLandGrid
 
