@@ -27,9 +27,9 @@ jobs:
       - uses: julia-actions/cache@v2
       - uses: julia-actions/julia-buildpkg@v1
         with: 
-          path: ./DeltaLand
+          project: ./DeltaLand
       - uses: julia-actions/julia-runtest@v1
         with:
-          path: ./DeltaLand
+          project: ./DeltaLand
         env:
           GITHUB_AUTH: ${{ secrets.GITHUB_TOKEN }}
