@@ -10,7 +10,7 @@ import DataStructures: OrderedDict
 # TODO: Raise an issue on Oceananigans.jl about refactoring numerics
 # into a separate package.
 import Oceananigans: Field, Center, Face, set!
-import Oceananigans.Architectures: AbstractArchitecture, CPU, GPU
+import Oceananigans.Architectures: AbstractArchitecture, CPU, GPU, architecture, on_architecture
 import Oceananigans.BoundaryConditions: fill_halo_regions!
 import Oceananigans.Grids: Grids, Periodic, Flat, Bounded
 import Oceananigans.Operators: ∂zᵃᵃᶜ, ∂zᵃᵃᶠ, Δzᵃᵃᶜ
