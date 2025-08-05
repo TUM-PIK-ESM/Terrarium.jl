@@ -1,0 +1,16 @@
+@kwdef struct PhysicalConstants{NF}
+    "Density of water in kg/m^3"
+    ρw::NF = 1000.0
+
+    "Density of ice in kg/m^3"
+    ρi::NF = 916.2
+
+    "Sepcific latent heat of fusion of water in J/kg"
+    Lsl::NF = 3.34e5
+    
+    "Specific latent heat of vaporization of water in J/kg"
+    Lsg::NF = 2.257e6
+    
+    "Gravitational constant in m/s^2"
+    g::NF = 9.80665
+end
