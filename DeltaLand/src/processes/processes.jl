@@ -29,6 +29,20 @@ include("soil/soil_biogeochemistry.jl")
 
 include("vegetation/abstract_types.jl")
 
+export LUEPhotosynthesis
 include("vegetation/photosynthesis.jl")
 
+export MedlynStomatalConductance
+include("vegetation/stomatal_conductance.jl")
+
+export AutotrophicRespirationModel
+include("vegetation/autotrophic_respiration.jl")
+
+export PhenologyModel
+include("vegetation/phenology.jl")
+
+export PaladynCarbonDynamics
 include("vegetation/carbon_dynamics.jl")
+
+export PaladynVegetationDynamics
+include("vegetation/vegetation_dynamics.jl")

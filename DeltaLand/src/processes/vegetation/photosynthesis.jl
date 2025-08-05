@@ -1,15 +1,17 @@
-@kwdef struct PhotosynthesisFarquhar{NF} <: AbstractPhotosynthesis
-    # parameters here
+@kwdef struct LUEPhotosynthesis{NF} <: AbstractPhotosynthesis
+    # TODO add photosynthesis parameters 
 end
 
-variables(photo::PhotosynthesisFarquhar) = (
-    auxiliary(:GPP, XY()),
+variables(photo::LUEPhotosynthesis) = (
+    auxiliary(:GPP, XY()), # Gross Primary Production (GPP) kgC/m²/day
 )
 
-function compute_auxiliary!(idx, state, model, photo::PhotosynthesisFarquhar)
-    i, j, k = idx
+function compute_auxiliary!(idx, state, model, photo::LUEPhotosynthesis)
+    i, j = idx
 
-    # Add photosynthesis impl here
-
-    # state.GPP[i, j, k] = ...
+    # TODO add photosynthesis implementation
+    # Needs state.λc from stomatal conductance
+    
+    # For now, set GPP to a random value 
+    state.GPP[i, j] = 0.01*rand() 
 end
