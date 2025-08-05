@@ -37,3 +37,31 @@ function timestep!(sim::Simulation, dt)
     timestep!(sim.state, sim.model, dt)
     tick_time!(sim.state.clock, dt)
 end
+
+"""
+    $SIGNATURES
+
+Run the simulation by `steps` or a `period` with `dt` timestep size (in seconds or Dates.Period).
+"""
+function run!(sim::Simulation; 
+        steps::Union{Int, Nothing} = nothing,
+        period::Union{Period, Nothing} = nothing,
+        dt = get_dt(get_time_stepping(sim.model)))
+
+    dt = convert_dt(dt)
+    steps = get_steps(steps, period, dt)
+
+    for _ in 1:steps
+        timestep!(sim, dt)
+    end
+
+    return sim 
+end
+
+convert_dt(dt::Real) = dt
+convert_dt(dt::Period) = Second(dt).value
+
+get_steps(steps::Nothing, period::Period, dt::Real) = div(Second(period).value, dt)
+get_steps(steps::Int, period::Nothing, dt::Real) = steps
+get_steps(steps::Nothing, period::Nothing, dt::Real) = throw(ArgumentError("either `steps` or `period` must be specified"))
+get_steps(steps::Int, period::Period, dt::Real) = throw(ArgumentError("both `steps` and `period` cannot be specified"))

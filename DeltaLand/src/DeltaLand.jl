@@ -5,6 +5,7 @@ using DocStringExtensions
 import ConstructionBase: getproperties, setproperties
 
 import DataStructures: OrderedDict
+import Dates: Period, Second
 
 # Oceananigans numerics
 # TODO: Raise an issue on Oceananigans.jl about refactoring numerics
@@ -85,7 +86,7 @@ export LandModel
 include("models/land_model.jl")
 
 # simulation types
-export Simulation, initialize
+export Simulation, initialize, run!
 include("simulation.jl")
 
 end # module DeltaLand
