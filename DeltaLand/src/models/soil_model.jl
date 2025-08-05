@@ -117,7 +117,7 @@ end
 
 @inline function soil_volumetric_fractions(idx, state, model::SoilModel)
     # get characteristic fractions
-    sat, por, org = soil_characteristic_fractions(idx, state, model)
+    (; sat, por, org) = soil_characteristic_fractions(idx, state, model)
     # get fraction of unfrozen pore water
     liq = state.liquid_water_fraction[idx...]
     # calculate volumetric fractions
