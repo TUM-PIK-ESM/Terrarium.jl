@@ -12,15 +12,15 @@ variables(autoresp::PaladynAutotrophicRespiration) = (
     auxiliary(:NPP, XY()), # Net Primary Production (NPP) kgC/m²/day
 )
 
-@inline function compute_auxiliary!(idx, state, model::AbstractVegetationModel, autoresp::PaladynAutotrophicRespiration)
+@inline function compute_auxiliary!(idx, state, model::AbstractVegetationModel, autoresp::PaladynAutotrophicRespiration{NF}) where NF
     i, j = idx
 
     # Compute maintenance respiration Rm
     # Placeholder assuming a simple linear relationship with C_veg
-    Rm = 0.05 * state.C_veg[i, j] 
+    Rm = NF(0.05) * state.C_veg[i, j] 
 
     # Compute growth respiration Rg
-    Rg = 0.25 * (state.GPP[i, j] - Rm)
+    Rg = NF(0.25) * (state.GPP[i, j] - Rm)
 
     # Compute autotrophic respiration Ra
     state.Ra[i, j] = Rm + Rg

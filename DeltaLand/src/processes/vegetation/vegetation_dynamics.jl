@@ -17,7 +17,7 @@ variables(veg_dynamics::PaladynVegetationDynamics) = (
     return nothing
 end
 
-@inline function compute_tendencies!(idx, state, model::AbstractVegetationModel, veg_dynamics::PaladynVegetationDynamics)
+@inline function compute_tendencies!(idx, state, model::AbstractVegetationModel, veg_dynamics::PaladynVegetationDynamics{NF}) where NF
     i, j = idx
     
     # Compute λ_NPP
@@ -31,5 +31,5 @@ end
     # Compute the vegetation fraction tendency
     ν_star = max(state.ν[i, j], veg_dynamics.ν_seed) 
     state.ν_tendency[i, j] = (λ_NPP * state.NPP[i, j] / state.C_veg[i, j]) * 
-                             ν_star * (1.0 - state.ν[i, j]) - γv * ν_star
+                             ν_star * (NF(1.0) - state.ν[i, j]) - γv * ν_star
 end

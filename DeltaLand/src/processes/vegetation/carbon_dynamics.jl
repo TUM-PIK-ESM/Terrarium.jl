@@ -28,32 +28,32 @@ variables(vegcarbon_dynamics::PaladynCarbonDynamics) = (
     auxiliary(:NPP, XY()), # Net Primary Production (NPP) kgC/m²/day
 )
 
-@inline function compute_λ_NPP(idx, state, model::AbstractVegetationModel, vegcarbon_dynamics::PaladynCarbonDynamics)
+@inline function compute_λ_NPP(idx, state, model::AbstractVegetationModel, vegcarbon_dynamics::PaladynCarbonDynamics{NF}) where NF
     i, j = idx
 
     # Compute λ_NPP based on the balanced Leaf Area Index (LAI_b)
     LAI_b = state.LAI_b[i, j]
     if LAI_b < vegcarbon_dynamics.LAI_min
-        λ_NPP = 0.0
+        λ_NPP = NF(0.0)
     elseif LAI_b <= vegcarbon_dynamics.LAI_max
         λ_NPP = (LAI_b - vegcarbon_dynamics.LAI_min) /  
                 (vegcarbon_dynamics.LAI_max - vegcarbon_dynamics.LAI_min)
     else
-        λ_NPP = 1.0
+        λ_NPP = NF(1.0)
     end
     return λ_NPP
 end
 
-@inline function compute_auxiliary!(idx, state, model::AbstractVegetationModel, vegcarbon_dynamics::PaladynCarbonDynamics)
+@inline function compute_auxiliary!(idx, state, model::AbstractVegetationModel, vegcarbon_dynamics::PaladynCarbonDynamics{NF}) where NF
     i, j = idx
 
     # Compute balanced Leaf Area Index (LAI_b)
     # Following Paladyn approach (assuming with bwl = 1)
-    state.LAI_b[i, j] = ((2.0 / vegcarbon_dynamics.SLA) + vegcarbon_dynamics.awl) / state.C_veg[i, j]
+    state.LAI_b[i, j] = ((NF(2.0) / vegcarbon_dynamics.SLA) + vegcarbon_dynamics.awl) / state.C_veg[i, j]
 
 end
 
-@inline function compute_tendencies!(idx, state, model::AbstractVegetationModel, vegcarbon_dynamics::PaladynCarbonDynamics)
+@inline function compute_tendencies!(idx, state, model::AbstractVegetationModel, vegcarbon_dynamics::PaladynCarbonDynamics{NF}) where NF  
     i, j = idx
 
     # Compute λ_NPP
@@ -65,5 +65,5 @@ end
              vegcarbon_dynamics.γS*vegcarbon_dynamics.awl) * state.LAI_b[i, j]
     
     # Compute the vegetation carbon pool tendency
-    state.C_veg_tendency[i, j] = (1.0 - λ_NPP) * state.NPP[i, j] - Λ_loc
+    state.C_veg_tendency[i, j] = (NF(1.0) - λ_NPP) * state.NPP[i, j] - Λ_loc
 end

@@ -11,19 +11,19 @@ variables(phenol::PaladynPhenology) = (
     auxiliary(:LAI, XY()), # Leaf Area Index (LAI)
 )
 
-@inline function compute_auxiliary!(idx, state, model::AbstractVegetationModel, phenol::PaladynPhenology)
+@inline function compute_auxiliary!(idx, state, model::AbstractVegetationModel, phenol::PaladynPhenology{NF}) where NF
     i, j = idx
 
     # TODO add phenology implementation from Paladyn
     # Compute f_deciduous, a factor for smooth transition between evergreen and deciduous
     # For now, set f_deciduous to 0.0 (evergreen PFT)
-    f_deciduous = 0.0
+    f_deciduous = zero(NF)
 
     # Compute phen 
     # For now, set phen to 1.0 (full leaf-out, evergreen PFT)
-    phen = 1.0
+    phen = NF(1.0)
 
     # Compute LAI
-    state.LAI[i, j] = (f_deciduous * phen + (1 - f_deciduous)) * state.LAI_b[i, j]
+    state.LAI[i, j] = (f_deciduous * phen + (NF(1.0) - f_deciduous)) * state.LAI_b[i, j]
 end
    

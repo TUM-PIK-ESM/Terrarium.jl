@@ -39,6 +39,9 @@ Multiple PFTs can be later handled with a `TiledVegetationModel` type that compo
     "Vegetation population density or coverage fraction dynamics"
     vegetation_dynamics::VegetationDynamics =  PaladynVegetationDynamics() # prognostic
 
+    "Physical constants"
+    constants::Constants = PhysicalConstants{eltype(grid)}()
+
     "Boundary conditions"
     boundary_conditions::BoundaryConditions = FieldBoundaryConditions()
 
@@ -61,6 +64,8 @@ get_phenology(model::VegetationModel) = model.phenology
 get_carbon_dynamics(model::VegetationModel) = model.carbon_dynamics
 
 get_vegetation_dynamics(model::VegetationModel) = model.vegetation_dynamics
+
+get_constants(model::VegetationModel) = model.constants
 
 
 # Model interface methods
@@ -101,8 +106,8 @@ end
     compute_auxiliary!(idx, state, model, model.stomatal_conductance) # This computes λc
     compute_auxiliary!(idx, state, model, model.photosynthesis) # This computes GPP
     compute_auxiliary!(idx, state, model, model.autotrophic_respiration) # This computes Ra and NPP
-    compute_auxiliary!(idx, state, model, model.carbon_dynamics) # This computes LAI_b and C_veg
-    compute_auxiliary!(idx, state, model, model.vegetation_dynamics) # This computes ν (veg_fraction)
+    compute_auxiliary!(idx, state, model, model.carbon_dynamics) # This computes LAI_b 
+    # compute_auxiliary!(idx, state, model, model.vegetation_dynamics) 
     compute_auxiliary!(idx, state, model, model.phenology) # This computes LAI
 
 end
