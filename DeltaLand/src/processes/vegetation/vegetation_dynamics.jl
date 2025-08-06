@@ -20,8 +20,8 @@ end
 @inline function compute_tendencies!(idx, state, model::AbstractVegetationModel, veg_dynamics::PaladynVegetationDynamics)
     i, j = idx
     
-    # TODO move this to a separate function
-    λ_NPP = state.λ_NPP[i, j]
+    # Compute λ_NPP
+    λ_NPP = compute_λ_NPP(idx, state, model, model.carbon_dynamics)
 
     # Compute the disturbance rate
     # TODO add Paladyn implemetation

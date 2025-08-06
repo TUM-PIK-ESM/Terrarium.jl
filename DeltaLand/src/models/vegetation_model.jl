@@ -116,12 +116,12 @@ end
 @kernel function _timestep_vegetation_kernel(state, model::VegetationModel, euler::ForwardEuler, dt)
     idx = @index(Global, NTuple)
     i, j = idx
-    # Update vegetation carbon pools
-    state.veg_carbon_pool[i, j] = state.veg_carbon_pool[i, j] + 
-                                  dt * state.veg_carbon_pool_tendency[i, j]
+    # Update vegetation carbon pool
+    state.C_veg[i, j] = state.C_veg[i, j] + 
+                                  dt * state.C_veg_tendency[i, j]
     # Update vegetation fraction
-    state.veg_fraction[i, j] = state.veg_fraction[i, j] + 
-                               dt * state.veg_fraction_tendency[i, j]
+    state.ν[i, j] = state.ν[i, j] + 
+                               dt * state.ν_tendency[i, j]
 end
 
 # Initialization
