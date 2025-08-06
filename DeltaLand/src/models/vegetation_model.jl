@@ -108,6 +108,7 @@ end
     compute_auxiliary!(idx, state, model, model.autotrophic_respiration) # This computes Ra and NPP
     compute_auxiliary!(idx, state, model, model.carbon_dynamics) # This computes LAI_b 
     # compute_auxiliary!(idx, state, model, model.vegetation_dynamics) 
+    # TODO check again, this does run after C_veg and LAI_b is updated, right?
     compute_auxiliary!(idx, state, model, model.phenology) # This computes LAI
 
 end

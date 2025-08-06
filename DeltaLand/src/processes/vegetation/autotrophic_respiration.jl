@@ -16,6 +16,7 @@ variables(autoresp::PaladynAutotrophicRespiration) = (
     i, j = idx
 
     # Compute maintenance respiration Rm
+    # TODO add maintenance respiration implementaion
     # Placeholder assuming a simple linear relationship with C_veg
     Rm = NF(0.05) * state.C_veg[i, j] 
 

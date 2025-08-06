@@ -17,7 +17,7 @@ variables(phenol::PaladynPhenology) = (
     # TODO add phenology implementation from Paladyn
     # Compute f_deciduous, a factor for smooth transition between evergreen and deciduous
     # For now, set f_deciduous to 0.0 (evergreen PFT)
-    f_deciduous = zero(NF)
+    f_deciduous = NF(0.0)
 
     # Compute phen 
     # For now, set phen to 1.0 (full leaf-out, evergreen PFT)
