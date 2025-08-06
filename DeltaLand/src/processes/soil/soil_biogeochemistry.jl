@@ -27,8 +27,8 @@ the organic material.
 """
 organic_fraction(bgc::ConstantSoilCarbonDenisty) = bgc.ρ_soc / ((1 - bgc.por_org)*bgc.ρ_org)
 
-@inline organic_fraction(idx, state, model, bgc::ConstantSoilCarbonDenisty) = organic_fraction(bgc)
+@inline organic_fraction(idx, state, bgc::ConstantSoilCarbonDenisty) = organic_fraction(bgc)
 
-@inline compute_auxiliary!(idx, state, model, bgc::ConstantSoilCarbonDenisty) = nothing
+@inline compute_auxiliary!(state, model, bgc::ConstantSoilCarbonDenisty) = nothing
 
-@inline compute_tendencies!(idx, state, model, bgc::ConstantSoilCarbonDenisty) = nothing
+@inline compute_tendencies!(state, model, bgc::ConstantSoilCarbonDenisty) = nothing

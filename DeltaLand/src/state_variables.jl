@@ -106,12 +106,29 @@ function Base.getproperty(
     end
 end
 
+function fill_halo_regions!(state::StateVariables)
+    # fill_halo_regions! for all prognostic variables
+    for var in state.prognostic
+        fill_halo_regions!(var)
+    end
+    # fill_halo_regions! for all auxiliary variables
+    for var in state.auxiliary
+        fill_halo_regions!(var)
+    end
+    # recurse over namespaces
+    for ns in state.namespaces
+        fill_halo_regions!(ns)
+    end
+end
+
 function reset_tendencies!(state::StateVariables)
+    # reset all tendency fields
     for var in state.tendencies
         set!(var, zero(eltype(var)))
     end
-    for substate in state.namespaces
-        reset_tendencies!(substate)
+    # recurse over namespaces
+    for ns in state.namespaces
+        reset_tendencies!(ns)
     end
 end
 

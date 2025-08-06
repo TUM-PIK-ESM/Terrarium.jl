@@ -34,7 +34,7 @@ Advance the simulation forward by one timestep.
 timestep!(sim::Simulation) = timestep!(sim, get_dt(get_time_stepping(sim.model)))
 function timestep!(sim::Simulation, dt)
     reset_tendencies!(sim.state)
-    timestep!(sim.state, sim.model, dt)
+    timestep!(sim.state, sim.model, get_time_stepping(sim.model), dt)
     tick_time!(sim.state.clock, dt)
 end
 

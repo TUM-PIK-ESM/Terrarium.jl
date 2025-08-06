@@ -11,8 +11,10 @@ get_field_boundary_conditions(::AbstractBoundaryConditions, ::AbstractVariable) 
 
 struct PrescribedFluxes <: AbstractBoundaryConditions end
 
-@kwdef struct FieldBoundaryConditions{BCS<:NamedTuple} <: AbstractBoundaryConditions
-    var_bcs::BCS = (;)
+struct FieldBoundaryConditions{BCS<:NamedTuple} <: AbstractBoundaryConditions
+    var_bcs::BCS
 end
+
+FieldBoundaryConditions(; vars...) = FieldBoundaryConditions((; vars...))
 
 get_field_boundary_conditions(bcs::FieldBoundaryConditions, var::AbstractVariable) = get(bcs.var_bcs, varname(var), nothing)
