@@ -1,5 +1,5 @@
 @kwdef struct MedlynStomatalConductance{NF} <: AbstractStomatalConductance
-    # TODO check g1 parameter meaning
+    # TODO check g1 parameter physical meaning
     "Parameter in optimal stomatal conductance formulation (Lin et al. 2015), PFT specific"
     g1::NF = 2.3 # Value for Needleleaf tree PFT (always evergreen)
 end
@@ -8,7 +8,7 @@ variables(stomcond::MedlynStomatalConductance) = (
     auxiliary(:λc, XY()), # Ratio of leaf-internal and air CO2 concentration (λc)
 )
 
-function compute_auxiliary!(idx, state, model, stomcond::MedlynStomatalConductance)
+@inline function compute_auxiliary!(idx, state, model::AbstractVegetationModel, stomcond::MedlynStomatalConductance)
     i, j = idx
 
     # Compute Vapor Pressure Deficit (Pa)

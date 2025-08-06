@@ -7,31 +7,29 @@
 end
 
 variables(veg_dynamics::PaladynVegetationDynamics) = (
-    prognostic(:veg_fraction, XY()), # PFT fractional area coverage
+    prognostic(:ν, XY()), # PFT fractional area coverage
+    auxiliary(:C_veg, XY()), # Vegetation carbon pool (kgC/m²)
+    auxiliary(:LAI_b, XY()), # Balanced Leaf Area Index (LAI_b)
 )
 
-function compute_auxiliary!(idx, state, model, veg_dynamics::PaladynVegetationDynamics)
-    i, j = idx
+@inline function compute_auxiliary!(idx, state, model, veg_dynamics::PaladynVegetationDynamics)
+    # Nothing needed here for now
     return nothing
 end
 
-function compute_tendencies!(idx, state, model, veg_dynamics::PaladynVegetationDynamics)
+@inline function compute_tendencies!(idx, state, model::AbstractVegetationModel, veg_dynamics::PaladynVegetationDynamics)
     i, j = idx
     
-    # Get state variables 
-    NPP = state.NPP[i, j]
-    C_veg = state.veg_carbon_pool[i, j]
-    
-    # TODO is this ok or should be recomputed here?
+    # TODO move this to a separate function
     λ_NPP = state.λ_NPP[i, j]
 
     # Compute the disturbance rate
     # TODO add Paladyn implemetation
-    # Placeholder for now = min dist. rate
+    # Placeholder for now = min disturbance rate
     γv = veg_dynamics.γv_min
 
     # Compute the vegetation fraction tendency
-    ν_star = max(state.veg_fraction[i, j], veg_dynamics.ν_seed) 
-    state.veg_fraction_tendency[i, j] = (λ_NPP * NPP / C_veg) * ν_star * 
-                                        (1.0 - state.veg_fraction[i, j]) - γv * ν_star
+    ν_star = max(state.ν[i, j], veg_dynamics.ν_seed) 
+    state.ν_tendency[i, j] = (λ_NPP * state.NPP[i, j] / state.C_veg[i, j]) * 
+                             ν_star * (1.0 - state.ν[i, j]) - γv * ν_star
 end

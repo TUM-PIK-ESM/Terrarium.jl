@@ -6,7 +6,7 @@ variables(photo::LUEPhotosynthesis) = (
     auxiliary(:GPP, XY()), # Gross Primary Production (GPP) kgC/m²/day
 )
 
-function compute_auxiliary!(idx, state, model, photo::LUEPhotosynthesis)
+@inline function compute_auxiliary!(idx, state, model::AbstractVegetationModel, photo::LUEPhotosynthesis)
     i, j = idx
 
     # TODO add photosynthesis implementation

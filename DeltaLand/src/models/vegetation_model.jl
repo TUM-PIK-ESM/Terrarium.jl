@@ -28,16 +28,16 @@ Multiple PFTs can be later handled with a `TiledVegetationModel` type that compo
     stomatal_conductance::StomatalConducatance = MedlynStomatalConductance() # not prognostic
 
     "Autotrophic respiration scheme"
-    autotrophic_respiration::AutotrophicRespiration = AutotrophicRespirationModel() # not prognostic
+    autotrophic_respiration::AutotrophicRespiration = PaladynAutotrophicRespiration() # not prognostic
 
     "Phenology scheme"
-    phenology::Phenology = PhenologyModel() # not prognostic
+    phenology::Phenology = PaladynPhenology() # not prognostic
 
     "Vegetation carbon pool dynamics"
     carbon_dynamics::CarbonDynamics = PaladynCarbonDynamics() # prognostic
 
     "Vegetation population density or coverage fraction dynamics"
-    vegetation_dynamics::VegetationDynamics =  PaladynVegetationDynamics()# prognostic
+    vegetation_dynamics::VegetationDynamics =  PaladynVegetationDynamics() # prognostic
 
     "Boundary conditions"
     boundary_conditions::BoundaryConditions = FieldBoundaryConditions()
@@ -64,7 +64,6 @@ get_vegetation_dynamics(model::VegetationModel) = model.vegetation_dynamics
 
 
 # Model interface methods
-#TODO or like soilmodel with tuplejoin?
 variables(model::VegetationModel) = (
     variables(model.photosynthesis)...,
     variables(model.stomatal_conductance)...,
@@ -102,8 +101,8 @@ end
     compute_auxiliary!(idx, state, model, model.stomatal_conductance) # This computes λc
     compute_auxiliary!(idx, state, model, model.photosynthesis) # This computes GPP
     compute_auxiliary!(idx, state, model, model.autotrophic_respiration) # This computes Ra and NPP
-    compute_auxiliary!(idx, state, model, model.carbon_dynamics) # This computes C_veg, LAI_b and λ_NPP
-    compute_auxiliary!(idx, state, model, model.vegetation_dynamics)
+    compute_auxiliary!(idx, state, model, model.carbon_dynamics) # This computes LAI_b and C_veg
+    compute_auxiliary!(idx, state, model, model.vegetation_dynamics) # This computes ν (veg_fraction)
     compute_auxiliary!(idx, state, model, model.phenology) # This computes LAI
 
 end

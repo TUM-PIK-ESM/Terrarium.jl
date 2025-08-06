@@ -23,18 +23,19 @@
 end
 
 variables(vegcarbon_dynamics::PaladynCarbonDynamics) = (
-    prognostic(:veg_carbon_pool, XY()), # Vegetation carbon pool (kgC/m²)
-    auxiliary(:λ_NPP, XY()), # A factor determining the partitioning of NPP between increase of vegetation carbon of the existing vegetated area
+    prognostic(:C_veg, XY()), # Vegetation carbon pool (kgC/m²)
     auxiliary(:LAI_b, XY()), # Balanced Leaf Area Index (LAI_b) 
+    auxiliary(:NPP, XY()), # Net Primary Production (NPP) kgC/m²/day
 )
 
-function compute_auxiliary!(idx, state, model, vegcarbon_dynamics::PaladynCarbonDynamics)
+@inline function compute_auxiliary!(idx, state, model::AbstractVegetationModel, vegcarbon_dynamics::PaladynCarbonDynamics)
     i, j = idx
 
     # Compute balanced Leaf Area Index (LAI_b)
     # Following Paladyn approach (assuming with bwl = 1)
     state.LAI_b[i, j] = ((2.0 / vegcarbon_dynamics.SLA) + vegcarbon_dynamics.awl) / state.veg_carbon_pool[i, j]
 
+    # TODO move to a separate function
     # Compute λ_NPP based on the balanced Leaf Area Index (LAI_b)
     LAI_b = state.LAI_b[i, j]
     if LAI_b < vegcarbon_dynamics.LAI_min
@@ -47,11 +48,13 @@ function compute_auxiliary!(idx, state, model, vegcarbon_dynamics::PaladynCarbon
     end
 end
 
-function compute_tendencies!(idx, state, model, vegcarbon_dynamics::PaladynCarbonDynamics)
+@inline function compute_tendencies!(idx, state, model::AbstractVegetationModel, vegcarbon_dynamics::PaladynCarbonDynamics)
     i, j = idx
 
     # Get state variables
     LAI_b = state.LAI_b[i, j]
+
+    # TODO call a separate function to compute λ_NPP
     λ_NPP = state.λ_NPP[i, j]
 
     # Compute local litterfall rate
@@ -60,5 +63,5 @@ function compute_tendencies!(idx, state, model, vegcarbon_dynamics::PaladynCarbo
              vegcarbon_dynamics.γS*vegcarbon_dynamics.awl) * LAI_b
     
     # Compute the vegetation carbon pool tendency
-    state.veg_carbon_pool_tendency[i, j] = (1.0 - λ_NPP) * state.NPP[i, j] - Λ_loc
+    state.C_veg_tendency[i, j] = (1.0 - λ_NPP) * state.NPP[i, j] - Λ_loc
 end

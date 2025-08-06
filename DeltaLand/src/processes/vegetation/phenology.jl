@@ -1,13 +1,17 @@
-@kwdef struct PhenologyModel{NF} <: AbstractPhenology
+# TODO maybe change the name later, if the PALADYN
+# phenology approach has a more specific name
+
+@kwdef struct PaladynPhenology{NF} <: AbstractPhenology
     # TODO add phenology parameters
 
 end
 
-variables(phenol::PhenologyModel) = (
+variables(phenol::PaladynPhenology) = (
+    auxiliary(:LAI_b, XY()), # Balanced Leaf Area Index (LAI_b)
     auxiliary(:LAI, XY()), # Leaf Area Index (LAI)
 )
 
-function compute_auxiliary!(idx, state, model, phenol::PhenologyModel)
+@inline function compute_auxiliary!(idx, state, model::AbstractVegetationModel, phenol::PaladynPhenology)
     i, j = idx
 
     # TODO add phenology implementation from Paladyn
