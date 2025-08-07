@@ -104,28 +104,38 @@ end
     idx = @index(Global, NTuple)
 
     # Compute auxiliary variables for each component
-    compute_auxiliary!(idx, state, model, model.stomatal_conductance) # This computes λc
-    compute_auxiliary!(idx, state, model, model.photosynthesis) # This computes GPP and Rd
-    compute_auxiliary!(idx, state, model, model.autotrophic_respiration) # This computes Ra and NPP
-    compute_auxiliary!(idx, state, model, model.carbon_dynamics) # This computes LAI_b 
-    # compute_auxiliary!(idx, state, model, model.vegetation_dynamics) 
-    # TODO check again, this does run after C_veg and LAI_b is updated, right?
-    compute_auxiliary!(idx, state, model, model.phenology) # This computes LAI and phen
+    # Veg. carbon dynamics: needs C_veg(t-1) and computes LAI_b(t-1)
+    compute_auxiliary!(idx, state, model, model.carbon_dynamics) 
 
+    # Phenology: needs LAI_b(t-1) and computes LAI(t-1) and phen(t-1)
+    compute_auxiliary!(idx, state, model, model.phenology) 
+
+    # Stomatal conductance: needs atm. inputs(t) and computes λc(t)
+    compute_auxiliary!(idx, state, model, model.stomatal_conductance) 
+
+    # Photosynthesis: needs atm. inputs(t), λc(t), LAI(t-1), and computes Rd(t) and GPP(t)
+    compute_auxiliary!(idx, state, model, model.photosynthesis) 
+
+    # Autotrophic respiration: needs atm. inputs(t), GPP(t), Rd(t), C_veg(t-1), phen(t-1) and computes Ra(t) and NPP(t)
+    compute_auxiliary!(idx, state, model, model.autotrophic_respiration) 
+    
+    # Note: vegetation_dynamics compute_auxiliary! does nothing for now
 end
 
 @kernel function _compute_tendencies_vegetation_kernel(state, model::VegetationModel)
     idx = @index(Global, NTuple)
+    # Needs NPP(t), C_veg(t-1), LAI_b(t-1) and computes C_veg_tendency
     compute_tendencies!(idx, state, model, model.carbon_dynamics)
+    # Needs NPP(t), C_veg(t-1), LAI_b(t-1), ν(t-1) and computes ν_tendency
     compute_tendencies!(idx, state, model, model.vegetation_dynamics)
 end
 
 @kernel function _timestep_vegetation_kernel(state, model::VegetationModel, euler::ForwardEuler, dt)
     idx = @index(Global, NTuple)
     i, j = idx
-    # Update vegetation carbon pool
+    # Update vegetation carbon pool, compute C_veg(t)
     state.C_veg[i, j] = state.C_veg[i, j] + dt * state.C_veg_tendency[i, j]
-    # Update vegetation fraction
+    # Update vegetation fraction, compute ν(t)
     state.ν[i, j] = state.ν[i, j] + dt * state.ν_tendency[i, j]
 end
 

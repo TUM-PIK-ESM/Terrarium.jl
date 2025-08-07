@@ -27,10 +27,10 @@ variables(autoresp::PALADYNAutotrophicRespiration) = (
     i, j = idx
 
     # Get atmospheric inputs/forcings and compute derived variables
-    T_air_C = convert_T_to_Celsius(idx, state, model, model.photosyntheis)
+    T_air_C = convert_T_to_Celsius(idx, state, model, model.photosynthesis)
 
     # Compute f_temp_soil
-    # TODO add f_temp_soil implementaion
+    # TODO add f_temp_soil implementaion (depends on soil temperature)
     # For now, placeholder as a constant value
     f_temp_soil = NF(0.0) 
 

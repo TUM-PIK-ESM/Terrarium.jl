@@ -73,6 +73,8 @@ variables(photo::LUEPhotosynthesis) = (
     auxiliary(:p, XY()), # Surface pressure [Pa]
     auxiliary(:swdown, XY()), # Downwelling shortwave radiation at the surface [W/m²]
     auxiliary(:co2, XY()), # Atmospheric CO2 concentration [ppm]
+    auxiliary(:λc, XY()), # Ratio of leaf-internal and air CO2 concentration 
+    auxiliary(:LAI, XY()), # Leaf Area Index 
     auxiliary(:Rd, XY()), # Daily leaf respiration [gC/m2/day]
     auxiliary(:GPP, XY()), # Gross Primary Production [kgC/m²/day]
 )
@@ -111,7 +113,7 @@ end
     p = state.p[i, j]
     
     # Compute atmospheric CO2 partial pressure [Pa]
-    pa = co2 * NF(1e-6) * p
+    pa = state.co2[i, j] * NF(1e-6) * p
 
     return pa
 end
@@ -212,7 +214,7 @@ end
             # Eqn 5, Haxeltine & Prentice 1996
             JC = c_2 * Vc_max / NF(24.0)
 
-            # TODO add implementaion for the soil-moisture limiting factor
+            # TODO add implementaion for the soil-moisture limiting factor (depends on soil moisture)
             # For now, set it to 1.0, no soil moisture limitation
             β = NF(1.0)
 
