@@ -80,72 +80,51 @@ variables(model::VegetationModel) = (
 )
 
 function compute_auxiliary!(state, model::VegetationModel)
-    grid = get_grid(model)
-    launch!(grid, _compute_auxiliary_vegetation_kernel, state, model)
+    # Compute auxiliary variables for each component
+    # Veg. carbon dynamics: needs C_veg(t-1) and computes LAI_b(t-1)
+    compute_auxiliary!(state, model, model.carbon_dynamics)
+
+    # Phenology: needs LAI_b(t-1) and computes LAI(t-1) and phen(t-1)
+    compute_auxiliary!(state, model, model.phenology)
+
+    # Stomatal conductance: needs atm. inputs(t) and computes λc(t)
+    compute_auxiliary!(state, model, model.stomatal_conductance)
+
+    # Photosynthesis: needs atm. inputs(t), λc(t), LAI(t-1), and computes Rd(t) and GPP(t)
+    compute_auxiliary!(state, model, model.photosynthesis)
+
+    # Autotrophic respiration: needs atm. inputs(t), GPP(t), Rd(t), C_veg(t-1), phen(t-1) and computes Ra(t) and NPP(t)
+    compute_auxiliary!(state, model, model.autotrophic_respiration)
+    
+    # Note: vegetation_dynamics compute_auxiliary! does nothing for now
     return nothing
 end
 
 function compute_tendencies!(state, model::VegetationModel)
-    grid = get_grid(model)
-    launch!(grid, _compute_tendencies_vegetation_kernel, state, model)
+    # Fill halo regions for fields with boundary conditions
+    fill_halo_regions!(state)
+
+    # Needs NPP(t), C_veg(t-1), LAI_b(t-1) and computes C_veg_tendency
+    compute_tendencies!(state, model, model.carbon_dynamics)
+
+    # Needs NPP(t), C_veg(t-1), LAI_b(t-1), ν(t-1) and computes ν_tendency
+    compute_tendencies!(state, model, model.vegetation_dynamics)
+
     return nothing
 end
 
-function timestep!(state, model::VegetationModel, dt=get_dt(timestepper))
+function timestep!(state, model::VegetationModel, euler::ForwardEuler, dt=get_dt(timestepper))
     compute_auxiliary!(state, model)
     compute_tendencies!(state, model)
     grid = get_grid(model)
-    launch!(grid, _timestep_vegetation_kernel, state, model, get_time_stepping(model), dt)
+    launch!(grid, :xy, _timestep_vegetation_kernel, state, model, euler, dt)
     return nothing
 end
 
-# Kernel functions
-@kernel function _compute_auxiliary_vegetation_kernel(state, model::VegetationModel)
-    idx = @index(Global, NTuple)
-
-    # Compute auxiliary variables for each component
-    # Veg. carbon dynamics: needs C_veg(t-1) and computes LAI_b(t-1)
-    compute_auxiliary!(idx, state, model, model.carbon_dynamics) 
-
-    # Phenology: needs LAI_b(t-1) and computes LAI(t-1) and phen(t-1)
-    compute_auxiliary!(idx, state, model, model.phenology) 
-
-    # Stomatal conductance: needs atm. inputs(t) and computes λc(t)
-    compute_auxiliary!(idx, state, model, model.stomatal_conductance) 
-
-    # Photosynthesis: needs atm. inputs(t), λc(t), LAI(t-1), and computes Rd(t) and GPP(t)
-    compute_auxiliary!(idx, state, model, model.photosynthesis) 
-
-    # Autotrophic respiration: needs atm. inputs(t), GPP(t), Rd(t), C_veg(t-1), phen(t-1) and computes Ra(t) and NPP(t)
-    compute_auxiliary!(idx, state, model, model.autotrophic_respiration) 
-    
-    # Note: vegetation_dynamics compute_auxiliary! does nothing for now
-end
-
-@kernel function _compute_tendencies_vegetation_kernel(state, model::VegetationModel)
-    idx = @index(Global, NTuple)
-    # Needs NPP(t), C_veg(t-1), LAI_b(t-1) and computes C_veg_tendency
-    compute_tendencies!(idx, state, model, model.carbon_dynamics)
-    # Needs NPP(t), C_veg(t-1), LAI_b(t-1), ν(t-1) and computes ν_tendency
-    compute_tendencies!(idx, state, model, model.vegetation_dynamics)
-end
-
 @kernel function _timestep_vegetation_kernel(state, model::VegetationModel, euler::ForwardEuler, dt)
-    idx = @index(Global, NTuple)
-    i, j = idx
+    i, j = @index(Global, NTuple)
     # Update vegetation carbon pool, compute C_veg(t)
     state.C_veg[i, j] = state.C_veg[i, j] + dt * state.C_veg_tendency[i, j]
     # Update vegetation fraction, compute ν(t)
     state.ν[i, j] = state.ν[i, j] + dt * state.ν_tendency[i, j]
-end
-
-# Initialization
-@kernel function _initialize_vegetation_kernel(state, model::VegetationModel, initializer)
-    idx = @index(Global, NTuple)
-    initialize!(idx, state, model, initializer)
-end
-
-function initialize!(state, model::VegetationModel, initializer::AbstractInitializer)
-    grid = get_grid(model)
-    launch!(grid, _initialize_vegetation_kernel, state, model, initializer)
 end

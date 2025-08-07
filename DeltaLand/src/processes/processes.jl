@@ -3,6 +3,9 @@ include("abstract_types.jl")
 export PhysicalConstants
 include("physical_constants.jl")
 
+# Utilities
+include("physics_utils.jl")
+
 # Soil
 
 include("soil/abstract_types.jl")
@@ -29,6 +32,12 @@ include("soil/soil_biogeochemistry.jl")
 
 include("vegetation/abstract_types.jl")
 
+export PALADYNCarbonDynamics
+include("vegetation/carbon_dynamics.jl")
+
+export PALADYNVegetationDynamics
+include("vegetation/vegetation_dynamics.jl")
+
 export LUEPhotosynthesis
 include("vegetation/photosynthesis.jl")
 
@@ -40,9 +49,3 @@ include("vegetation/autotrophic_respiration.jl")
 
 export PhenologyModel
 include("vegetation/phenology.jl")
-
-export PALADYNCarbonDynamics
-include("vegetation/carbon_dynamics.jl")
-
-export PALADYNVegetationDynamics
-include("vegetation/vegetation_dynamics.jl")

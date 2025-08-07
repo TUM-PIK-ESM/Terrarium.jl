@@ -1,6 +1,14 @@
-# Note: veg. carbon dynamics implementation following PALADYN  but considering only the sum of the veg. carbon pools.
-# The subsequent splitting into C_leaf, C_stem, C_root is not implemented for now
+"""
+    $TYPEDEF
 
+Vegetation carbon dynamics implementation following PALADYN  but considering only the sum of the vegetation carbon pools.
+The subsequent splitting into C_leaf, C_stem, C_root is not implemented for now.
+
+Authors: Maha Badri and Matteo Willeit
+
+Properties:
+$(TYPEDFIELDS)
+"""
 @kwdef struct PALADYNCarbonDynamics{NF} <: AbstractVegetationCarbonDynamics
     "Specific leaf area (Kattge et al. 2011) [m²/kgC], PFT specific"
     SLA::NF = 10 # Value for Needleleaf tree PFT 
@@ -24,17 +32,19 @@
     γS::NF = 0.05 # Value for Needleleaf tree PFT 
 end
 
-variables(vegcarbon_dynamics::PALADYNCarbonDynamics) = (
+variables(::PALADYNCarbonDynamics) = (
     prognostic(:C_veg, XY()), # Vegetation carbon pool [kgC/m²]
     auxiliary(:LAI_b, XY()), # Balanced Leaf Area Index [m²/m²]
     auxiliary(:NPP, XY()), # Net Primary Production [kgC/m²/day]
 )
 
-@inline function compute_λ_NPP(idx, state, model::AbstractVegetationModel, vegcarbon_dynamics::PALADYNCarbonDynamics{NF}) where NF
-    i, j = idx
+"""
+    $SIGNATURES
 
+Computes λ_NPP based on the balanced Leaf Area Index `LAI_b`.
+"""
+@inline function compute_λ_NPP(vegcarbon_dynamics::PALADYNCarbonDynamics{NF}, LAI_b) where NF
     # Compute λ_NPP based on the balanced Leaf Area Index (LAI_b)
-    LAI_b = state.LAI_b[i, j]
     if LAI_b < vegcarbon_dynamics.LAI_min
         λ_NPP = NF(0.0)
     elseif LAI_b <= vegcarbon_dynamics.LAI_max
@@ -46,20 +56,29 @@ variables(vegcarbon_dynamics::PALADYNCarbonDynamics) = (
     return λ_NPP
 end
 
-@inline function compute_auxiliary!(idx, state, model::AbstractVegetationModel, vegcarbon_dynamics::PALADYNCarbonDynamics{NF}) where NF
-    i, j = idx
+function compute_auxiliary!(state, model, vegcarbon_dynamics::PALADYNCarbonDynamics)
+    grid = get_grid(model)
+    launch!(grid, :xy, compute_auxiliary_kernel!, state, vegcarbon_dynamics)
+end
+
+@kernel function compute_auxiliary_kernel!(idx, state, vegcarbon_dynamics::PALADYNCarbonDynamics{NF}) where NF
+    i, j = @index(Global, NTuple)
 
     # Compute balanced Leaf Area Index 
     # Following PALADYN approach (assuming with bwl = 1)
     state.LAI_b[i, j] = ((NF(2.0) / vegcarbon_dynamics.SLA) + vegcarbon_dynamics.awl) / state.C_veg[i, j]
-
 end
 
-@inline function compute_tendencies!(idx, state, model::AbstractVegetationModel, vegcarbon_dynamics::PALADYNCarbonDynamics{NF}) where NF  
-    i, j = idx
+function compute_tendencies!(state, model, vegcarbon_dynamics::PALADYNCarbonDynamics{NF})
+    grid = get_grid(model)
+    launch!(grid, :xy, compute_tendencies_kernel!, state, vegcarbon_dynamics)
+end
+
+@kernel function compute_tendencies_kernel!(state, vegcarbon_dynamics::PALADYNCarbonDynamics{NF}) where NF  
+    i, j = @index(Global, NTuple)
 
     # Compute λ_NPP
-    λ_NPP = compute_λ_NPP(idx, state, model, vegcarbon_dynamics)
+    λ_NPP = compute_λ_NPP(vegcarbon_dynamics, state.LAI_b[i, j])
 
     # Compute local litterfall rate
     Λ_loc = (vegcarbon_dynamics.γL/vegcarbon_dynamics.SLA +

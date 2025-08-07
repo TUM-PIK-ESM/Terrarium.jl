@@ -14,6 +14,6 @@
     "Gravitational constant in m/s^2"
     g::NF = 9.80665
 
-    "Temperature at 0°C in Kelvin"
+    "Reference temperature at 0°C in Kelvin"
     T0::NF = 273.15
 end

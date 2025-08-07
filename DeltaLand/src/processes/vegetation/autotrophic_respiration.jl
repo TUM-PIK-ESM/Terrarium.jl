@@ -1,12 +1,19 @@
 # Note: maybe change the name later, if the PALADYN autotrophic respiration approach has a more specific name
+"""
+    $TYPEDEF
 
+Autotrophic respiration implementation from PALADYN (Willeit 2016).
+
+Properties:
+$(TYPEDFIELDS)
+"""
 @kwdef struct PALADYNAutotrophicRespiration{NF} <: AbstractAutotrophicRespiration
     # TODO check physical meaning of this parameter
-    "Parameter"
+    "Sapwood parameter"
     cn_sapwood::NF = 330
 
     # TODO check physical meaning of this parameter
-    "Parameter"
+    "Root parameter"
     cn_root::NF = 29
 
     "Ratio of total to respiring stem carbon, Cox 2001, PFT specific"
@@ -23,31 +30,39 @@ variables(autoresp::PALADYNAutotrophicRespiration) = (
     auxiliary(:NPP, XY()), # Net Primary Production [kgC/m²/day]
 )
 
-@inline function compute_f_temp(idx, state, model::AbstractVegetationModel, autoresp::PALADYNAutotrophicRespiration{NF}) where NF
-    i, j = idx
-
-    # Get atmospheric inputs/forcings and compute derived variables
-    T_air_C = convert_T_to_Celsius(idx, state, model, model.photosynthesis)
-
+@inline function compute_f_temp(
+    autoresp::PALADYNAutotrophicRespiration{NF},
+    T_air::NF,
+) where NF
     # Compute f_temp_soil
     # TODO add f_temp_soil implementaion (depends on soil temperature)
     # For now, placeholder as a constant value
-    f_temp_soil = NF(0.0) 
+    f_temp_soil = NF(0.0)
 
     # Compute f_temp_air
-    ftemp_air = exp(NF(308.56) * (NF(1.0) / NF(56.02) - NF(1.0) / (NF(46.02) + T_air_C)))
+    # TODO: These hardcoded constants need to be moved either into the model struct as
+    # parameters or into the PhysicalConstants struct
+    ftemp_air = exp(NF(308.56) * (NF(1.0) / NF(56.02) - NF(1.0) / (NF(46.02) + T_air)))
 
     return f_temp_air, f_temp_soil
 end
 
-@inline function compute_auxiliary!(idx, state, model::AbstractVegetationModel, autoresp::PALADYNAutotrophicRespiration{NF}) where NF
-    i, j = idx
-    
-    # Get carbon_dynamics
-    carbon_dynamics = get_carbon_dynamics(model)
+function compute_auxiliary!(state, model, autoresp::PALADYNAutotrophicRespiration{NF})
+    grid = get_grid(model)
+    launch!(grid, :xy, compute_auxiliary_kernel!, state, autoresp, get_carbon_dynamics(model))
+end
 
+# TODO: Consider splitting this up into multiple functions called by one kernel
+@kernel function compute_auxiliary_kernel!(
+    state,
+    autoresp::PALADYNAutotrophicRespiration{NF},
+    # TODO: Can this method be generalized to not depend on this specific implementation?
+    carbon_dynamics::PALADYNCarbonDynamics
+) where NF
+    i, j = @index(Global, NTuple)
+    
     # Compute f_temp for autotrophic respiration
-    f_temp_air, f_temp_soil = compute_f_temp(idx, state, model, autoresp)
+    f_temp_air, f_temp_soil = compute_f_temp(autoresp, state.T_air[i, j])
 
     # TODO add resp10 implementation
     # TODO check physical meaning of this variable

@@ -1,3 +1,14 @@
+"""
+    $TYPEDEF
+
+Vegetation carbon dynamics implementation following PALADYN  but considering only the sum of the vegetation carbon pools.
+The subsequent splitting into C_leaf, C_stem, C_root is not implemented for now.
+
+Authors: Maha Badri and Matteo Willeit
+
+Properties:
+$TYPEDFIELDS
+"""
 @kwdef struct PALADYNVegetationDynamics{NF} <: AbstractVegetationDynamics
     "Vegetation seed fraction"
     ν_seed::NF = 0.001
@@ -6,23 +17,31 @@
     γv_min::NF = 0.002 
 end
 
-variables(veg_dynamics::PALADYNVegetationDynamics) = (
+variables(::PALADYNVegetationDynamics) = (
     prognostic(:ν, XY()), # PFT fractional area coverage
     auxiliary(:C_veg, XY()), # Vegetation carbon pool [kgC/m²]
     auxiliary(:LAI_b, XY()), # Balanced Leaf Area Index 
 )
 
-@inline function compute_auxiliary!(idx, state, model, veg_dynamics::PALADYNVegetationDynamics)
+function compute_auxiliary!(state, veg_dynamics::PALADYNVegetationDynamics)
     # Nothing needed here for now
     return nothing
 end
 
-@inline function compute_tendencies!(idx, state, model::AbstractVegetationModel, veg_dynamics::PALADYNVegetationDynamics{NF}) where NF
-    i, j = idx
+function compute_tendencies!(state, model, veg_dynamics::PALADYNVegetationDynamics{NF})
+    grid = get_grid(model)
+    launch!(grid, :xy, compute_tendencies_kernel!, state, veg_dynamics, get_carbon_dynamics(model))
+end
+
+@kernel function compute_tendencies_kernel!(
+    state,
+    veg_dynamics::PALADYNVegetationDynamics{NF},
+    carbon_dynamics::AbstractVegetationCarbonDynamics
+) where NF
+    i, j = @index(Global, NTuple)
     
     # Compute λ_NPP
-    carbon_dynamics = get_carbon_dynamics(model)
-    λ_NPP = compute_λ_NPP(idx, state, model, carbon_dynamics)
+    λ_NPP = compute_λ_NPP(carbon_dynamics, state.LAI_b[i, j])
 
     # Compute the disturbance rate
     # TODO add PALADYN implemetation for dist. rate

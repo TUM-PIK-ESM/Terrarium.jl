@@ -1,3 +1,11 @@
+"""
+    $TYPEDEF
+
+General implementation of a 1D column model of soil energy, water, and carbon transport.
+
+Properties:
+$(TYPEDFIELDS)
+"""
 @kwdef struct SoilModel{
     NF,
     GridType<:AbstractLandGrid{NF},
@@ -86,6 +94,7 @@ function timestep!(state, model::SoilModel, euler::ForwardEuler, dt=get_dt(times
     compute_tendencies!(state, model)
     launch!(
         model.grid,
+        :xyz,
         timestep_kernel!,
         state,
         euler,
@@ -158,6 +167,7 @@ function initialize!(state, model::SoilModel, initializer::AbstractInitializer)
     grid = get_grid(model)
     launch!(
         grid,
+        :xyz,
         initialize_kernel!,
         state,
         initializer,

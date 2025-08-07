@@ -1,8 +1,14 @@
 # Note: maybe change the name later, if the PALADYN phenology approach has a more specific name
+"""
+    $TYPEDEF
 
+Vegetation phenology implementation from PALADYN (Willeit 2016).
+
+Properties:
+$(TYPEDFIELDS)
+"""
 @kwdef struct PALADYNPhenology{NF} <: AbstractPhenology
     # TODO add phenology parameters
-
 end
 
 variables(phenol::PALADYNPhenology) = (
@@ -11,8 +17,13 @@ variables(phenol::PALADYNPhenology) = (
     auxiliary(:LAI, XY()), # Leaf Area Index 
 )
 
-@inline function compute_auxiliary!(idx, state, model::AbstractVegetationModel, phenol::PALADYNPhenology{NF}) where NF
-    i, j = idx
+function compute_auxiliary!(state, model, phenol::PALADYNPhenology)
+    grid = get_grid(model)
+    launch!(grid, :xy, compute_auxiliary_kernel!, state, phenol)
+end
+
+@kernel function compute_auxiliary_kernel!(state, phenol::PALADYNPhenology)
+    i, j = @index(Global, NTuple)
 
     # TODO add phenology implementation from PALADYN
     # Compute f_deciduous, a factor for smooth transition between evergreen and deciduous

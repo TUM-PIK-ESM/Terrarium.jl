@@ -1,6 +1,10 @@
 
-# Note: photosynthesis implementation following PALADYN for C3 PFTs
+"""
+Photosynthesis implementation following PALADYN for C3 PFTs
 
+Properties:
+$TYPEDFIELDS
+"""
 @kwdef struct LUEPhotosynthesis{NF} <: AbstractPhotosynthesis
     # TODO check physical meaning of this parameter 
     "Value of τ at 25°C"
@@ -66,11 +70,11 @@
 
 end
 
-variables(photo::LUEPhotosynthesis) = (
+variables(::LUEPhotosynthesis) = (
     # TODO for now define atmospheric inputs/forcings here, move later
-    auxiliary(:T_air, XY()), # Surface air temperature in Kelvin [K]
+    auxiliary(:T_air, XY()), # Surface air temperature in °C
     auxiliary(:q_air, XY()), # Surface air specific humidity [kg/kg]
-    auxiliary(:p, XY()), # Surface pressure [Pa]
+    auxiliary(:pres, XY()), # Surface pressure [Pa]
     auxiliary(:swdown, XY()), # Downwelling shortwave radiation at the surface [W/m²]
     auxiliary(:co2, XY()), # Atmospheric CO2 concentration [ppm]
     auxiliary(:λc, XY()), # Ratio of leaf-internal and air CO2 concentration 
@@ -79,96 +83,51 @@ variables(photo::LUEPhotosynthesis) = (
     auxiliary(:GPP, XY()), # Gross Primary Production [kgC/m²/day]
 )
 
-# TODO for now define functions that compute derived variables from atm. inputs/forcings here, move later
-@inline function convert_T_to_Celsius(idx, state, model::AbstractVegetationModel, photo::LUEPhotosynthesis) 
-    i, j = idx
-
-    # Get model constants
-    constants = get_constants(model)
-
-    # Convert T_air to °C
-    T_air_C = state.T_air[i, j] - constants.T0
-
-    return T_air_C
-end
-
-# TODO for now define functions that compute derived variables from atm. inputs/forcings here, move later
-@inline function compute_p_O2(idx, state, model::AbstractVegetationModel, photo::LUEPhotosynthesis{NF}) where NF
-    i, j = idx
-
-    # Get surface pressure
-    p = state.p[i, j]
-
-    # Compute O2 partial pressure [Pa]
-    p_O2 = NF(0.209) * p
-
-    return p_O2
-end
-
-# TODO for now define functions that compute derived variables from atm. inputs/forcings here, move later
-@inline function compute_pa(idx, state, model::AbstractVegetationModel, photo::LUEPhotosynthesis{NF}) where NF
-    i, j = idx
-    
-    # Get surface pressure
-    p = state.p[i, j]
-    
-    # Compute atmospheric CO2 partial pressure [Pa]
-    pa = state.co2[i, j] * NF(1e-6) * p
-
-    return pa
-end
-
-@inline function compute_f_temp(idx, state, model::AbstractVegetationModel, photo::LUEPhotosynthesis{NF}) where NF
-    i, j = idx
-
-    # Convert surface air temperature to Celsius
-    T_air_C = convert_T_to_Celsius(idx, state, model, photo)
-
+@inline function compute_f_temp(photo::LUEPhotosynthesis{NF}, T_air::NF) where NF
     # TODO check physical meaning of these parameters
     k1 = NF(2.0) * log(NF(1.0)/NF(0.99)-NF(1.0)) / (photo.t_CO2_low - photo.t_photos_low)
     k2 = NF(0.5) * (photo.t_CO2_low + photo.t_photos_low)
     k3 = log(NF(0.99)/NF(0.01)) / (photo.t_CO2_high - photo.t_photos_high)
 
     # Compute f_temp, a PFT-specific temperature inhibition function
-    if T_air_C < photo.t_CO2_high && T_air_C > photo.t_CO2_low
-        low = NF(1.0) / (NF(1.0) + exp(k1 * (k2 - T_air_C)))
-        high = NF(1.0) - NF(0.01) * exp(k3 * (T_air_C - photo.t_photos_high))
+    if T_air < photo.t_CO2_high && T_air > photo.t_CO2_low
+        low = NF(1.0) / (NF(1.0) + exp(k1 * (k2 - T_air)))
+        high = NF(1.0) - NF(0.01) * exp(k3 * (T_air - photo.t_photos_high))
         f_temp = low * high
     else
-        f_temp = NF(0.0)
+        f_temp = zero(NF)
     end
 
     return f_temp
     
 end
 
-@inline function compute_kinetic_parameters(idx, state, model::AbstractVegetationModel, photo::LUEPhotosynthesis{NF}) where NF
-     i, j = idx
-
-    # Convert surface air temperature to Celsius
-    T_air_C = convert_T_to_Celsius(idx, state, model, photo)
-
+@inline function compute_kinetic_parameters(photo::LUEPhotosynthesis{NF}, T_air, pres) where NF
     # TODO check meaning of these parameters, Appendix C in PALADYN paper
-    τ = photo.τ25 * photo.q10_τ^((T_air_C - NF(25.0)) * NF(0.1))
-    Kc = photo.Kc25 * photo.q10_Kc^((T_air_C - NF(25.0)) * NF(0.1))
-    Ko = photo.Ko25 * photo.q10_Ko^((T_air_C - NF(25.0)) * NF(0.1))
+    τ = photo.τ25 * photo.q10_τ^((T_air - NF(25.0)) * NF(0.1))
+    Kc = photo.Kc25 * photo.q10_Kc^((T_air - NF(25.0)) * NF(0.1))
+    Ko = photo.Ko25 * photo.q10_Ko^((T_air - NF(25.0)) * NF(0.1))
     # TODO is Γ_star a kinetic parameter?
-    p_O2 = compute_p_O2(idx, state, model, photo)
+    p_O2 = partial_pressure_O2(pres)
     Γ_star = p_O2 / (NF(2.0) * τ)
     
     return τ, Kc, Ko, Γ_star
 end
 
-@inline function compute_auxiliary!(idx, state, model::AbstractVegetationModel, photo::LUEPhotosynthesis{NF}) where NF
-    # TODO checks for positive/negative values in the original PALADYN code ignored for now
+function compute_auxiliary!(state, photo::LUEPhotosynthesis)
+    grid = get_grid(photo)
+    launch!(grid, :xy, compute_auxiliary_kernel!, state, photo)
+end
 
-    i, j = idx
+@kernel function compute_auxiliary_kernel!(state, photo::LUEPhotosynthesis{NF}) where NF
+    # TODO checks for positive/negative values in the original PALADYN code ignored for now
+    i, j = @index(Global, NTuple)
 
     # Get atmospheric inputs/forcings and compute derived variables
     swdown = state.swdown[i, j] 
-    T_air_C = convert_T_to_Celsius(idx, state, model, photo)
-    p_O2 = compute_p_O2(idx, state, model, photo)
-    pa = compute_pa(idx, state, model, photo)
+    T_air_C = state.T_air[i, j]
+    p_O2 = partial_pressure_O2(state.pres[i, j])
+    pa = partial_pressure_CO2(state.pres[i, j], state.co2[i, j])
 
     # TODO add daylength/sec_day implementation
     # For now, placeholders as constant values
@@ -176,17 +135,17 @@ end
     sec_day = NF(8.765813e4)
 
     # TODO check this condition
-    if (daylength > NF(0.0)) && (T_air_C > NF(-3.0))
+    if (daylength > zero(NF)) && (T_air_C > NF(-3.0))
 
         # Compute kinetic parameters 
         # TODO check physical meaning of these parameters,  Appendix C in PALADYN paper
-        τ, Kc, Ko, Γ_star = compute_kinetic_parameters(idx, state, model, photo)
+        τ, Kc, Ko, Γ_star = compute_kinetic_parameters(idx, state, photo)
 
         # Compute NET photosynthetically active radiation [mol/m²/day]
         par = NF(0.5) * swdown * sec_day * (NF(1.0) - photo.α_leaf) * photo.cq
 
         # TODO check for bioclimatic limit ignored for now
-        if state.LAI[i, j] > NF(0.0)
+        if state.LAI[i, j] > zero(NF)
             # Compute absorbed PAR limited by the fraction of PAR assimilated at ecosystem level, the leaf scattering
             apar = photo.αa * (NF(1.0) - exp(-photo.k_ext*state.LAI[i, j])) * par
             
@@ -194,7 +153,7 @@ end
             pi = state.λc[i, j] * pa
 
             # Compute temperature factor for photosynthesis
-            f_temp = compute_f_temp(idx, state, model, photo)
+            f_temp = compute_f_temp(idx, state, photo)
 
             # Compute c1 and c2 parameters for C3 photosynthesis
             # TODO check factor 2 missing in PALADYN paper
@@ -238,11 +197,11 @@ end
             state.GPP[i, j] = And * NF(1.e-3)
         else
             # No photosynthesis 
-            state.GPP[i, j] = NF(0.0)
+            state.GPP[i, j] = zero(NF)
         end
     else
         # No light
-        state.GPP[i, j] = NF(0.0)
+        state.GPP[i, j] = zero(NF)
     end
 
 end

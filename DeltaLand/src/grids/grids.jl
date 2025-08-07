@@ -104,7 +104,7 @@ function Adapt.adapt_structure(to, grid::GlobalRingGrid)
 end
 
 # Convenience dispatch for Oceananigans.launch!
-function launch!(grid::AbstractLandGrid, args...; kwargs...)
+function launch!(grid::AbstractLandGrid, workdims::Symbol, args...; kwargs...)
     _grid = get_field_grid(grid)
-    launch!(_grid.architecture, _grid, :xyz, args...; kwargs...)
+    launch!(_grid.architecture, _grid, workdims, args...; kwargs...)
 end
