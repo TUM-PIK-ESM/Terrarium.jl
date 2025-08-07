@@ -1,4 +1,4 @@
-@kwdef struct PaladynVegetationDynamics{NF} <: AbstractVegetationDynamics
+@kwdef struct PALADYNVegetationDynamics{NF} <: AbstractVegetationDynamics
     "Vegetation seed fraction"
     ν_seed::NF = 0.001
 
@@ -6,26 +6,26 @@
     γv_min::NF = 0.002 
 end
 
-variables(veg_dynamics::PaladynVegetationDynamics) = (
+variables(veg_dynamics::PALADYNVegetationDynamics) = (
     prognostic(:ν, XY()), # PFT fractional area coverage
-    auxiliary(:C_veg, XY()), # Vegetation carbon pool (kgC/m²)
-    auxiliary(:LAI_b, XY()), # Balanced Leaf Area Index (LAI_b)
+    auxiliary(:C_veg, XY()), # Vegetation carbon pool [kgC/m²]
+    auxiliary(:LAI_b, XY()), # Balanced Leaf Area Index 
 )
 
-@inline function compute_auxiliary!(idx, state, model, veg_dynamics::PaladynVegetationDynamics)
+@inline function compute_auxiliary!(idx, state, model, veg_dynamics::PALADYNVegetationDynamics)
     # Nothing needed here for now
     return nothing
 end
 
-@inline function compute_tendencies!(idx, state, model::AbstractVegetationModel, veg_dynamics::PaladynVegetationDynamics{NF}) where NF
+@inline function compute_tendencies!(idx, state, model::AbstractVegetationModel, veg_dynamics::PALADYNVegetationDynamics{NF}) where NF
     i, j = idx
     
     # Compute λ_NPP
     λ_NPP = compute_λ_NPP(idx, state, model, model.carbon_dynamics)
 
     # Compute the disturbance rate
-    # TODO add Paladyn implemetation
-    # Placeholder for now = min disturbance rate
+    # TODO add PALADYN implemetation
+    # Placeholder for now γv = min. disturbance rate
     γv = veg_dynamics.γv_min
 
     # Compute the vegetation fraction tendency

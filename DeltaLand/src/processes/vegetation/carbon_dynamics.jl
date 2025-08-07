@@ -1,34 +1,34 @@
-@kwdef struct PaladynCarbonDynamics{NF} <: AbstractVegetationCarbonDynamics
+@kwdef struct PALADYNCarbonDynamics{NF} <: AbstractVegetationCarbonDynamics
     "Specific leaf area (Kattge et al. 2011) [m²/kgC], PFT specific"
-    SLA::NF = 10 # Value for Needleleaf tree PFT (always evergreen)
+    SLA::NF = 10 # Value for Needleleaf tree PFT 
     
     "Allometric coefficient [kgC/m²], PFT specific"
-    # TODO check awl value in Paladyn code
-    awl::NF = 2.0 # Value for Needleleaf tree PFT (always evergreen) 
+    # TODO check awl value in PALADYN code
+    awl::NF = 2.0 # Value for Needleleaf tree PFT 
     
     "Minimum Leaf Area Index modified from Clark et al. 2011, PFT specific"
-    LAI_min::NF = 1.0 # Value for Needleleaf tree PFT (always evergreen)
+    LAI_min::NF = 1.0 # Value for Needleleaf tree PFT 
     
     "Maximum Leaf Area Index modified from Clark et al. 2011, PFT specific"
-    LAI_max::NF = 6.0 # Value for Needleleaf tree PFT (always evergreen)
+    LAI_max::NF = 6.0 # Value for Needleleaf tree PFT 
     
     "Leaf turnover rate (Kattge et al. 2011) [1/year], PFT specific"
-    γL ::NF = 0.3 # Value for Needleleaf tree PFT (always evergreen)
+    γL ::NF = 0.3 # Value for Needleleaf tree PFT 
     
     "Root turnover rate [1/year], PFT specific"
-    γR::NF = 0.3 # Value for Needleleaf tree PFT (always evergreen)
+    γR::NF = 0.3 # Value for Needleleaf tree PFT 
     
     "Stem turnover rate modified from Clark et al. 2011 [1/year], PFT specific"
-    γS::NF = 0.05 # Value for Needleleaf tree PFT (always evergreen)
+    γS::NF = 0.05 # Value for Needleleaf tree PFT 
 end
 
-variables(vegcarbon_dynamics::PaladynCarbonDynamics) = (
-    prognostic(:C_veg, XY()), # Vegetation carbon pool (kgC/m²)
-    auxiliary(:LAI_b, XY()), # Balanced Leaf Area Index (LAI_b) 
-    auxiliary(:NPP, XY()), # Net Primary Production (NPP) kgC/m²/day
+variables(vegcarbon_dynamics::PALADYNCarbonDynamics) = (
+    prognostic(:C_veg, XY()), # Vegetation carbon pool [kgC/m²]
+    auxiliary(:LAI_b, XY()), # Balanced Leaf Area Index [m²/m²]
+    auxiliary(:NPP, XY()), # Net Primary Production [kgC/m²/day]
 )
 
-@inline function compute_λ_NPP(idx, state, model::AbstractVegetationModel, vegcarbon_dynamics::PaladynCarbonDynamics{NF}) where NF
+@inline function compute_λ_NPP(idx, state, model::AbstractVegetationModel, vegcarbon_dynamics::PALADYNCarbonDynamics{NF}) where NF
     i, j = idx
 
     # Compute λ_NPP based on the balanced Leaf Area Index (LAI_b)
@@ -44,16 +44,16 @@ variables(vegcarbon_dynamics::PaladynCarbonDynamics) = (
     return λ_NPP
 end
 
-@inline function compute_auxiliary!(idx, state, model::AbstractVegetationModel, vegcarbon_dynamics::PaladynCarbonDynamics{NF}) where NF
+@inline function compute_auxiliary!(idx, state, model::AbstractVegetationModel, vegcarbon_dynamics::PALADYNCarbonDynamics{NF}) where NF
     i, j = idx
 
-    # Compute balanced Leaf Area Index (LAI_b)
-    # Following Paladyn approach (assuming with bwl = 1)
+    # Compute balanced Leaf Area Index 
+    # Following PALADYN approach (assuming with bwl = 1)
     state.LAI_b[i, j] = ((NF(2.0) / vegcarbon_dynamics.SLA) + vegcarbon_dynamics.awl) / state.C_veg[i, j]
 
 end
 
-@inline function compute_tendencies!(idx, state, model::AbstractVegetationModel, vegcarbon_dynamics::PaladynCarbonDynamics{NF}) where NF  
+@inline function compute_tendencies!(idx, state, model::AbstractVegetationModel, vegcarbon_dynamics::PALADYNCarbonDynamics{NF}) where NF  
     i, j = idx
 
     # Compute λ_NPP

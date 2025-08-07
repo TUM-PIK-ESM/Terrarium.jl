@@ -41,8 +41,8 @@ include("vegetation/autotrophic_respiration.jl")
 export PhenologyModel
 include("vegetation/phenology.jl")
 
-export PaladynCarbonDynamics
+export PALADYNCarbonDynamics
 include("vegetation/carbon_dynamics.jl")
 
-export PaladynVegetationDynamics
+export PALADYNVegetationDynamics
 include("vegetation/vegetation_dynamics.jl")

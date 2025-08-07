@@ -1,18 +1,17 @@
-# TODO maybe change the name later, if the PALADYN 
-# autotrophic respiration approach has a more specific name
+# TODO maybe change the name later, if the PALADYN autotrophic respiration approach has a more specific name
 
-@kwdef struct PaladynAutotrophicRespiration{NF} <: AbstractAutotrophicRespiration
+@kwdef struct PALADYNAutotrophicRespiration{NF} <: AbstractAutotrophicRespiration
     # TODO add autotrophic respiration parameters
 end
 
-variables(autoresp::PaladynAutotrophicRespiration) = (
-    auxiliary(:GPP, XY()), # Gross Primary Production (GPP) kgC/m²/day
-    auxiliary(:C_veg, XY()), # Vegetation carbon pool (C_veg) kgC/m²
-    auxiliary(:Ra, XY()), # Autotrophic respiration (Ra) kgC/m²/day
-    auxiliary(:NPP, XY()), # Net Primary Production (NPP) kgC/m²/day
+variables(autoresp::PALADYNAutotrophicRespiration) = (
+    auxiliary(:GPP, XY()), # Gross Primary Production [kgC/m²/day]
+    auxiliary(:C_veg, XY()), # Vegetation carbon pool [kgC/m²]
+    auxiliary(:Ra, XY()), # Autotrophic respiration [kgC/m²/day]
+    auxiliary(:NPP, XY()), # Net Primary Production [kgC/m²/day]
 )
 
-@inline function compute_auxiliary!(idx, state, model::AbstractVegetationModel, autoresp::PaladynAutotrophicRespiration{NF}) where NF
+@inline function compute_auxiliary!(idx, state, model::AbstractVegetationModel, autoresp::PALADYNAutotrophicRespiration{NF}) where NF
     i, j = idx
 
     # Compute maintenance respiration Rm

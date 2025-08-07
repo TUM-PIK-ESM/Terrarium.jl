@@ -1,20 +1,19 @@
-# TODO maybe change the name later, if the PALADYN
-# phenology approach has a more specific name
+# TODO maybe change the name later, if the PALADYN phenology approach has a more specific name
 
-@kwdef struct PaladynPhenology{NF} <: AbstractPhenology
+@kwdef struct PALADYNPhenology{NF} <: AbstractPhenology
     # TODO add phenology parameters
 
 end
 
-variables(phenol::PaladynPhenology) = (
-    auxiliary(:LAI_b, XY()), # Balanced Leaf Area Index (LAI_b)
-    auxiliary(:LAI, XY()), # Leaf Area Index (LAI)
+variables(phenol::PALADYNPhenology) = (
+    auxiliary(:LAI_b, XY()), # Balanced Leaf Area Index 
+    auxiliary(:LAI, XY()), # Leaf Area Index 
 )
 
-@inline function compute_auxiliary!(idx, state, model::AbstractVegetationModel, phenol::PaladynPhenology{NF}) where NF
+@inline function compute_auxiliary!(idx, state, model::AbstractVegetationModel, phenol::PALADYNPhenology{NF}) where NF
     i, j = idx
 
-    # TODO add phenology implementation from Paladyn
+    # TODO add phenology implementation from PALADYN
     # Compute f_deciduous, a factor for smooth transition between evergreen and deciduous
     # For now, set f_deciduous to 0.0 (evergreen PFT)
     f_deciduous = NF(0.0)

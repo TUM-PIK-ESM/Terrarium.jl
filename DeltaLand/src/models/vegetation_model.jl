@@ -29,16 +29,16 @@ Multiple PFTs can be later handled with a `TiledVegetationModel` type that compo
     stomatal_conductance::StomatalConducatance = MedlynStomatalConductance() # not prognostic
 
     "Autotrophic respiration scheme"
-    autotrophic_respiration::AutotrophicRespiration = PaladynAutotrophicRespiration() # not prognostic
+    autotrophic_respiration::AutotrophicRespiration = PALADYNAutotrophicRespiration() # not prognostic
 
     "Phenology scheme"
-    phenology::Phenology = PaladynPhenology() # not prognostic
+    phenology::Phenology = PALADYNPhenology() # not prognostic
 
     "Vegetation carbon pool dynamics"
-    carbon_dynamics::CarbonDynamics = PaladynCarbonDynamics() # prognostic
+    carbon_dynamics::CarbonDynamics = PALADYNCarbonDynamics() # prognostic
 
     "Vegetation population density or coverage fraction dynamics"
-    vegetation_dynamics::VegetationDynamics =  PaladynVegetationDynamics() # prognostic
+    vegetation_dynamics::VegetationDynamics =  PALADYNVegetationDynamics() # prognostic
 
     "Physical constants"
     constants::Constants = PhysicalConstants{eltype(grid)}()
