@@ -14,6 +14,7 @@ variables(stomcond::MedlynStomatalConductance) = (
 
 # TODO for now define functions that compute derived variables from atm. inputs/forcings here, move later
 @inline function compute_vpd(idx, state, model::AbstractVegetationModel, stomcond::MedlynStomatalConductance{NF}) where NF
+    i, j = idx
     
     # Get atmospheric inputs/forcings 
     T_air = state.T_air[i, j] 

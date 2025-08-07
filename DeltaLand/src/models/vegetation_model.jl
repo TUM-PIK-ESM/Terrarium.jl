@@ -105,12 +105,12 @@ end
 
     # Compute auxiliary variables for each component
     compute_auxiliary!(idx, state, model, model.stomatal_conductance) # This computes λc
-    compute_auxiliary!(idx, state, model, model.photosynthesis) # This computes GPP
+    compute_auxiliary!(idx, state, model, model.photosynthesis) # This computes GPP and Rd
     compute_auxiliary!(idx, state, model, model.autotrophic_respiration) # This computes Ra and NPP
     compute_auxiliary!(idx, state, model, model.carbon_dynamics) # This computes LAI_b 
     # compute_auxiliary!(idx, state, model, model.vegetation_dynamics) 
     # TODO check again, this does run after C_veg and LAI_b is updated, right?
-    compute_auxiliary!(idx, state, model, model.phenology) # This computes LAI
+    compute_auxiliary!(idx, state, model, model.phenology) # This computes LAI and phen
 
 end
 
@@ -124,11 +124,9 @@ end
     idx = @index(Global, NTuple)
     i, j = idx
     # Update vegetation carbon pool
-    state.C_veg[i, j] = state.C_veg[i, j] + 
-                                  dt * state.C_veg_tendency[i, j]
+    state.C_veg[i, j] = state.C_veg[i, j] + dt * state.C_veg_tendency[i, j]
     # Update vegetation fraction
-    state.ν[i, j] = state.ν[i, j] + 
-                               dt * state.ν_tendency[i, j]
+    state.ν[i, j] = state.ν[i, j] + dt * state.ν_tendency[i, j]
 end
 
 # Initialization

@@ -21,7 +21,8 @@ end
     i, j = idx
     
     # Compute λ_NPP
-    λ_NPP = compute_λ_NPP(idx, state, model, model.carbon_dynamics)
+    carbon_dynamics = get_carbon_dynamics(model)
+    λ_NPP = compute_λ_NPP(idx, state, model, carbon_dynamics)
 
     # Compute the disturbance rate
     # TODO add PALADYN implemetation

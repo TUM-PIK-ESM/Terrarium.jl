@@ -7,6 +7,7 @@ end
 
 variables(phenol::PALADYNPhenology) = (
     auxiliary(:LAI_b, XY()), # Balanced Leaf Area Index 
+    auxiliary(:phen, XY()), # Phenology factor
     auxiliary(:LAI, XY()), # Leaf Area Index 
 )
 

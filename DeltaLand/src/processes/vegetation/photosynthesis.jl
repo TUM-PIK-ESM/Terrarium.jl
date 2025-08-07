@@ -73,6 +73,7 @@ variables(photo::LUEPhotosynthesis) = (
     auxiliary(:p, XY()), # Surface pressure [Pa]
     auxiliary(:swdown, XY()), # Downwelling shortwave radiation at the surface [W/m²]
     auxiliary(:co2, XY()), # Atmospheric CO2 concentration [ppm]
+    auxiliary(:Rd, XY()), # Daily leaf respiration [gC/m2/day]
     auxiliary(:GPP, XY()), # Gross Primary Production [kgC/m²/day]
 )
 
@@ -167,7 +168,7 @@ end
     p_O2 = compute_p_O2(idx, state, model, photo)
     pa = compute_pa(idx, state, model, photo)
 
-    # TODO add daylength/sec_day implementaion
+    # TODO add daylength/sec_day implementation
     # For now, placeholders as constant values
     daylength = NF(24.0)
     sec_day = NF(8.765813e4)
@@ -189,6 +190,9 @@ end
             
             # Compute intercellular CO2 partial pressure
             pi = state.λc[i, j] * pa
+
+            # Compute temperature factor for photosynthesis
+            f_temp = compute_f_temp(idx, state, model, photo)
 
             # Compute c1 and c2 parameters for C3 photosynthesis
             # TODO check factor 2 missing in PALADYN paper
@@ -219,14 +223,14 @@ end
 
             # Compute the daily leaf respiration [gC/m2/day]
             # Eqn 10, Haxeltine & Prentice 1996
-            Rd = α_C3 * Vc_max * β
+            state.Rd[i, j] = α_C3 * Vc_max * β
 
             # Compute the daily net photosynthesis [gC/m²/day]
-            An = Ag - Rd
+            An = Ag - state.Rd[i, j]
 
             # Compute total daytime net photosynthesis [gC/m²/day]
             # Eqn 19, Haxeltine & Prentice 1996
-            And = An + (NF(1.0) - daylength / NF(24.0)) * Rd
+            And = An + (NF(1.0) - daylength / NF(24.0)) * state.Rd[i, j]
 
             # Compute daily GPP [kgC/m²/day]
             state.GPP[i, j] = And * NF(1.e-3)
