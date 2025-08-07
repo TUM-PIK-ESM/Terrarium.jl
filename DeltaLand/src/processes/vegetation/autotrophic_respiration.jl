@@ -47,7 +47,7 @@ variables(autoresp::PALADYNAutotrophicRespiration) = (
     return f_temp_air, f_temp_soil
 end
 
-function compute_auxiliary!(state, model, autoresp::PALADYNAutotrophicRespiration{NF})
+function compute_auxiliary!(state, model, autoresp::PALADYNAutotrophicRespiration)
     grid = get_grid(model)
     launch!(grid, :xy, compute_auxiliary_kernel!, state, autoresp, get_carbon_dynamics(model))
 end

@@ -4,6 +4,9 @@
 Model for natural (unmanaged) vegetation processes for a single plant functional type (PFT).
 Multiple PFTs can be later handled with a `TiledVegetationModel` type that composes multiple
 `VegetationModel`s with different parameters for each PFT.
+
+Properties:
+$TYPEDFIELDS
 """
 @kwdef struct VegetationModel{
     NF,

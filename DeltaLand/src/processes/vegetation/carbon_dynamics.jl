@@ -69,7 +69,7 @@ end
     state.LAI_b[i, j] = ((NF(2.0) / vegcarbon_dynamics.SLA) + vegcarbon_dynamics.awl) / state.C_veg[i, j]
 end
 
-function compute_tendencies!(state, model, vegcarbon_dynamics::PALADYNCarbonDynamics{NF})
+function compute_tendencies!(state, model, vegcarbon_dynamics::PALADYNCarbonDynamics)
     grid = get_grid(model)
     launch!(grid, :xy, compute_tendencies_kernel!, state, vegcarbon_dynamics)
 end
