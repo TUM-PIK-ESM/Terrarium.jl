@@ -14,6 +14,7 @@ Multiple PFTs can be later handled with a `TiledVegetationModel` type that compo
     VegetationDynamics<:AbstractVegetationDynamics,
     Phenology<:AbstractPhenology,
     GridType<:AbstractLandGrid{NF},
+    Constants<:PhysicalConstants{NF},
     BoundaryConditions<:AbstractBoundaryConditions,
     Initializer<:AbstractInitializer,
     TimeStepper<:AbstractTimeStepper,
