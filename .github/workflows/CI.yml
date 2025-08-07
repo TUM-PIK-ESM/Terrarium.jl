@@ -1,0 +1,35 @@
+name: CI
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+jobs:
+  delta-land-test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        version:
+          - '1.10'
+          - '1.11'
+        os:
+          - ubuntu-latest
+        arch:
+          - x64
+    steps:
+      - uses: actions/checkout@v4
+      - uses: julia-actions/setup-julia@v2
+        with:
+          version: ${{ matrix.version }}
+          arch: ${{ matrix.arch }}
+      - uses: julia-actions/cache@v2
+      - uses: julia-actions/julia-buildpkg@v1
+        with: 
+          project: ./DeltaLand
+      - uses: julia-actions/julia-runtest@v1
+        with:
+          project: ./DeltaLand
+        env:
+          GITHUB_AUTH: ${{ secrets.GITHUB_TOKEN }}

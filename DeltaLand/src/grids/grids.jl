@@ -73,6 +73,7 @@ struct GlobalRingGrid{
     
     GlobalRingGrid(vert::AbstractVerticalSpacing, rings::RingGrids.AbstractGrid) = GlobalRingGrid(CPU(), Float32, vert, rings)
     GlobalRingGrid(arch::AbstractArchitecture, vert::AbstractVerticalSpacing, rings::RingGrids.AbstractGrid) = GlobalRingGrid(arch, Float32, vert, rings)
+    GlobalRingGrid(rings::RingGrid, grid::RectGrid) where {RingGrid, RectGrid} = new{eltype(grid), RingGrid, RectGrid}(rings, grid)
 
     """
         $SIGNATURES
@@ -96,6 +97,11 @@ struct GlobalRingGrid{
 end
 
 get_field_grid(grid::GlobalRingGrid) = grid.grid
+
+function Adapt.adapt_structure(to, grid::GlobalRingGrid)
+    inner_grid = Adapt.adapt_structure(to, grid.grid)
+    return GlobalRingGrid(Adapt.adapt_structure(to, grid.rings), inner_grid)
+end
 
 # Convenience dispatch for Oceananigans.launch!
 function launch!(grid::AbstractLandGrid, args...; kwargs...)

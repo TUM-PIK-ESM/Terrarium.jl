@@ -35,6 +35,28 @@ end
 end
 
 """
+    $SIGNATURES
+
+Computes the bulk thermal conductivity of a finite volume from the given volumetric fractions.
+"""
+@inline function thermalconductivity(props::SoilThermalProperties, fracs::NamedTuple)
+    κs = getproperties(props.cond)
+    # apply bulk conductivity weighting
+    return props.cond_bulk(κs, fracs)
+end
+
+"""
+    $SIGNATURES
+
+Computes the bulk heat capacity of a finite volume from the given volumetric fractions.
+"""
+@inline function heatcapacity(props::SoilThermalProperties, fracs::NamedTuple)
+    cs = getproperties(props.heatcap)
+    # for heat capacity, we just do a weighted average
+    return sum(fastmap(*, cs, fracs))
+end
+
+"""
 The inverse quadratic (or "quadratic parallel") bulk thermal conductivity formula (Cosenza et al. 2003):
 
 ```math

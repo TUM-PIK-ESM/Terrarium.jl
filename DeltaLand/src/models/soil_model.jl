@@ -62,62 +62,83 @@ function variables(model::SoilModel)
 end
 
 function compute_auxiliary!(state, model::SoilModel)
-    grid = get_grid(model)
-    launch!(grid, _compute_auxiliary_soil_kernel, state, model)
+    compute_auxiliary!(state, model, model.strat)
+    compute_auxiliary!(state, model, model.hydrology)
+    compute_auxiliary!(state, model, model.energy)
+    compute_auxiliary!(state, model, model.biogeochem)
     return nothing
 end
 
 function compute_tendencies!(state, model::SoilModel)
-    fill_halo_regions!(state.temperature)
-    grid = get_grid(model)
-    launch!(grid, _compute_tendencies_soil_kernel, state, model)
+    # Fill halo regions for fields with boundary conditions
+    fill_halo_regions!(state)
+    # Default implementation forwards the method dispatch to processes in the order:
+    # Stratigraphy -> Hydrology -> Energy -> Biogeochemistry
+    compute_tendencies!(state, model, model.strat)
+    compute_tendencies!(state, model, model.hydrology)
+    compute_tendencies!(state, model, model.energy)
+    compute_tendencies!(state, model, model.biogeochem)
     return nothing
 end
 
-function timestep!(state, model::SoilModel, dt=get_dt(timestepper))
+function timestep!(state, model::SoilModel, euler::ForwardEuler, dt=get_dt(timestepper))
     compute_auxiliary!(state, model)
     compute_tendencies!(state, model)
-    grid = get_grid(model)
-    launch!(grid, _timestep_kernel, state, model, get_time_stepping(model), dt)
+    launch!(
+        model.grid,
+        timestep_kernel!,
+        state,
+        euler,
+        model.energy,
+        model.hydrology,
+        model.strat,
+        model.biogeochem,
+        model.constants,
+        dt
+    )
     return nothing
 end
 
-@kernel function _compute_auxiliary_soil_kernel(state, model::SoilModel)
-    idx = @index(Global, NTuple)
-    compute_auxiliary!(idx, state, model, model.strat)
-    compute_auxiliary!(idx, state, model, model.hydrology)
-    compute_auxiliary!(idx, state, model, model.energy)
-    compute_auxiliary!(idx, state, model, model.biogeochem)
-end
-
-@kernel function _compute_tendencies_soil_kernel(state, model::SoilModel)
-    idx = @index(Global, NTuple)
-    compute_tendencies!(idx, state, model, model.strat)
-    compute_tendencies!(idx, state, model, model.hydrology)
-    compute_tendencies!(idx, state, model, model.energy)
-    compute_tendencies!(idx, state, model, model.biogeochem)
-end
-
-@kernel function _timestep_kernel(state, model::SoilModel, euler::ForwardEuler, dt)
+@kernel function timestep_kernel!(
+    state,
+    ::ForwardEuler,
+    energy::AbstractSoilEnergyBalance,
+    hydrology::AbstractSoilHydrology,
+    strat::AbstractStratigraphy,
+    bgc::AbstractSoilBiogeochemistry,
+    constants::PhysicalConstants,
+    dt
+)
     idx = @index(Global, NTuple)
     i, j, k = idx
     # timestep for internal energy
     state.internal_energy[i, j, k] = state.internal_energy[i, j, k] + dt*state.internal_energy_tendency[i, j, k]
     # apply inverse closure relation to update temperature
-    energy_to_temperature!(idx, state, model, get_freezecurve(get_soil_hydrology(model)))
+    fc = get_freezecurve(hydrology)
+    energy_to_temperature!(idx, state, fc, energy, hydrology, strat, bgc, constants)
 end
 
-@inline function soil_characteristic_fractions(idx, state, model::SoilModel)
+@inline function soil_characteristic_fractions(
+    idx, state,
+    strat::AbstractStratigraphy,
+    hydrology::AbstractSoilHydrology,
+    bgc::AbstractSoilBiogeochemistry
+)
     sat = state.pore_water_ice_saturation[idx...]
-    por = porosity(idx, state, model, get_soil_hydrology(model))
+    por = porosity(idx, state, hydrology, strat, bgc)
     ## there is some slight redundant computation here; consider merging into one method?
-    org = organic_fraction(idx, state, model, get_biogeochemistry(model))
+    org = organic_fraction(idx, state, bgc)
     return (; sat, por, org)
 end
 
-@inline function soil_volumetric_fractions(idx, state, model::SoilModel)
+@inline function soil_volumetric_fractions(
+    idx, state,
+    strat::AbstractStratigraphy,
+    hydrology::AbstractSoilHydrology,
+    bgc::AbstractSoilBiogeochemistry
+)
     # get characteristic fractions
-    sat, por, org = soil_characteristic_fractions(idx, state, model)
+    (; sat, por, org) = soil_characteristic_fractions(idx, state, strat, hydrology, bgc)
     # get fraction of unfrozen pore water
     liq = state.liquid_water_fraction[idx...]
     # calculate volumetric fractions
@@ -132,19 +153,33 @@ end
 
 # Initialization
 
-@kernel function _initialize_kernel(state, model::SoilModel, initializer)
-    idx = @index(Global, NTuple)
-    initialize!(idx, state, model, initializer)
-end
-
 function initialize!(state, model::SoilModel, initializer::AbstractInitializer)
+    # launch kernel
     grid = get_grid(model)
-    launch!(grid, _initialize_kernel, state, model, initializer)
+    launch!(
+        grid,
+        initialize_kernel!,
+        state,
+        initializer,
+        model.energy,
+        model.hydrology,
+        model.strat,
+        model.biogeochem,
+        model.constants
+    )
 end
 
-function initialize!(idx, state, model::SoilModel, initializer::AbstractInitializer)
+@kernel function initialize_kernel!(
+    state, initializer::AbstractInitializer,
+    energy::AbstractSoilEnergyBalance,
+    hydrology::AbstractSoilHydrology,
+    strat::AbstractStratigraphy,
+    bgc::AbstractSoilBiogeochemistry,
+    constants::PhysicalConstants,
+)
+    idx = @index(Global, NTuple)
     # TODO: need a more comprehensive initialization scheme for all soil model components
-    hydrology = get_soil_hydrology(model)
     # Note that this assumes temperature has already been iniitialized
-    temperature_to_energy!(idx, state, model, get_freezecurve(hydrology))
+    fc = get_freezecurve(hydrology)
+    temperature_to_energy!(idx, state, fc, energy, hydrology, strat, bgc, constants)
 end

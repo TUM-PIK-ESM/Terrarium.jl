@@ -5,15 +5,17 @@ using DocStringExtensions
 import ConstructionBase: getproperties, setproperties
 
 import DataStructures: OrderedDict
+import Dates: Period, Second
 
 # Oceananigans numerics
 # TODO: Raise an issue on Oceananigans.jl about refactoring numerics
 # into a separate package.
 import Oceananigans: Field, Center, Face, set!
-import Oceananigans.Architectures: AbstractArchitecture, CPU, GPU
-import Oceananigans.BoundaryConditions: fill_halo_regions!
+import Oceananigans.Advection: AbstractAdvectionScheme, UpwindBiased
+import Oceananigans.Architectures: AbstractArchitecture, CPU, GPU, architecture, on_architecture
+import Oceananigans.BoundaryConditions: BoundaryConditions, fill_halo_regions!
 import Oceananigans.Grids: Grids, Periodic, Flat, Bounded
-import Oceananigans.Operators: ∂zᵃᵃᶜ, ∂zᵃᵃᶠ, Δzᵃᵃᶜ
+import Oceananigans.Operators: ∂zᵃᵃᶜ, ∂zᵃᵃᶠ, ℑzᵃᵃᶠ, Δzᵃᵃᶜ
 import Oceananigans.TimeSteppers: Clock, tick_time!, reset!
 import Oceananigans.Utils: launch!
 
@@ -32,7 +34,7 @@ import CryoGrid: SoilTexture, SurfaceEnergyBalance
 
 # Re-export important types and methods
 export CPU, GPU, Clock
-export adapt
+export adapt, set!
 
 # internal utilities
 include("utils.jl")
@@ -85,7 +87,7 @@ export LandModel
 include("models/land_model.jl")
 
 # simulation types
-export Simulation, initialize
+export Simulation, initialize, run!, current_time
 include("simulation.jl")
 
 end # module DeltaLand
