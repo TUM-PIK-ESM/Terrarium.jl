@@ -1,5 +1,8 @@
 abstract type AbstractSoilWaterFluxes end
 struct NoFlow <: AbstractSoilWaterFluxes end
+struct RichardsEq{Advection<:AbstractAdvectionScheme} <: AbstractSoilWaterFluxes
+    advection::Advection
+end
 
 @kwdef struct SoilHydrology{
     SoilWaterFluxes<:AbstractSoilWaterFluxes,
@@ -23,21 +26,28 @@ get_hydraulic_properties(hydrology::SoilHydrology) = hydrology.hydraulic_propert
 # this probably only matters in permafrost environments.
 get_freezecurve(hydrology::SoilHydrology) = hydrology.freezecurve
 
-variables(::SoilHydrology{NoFlow}) = (
-    auxiliary(:pore_water_ice_saturation, XYZ()),
-)
-
-@inline function porosity(idx, state, model::AbstractSoilModel, hydrology::SoilHydrology)
-    bgc = get_biogeochemistry(model)
-    strat = get_stratigraphy(model)
+@inline function porosity(idx, state, hydrology::SoilHydrology, strat::AbstractStratigraphy, bgc::AbstractSoilBiogeochemistry)
     props = get_hydraulic_properties(hydrology)
-    org = organic_fraction(idx, state, model, bgc)
+    org = organic_fraction(idx, state, bgc)
     # note that this currently assumes the natural porosities of both the mineral and organic components to be constant;
     # we probably want to relax this in the future since there are global products of soil texture at least for the upper layers
     texture = get_soil_texture(strat)
     return (1 - org)*mineral_porosity(props, texture) + org*organic_porosity(bgc)
 end
 
-@inline compute_auxiliary!(idx, state, model::AbstractSoilModel, hydrology::SoilHydrology) = nothing
+# Immobile soil water (NoFlow)
 
-@inline compute_tendencies!(idx, state, model, strat::SoilHydrology{NoFlow}) = nothing
+variables(::SoilHydrology{NoFlow}) = (
+    auxiliary(:pore_water_ice_saturation, XYZ()),
+)
+
+@inline compute_auxiliary!(state, model, hydrology::SoilHydrology) = nothing
+
+@inline compute_tendencies!(state, model, strat::SoilHydrology{NoFlow}) = nothing
+
+# Richardson-Richards equation diffusion/advection
+
+variables(::SoilHydrology{<:RichardsEq}) = (
+    prognosic(:pore_water_ice_potential, XYZ()),
+    auxiliary(:pore_water_ice_saturation, XYZ()),
+)

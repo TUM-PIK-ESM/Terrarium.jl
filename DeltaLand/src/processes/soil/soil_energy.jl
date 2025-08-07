@@ -1,6 +1,9 @@
 abstract type AbstractHeatOperator end
 struct ExplicitHeatConduction <: AbstractHeatOperator end
 
+"""
+    $TYPEDEF
+"""
 @kwdef struct SoilEnergyBalance{
     HeatOperator<:AbstractHeatOperator,
     ThermalProps<:SoilThermalProperties,
@@ -20,57 +23,85 @@ variables(::SoilEnergyBalance) = (
     auxiliary(:geothermal_heat_flux, XY()),
 )
 
-@inline function thermalconductivity(idx, state, model::AbstractSoilModel, energy::SoilEnergyBalance)
-    conds = getproperties(energy.thermal_properties.cond)
-    fracs = soil_volumetric_fractions(idx, state, model)
-    # apply bulk conductivity weighting
-    return energy.thermal_properties.cond_bulk(conds, fracs)
-end
+compute_auxiliary!(state, model, energy::SoilEnergyBalance) = nothing
 
-@inline function heatcapacity(idx, state, model::AbstractSoilModel, energy::SoilEnergyBalance)
-    heatcaps = getproperties(energy.thermal_properties.heatcap)
-    fracs = soil_volumetric_fractions(idx, state, model)
-    # for heat capacity, we just do a weighted average
-    return sum(fastmap(*, heatcaps, fracs))
-end
-
-@inline function compute_auxiliary!(idx, state, model, energy::SoilEnergyBalance)
-    # currently nothing to do here
+function compute_tendencies!(state, model, energy::SoilEnergyBalance)
+    grid = get_grid(model)
+    field_grid = get_field_grid(grid)
+    hydrology = get_soil_hydrology(model)
+    strat = get_stratigraphy(model)
+    bgc = get_biogeochemistry(model)
+    launch!(grid, compute_energy_tendency!, state, field_grid, energy, hydrology, strat, bgc)
     return nothing
 end
 
-@inline function compute_tendencies!(idx, state, model, energy::SoilEnergyBalance)
+@kernel function compute_energy_tendency!(
+    state,
+    grid,
+    energy::SoilEnergyBalance,
+    hydrology::AbstractSoilHydrology,
+    strat::AbstractStratigraphy,
+    bgc::AbstractSoilBiogeochemistry
+)
+    idx = @index(Global, NTuple)
+    state.internal_energy_tendency[idx...] += energy_tendency(idx, state, grid, energy, hydrology, strat, bgc)
+end
+
+@inline function energy_tendency(
+    idx, state, grid,
+    energy::SoilEnergyBalance,
+    hydrology::AbstractSoilHydrology,
+    strat::AbstractStratigraphy,
+    bgc::AbstractSoilBiogeochemistry
+)
     i, j, k = idx
 
-    # Get underlying Oceananigans grid
-    grid = get_field_grid(get_grid(model))
-
-    # Get temperature state
+    # Get temperature field
     T = state.temperature
-
-    # Get thermal conductivity
-    κ = thermalconductivity(idx, state, model, energy)
     
-    # Interior heat fluxes
-    dUdt = -∂zᵃᵃᶜ(i, j, k, grid, diffusive_flux, κ, T)
-    
-    # Ground heat flux (upper boundary)
+    # Retrieve ground heat flux (upper boundary)
+    # Negative since fluxes are always positive upwards
     Qg = @inbounds state.ground_heat_flux[i, j, k]
-    Δz = Δzᵃᵃᶜ(i, j, k, grid)
-    dUdt += ifelse(k == grid.Nz, -Qg / Δz, zero(grid))
-
-    # Geothermal heat flux (lower boundary)
-    # TODO: should this just be a flux boundary condition on the tendency?
+    # Retrieve geothermal heat flux (lower boundary)
     Qgeo = @inbounds state.geothermal_heat_flux[i, j, k]
-    Δz = Δzᵃᵃᶜ(i, j, k, grid)
-    dUdt += ifelse(k == 1, Qgeo / Δz, zero(grid))
 
-    # Accumulate tendency
-    state.internal_energy_tendency[i, j, k] += dUdt
+    return (
+        # Interior heat fluxes
+        -∂zᵃᵃᶜ(i, j, k, grid, diffusive_heat_flux, state, energy, hydrology, strat, bgc)
+        # Upper boundary flux
+        + energy_boundary_tendency(i, j, k, grid, grid.Nz, -Qg)
+        # Lower boundary flux
+        + energy_boundary_tendency(i, j, k, grid, 1, Qgeo)
+    )
+end
+
+@inline function thermalconductivity(
+    i, j, k, grid, state,
+    energy::SoilEnergyBalance,
+    hydrology::AbstractSoilHydrology,
+    strat::AbstractStratigraphy,
+    bgc::AbstractSoilBiogeochemistry,
+)
+    fracs = soil_volumetric_fractions((i, j, k), state, strat, hydrology, bgc)
+    return thermalconductivity(energy.thermal_properties, fracs)
 end
 
 # Diffusive heat flux term passed to ∂z operator
-@inline diffusive_flux(i, j, k, grid, κ, T) = -κ * ∂zᵃᵃᶠ(i, j, k, grid, T)
+@inline function diffusive_heat_flux(i, j, k, grid, state, args...)
+    # Get temperature field
+    T = state.temperature
+    # Compute and interpolate conductivity to grid cell faces
+    κ = ℑzᵃᵃᶠ(i, j, k, grid, thermalconductivity, state, args...)
+    # Fourier's law: q = -κ ∂T/∂z
+    q = -κ * ∂zᵃᵃᶠ(i, j, k, grid, T)
+    return q
+end
+
+# Tendency for boundary cells; zero for all interior grid cells
+@inline function energy_boundary_tendency(i, j, k, grid, I, Q)
+    Δz = Δzᵃᵃᶜ(i, j, k, grid)
+    return (k == I) * (Q / Δz)
+end
 
 """
     TemperatureEnergyClosure
@@ -88,72 +119,120 @@ struct TemperatureEnergyClosure <: AbstractClosureRelation end
 
 varname(::TemperatureEnergyClosure) = :internal_energy
 
-function closure!(state, model::AbstractSoilModel, closure::TemperatureEnergyClosure)
-    grid = get_field_grid(get_grid(model))
-    launch!(grid, _closure_kernel, state, model, closure)
+function closure!(state, model::AbstractSoilModel, ::TemperatureEnergyClosure)
+    grid = get_grid(model)
+    energy = get_soil_energy_balance(model)
+    hydrology = get_soil_hydrology(model)
+    strat = get_stratigraphy(model)
+    bgc = get_biogeochemistry(model)
+    constants = get_constants(model)
+    launch!(grid, temperature_to_energy!, state, energy, hydrology, strat, bgc, constants)
     return nothing
 end
 
 function invclosure!(state, model::AbstractSoilModel, ::TemperatureEnergyClosure)
     grid = get_grid(model)
-    launch!(grid, _invclosure_kernel, state, model, closure)
+    energy = get_soil_energy_balance(model)
+    hydrology = get_soil_hydrology(model)
+    strat = get_stratigraphy(model)
+    bgc = get_biogeochemistry(model)
+    constants = get_constants(model)
+    launch!(grid, energy_to_temperature!, state, energy, hydrology, strat, bgc, constants)
     return nothing
 end
 
-@kernel function _closure_kernel(state, model::AbstractSoilModel, ::TemperatureEnergyClosure)
+@kernel function temperature_to_energy!(
+    state,
+    energy::SoilEnergyBalance,
+    hydrology::AbstractSoilHydrology,
+    strat::AbstractStratigraphy,
+    bgc::AbstractSoilBiogeochemistry,
+    constants::PhysicalConstants,
+)
     idx = @index(Global, NTuple)
-    temperature_to_energy!(idx, state, model, get_freezecurve(get_soil_hydrology(model)))
+    fc = get_freezecurve(hydrology)
+    temperature_to_energy!(idx, state, fc, energy, hydrology, strat, bgc, constants)
 end
 
-@kernel function _invclosure_kernel(state, model, ::TemperatureEnergyClosure)
-    idx = @index(Global, NTuple)
-    energy_to_temperature!(idx, state, model, get_freezecurve(get_soil_hydrology(model)))
-end
-
-@inline function temperature_to_energy!(idx, state, model, ::FreezeCurves.FreeWater)
+@inline function temperature_to_energy!(
+    idx, state, ::FreezeCurves.FreeWater,
+    energy::SoilEnergyBalance,
+    hydrology::AbstractSoilHydrology,
+    strat::AbstractStratigraphy,
+    bgc::AbstractSoilBiogeochemistry,
+    constants::PhysicalConstants,
+)
     i, j, k = idx
-    constants = get_constants(model)
     T = state.temperature[i, j, k] # assumed given
-    C = heatcapacity(idx, state, model, get_soil_energy_balance(model))
     L = constants.ρw*constants.Lsl
-    por = porosity(idx, state, model, get_soil_hydrology(model))
+    por = porosity(idx, state, hydrology, strat, bgc)
     sat = state.pore_water_ice_saturation[i, j, k]
-    θwi = sat*por
-    Lθ = L*θwi
+    Lθ = L*sat*por
     # calculate unfrozen water content from temperature
     # N.B. For the free water freeze curve, the mapping from temperature to unfrozen water content
     # within the phase change region is indeterminate since it is assumed that T = 0. As such, we
-    # have to assume here that the liquid water fraction is zero if T <= 0. This method shold therefore
+    # have to assume here that the liquid water fraction is zero if T <= 0. This method should therefore
     # only be used for initialization and should **not** be involved in the calculation of tendencies.
-    liquid_water_frac = ifelse(
+    liq = state.liquid_water_fraction[i, j, k] = ifelse(
         T > zero(T),
-        θwi,
-        zero(θwi),
+        sat,
+        zero(sat),
     )
-    state.liquid_water_fraction[i, j, k] = liquid_water_frac
+    fracs = soil_volumetric_fractions(idx, state, strat, hydrology, bgc)
+    C = heatcapacity(energy.thermal_properties, fracs)
     # compute energy from temperature, heat capacity, and ice fraction
-    U = state.internal_energy[i, j, k] = T*C - L*θwi*(1 - liquid_water_frac)
+    U = state.internal_energy[i, j, k] = T*C - L*sat*por*(1 - liq)
     return U
 end
 
-@inline function energy_to_temperature!(idx, state, model, ::FreezeCurves.FreeWater)
+@kernel function energy_to_temperature!(
+    state,
+    energy::SoilEnergyBalance,
+    hydrology::AbstractSoilHydrology,
+    strat::AbstractStratigraphy,
+    bgc::AbstractSoilBiogeochemistry,
+    constants::PhysicalConstants,
+)
+    idx = @index(Global, NTuple)
+    fc = get_freezecurve(hydrology)
+    energy_to_temperature!(idx, state, fc, energy, hydrology, strat, bgc, constants)
+end
+
+@inline function energy_to_temperature!(
+    idx, state, ::FreezeCurves.FreeWater,
+    energy::SoilEnergyBalance,
+    hydrology::AbstractSoilHydrology,
+    strat::AbstractStratigraphy,
+    bgc::AbstractSoilBiogeochemistry,
+    constants::PhysicalConstants,
+)
     i, j, k = idx
-    constants = get_constants(model)
     U = state.internal_energy[i, j, k] # assumed given
-    C = heatcapacity(idx, state, model, get_soil_energy_balance(model))
     L = constants.ρw*constants.Lsl
-    por = porosity(idx, state, model, get_soil_hydrology(model))
+    por = porosity(idx, state, hydrology, strat, bgc)
     sat = state.pore_water_ice_saturation[i, j, k]
-    θwi = sat*por
-    Lθ = L*θwi
+    Lθ = L*sat*por
     # calculate unfrozen water content
-    liquid_water_frac, _ = FreezeCurves.freewater(U, one(θwi), L)
-    state.liquid_water_fraction[i, j, k] = liquid_water_frac
+    state.liquid_water_fraction[i, j, k] = ifelse(
+        U < -Lθ,
+        # Case 1: U < -Lθ -> frozen
+        zero(sat),
+        # Case 2: U ≥ -Lθ
+        ifelse(
+            U >= zero(U),
+            # Case 2a: U ≥ Lθ -> thawed
+            one(sat),
+            # Case 2b: 0-Lθ ≤ U ≤ 0 -> phase change
+            1 - (U / -Lθ)
+        )
+    )
+    fracs = soil_volumetric_fractions(idx, state, strat, hydrology, bgc)
+    C = heatcapacity(energy.thermal_properties, fracs)
     # calculate temperature from internal energy and liquid water fraction
     T = state.temperature[i, j, k] = ifelse(
         U < -Lθ,
-        # Case 1: U < 0 → frozen
-        (U - Lθ) / C,
+        # Case 1: U < -Lθ → frozen
+        (U + Lθ) / C,
         # Case 2: U ≥ -Lθ
         ifelse(
             U >= zero(U),
