@@ -1,4 +1,4 @@
-# TODO maybe change the name later, if the PALADYN autotrophic respiration approach has a more specific name
+# Note: maybe change the name later, if the PALADYN autotrophic respiration approach has a more specific name
 
 @kwdef struct PALADYNAutotrophicRespiration{NF} <: AbstractAutotrophicRespiration
     # TODO check physical meaning of this parameter

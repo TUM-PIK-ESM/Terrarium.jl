@@ -1,4 +1,4 @@
-# TODO maybe change the name later, if the PALADYN phenology approach has a more specific name
+# Note: maybe change the name later, if the PALADYN phenology approach has a more specific name
 
 @kwdef struct PALADYNPhenology{NF} <: AbstractPhenology
     # TODO add phenology parameters

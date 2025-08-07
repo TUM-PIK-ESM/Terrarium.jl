@@ -25,7 +25,7 @@ end
     λ_NPP = compute_λ_NPP(idx, state, model, carbon_dynamics)
 
     # Compute the disturbance rate
-    # TODO add PALADYN implemetation
+    # TODO add PALADYN implemetation for dist. rate
     # Placeholder for now γv = min. disturbance rate
     γv = veg_dynamics.γv_min
 

@@ -1,5 +1,5 @@
 @kwdef struct MedlynStomatalConductance{NF} <: AbstractStomatalConductance
-    # TODO check g1 parameter physical meaning
+    # TODO check pysical meaning of this parameter
     "Parameter in optimal stomatal conductance formulation (Lin et al. 2015), PFT specific"
     g1::NF = 2.3 # Value for Needleleaf tree PFT 
 end

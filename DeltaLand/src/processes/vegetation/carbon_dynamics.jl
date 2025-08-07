@@ -1,9 +1,11 @@
+# Note: veg. carbon dynamics implementation following PALADYN  but considering only the sum of the veg. carbon pools.
+# The subsequent splitting into C_leaf, C_stem, C_root is not implemented for now
+
 @kwdef struct PALADYNCarbonDynamics{NF} <: AbstractVegetationCarbonDynamics
     "Specific leaf area (Kattge et al. 2011) [m²/kgC], PFT specific"
     SLA::NF = 10 # Value for Needleleaf tree PFT 
     
-    "Allometric coefficient [kgC/m²], PFT specific"
-    # TODO check awl value in PALADYN code
+    "Allometric coefficient, modified from Cox 2001 to account for bwl=1 [kgC/m²], PFT specific"
     awl::NF = 2.0 # Value for Needleleaf tree PFT 
     
     "Minimum Leaf Area Index modified from Clark et al. 2011, PFT specific"
