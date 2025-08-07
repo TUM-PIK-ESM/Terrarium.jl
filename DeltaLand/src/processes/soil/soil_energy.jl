@@ -23,23 +23,6 @@ variables(::SoilEnergyBalance) = (
     auxiliary(:geothermal_heat_flux, XY()),
 )
 
-"""
-    $SIGNATURES
-
-Computes the thermal conductivity of a grid cell from the given volumetric fractions.
-"""
-@inline function thermalconductivity(energy::SoilEnergyBalance, fracs::NamedTuple)
-    conds = getproperties(energy.thermal_properties.cond)
-    # apply bulk conductivity weighting
-    return energy.thermal_properties.cond_bulk(conds, fracs)
-end
-
-@inline function heatcapacity(energy::SoilEnergyBalance, fracs::NamedTuple)
-    heatcaps = getproperties(energy.thermal_properties.heatcap)
-    # for heat capacity, we just do a weighted average
-    return sum(fastmap(*, heatcaps, fracs))
-end
-
 compute_auxiliary!(state, model, energy::SoilEnergyBalance) = nothing
 
 function compute_tendencies!(state, model, energy::SoilEnergyBalance)
@@ -100,7 +83,7 @@ end
     bgc::AbstractSoilBiogeochemistry,
 )
     fracs = soil_volumetric_fractions((i, j, k), state, strat, hydrology, bgc)
-    return thermalconductivity(energy, fracs)
+    return thermalconductivity(energy.thermal_properties, fracs)
 end
 
 # Diffusive heat flux term passed to ∂z operator
@@ -184,8 +167,7 @@ end
     L = constants.ρw*constants.Lsl
     por = porosity(idx, state, hydrology, strat, bgc)
     sat = state.pore_water_ice_saturation[i, j, k]
-    θwi = sat*por
-    Lθ = L*θwi
+    Lθ = L*sat*por
     # calculate unfrozen water content from temperature
     # N.B. For the free water freeze curve, the mapping from temperature to unfrozen water content
     # within the phase change region is indeterminate since it is assumed that T = 0. As such, we
@@ -193,13 +175,13 @@ end
     # only be used for initialization and should **not** be involved in the calculation of tendencies.
     liq = state.liquid_water_fraction[i, j, k] = ifelse(
         T > zero(T),
-        θwi,
-        zero(θwi),
+        sat,
+        zero(sat),
     )
     fracs = soil_volumetric_fractions(idx, state, strat, hydrology, bgc)
-    C = heatcapacity(energy, fracs)
+    C = heatcapacity(energy.thermal_properties, fracs)
     # compute energy from temperature, heat capacity, and ice fraction
-    U = state.internal_energy[i, j, k] = T*C - L*θwi*(1 - liq)
+    U = state.internal_energy[i, j, k] = T*C - L*sat*por*(1 - liq)
     return U
 end
 
@@ -229,17 +211,28 @@ end
     L = constants.ρw*constants.Lsl
     por = porosity(idx, state, hydrology, strat, bgc)
     sat = state.pore_water_ice_saturation[i, j, k]
-    θwi = sat*por
-    Lθ = L*θwi
+    Lθ = L*sat*por
     # calculate unfrozen water content
-    state.liquid_water_fraction[i, j, k], _ = FreezeCurves.freewater(U, one(θwi), L)
+    state.liquid_water_fraction[i, j, k] = ifelse(
+        U < -Lθ,
+        # Case 1: U < -Lθ -> frozen
+        zero(sat),
+        # Case 2: U ≥ -Lθ
+        ifelse(
+            U >= zero(U),
+            # Case 2a: U ≥ Lθ -> thawed
+            one(sat),
+            # Case 2b: 0-Lθ ≤ U ≤ 0 -> phase change
+            1 - (U / -Lθ)
+        )
+    )
     fracs = soil_volumetric_fractions(idx, state, strat, hydrology, bgc)
-    C = heatcapacity(energy, fracs)
+    C = heatcapacity(energy.thermal_properties, fracs)
     # calculate temperature from internal energy and liquid water fraction
     T = state.temperature[i, j, k] = ifelse(
         U < -Lθ,
-        # Case 1: U < 0 → frozen
-        (U - Lθ) / C,
+        # Case 1: U < -Lθ → frozen
+        (U + Lθ) / C,
         # Case 2: U ≥ -Lθ
         ifelse(
             U >= zero(U),

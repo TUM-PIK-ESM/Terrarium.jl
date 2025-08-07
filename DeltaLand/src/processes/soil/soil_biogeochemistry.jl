@@ -1,7 +1,12 @@
-# Temporary stub implementation of BGC
+"""
+    ConstantSoilCarbonDenisty{NF} <: AbstractSoilBiogeochemistry
+
+Naive implementation of soil biogeochemistry that just assumes there to be a constant
+organic content in all soil layers.
+"""
 Base.@kwdef struct ConstantSoilCarbonDenisty{NF} <: AbstractSoilBiogeochemistry
     "Soil organic carbon density [kg/m^3]"
-    ρ_soc::NF = 65.0
+    ρ_soc::NF = 0.0
 
     "Pure organic matter density [kg/m^3]"
     ρ_org::NF = 1300.0
@@ -27,6 +32,13 @@ the organic material.
 """
 organic_fraction(bgc::ConstantSoilCarbonDenisty) = bgc.ρ_soc / ((1 - bgc.por_org)*bgc.ρ_org)
 
+"""
+    organic_fraction(idx, state, bgc::ConstantSoilCarbonDenisty)
+
+Calculate the soil organic carbon fraction at the given grid index. For `ConstantSoilCarbonDenisty`,
+this simply returns a constant parameter. Implementations of soil carbon dynamics would want to compute
+this based on the prognostic state of the carbon content/pool stored in the soil.
+"""
 @inline organic_fraction(idx, state, bgc::ConstantSoilCarbonDenisty) = organic_fraction(bgc)
 
 @inline compute_auxiliary!(state, model, bgc::ConstantSoilCarbonDenisty) = nothing

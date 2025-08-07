@@ -10,13 +10,13 @@ include("soil/abstract_types.jl")
 export SoilThermalConductivities, SoilHeatCapacities, SoilThermalProperties, InverseQuadratic
 include("soil/soil_thermal_properties.jl")
 
-export SURFEXHydraulics
+export PrescribedHydraulics, SURFEXHydraulics
 include("soil/soil_hydraulic_properties.jl")
 
 export HomogeneousSoil
 include("soil/soil_stratigraphy.jl")
 
-export ImmobileSoilWater, SoilHydraulicProperties
+export SoilHydrology, ImmobileSoilWater, SoilHydraulicProperties
 include("soil/soil_hydrology.jl")
 
 export SoilEnergyBalance

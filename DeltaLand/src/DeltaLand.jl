@@ -13,7 +13,7 @@ import Dates: Period, Second
 import Oceananigans: Field, Center, Face, set!
 import Oceananigans.Advection: AbstractAdvectionScheme, UpwindBiased
 import Oceananigans.Architectures: AbstractArchitecture, CPU, GPU, architecture, on_architecture
-import Oceananigans.BoundaryConditions: fill_halo_regions!
+import Oceananigans.BoundaryConditions: BoundaryConditions, fill_halo_regions!
 import Oceananigans.Grids: Grids, Periodic, Flat, Bounded
 import Oceananigans.Operators: ∂zᵃᵃᶜ, ∂zᵃᵃᶠ, ℑzᵃᵃᶠ, Δzᵃᵃᶜ
 import Oceananigans.TimeSteppers: Clock, tick_time!, reset!
@@ -87,7 +87,7 @@ export LandModel
 include("models/land_model.jl")
 
 # simulation types
-export Simulation, initialize, run!
+export Simulation, initialize, run!, current_time
 include("simulation.jl")
 
 end # module DeltaLand

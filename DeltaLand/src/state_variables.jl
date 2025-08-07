@@ -157,7 +157,7 @@ function create_field(
     kwargs...
 )
     FT = field_type(vardims(var))
-    bcs = get_field_boundary_conditions(bcs, var)
+    bcs = get_field_boundary_conditions(bcs, var, grid)
     field = if !isnothing(bcs)
         FT(get_field_grid(grid), args...; boundary_conditions=bcs, kwargs...)
     else
