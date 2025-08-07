@@ -10,7 +10,7 @@ include("soil/abstract_types.jl")
 export SoilThermalConductivities, SoilHeatCapacities, SoilThermalProperties, InverseQuadratic
 include("soil/soil_thermal_properties.jl")
 
-export PrescribedHydraulics, SURFEXHydraulics
+export PrescribedHydraulics, SURFEXHydraulics, saturated_hydraulic_conductivity, mineral_porosity, mineral_field_capacity, mineral_wilting_point
 include("soil/soil_hydraulic_properties.jl")
 
 export HomogeneousSoil

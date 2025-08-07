@@ -45,7 +45,7 @@ SURFEX parameterization of mineral soil porosity (Masson et al. 2013).
     porosity_sand_coef::NF = -1.1e-3
     
     "Linear coeficient of wilting point adjustment due to clay content [-]"
-    wilting_point_coef::NF = 37.1e-3
+    wilting_point_coef::NF = 37.13e-3
     
     "Linear coeficient of field capacity adjustment due to clay content [-]"
     field_capacity_coef::NF = 89.0e-3
@@ -62,19 +62,19 @@ end
 @inline function mineral_porosity(hydraulics::SURFEXHydraulics, texture::SoilTexture)
     p₀ = hydraulics.porosity
     β_s = hydraulics.porosity_sand_coef
-    por = p₀ + β_s*texture.sand
+    por = p₀ + β_s*texture.sand*100
     return por
 end
 
 @inline function mineral_wilting_point(hydraulics::SURFEXHydraulics, texture::SoilTexture)
     β_w = hydraulics.wilting_point_coef
-    wp = β_w*sqrt(texture.clay)
+    wp = β_w*sqrt(texture.clay*100)
     return wp
 end
 
 @inline function mineral_field_capacity(hydraulics::SURFEXHydraulics, texture::SoilTexture)
     η = hydraulics.field_capacity_exp
     β_c = hydraulics.field_capacity_coef
-    fc = β_c*texture.clay^η
+    fc = β_c*(texture.clay*100)^η
     return fc
 end
