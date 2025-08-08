@@ -3,6 +3,9 @@ struct ExplicitHeatConduction <: AbstractHeatOperator end
 
 """
     $TYPEDEF
+
+Properties:
+$TYPEDFIELDS
 """
 @kwdef struct SoilEnergyBalance{
     HeatOperator<:AbstractHeatOperator,
@@ -31,7 +34,7 @@ function compute_tendencies!(state, model, energy::SoilEnergyBalance)
     hydrology = get_soil_hydrology(model)
     strat = get_stratigraphy(model)
     bgc = get_biogeochemistry(model)
-    launch!(grid, compute_energy_tendency!, state, field_grid, energy, hydrology, strat, bgc)
+    launch!(grid, :xyz, compute_energy_tendency!, state, field_grid, energy, hydrology, strat, bgc)
     return nothing
 end
 
@@ -126,7 +129,7 @@ function closure!(state, model::AbstractSoilModel, ::TemperatureEnergyClosure)
     strat = get_stratigraphy(model)
     bgc = get_biogeochemistry(model)
     constants = get_constants(model)
-    launch!(grid, temperature_to_energy!, state, energy, hydrology, strat, bgc, constants)
+    launch!(grid, :xyz, temperature_to_energy!, state, energy, hydrology, strat, bgc, constants)
     return nothing
 end
 
@@ -137,7 +140,7 @@ function invclosure!(state, model::AbstractSoilModel, ::TemperatureEnergyClosure
     strat = get_stratigraphy(model)
     bgc = get_biogeochemistry(model)
     constants = get_constants(model)
-    launch!(grid, energy_to_temperature!, state, energy, hydrology, strat, bgc, constants)
+    launch!(grid, :xyz, energy_to_temperature!, state, energy, hydrology, strat, bgc, constants)
     return nothing
 end
 

@@ -16,3 +16,7 @@ end
 @testset "Soil model and processes" begin
     include("soil/soil_model_tests.jl")
 end
+
+@testset "Vegetation processes" begin
+    include("vegetation/vegetation_model_tests.jl")
+end
