@@ -4,7 +4,7 @@
 Vegetation carbon dynamics implementation following PALADYN (Willeit 2016) but considering only the sum of the vegetation
 carbon pools. The subsequent splitting into C_leaf, C_stem, C_root is not implemented for now.
 
-Authors: Maha Badri and Matteo Willeit
+Authors: Maha Badri 
 
 Properties:
 $TYPEDFIELDS

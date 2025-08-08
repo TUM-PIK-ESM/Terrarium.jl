@@ -4,7 +4,7 @@
 Vegetation dynamics implementation following PALADYN (Willeit 2016) for a single PFT
 based on the Lotka–Volterra approach.
 
-Authors: Maha Badri and Matteo Willeit
+Authors: Maha Badri 
 
 Properties:
 $TYPEDFIELDS
@@ -22,6 +22,28 @@ variables(::PALADYNVegetationDynamics) = (
     auxiliary(:C_veg, XY()), # Vegetation carbon pool [kgC/m²]
     auxiliary(:LAI_b, XY()), # Balanced Leaf Area Index 
 )
+
+"""
+    $SIGNATURES
+
+Computes the disturbance rate`γv`.
+"""
+@inline function compute_γv(veg_dynamics::PALADYNVegetationDynamics)
+    # TODO add PALADYN implemetation for the disturbance rate (depends on soil moisture)
+    # Placeholder for now γv = min. disturbance rate
+    return veg_dynamics.γv_min
+end
+
+"""
+    $SIGNATURES
+
+Computes `ν_star` which is the maximum between the current vegetation fraction `ν` and the seed fraction `ν_seed`,
+to ensure that a PFT is always seeded.
+"""
+@inline function compute_ν_star(veg_dynamics::PALADYNVegetationDynamics, ν) 
+    return max(ν, veg_dynamics.ν_seed)
+end
+
 
 function compute_auxiliary!(state, model, veg_dynamics::PALADYNVegetationDynamics)
     # Nothing needed here for now
@@ -44,12 +66,12 @@ end
     λ_NPP = compute_λ_NPP(carbon_dynamics, state.LAI_b[i, j])
 
     # Compute the disturbance rate
-    # TODO add PALADYN implemetation for dist. rate
-    # Placeholder for now γv = min. disturbance rate
-    γv = veg_dynamics.γv_min
+    γv = compute_γv(carbon_dynamics)
+
+    # Compute ν_star
+    ν_star = compute_ν_star(veg_dynamics, state.ν[i, j])
 
     # Compute the vegetation fraction tendency
-    ν_star = max(state.ν[i, j], veg_dynamics.ν_seed) 
     state.ν_tendency[i, j] = (λ_NPP * state.NPP[i, j] / state.C_veg[i, j]) * 
                              ν_star * (NF(1.0) - state.ν[i, j]) - γv * ν_star
 end
