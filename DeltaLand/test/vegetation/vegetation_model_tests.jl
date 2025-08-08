@@ -8,3 +8,7 @@ end
 @testset "Vegetation dynamics" begin
     include("vegetation_dynamics_tests.jl")
 end
+
+@testset "Phenology" begin
+    include("phenology_tests.jl")
+end

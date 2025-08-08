@@ -44,8 +44,8 @@ include("vegetation/photosynthesis.jl")
 export MedlynStomatalConductance
 include("vegetation/stomatal_conductance.jl")
 
-export AutotrophicRespirationModel
+export PALADYNAutotrophicRespiration
 include("vegetation/autotrophic_respiration.jl")
 
-export PhenologyModel
+export PALADYNPhenology
 include("vegetation/phenology.jl")
