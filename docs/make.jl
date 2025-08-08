@@ -40,4 +40,12 @@ makedocs(
 
 deployconfig = Documenter.auto_detect_deploy_system()
 
-# TODO: Add deploydocs before releasing repository
+# remove gitignore from build files
+# rm(joinpath(@__DIR__, "build", ".gitignore"))
+
+deploydocs(
+       repo="github.com/TUM-PIK-ESM/Terra.jl.git",
+       push_preview = true,
+       versions = ["v0" => "v^", "v#.#", "dev" => "dev"],
+       deploy_config = deployconfig,
+)
