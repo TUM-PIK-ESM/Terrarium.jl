@@ -24,10 +24,10 @@ We want a land surface (and subsurface) model that is
 - **Fully auto-differentiable** with Enzyme.jl to enable systematic parameter estimation and hybrid modeling with neural differential equations
 - **Modular** and **extensible** to allow for rapid prototyping of model components with varying levels of complexity
 - **Interactive** and **user-friendly** to make land surface modeling fun and accessible for a larger audience of researchers and practitioners, as well as students and educators
-- Open-source and community-driven to foster interdisciplinary collaboration and development
+- **Open-source** and **community-driven** to foster interdisciplinary collaboration and development
 
 It is important to emphasize, however, what Terra is not:
-- Terra is **not a comprehensive land-surface/terrestrial-ecoysstem model**. While we are always open to suggestions and collaborations to implement new processes, we do not aim to build a state-of-the-art terrestrial ecosystem model rivaling that of, e.g. the CTSM. Terra - will always favor simplicity, efficiency, and interoperability over process-complexity.
+- Terra is **not a comprehensive land model**. While we are always open to suggestions and contributions to add new processes, we do not aim to build a state-of-the-art terrestrial ecosystem model rivaling that of, e.g. the [CTSM](https://github.com/ESCOMP/CTSM). Terra will always favor simplicity, efficiency, and interoperability over process-complexity.
 - Terra is **not “just another model”**. We do not intend for users to simply download our model products and cite our papers. We want users to directly interact with our model, ideally running their own simulations and writing their own code.
 - Terra is **not a monolithic model**. Modularity and extensibility are core to our vision. Terra provides a library of models, process implementations, and numerical tools which users can use to build their own simulations. We will provide guidance and a set of well-tested and stable model configurations, but we encourage users to experiment and push the limits of what those models can do.
 
@@ -70,7 +70,7 @@ Terra.jl is free and open source licensed under the [European Union Public Lcens
 
 What does that mean for you? You are 100% free to
 - Copy, modify, and redistribute the code
-- Use the software as a package in your own Julia project (regardless of license or copyright status)
+- Use the software as a package in your own project (regardless of license or copyright status)
 - Use the software for both commercial and non-commerical purposes
 
-However, if you make changes or modification to the code (excluding use as a package/library or changes for the purpose of interoperability), **you are required to re-distribute the modified software under the EUPL v1.2 or a compatible license**.
+However, if you make changes or modification to the code, excluding those made purely for the purpose of interoperability, **you are required to re-distribute the modified software under the EUPL v1.2 or a compatible license**.
