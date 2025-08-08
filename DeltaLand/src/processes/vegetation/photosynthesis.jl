@@ -1,6 +1,10 @@
-
+# Note: this implementaion assumes a daily timestep but this should be changed later to allow for a more flexible timestep 
 """
-Photosynthesis implementation following PALADYN for C3 PFTs
+    $TYPEDEF
+Photosynthesis implementation from PALADYN (Willeit 2016) for C3 PFTs following the general light
+use efficiency model described in Haxeltine and Prentice 1996.
+
+Authors: Maha Badri and Matteo Willeit
 
 Properties:
 $TYPEDFIELDS
@@ -11,11 +15,11 @@ $TYPEDFIELDS
     τ25::NF = 2600.0 
 
     # TODO check physical meaning of this parameter 
-    "Value of kc at 25°C"
+    "Value of Kc at 25°C"
     Kc25::NF = 30.0
 
     # TODO check physical meaning of this parameter 
-    "Value of ko at 25°C"
+    "Value of Ko at 25°C"
     Ko25::NF = 3.0e4
 
     # TODO check physical meaning of this parameter
@@ -23,11 +27,11 @@ $TYPEDFIELDS
     q10_τ::NF = 0.57
 
     # TODO check physical meaning of this parameter
-    "q10 for temperature-sensitive parameter kc"
+    "q10 for temperature-sensitive parameter Kc"
     q10_Kc::NF = 2.1
 
     # TODO check physical meaning of this parameter
-    "q10 for temperature-sensitive parameter ko"
+    "q10 for temperature-sensitive parameter Ko"
     q10_Ko::NF = 1.2
 
     "Leaf albedo in PAR range"
@@ -72,7 +76,7 @@ end
 
 variables(::LUEPhotosynthesis) = (
     # TODO for now define atmospheric inputs/forcings here, move later
-    auxiliary(:T_air, XY()), # Surface air temperature in °C
+    auxiliary(:T_air, XY()), # Surface air temperature in Celsius [°C]
     auxiliary(:q_air, XY()), # Surface air specific humidity [kg/kg]
     auxiliary(:pres, XY()), # Surface pressure [Pa]
     auxiliary(:swdown, XY()), # Downwelling shortwave radiation at the surface [W/m²]
@@ -82,6 +86,12 @@ variables(::LUEPhotosynthesis) = (
     auxiliary(:Rd, XY()), # Daily leaf respiration [gC/m2/day]
     auxiliary(:GPP, XY()), # Gross Primary Production [kgC/m²/day]
 )
+
+"""
+    $SIGNATURES
+
+Computes temperature stress factor `f_temp` for photosynthesis.
+"""
 
 @inline function compute_f_temp(photo::LUEPhotosynthesis{NF}, T_air::NF) where NF
     # TODO check physical meaning of these parameters
@@ -102,7 +112,12 @@ variables(::LUEPhotosynthesis) = (
     
 end
 
-@inline function compute_kinetic_parameters(photo::LUEPhotosynthesis{NF}, T_air, pres) where NF
+"""
+    $SIGNATURES
+Computes kinetic parameters `τ`, `Kc`, `Ko`, `Γ_star` based on temperature and pressure.
+"""
+
+@inline function compute_kinetic_parameters(photo::LUEPhotosynthesis{NF}, T_air::NF, pres::NF) where NF
     # TODO check meaning of these parameters, Appendix C in PALADYN paper
     τ = photo.τ25 * photo.q10_τ^((T_air - NF(25.0)) * NF(0.1))
     Kc = photo.Kc25 * photo.q10_Kc^((T_air - NF(25.0)) * NF(0.1))
@@ -125,7 +140,7 @@ end
 
     # Get atmospheric inputs/forcings and compute derived variables
     swdown = state.swdown[i, j] 
-    T_air_C = state.T_air[i, j]
+    T_air = state.T_air[i, j]
     p_O2 = partial_pressure_O2(state.pres[i, j])
     pa = partial_pressure_CO2(state.pres[i, j], state.co2[i, j])
 
@@ -135,7 +150,7 @@ end
     sec_day = NF(8.765813e4)
 
     # TODO check this condition
-    if (daylength > zero(NF)) && (T_air_C > NF(-3.0))
+    if (daylength > zero(NF)) && (T_air > NF(-3.0))
 
         # Compute kinetic parameters 
         # TODO check physical meaning of these parameters,  Appendix C in PALADYN paper
@@ -153,12 +168,12 @@ end
             pi = state.λc[i, j] * pa
 
             # Compute temperature factor for photosynthesis
-            f_temp = compute_f_temp(idx, state, photo)
+            f_temp = compute_f_temp(photo, T_air)
 
             # Compute c1 and c2 parameters for C3 photosynthesis
             # TODO check factor 2 missing in PALADYN paper
-            c_1 = photo.α_C3 * f_temp * photo.C_mass * (pi - Γ_star) / (pi + NF(2.0) * Γ_star) 
-            c_2 = (pi - Γ_star) / (pi + Kc*(NF(1.0) + p_O2/Ko))
+            c_1 = photo.α_C3 * f_temp * photo.C_mass * (pi - Γ_star) / (pi + NF(2.0) * Γ_star)
+            c_2 = (pi - Γ_star) / (pi + Kc * (NF(1.0) + p_O2 / Ko))
 
             # Compute the maximum daily rate of net photosynthesis [gC/m²/day]
             # Following the coordination hypothesis (acclimation), see Harrison 2021 Box 2

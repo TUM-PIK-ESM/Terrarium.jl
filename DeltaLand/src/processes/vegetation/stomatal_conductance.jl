@@ -1,5 +1,9 @@
 """
     $TYPEDEF
+Stomatal conductance implementation from PALADYN (Willeit 2016) following the optimal stomatal conductance model
+(Medlyn et al. 2011).
+
+Authors: Maha Badri and Matteo Willeit
 
 Properties:
 $TYPEDFIELDS
@@ -12,9 +16,9 @@ end
 
 variables(stomcond::MedlynStomatalConductance) = (
     # TODO for now define atmospheric inputs/forcings here, move later
-    auxiliary(:T_air, XY()), # Surface air temperature in Kelvin [K]
+    auxiliary(:T_air, XY()), # Surface air temperature in Celsius [°C]
     auxiliary(:q_air, XY()), # Surface air specific humidity [kg/kg]
-    auxiliary(:p, XY()), # Surface pressure [Pa]
+    auxiliary(:pres, XY()), # Surface pressure [Pa]
     auxiliary(:λc, XY()), # Ratio of leaf-internal and air CO2 concentration 
 )
 

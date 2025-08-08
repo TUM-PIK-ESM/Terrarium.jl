@@ -4,8 +4,10 @@
 
 Vegetation phenology implementation from PALADYN (Willeit 2016).
 
+Authors: Maha Badri and Matteo Willeit
+
 Properties:
-$(TYPEDFIELDS)
+$TYPEDFIELDS
 """
 @kwdef struct PALADYNPhenology{NF} <: AbstractPhenology
     # TODO add phenology parameters
@@ -17,8 +19,8 @@ variables(phenol::PALADYNPhenology) = (
     auxiliary(:LAI, XY()), # Leaf Area Index 
 )
 
-function compute_auxiliary!(state, model, phenol::PALADYNPhenology)
-    grid = get_grid(model)
+function compute_auxiliary!(state, phenol::PALADYNPhenology)
+    grid = get_grid(phenol)
     launch!(grid, :xy, compute_auxiliary_kernel!, state, phenol)
 end
 
@@ -28,7 +30,7 @@ end
     # TODO add phenology implementation from PALADYN
     # Compute f_deciduous, a factor for smooth transition between evergreen and deciduous
     # For now, set f_deciduous to 0.0 (evergreen PFT)
-    f_deciduous = NF(0.0)
+    f_deciduous = zero(NF)
 
     # Compute phen 
     # For now, set phen to 1.0 (full leaf-out, evergreen PFT)

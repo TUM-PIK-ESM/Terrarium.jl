@@ -4,10 +4,18 @@
 
 Autotrophic respiration implementation from PALADYN (Willeit 2016).
 
+Authors: Maha Badri and Matteo Willeit
+
 Properties:
-$(TYPEDFIELDS)
+$TYPEDFIELDS
 """
 @kwdef struct PALADYNAutotrophicRespiration{NF} <: AbstractAutotrophicRespiration
+    "Specific leaf area (Kattge et al. 2011) [m²/kgC], PFT specific"
+    SLA::NF = 10 # Value for Needleleaf tree PFT 
+
+    "Allometric coefficient, modified from Cox 2001 to account for bwl=1 [kgC/m²], PFT specific"
+    awl::NF = 2.0 # Value for Needleleaf tree PFT 
+
     # TODO check physical meaning of this parameter
     "Sapwood parameter"
     cn_sapwood::NF = 330
@@ -21,7 +29,7 @@ $(TYPEDFIELDS)
 end
 
 variables(autoresp::PALADYNAutotrophicRespiration) = (
-    auxiliary(:T_air, XY()), # Surface air temperature [K]
+    auxiliary(:T_air, XY()), # Surface air temperature in Celcius [°C]
     auxiliary(:GPP, XY()), # Gross Primary Production [kgC/m²/day]
     auxiliary(:Rd, XY()), # Respiration at 10°C [kgC/m²/day]
     auxiliary(:C_veg, XY()), # Vegetation carbon pool [kgC/m²]
@@ -30,6 +38,13 @@ variables(autoresp::PALADYNAutotrophicRespiration) = (
     auxiliary(:NPP, XY()), # Net Primary Production [kgC/m²/day]
 )
 
+
+"""
+    $SIGNATURES
+
+Computes temperature factors `f_temp_air` and `f_temp_soil` for autotrophic respiration.
+"""
+
 @inline function compute_f_temp(
     autoresp::PALADYNAutotrophicRespiration{NF},
     T_air::NF,
@@ -37,7 +52,7 @@ variables(autoresp::PALADYNAutotrophicRespiration) = (
     # Compute f_temp_soil
     # TODO add f_temp_soil implementaion (depends on soil temperature)
     # For now, placeholder as a constant value
-    f_temp_soil = NF(0.0)
+    f_temp_soil = zero(NF)
 
     # Compute f_temp_air
     # TODO: These hardcoded constants need to be moved either into the model struct as
@@ -56,8 +71,6 @@ end
 @kernel function compute_auxiliary_kernel!(
     state,
     autoresp::PALADYNAutotrophicRespiration{NF},
-    # TODO: Can this method be generalized to not depend on this specific implementation?
-    carbon_dynamics::PALADYNCarbonDynamics
 ) where NF
     i, j = @index(Global, NTuple)
     
@@ -73,12 +86,12 @@ end
     R_leaf = state.Rd[i, j]/NF(1000.0) # Convert from gC/m²/day to kgC/m²/day
 
     # Compute stem respiration
-    R_stem = resp10 * f_temp_air * (carbon_dynamics.awl * ((NF(2.0) / carbon_dynamics.SLA) + carbon_dynamics.awl)) / 
+    R_stem = resp10 * f_temp_air * (autoresp.awl * ((NF(2.0) / autoresp.SLA) + autoresp.awl)) / 
                                    (state.C_veg[i, j] * autoresp.aws * autoresp.cn_sapwood) 
 
     # Compute root respiration
-    R_root = resp10 * f_temp_soil * state.phen[i, j] * (NF(2.0) / carbon_dynamics.SLA) / 
-                                                       (carbon_dynamics.SLA * state.C_veg[i, j] * autoresp.cn_root)
+    R_root = resp10 * f_temp_soil * state.phen[i, j] * (NF(2.0) / autoresp.SLA) / 
+                                                       (autoresp.SLA * state.C_veg[i, j] * autoresp.cn_root)
 
     
     # Compute maintenance respiration Rm

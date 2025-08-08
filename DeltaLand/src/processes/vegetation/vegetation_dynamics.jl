@@ -1,8 +1,8 @@
 """
     $TYPEDEF
 
-Vegetation carbon dynamics implementation following PALADYN  but considering only the sum of the vegetation carbon pools.
-The subsequent splitting into C_leaf, C_stem, C_root is not implemented for now.
+Vegetation dynamics implementation following PALADYN (Willeit 2016) for a single PFT
+based on the Lotka–Volterra approach.
 
 Authors: Maha Badri and Matteo Willeit
 
@@ -36,7 +36,7 @@ end
 @kernel function compute_tendencies_kernel!(
     state,
     veg_dynamics::PALADYNVegetationDynamics{NF},
-    carbon_dynamics::AbstractVegetationCarbonDynamics
+    carbon_dynamics::PALADYNCarbonDynamics{NF}
 ) where NF
     i, j = @index(Global, NTuple)
     
