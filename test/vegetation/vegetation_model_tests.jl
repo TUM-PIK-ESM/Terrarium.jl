@@ -1,6 +1,9 @@
 using Terra
 using Test
 
+@testset "Photosynthesis" begin
+    include("photosynthesis_tests.jl")
+end
 
 @testset "Stomatal conductance" begin
     include("stomatal_conductance_tests.jl")
