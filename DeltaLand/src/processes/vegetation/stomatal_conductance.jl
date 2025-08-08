@@ -22,8 +22,8 @@ variables(stomcond::MedlynStomatalConductance) = (
     auxiliary(:λc, XY()), # Ratio of leaf-internal and air CO2 concentration 
 )
 
-function compute_auxiliary!(state, stomcond::MedlynStomatalConductance)
-    grid = get_grid(photo)
+function compute_auxiliary!(state, model, stomcond::MedlynStomatalConductance)
+    grid = get_grid(model)
     launch!(grid, :xy, compute_auxiliary_kernel!, state, stomcond)
 end
 

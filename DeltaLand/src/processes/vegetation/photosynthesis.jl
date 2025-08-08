@@ -129,8 +129,8 @@ Computes kinetic parameters `τ`, `Kc`, `Ko`, `Γ_star` based on temperature and
     return τ, Kc, Ko, Γ_star
 end
 
-function compute_auxiliary!(state, photo::LUEPhotosynthesis)
-    grid = get_grid(photo)
+function compute_auxiliary!(state, model, photo::LUEPhotosynthesis)
+    grid = get_grid(model)
     launch!(grid, :xy, compute_auxiliary_kernel!, state, photo)
 end
 

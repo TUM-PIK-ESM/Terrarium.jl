@@ -23,7 +23,7 @@ variables(::PALADYNVegetationDynamics) = (
     auxiliary(:LAI_b, XY()), # Balanced Leaf Area Index 
 )
 
-function compute_auxiliary!(state, veg_dynamics::PALADYNVegetationDynamics)
+function compute_auxiliary!(state, model, veg_dynamics::PALADYNVegetationDynamics)
     # Nothing needed here for now
     return nothing
 end
