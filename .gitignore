@@ -29,3 +29,10 @@ JuliaLocalPreferences.toml
 
 # VS-Code files
 .vscode/
+
+# Data and output files
+data/
+output/
+
+# Scratchspace
+scratch/
