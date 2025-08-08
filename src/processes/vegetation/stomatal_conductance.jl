@@ -22,6 +22,17 @@ variables(stomcond::MedlynStomatalConductance) = (
     auxiliary(:λc, XY()), # Ratio of leaf-internal and air CO2 concentration 
 )
 
+"""
+    $SIGNATURES
+
+Computes the ratio of leaf-internal and air CO2 concentration `λc`, 
+derived from the optimal stomatal conductance model (Medlyn et al. 2011).
+"""
+@inline function compute_λc(stomcond::MedlynStomatalConductance{NF}, vpd) where NF
+    λc = NF(1.0) - NF(1.6) / (NF(1.0) + stomcond.g1 / sqrt(vpd))
+    return λc
+end
+
 function compute_auxiliary!(state, model, stomcond::MedlynStomatalConductance)
     grid = get_grid(model)
     launch!(grid, :xy, compute_auxiliary_kernel!, state, stomcond)
@@ -30,9 +41,9 @@ end
 @kernel function compute_auxiliary_kernel!(state, stomcond::MedlynStomatalConductance{NF}) where NF
     i, j = @index(Global, NTuple)
 
-    # Compute Vapor Pressure Deficit [Pa]
+    # Compute vpd [Pa]
     vpd = compute_vpd(state.T_air[i, j], state.q_air[i, j], state.pres[i, j])
 
-    # Compute λc, derived from the optimal stomatal conductance model (Medlyn et al. 2011)
-    state.λc[i, j] = NF(1.0) - NF(1.6) / (NF(1.0) + stomcond.g1 / sqrt(vpd))
+    # Compute λc
+    state.λc[i, j] = compute_λc(stomcond, vpd)
 end
