@@ -19,8 +19,8 @@ variables(phenol::PALADYNPhenology) = (
     auxiliary(:LAI, XY()), # Leaf Area Index 
 )
 
-function compute_auxiliary!(state, phenol::PALADYNPhenology)
-    grid = get_grid(phenol)
+function compute_auxiliary!(state, model, phenol::PALADYNPhenology)
+    grid = get_grid(model)
     launch!(grid, :xy, compute_auxiliary_kernel!, state, phenol)
 end
 

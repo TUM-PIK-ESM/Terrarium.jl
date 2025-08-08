@@ -10,12 +10,6 @@ Properties:
 $TYPEDFIELDS
 """
 @kwdef struct PALADYNAutotrophicRespiration{NF} <: AbstractAutotrophicRespiration
-    "Specific leaf area (Kattge et al. 2011) [m²/kgC], PFT specific"
-    SLA::NF = 10 # Value for Needleleaf tree PFT 
-
-    "Allometric coefficient, modified from Cox 2001 to account for bwl=1 [kgC/m²], PFT specific"
-    awl::NF = 2.0 # Value for Needleleaf tree PFT 
-
     # TODO check physical meaning of this parameter
     "Sapwood parameter"
     cn_sapwood::NF = 330
@@ -71,6 +65,7 @@ end
 @kernel function compute_auxiliary_kernel!(
     state,
     autoresp::PALADYNAutotrophicRespiration{NF},
+    vegcarbon_dynamics::PALADYNCarbonDynamics{NF},
 ) where NF
     i, j = @index(Global, NTuple)
     
@@ -86,14 +81,13 @@ end
     R_leaf = state.Rd[i, j]/NF(1000.0) # Convert from gC/m²/day to kgC/m²/day
 
     # Compute stem respiration
-    R_stem = resp10 * f_temp_air * (autoresp.awl * ((NF(2.0) / autoresp.SLA) + autoresp.awl)) / 
+    R_stem = resp10 * f_temp_air * (autoresp.awl * ((NF(2.0) / vegcarbon_dynamics.SLA) + vegcarbon_dynamics.awl)) / 
                                    (state.C_veg[i, j] * autoresp.aws * autoresp.cn_sapwood) 
 
     # Compute root respiration
-    R_root = resp10 * f_temp_soil * state.phen[i, j] * (NF(2.0) / autoresp.SLA) / 
-                                                       (autoresp.SLA * state.C_veg[i, j] * autoresp.cn_root)
+    R_root = resp10 * f_temp_soil * state.phen[i, j] * (NF(2.0) / vegcarbon_dynamics.SLA) / 
+                                                       (vegcarbon_dynamics.SLA * state.C_veg[i, j] * autoresp.cn_root)
 
-    
     # Compute maintenance respiration Rm
     Rm = R_leaf + R_stem + R_root 
 
