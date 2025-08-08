@@ -7,8 +7,6 @@ initializer = FieldInitializers(temperature = (x,z) -> -1.0 - 0.01*z + exp(z/10)
 model = SoilModel(; grid, initializer)
 sim = initialize(model)
 
-reset_tendencies!(sim.state)
-
 state = sim.state
 dstate = make_zero(state)
 
