@@ -32,12 +32,12 @@ It is important to emphasize, however, what Terra is not:
 - Terra is **not a monolithic model**. Modularity and extensibility are core to our vision. Terra provides a library of models, process implementations, and numerical tools which users can use to build their own simulations. We will provide guidance and a set of well-tested and stable model configurations, but we encourage users to experiment and push the limits of what those models can do.
 
 ## Why Oceananigans?
-It might initially seem strange that a land model would be built on top of a framework for ocean modeling. There are some key advantages in doing so:
+It might initially seem strange that a land model would be built on top of a framework for ocean modeling. There are, however, some key advantages in doing so:
 
 
 1. Firstly, like ocean models, land models are commonly implemented using the finite volume method (FVM) to approximate spatial gradients in mass and energy conservation laws. Oceananigans provides state-of-the-art tools for FVM simulation in Julia, with a focus on geophysical applications, which aligns well with our goals. Although Terra will primarily focus on 1D (vertical) dynamics in the beginning, using Oceananigans affords us the possibility of very feasibly expanding to 2D and 3D simulations of surface and subsurface heat and water transport in the future!
 2. Secondly, the numerical operators provided by Oceananigans are built to be both auto-differentiable and GPU-compatible out-of-the-box, which means that Terra can inherit these capabilities almost “for free”.
-3. Finally, and perhaps most importantly, we believe in the vision pioneered by the Climate Modeling Alliance and the Oceananigans team for the development of a new generation of Earth System Models that are open, accessible, interactive, and capable of learning from data in ways that go beyond traditional data assimilation.
+3. Finally, and perhaps most importantly, we believe in the vision pioneered by the [Climate Modeling Alliance](https://clima.caltech.edu/) and the Oceananigans team for the development of a new generation of Earth System Models that are open, accessible, interactive, and capable of learning from data in ways that go beyond traditional data assimilation.
 
 ## Installation
 
@@ -73,4 +73,4 @@ What does that mean for you? You are 100% free to
 - Use the software as a package in your own project (regardless of license or copyright status)
 - Use the software for both commercial and non-commerical purposes
 
-However, if you make changes or modification to the code, excluding those made purely for the purpose of interoperability, **you are required to re-distribute the modified software under the EUPL v1.2 or a compatible license**.
+However, if you make changes or modification to the code, excluding those made purely for the purpose of interoperability, **you are required to re-distribute the modified software under the EUPL v1.2 or a compatible license**. This is vital to ensure the long-term survival of the project and to foster an open, supportive, and diverse community.
