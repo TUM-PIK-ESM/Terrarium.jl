@@ -1,4 +1,4 @@
-using DeltaLand
+using Terra
 using Test
 
 @testset "Vegetation carbon dynamics" begin

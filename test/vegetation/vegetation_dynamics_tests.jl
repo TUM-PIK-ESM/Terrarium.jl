@@ -1,5 +1,5 @@
-using DeltaLand
-using DeltaLand: compute_γv, compute_ν_star
+using Terra
+using Terra: compute_γv, compute_ν_star
 using Test
 
 @testset "γv test" begin

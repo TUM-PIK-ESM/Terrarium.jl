@@ -1,19 +1,19 @@
-using DeltaLand
+using Terra
 using Oceananigans.Grids
-using DeltaLand.RingGrids
+using Terra.RingGrids
 using Test
 
 @testset "Vertical discretizations" begin
     # Uniform spacing
-    @test DeltaLand.get_spacing(UniformSpacing(Δz=0.1, N=1)) == [0.1]
-    @test DeltaLand.get_spacing(UniformSpacing(Δz=0.1, N=10)) == repeat([0.1], 10)
+    @test Terra.get_spacing(UniformSpacing(Δz=0.1, N=1)) == [0.1]
+    @test Terra.get_spacing(UniformSpacing(Δz=0.1, N=10)) == repeat([0.1], 10)
 
     # ExponentialSpacing
-    @test DeltaLand.get_spacing(ExponentialSpacing(Δz_min=0.1, Δz_max=1.0, N=2)) == [0.1,1.0]
-    @test DeltaLand.get_spacing(ExponentialSpacing(Δz_min=0.1, Δz_max=1.0, N=3, sig=nothing)) ≈ exp2.(LinRange(log2(0.1), log2(1.0), 3))
+    @test Terra.get_spacing(ExponentialSpacing(Δz_min=0.1, Δz_max=1.0, N=2)) == [0.1,1.0]
+    @test Terra.get_spacing(ExponentialSpacing(Δz_min=0.1, Δz_max=1.0, N=3, sig=nothing)) ≈ exp2.(LinRange(log2(0.1), log2(1.0), 3))
 
     # PrescribedSpacing
-    @test DeltaLand.get_spacing(PrescribedSpacing(Δz=[0.1,0.2,0.3])) == [0.1,0.2,0.3]
+    @test Terra.get_spacing(PrescribedSpacing(Δz=[0.1,0.2,0.3])) == [0.1,0.2,0.3]
 end
 
 @testset "ColumnGrid" begin

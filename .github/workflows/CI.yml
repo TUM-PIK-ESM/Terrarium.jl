@@ -7,7 +7,7 @@ on:
     branches:
       - main
 jobs:
-  delta-land-test:
+  test:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -26,10 +26,6 @@ jobs:
           arch: ${{ matrix.arch }}
       - uses: julia-actions/cache@v2
       - uses: julia-actions/julia-buildpkg@v1
-        with: 
-          project: ./DeltaLand
       - uses: julia-actions/julia-runtest@v1
-        with:
-          project: ./DeltaLand
         env:
           GITHUB_AUTH: ${{ secrets.GITHUB_TOKEN }}

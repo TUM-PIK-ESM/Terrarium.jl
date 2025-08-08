@@ -1,7 +1,7 @@
-using DeltaLand
+using Terra
 using Test
 
-using DeltaLand: getproperties
+using Terra: getproperties
 using SpecialFunctions: erfc
 
 import Oceananigans.BoundaryConditions: ValueBoundaryCondition, FluxBoundaryCondition, NoFluxBoundaryCondition, regularize_field_boundary_conditions
@@ -106,9 +106,9 @@ end
     @test all(>(0), getproperties(thermal_props.heatcap))
     
     # sanity checks for bulk thermal properties
-    @test DeltaLand.thermalconductivity(thermal_props, (water=1.0, ice=0.0, air=0.0, mineral=0.0, organic=0.0)) ≈ thermal_props.cond.water
-    @test DeltaLand.thermalconductivity(thermal_props, (water=0.0, ice=1.0, air=0.0, mineral=0.0, organic=0.0)) ≈ thermal_props.cond.ice
-    @test DeltaLand.thermalconductivity(thermal_props, (water=0.0, ice=0.0, air=1.0, mineral=0.0, organic=0.0)) ≈ thermal_props.cond.air
-    @test DeltaLand.thermalconductivity(thermal_props, (water=0.0, ice=0.0, air=0.0, mineral=1.0, organic=0.0)) ≈ thermal_props.cond.mineral
-    @test DeltaLand.thermalconductivity(thermal_props, (water=0.0, ice=0.0, air=0.0, mineral=0.0, organic=1.0)) ≈ thermal_props.cond.organic
+    @test Terra.thermalconductivity(thermal_props, (water=1.0, ice=0.0, air=0.0, mineral=0.0, organic=0.0)) ≈ thermal_props.cond.water
+    @test Terra.thermalconductivity(thermal_props, (water=0.0, ice=1.0, air=0.0, mineral=0.0, organic=0.0)) ≈ thermal_props.cond.ice
+    @test Terra.thermalconductivity(thermal_props, (water=0.0, ice=0.0, air=1.0, mineral=0.0, organic=0.0)) ≈ thermal_props.cond.air
+    @test Terra.thermalconductivity(thermal_props, (water=0.0, ice=0.0, air=0.0, mineral=1.0, organic=0.0)) ≈ thermal_props.cond.mineral
+    @test Terra.thermalconductivity(thermal_props, (water=0.0, ice=0.0, air=0.0, mineral=0.0, organic=1.0)) ≈ thermal_props.cond.organic
 end

@@ -1,36 +1,36 @@
-using DeltaLand
+using Terra
 using Test
 
-import DeltaLand: XY, XYZ, prognostic, auxiliary, namespace
+import Terra: XY, XYZ, prognostic, auxiliary, namespace
 import Oceananigans: Field, Center
 
 @testset "State variables for mock type" begin
 
-    @kwdef struct SubModel <: DeltaLand.AbstractModel
+    @kwdef struct SubModel <: Terra.AbstractModel
         grid
-        boundary_conditions = DeltaLand.FieldBoundaryConditions()
-        initializer = DeltaLand.FieldInitializers()
-        time_stepping = DeltaLand.ForwardEuler()
+        boundary_conditions = Terra.FieldBoundaryConditions()
+        initializer = Terra.FieldInitializers()
+        time_stepping = Terra.ForwardEuler()
     end
 
-    DeltaLand.variables(model::SubModel) = (
+    Terra.variables(model::SubModel) = (
         # duplicate naming allowed in new namesapce
         auxiliary(:auxvar2D, XY()),
     )
 
-    @kwdef struct TestModel <: DeltaLand.AbstractModel
+    @kwdef struct TestModel <: Terra.AbstractModel
         grid
         submodel = SubModel(; grid)
-        boundary_conditions = DeltaLand.FieldBoundaryConditions()
-        initializer = DeltaLand.FieldInitializers()
-        time_stepping = DeltaLand.ForwardEuler()
+        boundary_conditions = Terra.FieldBoundaryConditions()
+        initializer = Terra.FieldInitializers()
+        time_stepping = Terra.ForwardEuler()
     end
 
-    struct TestClosure <: DeltaLand.AbstractClosureRelation end
+    struct TestClosure <: Terra.AbstractClosureRelation end
 
-    DeltaLand.varname(::TestClosure) = :closurevar
+    Terra.varname(::TestClosure) = :closurevar
 
-    DeltaLand.variables(model::TestModel) = (
+    Terra.variables(model::TestModel) = (
         prognostic(:progvar3D, XYZ()),
         prognostic(:cprogvar3D, XYZ(), TestClosure()),
         prognostic(:progvar2D, XY()),

@@ -1,5 +1,5 @@
-using DeltaLand
-using DeltaLand: compute_λ_NPP, compute_LAI_b, compute_Λ_loc
+using Terra
+using Terra: compute_λ_NPP, compute_LAI_b, compute_Λ_loc
 using Test
 
 @testset "λ_NPP test" begin

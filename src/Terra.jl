@@ -1,4 +1,4 @@
-module DeltaLand
+module Terra
 
 using DocStringExtensions
 
@@ -90,4 +90,4 @@ include("models/land_model.jl")
 export Simulation, initialize, run!, current_time
 include("simulation.jl")
 
-end # module DeltaLand
+end # module Terra

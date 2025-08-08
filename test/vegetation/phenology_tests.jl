@@ -1,5 +1,5 @@
-using DeltaLand
-using DeltaLand: compute_f_deciduous, compute_phen
+using Terra
+using Terra: compute_f_deciduous, compute_phen
 using Test
 
 @testset "f_deciduous test" begin
