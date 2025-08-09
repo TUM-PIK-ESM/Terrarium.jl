@@ -23,7 +23,7 @@ $TYPEDFIELDS
     LAI_max::NF = 6.0 # Value for Needleleaf tree PFT 
     
     "Leaf turnover rate (Kattge et al. 2011) [1/year], PFT specific"
-    γL ::NF = 0.3 # Value for Needleleaf tree PFT 
+    γL::NF = 0.3 # Value for Needleleaf tree PFT 
     
     "Root turnover rate [1/year], PFT specific"
     γR::NF = 0.3 # Value for Needleleaf tree PFT 

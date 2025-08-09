@@ -10,76 +10,76 @@ Properties:
 $TYPEDFIELDS
 """
 @kwdef struct LUEPhotosynthesis{NF} <: AbstractPhotosynthesis
-    # TODO check physical meaning of this parameter 
+    # TODO check physical meaning of this parameter + add unit
     "Value of τ at 25°C"
     τ25::NF = 2600.0 
 
-    # TODO check physical meaning of this parameter 
+    # TODO check physical meaning of this parameter + add unit
     "Value of Kc at 25°C"
     Kc25::NF = 30.0
 
-    # TODO check physical meaning of this parameter 
+    # TODO check physical meaning of this parameter + add unit
     "Value of Ko at 25°C"
     Ko25::NF = 3.0e4
 
-    # TODO check physical meaning of this parameter
+    # TODO check physical meaning of this parameter + add unit
     "q10 for temperature-sensitive parameter τ"
     q10_τ::NF = 0.57
 
-    # TODO check physical meaning of this parameter
+    # TODO check physical meaning of this parameter + add unit
     "q10 for temperature-sensitive parameter Kc"
     q10_Kc::NF = 2.1
 
-    # TODO check physical meaning of this parameter
+    # TODO check physical meaning of this parameter + add unit
     "q10 for temperature-sensitive parameter Ko"
     q10_Ko::NF = 1.2
 
-    "Leaf albedo in PAR range"
+    "Leaf albedo in PAR range [-]"
     α_leaf::NF = 0.17
 
     "Conversion factor for solar radiation at 550 nm from J/m² to mol/m² [mol/J]"
     cq::NF = 4.6e-6
 
-    "Extinction coefficient for radiation through vegetation"
+    "Extinction coefficient for radiation through vegetation [-]"
     k_ext::NF = 0.5
 
-    "Fraction of PAR assimilated at ecosystem level, relative to leaf level"
-    αa::NF = 0.5
+    "Fraction of PAR assimilated at ecosystem level, relative to leaf level [-]"
+    α_a::NF = 0.5
 
-    #TODO check physical meaning of this parameter
-    "Parameter, PFT specific"
+    # TODO check physical meaning of this parameter 
+    "Parameter, PFT specific [°C]"
     t_CO2_high::NF = 42.0 # Value for Needleleaf tree PFT 
 
     # TODO check physical meaning of this parameter
-    "Parameter, PFT specific"
+    "Parameter, PFT specific [°C]"
     t_CO2_low::NF = -4.0 # Value for Needleleaf tree PFT 
 
     # TODO check physical meaning of this parameter
-    "Parameter, PFT specific"
+    "Parameter, PFT specific [°C]"
     t_photos_high::NF = 30.0 # Value for Needleleaf tree PFT 
 
     # TODO check physical meaning of this parameter
-    "Parameter, PFT specific"
+    "Parameter, PFT specific [°C]"
     t_photos_low::NF = 15.0 # Value for Needleleaf tree PFT 
 
-    "Intrinsic quantum efficiency of CO2 uptake in C3 plants"
+    "Intrinsic quantum efficiency of CO2 uptake in C3 plants [mol/mol]"
     α_C3::NF = 0.08 
 
-    "Atomic mass of carbon"
+    "Atomic mass of carbon [gC/mol]"
     C_mass::NF = 12.0
 
     # TODO check physical meaning of this parameter
-    "Shape parameter"
-    θr::NF = 0.7 
+    "Shape parameter [-]"
+    θ_r::NF = 0.7 
 
     # TODO add implementaion for daylength later
     # For now, consider constant
-    "Day length"
+    "Day length [h/day]"
     day_length::NF = 24.0
 
     # TODO add implementaion for sec_day later
     # For now, consider constant
-    "Seconds per day"
+    "Seconds per day [s/day]"
     sec_day::NF = 8.765813e4
 end
 
@@ -90,9 +90,9 @@ variables(::LUEPhotosynthesis) = (
     auxiliary(:pres, XY()), # Surface pressure [Pa]
     auxiliary(:swdown, XY()), # Downwelling shortwave radiation at the surface [W/m²]
     auxiliary(:co2, XY()), # Atmospheric CO2 concentration [ppm]
-    auxiliary(:λc, XY()), # Ratio of leaf-internal and air CO2 concentration 
-    auxiliary(:LAI, XY()), # Leaf Area Index 
-    auxiliary(:Rd, XY()), # Daily leaf respiration [gC/m2/day]
+    auxiliary(:λc, XY()), # Ratio of leaf-internal and air CO2 concentration [-]
+    auxiliary(:LAI, XY()), # Leaf Area Index [m²/m²]
+    auxiliary(:Rd, XY()), # Daily leaf respiration [gC/m²/day]
     auxiliary(:GPP, XY()), # Gross Primary Production [kgC/m²/day]
 )
 
@@ -104,6 +104,7 @@ Computes kinetic parameters `τ`, `Kc`, `Ko` based on temperature.
 
 @inline function compute_kinetic_parameters(photo::LUEPhotosynthesis{NF}, T_air::NF) where NF
     # TODO check meaning of these parameters, Appendix C in PALADYN paper
+    # TODO add units
     τ = photo.τ25 * photo.q10_τ^((T_air - NF(25.0)) * NF(0.1))
     Kc = photo.Kc25 * photo.q10_Kc^((T_air - NF(25.0)) * NF(0.1))
     Ko = photo.Ko25 * photo.q10_Ko^((T_air - NF(25.0)) * NF(0.1))
@@ -116,6 +117,7 @@ end
 Computes the CO2 compensation point `Γ_star`.
 """
 @inline function compute_Γ_star(photo::LUEPhotosynthesis{NF}, τ::NF, pres_O2::NF) where NF
+    # TODO add unit
     Γ_star = pres_O2 / (NF(2.0) * τ)
     return Γ_star
 end
@@ -135,13 +137,13 @@ Computes absorbed PAR limited by the fraction of PAR assimilated at ecosystem le
 """
 @inline function compute_APAR(photo::LUEPhotosynthesis{NF}, swdown::NF, LAI::NF) where NF
     PAR = compute_PAR(photo, swdown)
-    APAR = photo.αa * PAR * (NF(1.0) - exp(-photo.k_ext*LAI)) 
+    APAR = photo.α_a * PAR * (NF(1.0) - exp(-photo.k_ext*LAI)) 
     return APAR
 end
 
 """
     $SIGNATURES
-Computes intercellular CO2 partial pressure.
+Computes intercellular CO2 partial pressure [Pa].
 """
 @inline function compute_pres_i(photo::LUEPhotosynthesis, λc, pres_a) 
     pres_i = λc * pres_a
@@ -179,6 +181,7 @@ Computes factor for light-limited assimilation `c_1` and factor for RuBisCO-limi
 @inline function compute_c1_c2(photo::LUEPhotosynthesis{NF}, T_air::NF, Γ_star::NF, Kc::NF, Ko::NF, pres_i::NF, pres_O2::NF) where NF
     t_stress = compute_t_stress(photo, T_air)
     # TODO check factor 2 missing in PALADYN paper
+    # TODO add units
     c_1 = photo.α_C3 * t_stress * photo.C_mass * (pres_i - Γ_star) / (pres_i + NF(2.0) * Γ_star)
     c_2 = (pres_i - Γ_star) / (pres_i + Kc * (NF(1.0) + pres_O2 / Ko))
     return c_1, c_2
@@ -208,7 +211,7 @@ end
 
 """
     $SIGNATURES
-Computes the soil-moisture limiting factor `β `.
+Computes the soil-moisture limiting factor `β`.
 """
 @inline function compute_β(photo::LUEPhotosynthesis{NF}) where NF
     # TODO add implementaion for β (depends on soil moisture)
@@ -237,7 +240,7 @@ Eqn 2, Haxeltine & Prentice 1996
     JE, JC = compute_JE_JC(photo, c_1, c_2, APAR, Vc_max)
 
     # TODO photosyntheis downregulation ignored for now
-    Ag = (JE + JC - sqrt((JE + JC)^2 - NF(4.0) * photo.θr * JE * JC)) / (NF(2.0) * photo.θr) * photo.day_length * β
+    Ag = (JE + JC - sqrt((JE + JC)^2 - NF(4.0) * photo.θ_r * JE * JC)) / (NF(2.0) * photo.θ_r) * photo.day_length * β
     return Ag
 end
 
@@ -265,7 +268,7 @@ end
 Computes Gross Primary Production `GPP`in [kgC/m²/day] and leaf respiration `Rd` in [gC/m²/day]
 """
 function compute_photosynthesis(photo::LUEPhotosynthesis{NF}, T_air::NF, swdown::NF, pres::NF, co2::NF, LAI::NF, λc::NF) where NF
-    # Compute partial CO2 and O2 pressures
+    # Compute partial CO2 and O2 pressures in [Pa]
     pres_O2 = partial_pressure_O2(pres)
     pres_a = partial_pressure_CO2(pres, co2)
 
@@ -274,24 +277,27 @@ function compute_photosynthesis(photo::LUEPhotosynthesis{NF}, T_air::NF, swdown:
         
         # Compute kinetic parameters 
         # TODO check physical meaning of these parameters,  Appendix C in PALADYN paper
+        # TODO add units
         τ, Kc, Ko = compute_kinetic_parameters(photo, T_air)
 
         # Compute Γ_star
+        # TODO add unit
         Γ_star = compute_Γ_star(photo, τ, pres_O2)
 
         # TODO check for bioclimatic limit ignored for now
         if LAI > zero(NF)
 
-            # Compute absorbed PAR 
+            # Compute absorbed PAR [mol/m²/day]
             APAR = compute_APAR(photo, swdown, LAI)
 
-            # Compute pres_i, intercellular CO2 partial pressure
+            # Compute pres_i, intercellular CO2 partial pressure [Pa]
             pres_i = compute_pres_i(photo, λc, pres_a)
             
             # Compute c1 and c2 parameters for C3 photosynthesis
+            # TODO add units
             c_1, c_2 = compute_c1_c2(photo, T_air, Γ_star, Kc, Ko, pres_i, pres_O2)
-            
-            # Compute Vc_max, maximum rate of carboxylation 
+
+            # Compute Vc_max, maximum rate of carboxylation [gC/m²/day]
             Vc_max = compute_Vc_max(photo, c_1, APAR, Kc, Ko, Γ_star, pres_i, pres_O2)
             
             # Compute soil moisture limiting factor (depends on soil moisture)
@@ -327,7 +333,6 @@ function compute_auxiliary!(state, model, photo::LUEPhotosynthesis)
     launch!(grid, :xy, compute_auxiliary_kernel!, state, photo)
 end
 
-
 @kernel function compute_auxiliary_kernel!(state, photo::LUEPhotosynthesis{NF}) where NF
     # TODO checks for positive/negative values in the original PALADYN code ignored for now
     i, j = @index(Global, NTuple)
@@ -342,11 +347,10 @@ end
     LAI = state.LAI[i, j]
     λc = state.λc[i, j]
 
-    # Compute GPP, Gross Primary Production [kgC/m²/day] and Rd, daily leaf respiration [gC/m²/day]
+    # Compute GPP, Gross Primary Production in [kgC/m²/day] and Rd, daily leaf respiration in [gC/m²/day]
     GPP, Rd = compute_photosynthesis(photo, T_air, swdown, pres, co2, LAI, λc)
     
     # Store results
     state.GPP[i, j] = GPP
     state.Rd[i, j] = Rd
-
 end

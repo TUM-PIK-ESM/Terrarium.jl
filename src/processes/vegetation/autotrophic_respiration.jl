@@ -22,17 +22,6 @@ $TYPEDFIELDS
     aws::NF = 10.0 # Value for Needleleaf tree PFT
 end
 
-variables(autoresp::PALADYNAutotrophicRespiration) = (
-    auxiliary(:T_air, XY()), # Surface air temperature in Celcius [°C]
-    auxiliary(:GPP, XY()), # Gross Primary Production [kgC/m²/day]
-    auxiliary(:Rd, XY()), # Respiration at 10°C [kgC/m²/day]
-    auxiliary(:C_veg, XY()), # Vegetation carbon pool [kgC/m²]
-    auxiliary(:phen, XY()), # Phenology factor
-    auxiliary(:Ra, XY()), # Autotrophic respiration [kgC/m²/day]
-    auxiliary(:NPP, XY()), # Net Primary Production [kgC/m²/day]
-)
-
-
 """
     $SIGNATURES
 
@@ -73,7 +62,7 @@ end
 """
 $SIGNATURES
 
-Computes maintenance respiration `Rm`.
+Computes maintenance respiration `Rm` in [kgC/m²/day].
 """
 @inline function compute_Rm(
     autoresp::PALADYNAutotrophicRespiration{NF}, 
@@ -110,7 +99,7 @@ end
 """
 $SIGNATURES
 
-Computes growth respiration `Rg`.
+Computes growth respiration `Rg` in [kgC/m²/day].
 """
 @inline function compute_Rg(autoresp::PALADYNAutotrophicRespiration{NF}, GPP, Rm) where NF
     Rg = NF(0.25) * (GPP - Rm)
@@ -120,7 +109,7 @@ end
 """
 $SIGNATURES
 
-Computes autotrophic respiration `Ra` as the sum of maintenance respiration `Rm` and growth respiration `Rg`.
+Computes autotrophic respiration `Ra` as the sum of maintenance respiration `Rm` and growth respiration `Rg` in [kgC/m²/day].
 """
 @inline function compute_Ra(autoresp::PALADYNAutotrophicRespiration, Rm, Rg) 
     Ra = Rm + Rg
@@ -130,7 +119,8 @@ end
 """
 $SIGNATURES
 
-Computes Net Primary Productivity `NPP` as the difference between Gross Primary Production `GPP` and autotrophic respiration `Ra`.
+Computes Net Primary Productivity `NPP` as the difference between Gross Primary Production `GPP` and autotrophic respiration `Ra`
+in [kgC/m²/day].
 """
 @inline function compute_NPP(autoresp::PALADYNAutotrophicRespiration, GPP, Ra) 
     NPP = GPP - Ra
