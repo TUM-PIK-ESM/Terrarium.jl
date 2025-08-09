@@ -29,7 +29,7 @@ Computes the ratio of leaf-internal and air CO2 concentration `λc`,
 derived from the optimal stomatal conductance model (Medlyn et al. 2011).
 """
 @inline function compute_λc(stomcond::MedlynStomatalConductance{NF}, vpd) where NF
-    λc = NF(1.0) - NF(1.6) / (NF(1.0) + stomcond.g1 / sqrt(vpd))
+    λc = NF(1.0) - NF(1.6) / (NF(1.0) + stomcond.g1 / sqrt(vpd * NF(1.0e-3)))
     return λc
 end
 

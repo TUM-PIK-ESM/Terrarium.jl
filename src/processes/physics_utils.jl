@@ -1,11 +1,10 @@
 """
     partial_pressure_O2(pres::NF) where NF
 
-Compute partial pressure of oxygen from surface pressure.
+Compute partial pressure of oxygen from surface pressure in Pa.
 """
 @inline function partial_pressure_O2(pres::NF) where NF
-    # Compute O2 partial pressure [Pa]
-    # Shouldn't this be in physical constants?
+    # TODO Shouldn't this be in physical constants?
     pres_O2 = NF(0.209) * pres
     return pres_O2
 end
@@ -13,10 +12,9 @@ end
 """
     partial_pressure_CO2(pres::NF, conc_co2::NF) where NF
 
-Compute partial pressure of CO2 from surface pressure and CO2 concentration.
+Compute partial pressure of CO2 from surface pressure and CO2 concentration in Pa.
 """
 @inline function partial_pressure_CO2(pres::NF, conc_co2::NF) where NF
-    # Compute atmospheric CO2 partial pressure [Pa]
     pres_co2 = conc_co2 * NF(1e-6) * pres
     return pres_co2
 end

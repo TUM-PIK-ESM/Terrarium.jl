@@ -9,15 +9,10 @@ using Test
     λc = compute_λc(stom_conductance, vpd)
     @test λc ≈ 1.0
 
-    # Test vpd near inf (λc should be close to 0)
-    # TODO here is it ok to use Inf to test the limit case? or a very large number?
-    vpd = Inf
+    # Test λc should be between 0 and 1 for a realistic positive vpd
+    # TODO for very high VPD λc can become negative
+    vpd = 1000 # Pa
     λc = compute_λc(stom_conductance, vpd)
-    @test λc ≈ -0.6
-
-    # Test λc should be between -0.6 and 1 for a positive vpd
-    vpd = 500
-    λc = compute_λc(stom_conductance, vpd)
-    @test -0.6 < λc < 1.0
+    @test 0.0 < λc < 1.0
 end
    
