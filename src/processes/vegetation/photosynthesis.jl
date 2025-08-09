@@ -337,13 +337,11 @@ end
     # TODO checks for positive/negative values in the original PALADYN code ignored for now
     i, j = @index(Global, NTuple)
 
-    # Get atmospheric inputs/forcings 
-    T_air = state.T_air[i, j]
-    pres = state.pres[i, j]
+    # Get inputs
+    T_air = state.T_air[i, j] 
+    pres = state.pres[i, j] 
     swdown = state.swdown[i, j] 
-    co2 = state.co2[i, j]
-
-    # Get LAI and λc
+    co2 = state.co2[i, j]  
     LAI = state.LAI[i, j]
     λc = state.λc[i, j]
 
