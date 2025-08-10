@@ -112,6 +112,7 @@ end
     i, j = @index(Global, NTuple)
 
     # Compute balanced Leaf Area Index 
+    # TODO is this ok, or better with get input, compute and store result?
     state.LAI_b[i, j] = compute_LAI_b(vegcarbon_dynamics, state.C_veg[i, j])
 
 end
