@@ -8,9 +8,10 @@ Properties:
 $TYPEDFIELDS
 """
 @kwdef struct SoilEnergyBalance{
+    NF,
     HeatOperator<:AbstractHeatOperator,
-    ThermalProps<:SoilThermalProperties,
-} <: AbstractSoilEnergyBalance
+    ThermalProps<:SoilThermalProperties{NF},
+} <: AbstractSoilEnergyBalance{NF}
     "Heat transport operator"
     operator::HeatOperator = ExplicitHeatConduction()
 

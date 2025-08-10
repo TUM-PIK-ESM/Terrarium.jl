@@ -1,11 +1,11 @@
 # AbstractModel
 
 """
-    AbstractModel
+    $TYPEDEF
 
 Base type for all models.
 """
-abstract type AbstractModel end
+abstract type AbstractModel{NF} end
 
 """
     variables(model::AbstractModel)
@@ -74,53 +74,53 @@ get_initializer(model::AbstractModel) = model.initializer
 # TODO: define general method interfaces (as needed) for all model types
 
 """
-    AbstractGroundModel
+    $TYPEDEF
     
 Base type for ground (e.g. soil and rock) models.
 """
-abstract type AbstractGroundModel <: AbstractModel end
+abstract type AbstractGroundModel{NF} <: AbstractModel{NF} end
 
 """
-    AbstractSoilModel
+    $TYPEDEF
 
 Base type for soil ground models.
 """
-abstract type AbstractSoilModel <: AbstractGroundModel end
+abstract type AbstractSoilModel{NF} <: AbstractGroundModel{NF} end
 
 """
-    AbstractSnowModel
+    $TYPEDEF
 
 Base type for snow models.
 """
-abstract type AbstractSnowModel <: AbstractModel end
+abstract type AbstractSnowModel{NF} <: AbstractModel{NF} end
 
 """
-    AbstractVegetationModel
+    $TYPEDEF
 
 Base type for vegetation/carbon models.
 """
-abstract type AbstractVegetationModel <: AbstractModel end
+abstract type AbstractVegetationModel{NF} <: AbstractModel{NF} end
 
 """
-    AbstractEnergyBalanceModel
+    $TYPEDEF
 
 Base type for surface energy balance models.
 """
-abstract type AbstractEnergyBalanceModel <: AbstractModel end
+abstract type AbstractEnergyBalanceModel{NF} <: AbstractModel{NF} end
 
 """
-    AbstractHydrologyModel
+    $TYPEDEF
 
 Base type for surface hydrology models.
 """
-abstract type AbstractHydrologyModel <: AbstractModel end
+abstract type AbstractHydrologyModel{NF} <: AbstractModel{NF} end
 
 """
     AbstractLandModel <: AbstractModel
 
 Base type for full land models which couple together multiple component models.
 """
-abstract type AbstractLandModel <: AbstractModel end
+abstract type AbstractLandModel{NF} <: AbstractModel{NF} end
 
 function Adapt.adapt_structure(to, model::AbstractModel)
     return setproperties(model, map(prop -> Adapt.adapt_structure(to, prop), getproperties(model)))
