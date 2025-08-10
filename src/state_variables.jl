@@ -14,12 +14,10 @@ however, they are assigned their own category here since they need to be handled
 by the timestepping scheme.
 """
 @kwdef struct StateVariables{
-    NF,
     prognames, tendnames, auxnames, subnames, closurenames,
     ProgVars, TendVars, AuxVars, SubVars, Closures,
     ClockType,
 } <: AbstractStateVariables
-    format::Type{NF} # to avoid custom constructor shenanigans
     prognostic::NamedTuple{prognames, ProgVars} = (;)
     tendencies::NamedTuple{tendnames, TendVars} = (;)
     auxiliary::NamedTuple{auxnames, AuxVars} = (;)
@@ -29,9 +27,9 @@ by the timestepping scheme.
 end
 
 function StateVariables(
-    model::AbstractModel{NF},
+    model::AbstractModel,
     clock::Clock
-) where {NF}
+)
     vars = variables(model)
     # filter out variables from tuple by type
     prognostic = merge_duplicates(filter(var -> isa(var, PrognosticVariable), vars))
@@ -58,7 +56,6 @@ function StateVariables(
     # recursively initialize state variables for namespaces
     namespace_states = map(ns -> varname(ns) => StateVariables(getproperty(model, varname(ns)), clock), namespaces)
     return StateVariables(
-        NF,
         (; prognostic_fields...),
         (; tendency_fields...),
         (; auxiliary_fields...),
@@ -81,8 +78,8 @@ function Adapt.adapt_structure(to, sv::StateVariables)
 end
 
 Base.propertynames(
-    vars::StateVariables{NF, prognames, tendnames, auxnames, namespaces, closures}
-) where {NF, prognames, tendnames, auxnames, namespaces, closures} = (
+    vars::StateVariables{prognames, tendnames, auxnames, namespaces, closures}
+) where {prognames, tendnames, auxnames, namespaces, closures} = (
     prognames...,
     tendnames...,
     auxnames...,
@@ -92,9 +89,9 @@ Base.propertynames(
 )
 
 function Base.getproperty(
-    vars::StateVariables{NF, prognames, tendnames, auxnames, namespaces, closures},
+    vars::StateVariables{prognames, tendnames, auxnames, namespaces, closures},
     name::Symbol
-) where {NF, prognames, tendnames, auxnames, namespaces, closures}
+) where {prognames, tendnames, auxnames, namespaces, closures}
     # forward getproperty calls to variable groups
     if name ∈ prognames
         return getproperty(getfield(vars, :prognostic), name)
@@ -124,10 +121,10 @@ function fill_halo_regions!(state::StateVariables)
     end
 end
 
-function reset_tendencies!(state::StateVariables{NF}) where {NF}
+function reset_tendencies!(state::StateVariables)
     # reset all tendency fields
     for var in state.tendencies
-        set!(var, zero(NF))
+        set!(var, zero(eltype(var)))
     end
     # recurse over namespaces
     for ns in state.namespaces
