@@ -22,7 +22,7 @@ $TYPEDFIELDS
     aws::NF = 10.0 # Value for Needleleaf tree PFT
 end
 
-variables(::LUEPhotosynthesis) = (
+variables(::PALADYNAutotrophicRespiration) = (
     # TODO for now define atmospheric inputs/forcings here, move later
     auxiliary(:T_air, XY()), # Surface air temperature in Celsius [°C]
     auxiliary(:Rd, XY()), # Daily leaf respiration [gC/m²/day]

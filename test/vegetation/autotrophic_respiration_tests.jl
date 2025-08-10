@@ -37,6 +37,8 @@ end
     Rm = 0.2 # Mock value
     Rg = compute_Rg(autoresp, GPP, Rm)
     @test isfinite(Rg)
+
+    # TODO Rg could be negative?
 end
 
 @testset "Ra test" begin
@@ -50,6 +52,8 @@ end
     GPP = 0.5 # Mock value
     Ra = compute_Ra(autoresp, vegcarbon_dynamics, T_air, Rd, phen, C_veg, GPP)
     @test isfinite(Ra)
+
+    # TODO Ra could be negative?
 end
 
 @testset "NPP test" begin
@@ -59,4 +63,6 @@ end
     Ra = 0.3 # Mock value
     NPP = compute_NPP(autoresp, GPP, Ra)
     @test NPP == GPP - Ra
+
+    # TODO is NPP always positive ? GPP always > Ra?
 end
