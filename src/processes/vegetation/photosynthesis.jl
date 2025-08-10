@@ -114,7 +114,8 @@ end
 
 """
     $SIGNATURES
-Computes the CO2 compensation point `Γ_star`.
+Computes the CO2 compensation point `Γ_star`,
+Eq. C6, PALADYN (Willeit 2016).
 """
 @inline function compute_Γ_star(photo::LUEPhotosynthesis{NF}, τ::NF, pres_O2::NF) where NF
     # TODO add unit
@@ -133,7 +134,8 @@ end
 
 """
     $SIGNATURES
-Computes absorbed PAR limited by the fraction of PAR assimilated at ecosystem level `APAR` [mol/m²/day].
+Computes absorbed PAR limited by the fraction of PAR assimilated at ecosystem level `APAR` [mol/m²/day],
+Eq. 62, PALADYN (Willeit 2016).
 """
 @inline function compute_APAR(photo::LUEPhotosynthesis{NF}, swdown::NF, LAI::NF) where NF
     PAR = compute_PAR(photo, swdown)
@@ -143,7 +145,8 @@ end
 
 """
     $SIGNATURES
-Computes intercellular CO2 partial pressure [Pa].
+Computes intercellular CO2 partial pressure [Pa],
+Eq. 67, PALADYN (Willeit 2016).
 """
 @inline function compute_pres_i(photo::LUEPhotosynthesis, λc, pres_a) 
     pres_i = λc * pres_a
@@ -176,7 +179,8 @@ end
 
 """
     $SIGNATURES
-Computes factor for light-limited assimilation `c_1` and factor for RuBisCO-limited assimilation `c_2`.
+Computes factor for light-limited assimilation `c_1` and factor for RuBisCO-limited assimilation `c_2`,
+Eqs. C4+C5, PALADYN (Willeit 2016).
 """
 @inline function compute_c1_c2(photo::LUEPhotosynthesis{NF}, T_air::NF, Γ_star::NF, Kc::NF, Ko::NF, pres_i::NF, pres_O2::NF) where NF
     t_stress = compute_t_stress(photo, T_air)
@@ -211,7 +215,8 @@ end
 
 """
     $SIGNATURES
-Computes the soil-moisture limiting factor `β`.
+Computes the soil-moisture limiting factor `β`,
+Eq. 66, PALADYN (Willeit 2016).
 """
 @inline function compute_β(photo::LUEPhotosynthesis{NF}) where NF
     # TODO add implementaion for β (depends on soil moisture)
@@ -223,7 +228,7 @@ end
 """
     $SIGNATURES
 Computes the daily leaf respiration `Rd` [gC/m²/day],
-Eqn 10, Haxeltine & Prentice 1996
+Eqn 10, Haxeltine & Prentice 1996 and Eq. 10 PALADYN (Willeit 2016).
 """
 @inline function compute_Rd(photo::LUEPhotosynthesis, Vc_max, β)
     Rd = photo.α_C3 * Vc_max * β
@@ -248,7 +253,7 @@ end
 """
     $SIGNATURES
 Computes the total daytime net photosynthesis `And` [gC/m²/day],
-Eqn 19, Haxeltine & Prentice 1996
+Eqn 19, Haxeltine & Prentice 1996 + Eq. 65, PALADYN (Willeit 2016).
 """
 @inline function compute_And(photo::LUEPhotosynthesis, c_1::NF, c_2::NF, APAR::NF, Vc_max::NF, β::NF, Rd::NF) where NF
     # Compute Ag, the daily gross photosynthesis 
