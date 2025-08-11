@@ -5,10 +5,11 @@ struct RichardsEq{Advection<:AbstractAdvectionScheme} <: AbstractSoilWaterFluxes
 end
 
 @kwdef struct SoilHydrology{
+    NF,
     SoilWaterFluxes<:AbstractSoilWaterFluxes,
-    SoilHydraulicProperties<:AbstractSoilHydraulicProperties,
+    SoilHydraulicProperties<:AbstractSoilHydraulicProperties{NF},
     FC<:FreezeCurves.FreezeCurve
-} <: AbstractSoilHydrology
+} <: AbstractSoilHydrology{NF}
     "Soil water flux scheme"
     fluxes::SoilWaterFluxes = NoFlow()
 
@@ -37,17 +38,17 @@ end
 
 # Immobile soil water (NoFlow)
 
-variables(::SoilHydrology{NoFlow}) = (
+variables(::SoilHydrology{NF,NoFlow}) where {NF} = (
     auxiliary(:pore_water_ice_saturation, XYZ()),
 )
 
 @inline compute_auxiliary!(state, model, hydrology::SoilHydrology) = nothing
 
-@inline compute_tendencies!(state, model, strat::SoilHydrology{NoFlow}) = nothing
+@inline compute_tendencies!(state, model, strat::SoilHydrology{NF,NoFlow}) where {NF} = nothing
 
 # Richardson-Richards equation diffusion/advection
 
-variables(::SoilHydrology{<:RichardsEq}) = (
+variables(::SoilHydrology{NF,<:RichardsEq}) where {NF} = (
     prognosic(:pore_water_ice_potential, XYZ()),
     auxiliary(:pore_water_ice_saturation, XYZ()),
 )

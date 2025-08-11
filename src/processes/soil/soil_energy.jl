@@ -8,9 +8,10 @@ Properties:
 $TYPEDFIELDS
 """
 @kwdef struct SoilEnergyBalance{
+    NF,
     HeatOperator<:AbstractHeatOperator,
-    ThermalProps<:SoilThermalProperties,
-} <: AbstractSoilEnergyBalance
+    ThermalProps<:SoilThermalProperties{NF},
+} <: AbstractSoilEnergyBalance{NF}
     "Heat transport operator"
     operator::HeatOperator = ExplicitHeatConduction()
 
@@ -226,7 +227,7 @@ end
             # Case 2a: U ≥ Lθ -> thawed
             one(sat),
             # Case 2b: 0-Lθ ≤ U ≤ 0 -> phase change
-            1 - (U / -Lθ)
+            one(sat) - (U / -Lθ)
         )
     )
     fracs = soil_volumetric_fractions(idx, state, strat, hydrology, bgc)

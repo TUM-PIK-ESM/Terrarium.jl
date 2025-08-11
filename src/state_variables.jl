@@ -56,12 +56,12 @@ function StateVariables(
     # recursively initialize state variables for namespaces
     namespace_states = map(ns -> varname(ns) => StateVariables(getproperty(model, varname(ns)), clock), namespaces)
     return StateVariables(
-        prognostic=(; prognostic_fields...),
-        tendencies=(; tendency_fields...),
-        auxiliary=(; auxiliary_fields...),
-        namespaces=(; namespace_states...),
-        closures=(; closures...),
-        clock=clock,
+        (; prognostic_fields...),
+        (; tendency_fields...),
+        (; auxiliary_fields...),
+        (; namespace_states...),
+        (; closures...),
+        clock,
     )
 end
 
