@@ -1,6 +1,6 @@
 name = "Terrarium"
 uuid = "80418d68-07fa-499d-ae2b-c12e531f5cd8"
-authors = ["Brian Groenke <brian.groenke@pik-potsdam.de>"]
+authors = ["Brian Groenke <brian.groenke@pik-potsdam.de>", "Maximillian Gelbrecht <gelbrecht@pik-potsdam.de>", "Maha Badri <maha.badri@pik-potsdam.de>", "Terrarium Contributors"]
 version = "0.1.0"
 
 [deps]
