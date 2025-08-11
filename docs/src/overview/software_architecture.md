@@ -1,7 +1,7 @@
 # Software architecture
 
-> [!WARNING]
-> The architecture of Terra.jl is still in an early prototype stage and is the subject of ongoing discussion. This page is a non-exhaustive summary of the current working concept and will be updated accordingly if and when the architecture changes.
+!!! warning "🚧🚧 Under construction 🚧🚧"
+    The architecture of Terra.jl is still in an early prototype stage and is the subject of ongoing discussion. This page is a non-exhaustive summary of the current working concept and will be updated accordingly if and when the architecture changes.
 
 ## Numerical implementation
 Terra is based on the numerics and finite-volume method operators provided by Oceananigans.jl. All state variables are represented as Oceananigans Fields with computations automatically distributed using KernelAbstractions.jl. Spatial grids in Terra are similarly based on the corresponding Oceananigans grids, most prominently the RectilinearGrid which represents a rectangular volume divided orthogonally into smaller control volumes along the X, Y, and Z dimensions. DetlaLand currently implements dynamics only along the Z axis, while the 
