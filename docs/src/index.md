@@ -14,7 +14,7 @@ Terra is being developed alongside [SpeedyWeather.jl](https://github.com/SpeedyW
 ```@contents
 Pages = [
     "overview/mathematical_formulation.md",
-    "overview/software_practices.md",
+    "overview/software_architecture.md",
     "api_reference.md",
 ]
 Depth = 3
