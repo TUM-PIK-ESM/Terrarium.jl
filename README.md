@@ -10,7 +10,7 @@
     <img alt="EUPLv1.2 license" src="https://img.shields.io/badge/License-EUPLv1.2-blue.svg?style=flat-square">
 </a>
 
-[Terra.jl](https://tum-pik-esm.github.io/Terra.jl/dev") is a new and upcoming land model that aims to support hybrid physics- and data-driven land modeling across multiple spatial and temporal scales. We envision Terra to be part of a new generation of Earth system component models that combine modularity, interactivity, GPU-compability and auto-differentiability (AD) for seamless integration of process-based and data-driven model components in both global and regional scale simulations.
+[Terra.jl](https://tum-pik-esm.github.io/Terra.jl/dev) is a new and upcoming land model that aims to support hybrid physics- and data-driven land modeling across multiple spatial and temporal scales. We envision Terra to be part of a new generation of Earth system component models that combine modularity, interactivity, GPU-compability and auto-differentiability (AD) for seamless integration of process-based and data-driven model components in both global and regional scale simulations.
 
 Terra is being developed alongside [SpeedyWeather.jl](https://github.com/SpeedyWeather/SpeedyWeather.jl) and [Oceananigans.jl](https://github.com/CliMA/Oceananigans.jl) as the land component of the proposed DELTA-ESM project which aims to realize this vision by building a new, user-friendly, and fully GPU/AD-compatible Earth System Model in the Julia programming language.
 
