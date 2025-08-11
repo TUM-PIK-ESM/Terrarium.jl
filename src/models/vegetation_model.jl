@@ -124,10 +124,10 @@ function timestep!(state, model::VegetationModel, euler::ForwardEuler, dt=get_dt
     return nothing
 end
 
-@kernel function timestep_vegetation_kernel!(state, ::ForwardEuler, dt)
+@kernel function timestep_vegetation_kernel!(state, euler::ForwardEuler, dt)
     i, j = @index(Global, NTuple)
     # Update vegetation carbon pool, compute C_veg(t)
-    state.C_veg[i, j] = state.C_veg[i, j] + dt * state.C_veg_tendency[i, j]
+    state.C_veg[i, j] = step(euler, state.C_veg[i, j], state.C_veg_tendency[i, j], dt)
     # Update vegetation fraction, compute ν(t)
-    state.ν[i, j] = state.ν[i, j] + dt * state.ν_tendency[i, j]
+    state.ν[i, j] = step(euler, state.ν[i, j], state.ν_tendency[i, j], dt)
 end
