@@ -84,7 +84,7 @@ where $C = C(\theta_{\text{w}},\theta)$ is the volumetric heat capacity (J/K/m³
 
 The vertical flow of water in porous media, such as soils, can be formulated as following the conservation law
 ```math
-    \phi\frac{\partial\vartheta(\partial\psi)}{t} - \nabla \cdot \textbf{j}_{\text{w}} - F_{\text{w}}(z,t) = 0,
+    \phi\frac{\partial\vartheta(\psi)}{\partial t} - \nabla \cdot \textbf{j}_{\text{w}} - F_{\text{w}}(z,t) = 0,
 ```
 where $\phi$ is the natural porosity (or saturated water content) of the soil volume and $F_{\text{w}}(z,t)$ (m/s) is an inhomogeneous source/sink (forcing) term.
 
