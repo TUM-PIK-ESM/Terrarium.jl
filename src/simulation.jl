@@ -2,22 +2,22 @@ abstract type AbstractSimulation end
 
 struct Simulation{
     Model<:AbstractModel,
-    TimeStepper<:AbstractTimeStepper,
+    TimeStepperCache<:AbstractTimeStepperCache,
     StateVars<:AbstractStateVariables,
 } <: AbstractSimulation
     "The type of model used for the simulation."
     model::Model
 
-    "The time stepping scheme used by the simulation."
-    time_stepping::TimeStepper
+    cache::TimeStepperCache
 
     "Collection of all state variables defined on the simulation `model`."
     state::StateVars
 end
 
-function initialize(model::AbstractModel, time_stepping=get_time_stepping(model); clock::Clock=Clock(time=0.0))
+function initialize(model::AbstractModel; clock::Clock=Clock(time=0.0))
     state = StateVariables(model, clock)
-    sim = Simulation(model, time_stepping, state)
+    time_stepping_cache = initialize(model, get_time_stepping(model))
+    sim = Simulation(model, time_stepping_cache, state)
     initialize!(sim)
     return sim
 end
@@ -47,11 +47,11 @@ end
 
 Run the simulation by `steps` or a `period` with `dt` timestep size (in seconds or Dates.Period).
 """
-function run!(sim::Simulation; 
-        steps::Union{Int, Nothing} = nothing,
-        period::Union{Period, Nothing} = nothing,
-        dt = get_dt(get_time_stepping(sim.model)))
-
+function run!(sim::Simulation;
+    steps::Union{Int, Nothing} = nothing,
+    period::Union{Period, Nothing} = nothing,
+    dt = get_dt(get_time_stepping(sim.model))
+)
     dt = convert_dt(dt)
     steps = get_steps(steps, period, dt)
 
