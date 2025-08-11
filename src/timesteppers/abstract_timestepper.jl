@@ -22,3 +22,8 @@ function is_adaptive end
 Advance the model state by one time step, or by `dt` units of time.
 """
 function timestep! end
+
+"""
+Base type for time-stepper state caches.
+"""
+abstract type AbstractTimeStepperCache{NF} end

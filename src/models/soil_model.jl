@@ -110,7 +110,7 @@ end
 
 @kernel function timestep_kernel!(
     state,
-    ::ForwardEuler,
+    euler::ForwardEuler,
     energy::AbstractSoilEnergyBalance,
     hydrology::AbstractSoilHydrology,
     strat::AbstractStratigraphy,
@@ -121,7 +121,7 @@ end
     idx = @index(Global, NTuple)
     i, j, k = idx
     # timestep for internal energy
-    state.internal_energy[i, j, k] = state.internal_energy[i, j, k] + dt*state.internal_energy_tendency[i, j, k]
+    state.internal_energy[i, j, k] = step(euler, state.internal_energy[i, j, k], state.internal_energy_tendency[i, j, k], dt)
     # apply inverse closure relation to update temperature
     fc = get_freezecurve(hydrology)
     energy_to_temperature!(idx, state, fc, energy, hydrology, strat, bgc, constants)
