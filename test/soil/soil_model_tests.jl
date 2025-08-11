@@ -1,4 +1,4 @@
-using Terra
+using Terrarium
 using Test
 
 @testset "Soil energy" begin

@@ -1,6 +1,6 @@
 # API Reference
 
 ```@autodocs
-Modules = [Terra]
+Modules = [Terrarium]
 Order   = [:type, :function]
 ```

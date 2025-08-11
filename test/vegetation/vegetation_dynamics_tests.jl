@@ -1,5 +1,5 @@
-using Terra
-using Terra: compute_γv, compute_ν_star, compute_ν_tend
+using Terrarium
+using Terrarium: compute_γv, compute_ν_star, compute_ν_tend
 using Test
 
 @testset "γv test" begin

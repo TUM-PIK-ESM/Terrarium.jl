@@ -1,7 +1,7 @@
-using Terra
-using Terra: compute_kinetic_parameters, compute_Γ_star, compute_PAR, compute_APAR, compute_pres_i
-using Terra: compute_t_stress, compute_c1_c2, compute_Vc_max, compute_JE_JC, compute_β
-using Terra: compute_Rd, compute_Ag, compute_And, compute_photosynthesis
+using Terrarium
+using Terrarium: compute_kinetic_parameters, compute_Γ_star, compute_PAR, compute_APAR, compute_pres_i
+using Terrarium: compute_t_stress, compute_c1_c2, compute_Vc_max, compute_JE_JC, compute_β
+using Terrarium: compute_Rd, compute_Ag, compute_And, compute_photosynthesis
 using Test
 
 

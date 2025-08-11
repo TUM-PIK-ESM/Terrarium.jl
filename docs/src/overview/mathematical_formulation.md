@@ -1,6 +1,6 @@
 # Mathematical formulation
 
-Terra.jl strictly follows a philosophy of dynamical modeling via discretized differential equations. This means that all physical processes in the model must be written as terms in a set of continuous-time equations of the form:
+Terrarium.jl strictly follows a philosophy of dynamical modeling via discretized differential equations. This means that all physical processes in the model must be written as terms in a set of continuous-time equations of the form:
 ```math
 \frac{\partial u(x,t)}{\partial t} = G(u(x,t)) + F(x,t)
 ```

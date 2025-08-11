@@ -1,5 +1,5 @@
-using Terra
-using Terra: compute_f_deciduous, compute_phen, compute_LAI
+using Terrarium
+using Terrarium: compute_f_deciduous, compute_phen, compute_LAI
 using Test
 
 @testset "f_deciduous test" begin

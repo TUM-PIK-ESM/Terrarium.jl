@@ -2,7 +2,7 @@ using ArgParse
 using Documenter
 using Literate
 
-using Terra
+using Terrarium
 
 s = ArgParseSettings()
 @add_arg_table! s begin
@@ -26,12 +26,12 @@ makedocs(
         prettyurls=get(ENV, "CI", nothing)=="true",
         ansicolor=true,
         collapselevel=1,
-        canonical = "https://tum-pik-esm.github.io/TerraDocumentation/stable/",
+        canonical = "https://tum-pik-esm.github.io/Terrarium.jl/stable/",
         size_threshold = 600_000
     ),      # in bytes
-    sitename = "Terra.jl",
+    sitename = "Terrarium.jl",
     authors = "Brian Groenke, Maximillian Galbrecht, Maha Badri, and Contributors",
-    modules = [Terra],
+    modules = [Terrarium],
     pages = [
         "Home" => "index.md",
         "Overview" => [
@@ -56,7 +56,7 @@ deployconfig = Documenter.auto_detect_deploy_system()
 # rm(joinpath(@__DIR__, "build", ".gitignore"))
 
 deploydocs(
-       repo="github.com/TUM-PIK-ESM/Terra.jl.git",
+       repo="github.com/TUM-PIK-ESM/Terrarium.jl.git",
        push_preview = true,
        versions = ["v0" => "v^", "v#.#", "dev" => "dev"],
        deploy_config = deployconfig,

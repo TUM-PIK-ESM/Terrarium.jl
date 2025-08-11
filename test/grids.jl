@@ -1,19 +1,19 @@
-using Terra
+using Terrarium
 using Oceananigans.Grids
-using Terra.RingGrids
+using Terrarium.RingGrids
 using Test
 
 @testset "Vertical discretizations" begin
     # Uniform spacing
-    @test Terra.get_spacing(UniformSpacing(Δz=0.1, N=1)) == [0.1]
-    @test Terra.get_spacing(UniformSpacing(Δz=0.1, N=10)) == repeat([0.1], 10)
+    @test Terrarium.get_spacing(UniformSpacing(Δz=0.1, N=1)) == [0.1]
+    @test Terrarium.get_spacing(UniformSpacing(Δz=0.1, N=10)) == repeat([0.1], 10)
 
     # ExponentialSpacing
-    @test Terra.get_spacing(ExponentialSpacing(Δz_min=0.1, Δz_max=1.0, N=2)) == [0.1,1.0]
-    @test Terra.get_spacing(ExponentialSpacing(Δz_min=0.1, Δz_max=1.0, N=3, sig=nothing)) ≈ exp2.(LinRange(log2(0.1), log2(1.0), 3))
+    @test Terrarium.get_spacing(ExponentialSpacing(Δz_min=0.1, Δz_max=1.0, N=2)) == [0.1,1.0]
+    @test Terrarium.get_spacing(ExponentialSpacing(Δz_min=0.1, Δz_max=1.0, N=3, sig=nothing)) ≈ exp2.(LinRange(log2(0.1), log2(1.0), 3))
 
     # PrescribedSpacing
-    @test Terra.get_spacing(PrescribedSpacing(Δz=[0.1,0.2,0.3])) == [0.1,0.2,0.3]
+    @test Terrarium.get_spacing(PrescribedSpacing(Δz=[0.1,0.2,0.3])) == [0.1,0.2,0.3]
 end
 
 @testset "ColumnGrid" begin

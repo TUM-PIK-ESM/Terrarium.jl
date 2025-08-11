@@ -1,4 +1,4 @@
-using Terra
+using Terrarium
 using Dates
 
 import CairoMakie as Makie
@@ -18,7 +18,7 @@ sim = initialize(model)
 timestep!(sim)
 run!(sim, period=Day(30))
 
-Terra.invclosure!(sim.state, model, Terra.TemperatureEnergyClosure())
+Terrarium.invclosure!(sim.state, model, Terrarium.TemperatureEnergyClosure())
 
 # TODO: Figure out how to retrieve field data without halo regions...
 T = adapt(Array, sim.state.temperature)[1,1,1:end-3]

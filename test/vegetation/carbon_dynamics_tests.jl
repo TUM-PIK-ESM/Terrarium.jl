@@ -1,5 +1,5 @@
-using Terra
-using Terra: compute_λ_NPP, compute_LAI_b, compute_Λ_loc, compute_C_veg_tend
+using Terrarium
+using Terrarium: compute_λ_NPP, compute_LAI_b, compute_Λ_loc, compute_C_veg_tend
 using Test
 
 @testset "λ_NPP test" begin
