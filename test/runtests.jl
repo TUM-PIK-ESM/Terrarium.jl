@@ -1,4 +1,4 @@
-using Terra
+using Terrarium
 using Test
 
 FLAG_ENZYME_TESTS = "enzyme" in ARGS ? true : false

@@ -1,38 +1,38 @@
-using Terra
+using Terrarium
 using Test
 
-import Terra: XY, XYZ, prognostic, auxiliary, namespace
+import Terrarium: XY, XYZ, prognostic, auxiliary, namespace
 import Oceananigans: Field, Center
 
 DEFAULT_NF = Float32
 
 @testset "State variables for mock type" begin
 
-    @kwdef struct SubModel{NF} <: Terra.AbstractModel{NF}
+    @kwdef struct SubModel{NF} <: Terrarium.AbstractModel{NF}
         grid
-        boundary_conditions = Terra.FieldBoundaryConditions()
-        initializer = Terra.FieldInitializers()
-        time_stepping::Terra.AbstractTimeStepper{NF} = Terra.ForwardEuler{DEFAULT_NF}()
+        boundary_conditions = Terrarium.FieldBoundaryConditions()
+        initializer = Terrarium.FieldInitializers()
+        time_stepping::Terrarium.AbstractTimeStepper{NF} = Terrarium.ForwardEuler{DEFAULT_NF}()
     end
 
-    Terra.variables(model::SubModel) = (
+    Terrarium.variables(model::SubModel) = (
         # duplicate naming allowed in new namesapce
         auxiliary(:auxvar2D, XY()),
     )
 
-    @kwdef struct TestModel{NF} <: Terra.AbstractModel{NF}
+    @kwdef struct TestModel{NF} <: Terrarium.AbstractModel{NF}
         grid
         submodel = SubModel(; grid)
-        boundary_conditions = Terra.FieldBoundaryConditions()
-        initializer = Terra.FieldInitializers()
-        time_stepping::Terra.AbstractTimeStepper{NF} = Terra.ForwardEuler{DEFAULT_NF}()
+        boundary_conditions = Terrarium.FieldBoundaryConditions()
+        initializer = Terrarium.FieldInitializers()
+        time_stepping::Terrarium.AbstractTimeStepper{NF} = Terrarium.ForwardEuler{DEFAULT_NF}()
     end
 
-    struct TestClosure <: Terra.AbstractClosureRelation end
+    struct TestClosure <: Terrarium.AbstractClosureRelation end
 
-    Terra.varname(::TestClosure) = :closurevar
+    Terrarium.varname(::TestClosure) = :closurevar
 
-    Terra.variables(model::TestModel) = (
+    Terrarium.variables(model::TestModel) = (
         prognostic(:progvar3D, XYZ()),
         prognostic(:cprogvar3D, XYZ(), TestClosure()),
         prognostic(:progvar2D, XY()),

@@ -1,4 +1,4 @@
-using Terra
+using Terrarium
 
 @testset "Forward Euler" begin
     dt = 10.0
@@ -8,5 +8,5 @@ using Terra
     # Forward Euler is simple so we can just directly test it here
     progvar = 1.0
     tendency = 0.1
-    @test Terra.step(euler, progvar, tendency, dt) ≈ progvar + dt*tendency
+    @test Terrarium.step(euler, progvar, tendency, dt) ≈ progvar + dt*tendency
 end

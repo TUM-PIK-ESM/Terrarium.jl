@@ -1,4 +1,4 @@
-module Terra
+module Terrarium
 
 using DocStringExtensions
 
@@ -90,4 +90,4 @@ include("models/land_model.jl")
 export Simulation, initialize, run!, current_time
 include("simulation.jl")
 
-end # module Terra
+end # module Terrarium

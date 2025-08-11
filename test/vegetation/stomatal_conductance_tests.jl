@@ -1,5 +1,5 @@
-using Terra
-using Terra: compute_λc
+using Terrarium
+using Terrarium: compute_λc
 using Test
 
 @testset "λc test" begin

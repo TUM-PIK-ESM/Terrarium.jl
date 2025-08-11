@@ -1,4 +1,4 @@
-using Terra, Enzyme
+using Terrarium, Enzyme
 using Oceananigans: Average, Field
 
 import SpeedyWeather.RingGrids

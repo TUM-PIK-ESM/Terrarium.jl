@@ -1,5 +1,5 @@
-using Terra
-using Terra: compute_f_temp, compute_resp10, compute_Rm, compute_Rg, compute_Ra, compute_NPP
+using Terrarium
+using Terrarium: compute_f_temp, compute_resp10, compute_Rm, compute_Rg, compute_Ra, compute_NPP
 using Test
 
 @testset "f_temp test" begin

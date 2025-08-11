@@ -1,4 +1,4 @@
-using Terra
+using Terrarium
 
 import SpeedyWeather.RingGrids
 
