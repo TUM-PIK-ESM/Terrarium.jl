@@ -24,3 +24,6 @@ end
 dostep!(state, model, model.time_stepping, 1.0)
 
 Enzyme.autodiff(set_strong_zero(set_runtime_activity(Reverse)), dostep!, Active, Duplicated(state, dstate), Const(model), Const(model.time_stepping), Const(model.time_stepping.dt))
+
+# TODO: NaNs in the gradient, find out what's wrong 
+@test_broken all(isfinite.(dstate.temperature))
