@@ -24,7 +24,7 @@ where $\mathbf{j}_\text{h}$ (W/m²) is the diffusive heat flux vector and $\math
 Since ground materials are often porous, i.e., there exists void space between the solid particles, it is necessary to consider the potential presence of water and/or ice in this void space, which is hereafter referred to as pore space, or simply, soil pores. The thermal effects of water and ice can be accounted for by considering not only the temperature of the material but rather the total internal energy of the elementary volume. Combining the diffusive flux with a potential advective heat flux $j_z^{\text{w}}$ due to water flow yields the energy conservation law,
 ```math
 \begin{equation}
-\frac{\partial U(T,\theta)}{\partial t} - \nabla \cdot \mathbf{j}_\text{h} + \mathbf{j}_h^{\text{w}} - F_h(z,t) = 0\,,
+\frac{\partial U(T,\theta)}{\partial t} - \nabla \cdot \left(\mathbf{j}_\text{h} + \mathbf{j}_h^{\text{w}}\right) - F_h(z,t) = 0\,,
 \end{equation}
 ```
 where $U(T,\theta)$ (J/m³) is the volumetric internal energy as a function of temperature and total water/ice content $\theta$ (m³/m³), and $F_h(z,t)$ is an inhomogeneous heat source/sink (forcing) term.
@@ -61,9 +61,9 @@ In the simplest case where we neglect the effect of capillary action in the soil
 \begin{equation}
     \theta_{\text{w}}(U) =
         \begin{cases}
-            0                   & U < \rho_{\text{w}}L_{\text{sl}}\theta \\
+            0                   & U < -\rho_{\text{w}}L_{\text{sl}}\theta \\
             \frac{U}{L} & -\rho_{\text{w}}L_{\text{sl}}\theta \leq U < 0 \\
-            \theta              & U > 0\,,
+            \theta              & U \geq 0\,,
         \end{cases}
 \end{equation}
 ```
@@ -72,13 +72,13 @@ with temperature then determined by
 \begin{equation}
     U^{-1}(U(T,\theta)) =
     \begin{cases}
-    \frac{(U(T,\theta) - L_f\theta)}{C} &   U(T,\theta) > \rho_{\text{w}}L_{\text{sl}}\theta \\
+    \frac{U(T,\theta) - \rho_{\text{w}}L_{\text{sl}}\theta}{C} & U(T,\theta) < -\rho_{\text{w}}L_{\text{sl}}\theta \\
     0 & 0 \leq U(T,\theta) \leq \rho_{\text{w}}L_{\text{sl}}\theta \\
-    \frac{U(T,\theta)}{C} &   U(T,\theta) < 0\,,
+    \frac{U(T,\theta)}{C} &   U(T,\theta) \geq 0\,,
     \end{cases}
 \end{equation}
 ```
-where $C = C(\theta_{\text{w}},\theta)$ is the volumetric heat capacity (J/K/m³).
+where $C = C(\theta_{\text{w}},\theta)$ is the volumetric heat capacity (J/K/m³) as a function of the unfrozen and total water content.
 
 ## Vertical water transport in variably saturated soil
 

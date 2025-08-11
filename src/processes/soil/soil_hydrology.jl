@@ -4,6 +4,12 @@ struct RichardsEq{Advection<:AbstractAdvectionScheme} <: AbstractSoilWaterFluxes
     advection::Advection
 end
 
+"""
+    $TYPEDEF
+
+Properties:
+$TYPEDFIELDS
+"""
 @kwdef struct SoilHydrology{
     NF,
     SoilWaterFluxes<:AbstractSoilWaterFluxes,
@@ -46,7 +52,7 @@ variables(::SoilHydrology{NF,NoFlow}) where {NF} = (
 
 @inline compute_tendencies!(state, model, strat::SoilHydrology{NF,NoFlow}) where {NF} = nothing
 
-# Richardson-Richards equation diffusion/advection
+# TODO: Richardson-Richards equation diffusion/advection
 
 variables(::SoilHydrology{NF,<:RichardsEq}) where {NF} = (
     prognosic(:pore_water_ice_potential, XYZ()),

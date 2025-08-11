@@ -1,3 +1,8 @@
+"""
+    $TYPEDEF
+
+A collection of general physical constants that do not (usually) need to be varied in parameter calibration.
+"""
 @kwdef struct PhysicalConstants{NF}
     "Density of water in kg/m^3"
     ρw::NF = 1000.0
@@ -14,6 +19,6 @@
     "Gravitational constant in m/s^2"
     g::NF = 9.80665
 
-    "Reference temperature at 0°C in Kelvin"
+    "Reference temperature (0°C in Kelvin)"
     T0::NF = 273.15
 end

@@ -6,6 +6,9 @@ abstract type AbstractSoilHydraulicProperties{NF} end
 Represents a simple case where soil hydraulic properties are directly prescribed to constant values.
 This is mostly provided just for testing, although it may be useful in certain cases where direct
 measurements of hydraulic properites are available.
+
+Properties:
+$TYPEDFIELDS
 """
 @kwdef struct PrescribedHydraulics{NF} <: AbstractSoilHydraulicProperties{NF}
     "Hydraulic conductivity at saturation [m/s]"

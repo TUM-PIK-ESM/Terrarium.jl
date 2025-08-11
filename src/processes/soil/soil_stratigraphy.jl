@@ -2,6 +2,9 @@
     $TYPEDEF
 
 Represents a soil stratigraphy of well mixed material with homogeneous soil texture.
+
+Properties:
+$TYPEDFIELDS
 """
 @kwdef struct HomogeneousSoil{NF} <: AbstractStratigraphy{NF}
     "Material composition of mineral soil componnet"

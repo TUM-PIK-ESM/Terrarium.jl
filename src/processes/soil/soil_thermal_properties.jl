@@ -1,4 +1,10 @@
 # Note: Should sand, silt, and clay have separate thermal properties?
+"""
+    $TYPEDEF
+
+Properties:
+$TYPEDFIELDS
+"""
 @kwdef struct SoilThermalConductivities{NF}
     water::NF = 0.57 # thermal conductivity of water [W/m/K] (Hillel 1982)
     ice::NF = 2.2 # thermal conductivity of ice [W/m/K] Hillel (1982)
@@ -13,6 +19,12 @@ such as conductivities or densities.
 """
 abstract type AbstractBulkWeightingScheme end
 
+"""
+    $TYPEDEF
+
+Properties:
+$TYPEDFIELDS
+"""
 @kwdef struct SoilHeatCapacities{NF}
     water::NF = 4.2e6 # volumetric heat capacity of water [J/m^3]
     ice::NF = 1.9e6 # volumetric heat capacity of ice [J/m^3]
@@ -23,6 +35,12 @@ end
 
 # TODO: In principle, these types could change for different soil parameterizations.
 # This is something we should ideally allow for.
+"""
+    $TYPEDEF
+
+Properties:
+$TYPEDFIELDS
+"""
 @kwdef struct SoilThermalProperties{NF,CondWeighting}
     "Thermal conductivities for all constituents"
     cond::SoilThermalConductivities{NF} = SoilThermalConductivities()

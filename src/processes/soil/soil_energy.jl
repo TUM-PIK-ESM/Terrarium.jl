@@ -4,6 +4,8 @@ struct ExplicitHeatConduction <: AbstractHeatOperator end
 """
     $TYPEDEF
 
+Standard implementation of the soil energy balance accounting for freezing and thawing of pore water/ice.
+
 Properties:
 $TYPEDFIELDS
 """
