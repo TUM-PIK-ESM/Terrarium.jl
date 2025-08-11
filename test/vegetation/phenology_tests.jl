@@ -1,17 +1,25 @@
 using Terra
-using Terra: compute_f_deciduous, compute_phen
+using Terra: compute_f_deciduous, compute_phen, compute_LAI
 using Test
 
 @testset "f_deciduous test" begin
-    phenology = PALADYNPhenology{Float64}()
+    phenol = PALADYNPhenology{Float64}()
     # For now, test that f_deciduous = 0
-    f_deciduous = compute_f_deciduous(phenology)
+    f_deciduous = compute_f_deciduous(phenol)
     @test f_deciduous == 0.0
 end
 
 @testset "phen test" begin
-    phenology = PALADYNPhenology{Float64}()
+    phenol = PALADYNPhenology{Float64}()
     # For now, test that phen = 1
-    phen = compute_phen(phenology)
+    phen = compute_phen(phenol)
     @test phen == 1.0
+end
+
+@testset "LAI test" begin
+    phenol = PALADYNPhenology{Float64}()
+    LAI_b = 5.0  # Mock value
+    LAI = compute_LAI(phenol, LAI_b)
+    # For now, test that LAI = LAI_b (since f_deciduous=0 and phen=1)
+    @test LAI == LAI_b
 end

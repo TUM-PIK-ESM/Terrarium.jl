@@ -14,15 +14,15 @@ $TYPEDFIELDS
 end
 
 variables(phenol::PALADYNPhenology) = (
-    auxiliary(:LAI_b, XY()), # Balanced Leaf Area Index 
-    auxiliary(:phen, XY()), # Phenology factor
-    auxiliary(:LAI, XY()), # Leaf Area Index 
+    auxiliary(:LAI_b, XY()), # Balanced Leaf Area Index [m²/m²]
+    auxiliary(:phen, XY()), # Phenology factor [-]
+    auxiliary(:LAI, XY()), # Leaf Area Index [m²/m²]
 )
 
 """
     $SIGNATURES
 
-Computes `f_deciduous`, a factor for smooth transition between evergreen and deciduous.
+Computes `f_deciduous`, a factor for smooth transition between evergreen and deciduous [-].
 """
 @inline function compute_f_deciduous(phenol::PALADYNPhenology{NF}) where NF
     # TODO add phenology implementation from PALADYN
@@ -35,7 +35,7 @@ end
 """
     $SIGNATURES
 
-Computes `phen`, the phenology factor.
+Computes `phen`, the phenology factor [-].
 """
 @inline function compute_phen(phenol::PALADYNPhenology{NF}) where NF
     # TODO add phenology implementation from PALADYN
@@ -45,6 +45,23 @@ Computes `phen`, the phenology factor.
     return phen
 end
 
+"""
+    $SIGNATURES
+
+Computes `LAI`, based on the balanced Leaf Area Index `LAI_b`:
+"""
+@inline function compute_LAI(phenol::PALADYNPhenology{NF}, LAI_b::NF) where NF
+ # Compute f_deciduous
+    f_deciduous = compute_f_deciduous(phenol)
+
+    # Compute phen 
+    phen = compute_phen(phenol)
+
+    # Compute LAI
+    LAI = (f_deciduous * phen + (NF(1.0) - f_deciduous)) * LAI_b
+
+    return LAI
+end
 
 function compute_auxiliary!(state, model, phenol::PALADYNPhenology)
     grid = get_grid(model)
@@ -54,13 +71,17 @@ end
 @kernel function compute_auxiliary_kernel!(state, phenol::PALADYNPhenology)
     i, j = @index(Global, NTuple)
 
-    # Compute f_deciduous
-    f_deciduous = compute_f_deciduous(phenol)
+    # Get input
+    LAI_b = state.LAI_b[i, j]
 
-    # Compute phen 
+    # Compute phen
     phen = compute_phen(phenol)
 
     # Compute LAI
-    state.LAI[i, j] = (f_deciduous * phen + (NF(1.0) - f_deciduous)) * state.LAI_b[i, j]
+    LAI = compute_LAI(phenol, LAI_b)
+
+    # Store results
+    state.phen[i, j] = phen
+    state.LAI[i, j] = LAI
 end
    
