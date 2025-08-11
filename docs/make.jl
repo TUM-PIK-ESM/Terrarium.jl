@@ -26,14 +26,26 @@ makedocs(
         prettyurls=get(ENV, "CI", nothing)=="true",
         ansicolor=true,
         collapselevel=1,
-        canonical = "https://terra.github.io/TerraDocumentation/stable/",
+        canonical = "https://tum-pik-esm.github.io/TerraDocumentation/stable/",
         size_threshold = 600_000
     ),      # in bytes
     sitename = "Terra.jl",
-    authors = "Brian Groenke and contributors",
+    authors = "Brian Groenke, Maximillian Galbrecht, Maha Badri, and Contributors",
     modules = [Terra],
     pages = [
-        "Home"=>"index.md",
+        "Home" => "index.md",
+        "Overview" => [
+            "Mathematical formulation" => "overview/mathematical_formulation.md",
+            "Software architecture" => "overview/software_architecture.md",
+        ],
+        "Physics" => [
+            "Soil physics" => [
+                "Energy and water balance" => "physics/soil_energy_water.md",
+            ],
+            "Vegetation" => "physics/vegetation.md",
+        ],
+        "Contributing" => "contributing.md",
+        "API Reference" => "api_reference.md",
     ],
     draft=IS_DRAFT,
 )
