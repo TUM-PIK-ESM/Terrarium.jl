@@ -4,7 +4,7 @@
 Naive implementation of soil biogeochemistry that just assumes there to be a constant
 organic content in all soil layers.
 """
-Base.@kwdef struct ConstantSoilCarbonDenisty{NF} <: AbstractSoilBiogeochemistry
+Base.@kwdef struct ConstantSoilCarbonDenisty{NF} <: AbstractSoilBiogeochemistry{NF}
     "Soil organic carbon density [kg/m^3]"
     ρ_soc::NF = 0.0
 

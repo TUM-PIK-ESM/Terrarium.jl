@@ -3,7 +3,7 @@
 
 Represents a soil stratigraphy of well mixed material with homogeneous soil texture.
 """
-@kwdef struct HomogeneousSoil{NF} <: AbstractStratigraphy
+@kwdef struct HomogeneousSoil{NF} <: AbstractStratigraphy{NF}
     "Material composition of mineral soil componnet"
     texture::SoilTexture{NF,NF,NF} = SoilTexture(:sand)
 end

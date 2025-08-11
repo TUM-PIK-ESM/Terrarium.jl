@@ -1,5 +1,6 @@
 # Initial concept of what a semi-complete land model might look like.
 struct LandModel{
+    NF,
     GridType<:AbstractLandGrid,
     GroundModel<:AbstractGroundModel,
     SnowModel<:AbstractSnowModel,
@@ -7,7 +8,7 @@ struct LandModel{
     EnergyBalanceModel<:AbstractEnergyBalanceModel,
     HydrologyModel<:AbstractHydrologyModel,
     TimeStepper<:AbstractTimeStepper,
-} <: AbstractLandModel
+} <: AbstractLandModel{NF}
     "Spatial grid"
     grid::GridType
 
@@ -23,7 +24,7 @@ struct LandModel{
     "Surface energy balance"
     energy::EnergyBalanceModel
     
-    "Hydrology type"
+    "Surface hydrology model"
     hydrology::HydrologyModel
     
     "Time stepping scheme"

@@ -1,4 +1,4 @@
-abstract type AbstractSoilHydraulicProperties end
+abstract type AbstractSoilHydraulicProperties{NF} end
 
 """
     PrescribedHydraulics{NF} <: AbstractSoilHydraulicProperties
@@ -7,7 +7,7 @@ Represents a simple case where soil hydraulic properties are directly prescribed
 This is mostly provided just for testing, although it may be useful in certain cases where direct
 measurements of hydraulic properites are available.
 """
-@kwdef struct PrescribedHydraulics{NF} <: AbstractSoilHydraulicProperties
+@kwdef struct PrescribedHydraulics{NF} <: AbstractSoilHydraulicProperties{NF}
     "Hydraulic conductivity at saturation [m/s]"
     cond_sat::NF = 1e-5
 
@@ -34,7 +34,7 @@ end
 
 SURFEX parameterization of mineral soil porosity (Masson et al. 2013).
 """
-@kwdef struct SURFEXHydraulics{NF} <: AbstractSoilHydraulicProperties
+@kwdef struct SURFEXHydraulics{NF} <: AbstractSoilHydraulicProperties{NF}
     "Hydraulic conductivity at saturation [m/s]"
     cond_sat::NF = 1e-5
 

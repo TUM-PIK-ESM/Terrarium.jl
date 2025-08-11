@@ -4,13 +4,15 @@ using Test
 import Terra: XY, XYZ, prognostic, auxiliary, namespace
 import Oceananigans: Field, Center
 
+DEFAULT_NF = Float32
+
 @testset "State variables for mock type" begin
 
-    @kwdef struct SubModel <: Terra.AbstractModel
+    @kwdef struct SubModel{NF} <: Terra.AbstractModel{NF}
         grid
         boundary_conditions = Terra.FieldBoundaryConditions()
         initializer = Terra.FieldInitializers()
-        time_stepping = Terra.ForwardEuler()
+        time_stepping::Terra.AbstractTimeStepper{NF} = Terra.ForwardEuler{DEFAULT_NF}()
     end
 
     Terra.variables(model::SubModel) = (
@@ -18,12 +20,12 @@ import Oceananigans: Field, Center
         auxiliary(:auxvar2D, XY()),
     )
 
-    @kwdef struct TestModel <: Terra.AbstractModel
+    @kwdef struct TestModel{NF} <: Terra.AbstractModel{NF}
         grid
         submodel = SubModel(; grid)
         boundary_conditions = Terra.FieldBoundaryConditions()
         initializer = Terra.FieldInitializers()
-        time_stepping = Terra.ForwardEuler()
+        time_stepping::Terra.AbstractTimeStepper{NF} = Terra.ForwardEuler{DEFAULT_NF}()
     end
 
     struct TestClosure <: Terra.AbstractClosureRelation end
@@ -40,7 +42,7 @@ import Oceananigans: Field, Center
     )
 
     grid = ColumnGrid(ExponentialSpacing(N=10))
-    model = TestModel(; grid)
+    model = TestModel{DEFAULT_NF}(; grid)
     sim = initialize(model)
     # Check that all prognostic variables are defined correctly
     @test hasproperty(sim.state, :progvar3D) && isa(sim.state.prognostic.progvar3D, Field{Center,Center,Center})
