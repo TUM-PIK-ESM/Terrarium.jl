@@ -3,24 +3,25 @@ using Dates
 
 import CairoMakie as Makie
 
-import Oceananigans.BoundaryConditions: ValueBoundaryCondition
-
-grid = ColumnGrid(ExponentialSpacing(Δz_min=0.05, Δz_max=100.0, N=50))
-initializer = FieldInitializers(
-    # steady state temperature profile
-    temperature = (x,z) -> -1.0 - 0.01*z,
-    # dry soil
-    pore_water_ice_saturation = (x,z) -> 0.0,
+grid = ColumnGrid(ExponentialSpacing())
+initializer = Initializers(
+    # steady-ish state initial condition for temperature
+    VarInitializer((x,z) -> -1 - 0.05*z, :temperature),
+    # fully saturated soil pores
+    VarInitializer(1.0, :pore_water_ice_saturation),
 )
-boundary_conditions = FieldBoundaryConditions(temperature=(top=ValueBoundaryCondition(0.0),))
+# temperature boundary condition
+boundary_conditions = SoilBoundaryConditions(grid, top = (temperature = ValueBoundaryCondition(1.0),))
 model = SoilModel(; grid, initializer, boundary_conditions)
 sim = initialize(model)
-timestep!(sim)
-run!(sim, period=Day(30))
+# test one timestep
+@time timestep!(sim)
+# run simulation forward for a set period of time
+run!(sim, period=Day(10))
 
-Terrarium.invclosure!(sim.state, model, Terrarium.TemperatureEnergyClosure())
-
-# TODO: Figure out how to retrieve field data without halo regions...
-T = adapt(Array, sim.state.temperature)[1,1,1:end-3]
-z_centers = grid.grid.z.cᵃᵃᶜ[1:end-3]
-Makie.scatterlines(T[10:end], z_centers[10:end])
+T = interior(sim.state.temperature)
+f = interior(sim.state.liquid_water_fraction)
+zs = znodes(sim.state.temperature)
+# Plot temperature and liquid fraction profiles
+Makie.scatterlines(T[1,1,:], zs)
+Makie.scatterlines(f[1,1,:], zs)

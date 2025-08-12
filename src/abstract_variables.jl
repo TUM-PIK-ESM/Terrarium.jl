@@ -21,13 +21,6 @@ struct XY <: VarDims end
 """
     $TYPEDEF
 
-Base type for state variable specification.
-"""
-abstract type AbstractVariable end
-
-"""
-    $TYPEDEF
-
 Base type for prognostic variable closure relations for differential equations of the form:
 
 ```math
@@ -40,9 +33,21 @@ are temperature-enthalpy and saturation-pressure relations.
 abstract type AbstractClosureRelation end
 
 """
-    varname(::AbstractVariable)
-    varname(::AbstractClosureRelation)
-    varname(::Pair{Symbol})
+    getvar(::AbstractClosureRelation, dims::VarDims)
+
+Returns an `AuxiliaryVariable` corresponding to the closure variable defined by the given closure relation.
+"""
+function getvar end
+
+"""
+    $TYPEDEF
+
+Base type for state variable specification.
+"""
+abstract type AbstractVariable end
+
+"""
+    $SIGNATURES
 
 Retrieves the name of the given variable or closure. For closure relations, `varname`
 should return the name of the variable returned by the closure relation.
@@ -51,42 +56,67 @@ varname(var::AbstractVariable) = var.name
 varname(namespace::Pair{Symbol}) = first(namespace)
 
 """
-    vardims(::AbstractVariable)
+    $SIGNATURES
 
 Retrieves the grid dimensions on which this variable is defined.
 """
 vardims(var::AbstractVariable) = var.dims
 
 """
-    AuxiliaryVariable{VD<:VarDims} <: AbstractVariable
+    $SIGNATURES
+
+Retrieves the physical units for the given variable.
+"""
+varunits(var::AbstractVariable) = var.units
+
+"""
+    $TYPEDEF
 
 Represents an auxiliary (sometimes called "diagnostic") variable with the given `name`
 and `dims` on the spatial grid.
 """
-struct AuxiliaryVariable{VD<:VarDims} <: AbstractVariable
+struct AuxiliaryVariable{VD<:VarDims, UT<:Units} <: AbstractVariable
     "Name of the auxiliary variable"
     name::Symbol
 
-    "Grid dimensions on which the variable is defined."
+    "Grid dimensions on which the variable is defined"
     dims::VD
+
+    "Physical untis associated with this state variable"
+    units::UT
+
+    "Human-readable description of this state variable"
+    desc::String
 end
 
+"""
+    $TYPEDEF
+
+Represents a prognostic variable with the given `name` and `dims` on the spatial grid.
+"""
 struct PrognosticVariable{
     VD<:VarDims,
+    UT<:Units,
     TendencyVar<:AuxiliaryVariable,
     Closure<:Union{Nothing, AbstractClosureRelation}
 } <: AbstractVariable
     "Name of the prognostic variable"
     name::Symbol
 
-    "Grid dimensions on which the variable is defined."
+    "Grid dimensions on which the variable is defined"
     dims::VD
 
-    "Closure relation for the tendency of the prognostic variable."
+    "Closure relation for the tendency of the prognostic variable"
     closure::Closure
 
-    "Tendency corresponding to this prognostic variable."
+    "Tendency corresponding to this prognostic variable"
     tendency::TendencyVar
+
+    "Physical untis associated with this state variable"
+    units::UT
+
+    "Human-readable description of this state variable"
+    desc::String
 end
 
 hasclosure(var::PrognosticVariable) = !isnothing(var.closure)
@@ -107,21 +137,25 @@ end
 
 Convenience constructor method for `PrognosticVariable`.
 """
-prognostic(name::Symbol, dims::VarDims) =
+prognostic(name::Symbol, dims::VarDims; units=NoUnits, desc="") =
     PrognosticVariable(
         name,
         dims,
         nothing,
-        AuxiliaryVariable(Symbol(name, :_tendency), dims)
+        tendency(name, dims; units),
+        units,
+        desc
     )
-prognostic(name::Symbol, dims::VarDims, closure::AbstractClosureRelation) =
+prognostic(name::Symbol, dims::VarDims, closure::AbstractClosureRelation; units=NoUnits, desc="") =
     PrognosticVariable(
         name,
         dims,
         # closure term
         closure,
         # tendency variable
-        AuxiliaryVariable(Symbol(varname(closure), :_tendency), dims),
+        tendency(closure, dims),
+        units,
+        desc
     )
 
 """
@@ -129,7 +163,21 @@ prognostic(name::Symbol, dims::VarDims, closure::AbstractClosureRelation) =
 
 Convenience constructor method for `AuxiliaryVariable`.
 """
-auxiliary(name::Symbol, dims::VarDims) = AuxiliaryVariable(name, dims)
+auxiliary(name::Symbol, dims::VarDims; units=NoUnits, desc="") = AuxiliaryVariable(name, dims, units, desc)
+
+"""
+    $SIGNATURES
+
+Creates an `AuxiliaryVariable` for the tendency of a prognostic variable with the given name, dimensions, and physical units.
+This constructor is primarily used internally by other constructors and does not usually need to be called by implementations of `variables`.
+"""
+tendency(progname::Symbol, progdims::VarDims, progunits::Units) = AuxiliaryVariable(Symbol(progname, :_, :tendency), progdims, progunits/u"s", "")
+function tendency(closure::AbstractClosureRelation, dims::VarDims)
+    # get the auxiliary closure variable
+    var = getvar(closure, dims)
+    # create a tendency variable based on its name and units
+    return tendency(varname(var), dims, varunits(var))
+end
 
 """
     $SIGNATURES

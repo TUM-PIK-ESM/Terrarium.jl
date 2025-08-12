@@ -37,10 +37,10 @@ $(TYPEDFIELDS)
     constants::Constants = PhysicalConstants{eltype(grid)}()
 
     "Boundary conditions"
-    boundary_conditions::BoundaryConditions = PrescribedFluxes()
+    boundary_conditions::BoundaryConditions = DefaultBoundaryConditions()
 
     "State variable initializer"
-    initializer::Initializer = FieldInitializers()
+    initializer::Initializer = DefaultInitializer()
 
     "Timestepping scheme"
     time_stepping::TimeStepper = ForwardEuler()
@@ -125,71 +125,4 @@ end
     # apply inverse closure relation to update temperature
     fc = get_freezecurve(hydrology)
     energy_to_temperature!(idx, state, fc, energy, hydrology, strat, bgc, constants)
-end
-
-@inline function soil_characteristic_fractions(
-    idx, state,
-    strat::AbstractStratigraphy,
-    hydrology::AbstractSoilHydrology,
-    bgc::AbstractSoilBiogeochemistry
-)
-    sat = state.pore_water_ice_saturation[idx...]
-    por = porosity(idx, state, hydrology, strat, bgc)
-    ## there is some slight redundant computation here; consider merging into one method?
-    org = organic_fraction(idx, state, bgc)
-    return (; sat, por, org)
-end
-
-@inline function soil_volumetric_fractions(
-    idx, state,
-    strat::AbstractStratigraphy,
-    hydrology::AbstractSoilHydrology,
-    bgc::AbstractSoilBiogeochemistry
-)
-    # get characteristic fractions
-    (; sat, por, org) = soil_characteristic_fractions(idx, state, strat, hydrology, bgc)
-    # get fraction of unfrozen pore water
-    liq = state.liquid_water_fraction[idx...]
-    # calculate volumetric fractions
-    water_ice = sat*por
-    water = water_ice*liq
-    ice = water_ice*(1-liq)
-    air = (1-sat)*por
-    mineral = (1-por)*(1-org)
-    organic = (1-por)*org
-    return (; water, ice, air, mineral, organic)
-end
-
-# Initialization
-
-function initialize!(state, model::SoilModel, initializer::AbstractInitializer)
-    # launch kernel
-    grid = get_grid(model)
-    launch!(
-        grid,
-        :xyz,
-        initialize_kernel!,
-        state,
-        initializer,
-        model.energy,
-        model.hydrology,
-        model.strat,
-        model.biogeochem,
-        model.constants
-    )
-end
-
-@kernel function initialize_kernel!(
-    state, initializer::AbstractInitializer,
-    energy::AbstractSoilEnergyBalance,
-    hydrology::AbstractSoilHydrology,
-    strat::AbstractStratigraphy,
-    bgc::AbstractSoilBiogeochemistry,
-    constants::PhysicalConstants,
-)
-    idx = @index(Global, NTuple)
-    # TODO: need a more comprehensive initialization scheme for all soil model components
-    # Note that this assumes temperature has already been iniitialized
-    fc = get_freezecurve(hydrology)
-    temperature_to_energy!(idx, state, fc, energy, hydrology, strat, bgc, constants)
 end

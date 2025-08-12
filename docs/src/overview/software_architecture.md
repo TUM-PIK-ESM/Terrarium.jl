@@ -14,7 +14,7 @@ A “model” in Terrarium represents a collection of parameters and process typ
 
 The distinction between what constitutes a “model” versus a “process” should be based on whether or not there is a use case for running simulations of that model/process independently from other processes. Models should be built to be independently runnable standalone in a `Simulation`, while process types simply provide the concrete implementations of the physical processes to be included in a model. Since Terrarium models are composable, it should generally be trivial to convert a process into a full standalone model later (if necessary) without affecting the other model components that depend on it.
 
-All `AbstractModel` and `AbstractLandProcess` types must additional provide dispatches for the following methods:
+All `AbstractModel` and `AbstractProcess` types must additional provide dispatches for the following methods:
 - `variables(::Model)` returns a tuple of variable metadata declaring the state variables. Variables must be one of two types: prognostic or auxiliary (sometimes referred to as “diagnostic”). Prognostic variables fully characterize the state of the system at any given timestep and are updated according to their tendencies (i.e. $G$ in the aforementioned equation). Tendencies are automatically allocated for each prognostic variable declared by the model.
 - `compute_auxiliary!(state, ::Model)` computes the values of all auxiliary variables (if necessary) assuming that the prognostic variables of the system in `state` are available for the current timestep.
 - `compute_tendencies!(state, ::Model)` computes the tendencies based on the current values of the prognostic and auxiliary variables stored in `state`.
