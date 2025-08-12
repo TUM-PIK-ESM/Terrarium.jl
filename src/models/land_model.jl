@@ -7,6 +7,7 @@ struct LandModel{
     VegetationModel<:AbstractVegetationModel,
     EnergyBalanceModel<:AbstractEnergyBalanceModel,
     HydrologyModel<:AbstractHydrologyModel,
+    Initializer<:AbstractInitializer,
     TimeStepper<:AbstractTimeStepper,
 } <: AbstractLandModel{NF}
     "Spatial grid"
@@ -26,6 +27,9 @@ struct LandModel{
     
     "Surface hydrology model"
     hydrology::HydrologyModel
+
+    "State variable initializer"
+    initializer::Initializer
     
     "Time stepping scheme"
     time_stepping::TimeStepper

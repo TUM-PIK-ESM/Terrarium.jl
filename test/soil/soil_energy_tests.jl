@@ -27,20 +27,15 @@ end
     P = 24*3600
     # model setup
     grid = ColumnGrid(ExponentialSpacing(Δz_min=0.05, Δz_max=1.0, N=50))
-    initializer = FieldInitializers(
-        # steady state temperature profile
-        temperature = (x,z) -> T₀,
-        # dry soil
-        pore_water_ice_saturation = (x,z) -> 0.0,
-    )
+    # specify periodic upper boundary condition
     upperbc(x, y, t) = sin(2π*t / P)
-    # TODO: This currently isn't working due to what is probably a bug in Oceananigans.jl
-    # FluxBoundaryCondition(upperbc) does work though
-    T_ubc = ValueBoundaryCondition(upperbc)
-    boundary_conditions = FieldBoundaryConditions(temperature=(top=T_ubc, bottom=NoFluxBoundaryCondition()))
+    boundary_conditions = VarBoundaryConditions(:temperature, top=ValueBoundaryCondition(upperbc))
+    # temperature initial condition
+    initializer = VarInitializer(T₀, :temperature)
     model = SoilModel(; grid, initializer, boundary_conditions)
     sim = initialize(model)
     # timestep!(sim)
+    # TODO add check
 end
 
 @testset "Step heat diffusion" begin
@@ -50,12 +45,10 @@ end
     # model setup
     grid = ColumnGrid(UniformSpacing(Δz=0.01, N=50))
     z_centers = grid.grid.z.cᵃᵃᶜ[1:end-3]
-    initializer = FieldInitializers(
-        # steady state temperature profile
-        temperature = (x,z) -> T₀,
-    )
-    T_ubc = ValueBoundaryCondition(T₁)
-    boundary_conditions = FieldBoundaryConditions(temperature=(top=T_ubc, bottom=NoFluxBoundaryCondition()))
+    # temperature initial condition
+    initializer = VarInitializer(T₀, :temperature)
+    # constant upper boundary temperature set to T₁
+    boundary_conditions = VarBoundaryConditions(:temperature, top=ValueBoundaryCondition(T₁))
     # set carbon content to zero so the soil has only a mineral constituent
     biogeochem = ConstantSoilCarbonDenisty(ρ_soc=0.0)
     # set porosity to zero to remove influence of pore space;

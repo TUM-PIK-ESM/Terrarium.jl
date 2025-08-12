@@ -5,19 +5,25 @@ using DocStringExtensions
 import ConstructionBase: getproperties, setproperties
 
 import DataStructures: OrderedDict
+
 import Dates: Period, Second
+
+import Flatten
 
 # Oceananigans numerics
 # TODO: Raise an issue on Oceananigans.jl about refactoring numerics
 # into a separate package.
-import Oceananigans: Field, Center, Face, set!
+import Oceananigans: Field, Center, Face, set!, interior, xnodes, ynodes, znodes
 import Oceananigans.Advection: AbstractAdvectionScheme, UpwindBiased
 import Oceananigans.Architectures: AbstractArchitecture, CPU, GPU, architecture, on_architecture
-import Oceananigans.BoundaryConditions: BoundaryConditions, fill_halo_regions!
 import Oceananigans.Grids: Grids, Periodic, Flat, Bounded
 import Oceananigans.Operators: ∂zᵃᵃᶜ, ∂zᵃᵃᶠ, ℑzᵃᵃᶠ, Δzᵃᵃᶜ
 import Oceananigans.TimeSteppers: Clock, tick_time!, reset!
 import Oceananigans.Utils: launch!
+# Boundary conditions
+import Oceananigans.BoundaryConditions: FieldBoundaryConditions, ValueBoundaryCondition,
+                                        FluxBoundaryCondition, NoFluxBoundaryCondition,
+                                        fill_halo_regions!, regularize_field_boundary_conditions
 
 # Adapt and KernelAbstractions for GPU parallelization
 import Adapt: Adapt, adapt
@@ -29,9 +35,12 @@ import FreezeCurves
 # temporary dependency on SpeedyWeather until RingGrids is registered
 import SpeedyWeather: RingGrids
 
-# Re-export important types and methods
-export CPU, GPU, Clock
-export adapt, set!
+# Re-export selected types and methods from Oceananigans
+export CPU, GPU, Clock, Center, Face, ValueBoundaryCondition, FluxBoundaryCondition, NoFluxBoundaryCondition
+export set!, interior, architecture, on_architecture, xnodes, ynodes, znodes
+
+# Re-export adapt
+export adapt
 
 # internal utilities
 include("utils.jl")
@@ -59,8 +68,11 @@ export ForwardEuler
 include("timesteppers/forward_euler.jl")
 
 # default initializers
-export FieldInitializers
+export VarInitializer, DefaultInitializer, Initializers
 include("models/initializers.jl")
+
+export VarBoundaryConditions, DefaultBoundaryConditions, BoundaryConditions
+include("models/boundary_conditions.jl")
 
 # state variables
 export StateVariables

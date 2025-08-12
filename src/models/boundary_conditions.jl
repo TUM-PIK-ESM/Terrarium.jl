@@ -1,42 +1,86 @@
-# Boundary conditions interface
-
 abstract type AbstractBoundaryConditions end
 
 """
-    get_field_boundary_conditions(bcs::AbstractBoundaryConditions, var::AbstractVariable)
+    $SIGNATURES
 
-Retrieve the `Field` boundary conditions for the corresponding variable. Defaults to returning `nothing` if no BC is defined.
+Returns an `Oceananigans` `FieldBoundaryConditions` type describing the boundary conditions at
+each boundary of the `Field` for the given state variable. Defaults to returning `nothing` which
+will result in default boundary conditions being assigned.
 """
-get_field_boundary_conditions(::AbstractBoundaryConditions, ::AbstractVariable, ::AbstractLandGrid) = nothing
+get_field_boundary_conditions(::AbstractBoundaryConditions, ::AbstractLandGrid, ::AbstractVariable) = nothing
 
-struct PrescribedFluxes <: AbstractBoundaryConditions end
+"""
+    get_field_boundary_conditions(bcs::NamedTuple, var::AbstractVariable, grid::AbstractLandGrid, loc::Tuple)
 
-struct FieldBoundaryConditions{BCS<:NamedTuple} <: AbstractBoundaryConditions
-    var_bcs::BCS
+Creates a regularized `FieldBoundaryConditions` type from the given named tuple of Oceananigans boundary condition types
+with keys corresponding to their positions on the domain (i.e. `top`, `bottom`, etc.), as well as the grid and location `loc`.
+The location refers the position on the staggered grid at which the boundary conditions are defined. For 1D (vertical) domains,
+this is usually `(Center(), Center(), nothing)`.
+"""
+function get_field_boundary_conditions(bcs::NamedTuple, grid::AbstractLandGrid, loc::Tuple=(Center(), Center(), nothing))
+    field_grid = get_field_grid(grid)
+    field_bcs = FieldBoundaryConditions(field_grid, loc; bcs...)
+    return regularize_field_boundary_conditions(field_bcs, field_grid, loc)
 end
 
-FieldBoundaryConditions(; vars...) = FieldBoundaryConditions((; vars...))
+"""
+Marker type for using default boundary conditions inferred from the `Field` and grid types.
+"""
+struct DefaultBoundaryConditions <: AbstractBoundaryConditions end
 
-function get_field_boundary_conditions(bcs::FieldBoundaryConditions, var::AbstractVariable, grid::AbstractLandGrid)
-    bcs = get(bcs.var_bcs, varname(var), nothing)
-    if isnothing(bcs)
-        return nothing
+"""
+    $TYPEDEF
+
+Represents a choice of boundary conditions for a specific state variable with the given `name`. Currently only 1D (top and bottom)
+bounday conditions are supported.
+
+Properties:
+$TYPEDFIELDS
+"""
+struct VarBoundaryConditions{TopBC, BottomBC} <: AbstractBoundaryConditions
+    "Name of the state variable on which these boundary conditions are defined"
+    name::Symbol
+
+    "Boundary conditions at the top of the spatial domain"
+    top::TopBC
+
+    "Boundary conditions at the bottom of the spatial domain"
+    bottom::BottomBC
+end
+
+VarBoundaryConditions(name::Symbol; top=NoFluxBoundaryCondition(), bottom=NoFluxBoundaryCondition()) = VarBoundaryConditions(name, top, bottom)
+
+function get_field_boundary_conditions(bc::VarBoundaryConditions, grid::AbstractLandGrid, var::AbstractVariable)
+    if varname(var) == bc.name
+        return get_field_boundary_conditions((top=bc.top, bottom=bc.bottom), grid)
     else
-        field_bc = BoundaryConditions.FieldBoundaryConditions(get_field_grid(grid), (Center,Center,Nothing); bcs...)
-        return _regularize_field_boundary_conditions(field_bc, get_field_grid(grid))
+        return nothing
     end
 end
 
-# TODO: Temporary workaround to issue with Oceananigans.jl BC regularization
-# Default implementation of regularize_field_boundary_conditions in Oceananigans.jl assigns an immersed boundary
-# which results in a warning for our 1D RectilinearGrid.
-function _regularize_field_boundary_conditions(bcs::BoundaryConditions.FieldBoundaryConditions, grid)
-    loc = (Center, Center, Nothing)
-    west = BoundaryConditions.regularize_west_boundary_condition(bcs.west, grid, loc, 1, BoundaryConditions.LeftBoundary,  nothing)
-    east = BoundaryConditions.regularize_east_boundary_condition(bcs.east, grid, loc, 1, BoundaryConditions.RightBoundary, nothing)
-    south = BoundaryConditions.regularize_south_boundary_condition(bcs.south, grid, loc, 2, BoundaryConditions.LeftBoundary,  nothing)
-    north = BoundaryConditions.regularize_north_boundary_condition(bcs.north, grid, loc, 2, BoundaryConditions.RightBoundary, nothing)
-    bottom = BoundaryConditions.regularize_bottom_boundary_condition(bcs.bottom, grid, loc, 3, BoundaryConditions.LeftBoundary,  nothing)
-    top = BoundaryConditions.regularize_top_boundary_condition(bcs.top, grid, loc, 3, BoundaryConditions.RightBoundary, nothing)
-    return BoundaryConditions.FieldBoundaryConditions(; west, east, south, north, bottom, top)
+"""
+    $TYPEDEF
+
+Container type that bundle multiple `AbstractBoundaryConditions` structs into a single object that can be supplied to a model.
+"""
+struct BoundaryConditions{names, BCS<:Tuple{Vararg{AbstractBoundaryConditions}}} <: AbstractBoundaryConditions
+    bcs::NamedTuple{names, BCS}
+end
+
+BoundaryConditions(; bcs...) = BoundaryConditions((; bcs...))
+BoundaryConditions(bcs::VarBoundaryConditions...) = BoundaryConditions(; map(bc -> varname(bc) => bc, bcs)...)
+
+Base.propertynames(bcs::BoundaryConditions) = propertynames(getfield(bcs, :bcs))
+Base.getproperty(bcs::BoundaryConditions, name::Symbol) = getproperty(getfield(bcs, :bcs), name)
+
+function get_field_boundary_conditions(bcs::BoundaryConditions, grid::AbstractLandGrid, var::AbstractVariable)
+    field_bcs = map(getfield(bcs, :bcs)) do bc
+        get_field_boundary_conditions(bc, grid, var)
+    end
+    # get all non-nothing values
+    matched_idx = findall(!isnothing, field_bcs)
+    if length(matched_idx) > 1
+        @warn "Found more than one matching boundary condition type for $(varname(var)); selecting $(typeof(field_bcs[matched_idx[1]]))"
+    end
+    return length(matched_idx) >= 1 ? field_bcs[matched_idx[1]] : nothing
 end
