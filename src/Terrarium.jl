@@ -29,9 +29,6 @@ import FreezeCurves
 # temporary dependency on SpeedyWeather until RingGrids is registered
 import SpeedyWeather: RingGrids
 
-# temporary dependency on CryoGrid for soil types and SEB
-import CryoGrid: SoilTexture, SurfaceEnergyBalance
-
 # Re-export important types and methods
 export CPU, GPU, Clock
 export adapt, set!
@@ -60,10 +57,6 @@ include("models/abstract_model.jl")
 # timestepper implementations
 export ForwardEuler
 include("timesteppers/forward_euler.jl")
-
-# default boundary conditions
-export FieldBoundaryConditions, PrescribedFluxes
-include("models/boundary_conditions.jl")
 
 # default initializers
 export FieldInitializers

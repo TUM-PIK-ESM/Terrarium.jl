@@ -8,7 +8,7 @@ $TYPEDFIELDS
 """
 @kwdef struct HomogeneousSoil{NF} <: AbstractStratigraphy{NF}
     "Material composition of mineral soil componnet"
-    texture::SoilTexture{NF,NF,NF} = SoilTexture(:sand)
+    texture::SoilTexture{NF} = SoilTexture(:sand)
 end
 
 get_soil_texture(strat::HomogeneousSoil) = strat.texture
