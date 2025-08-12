@@ -69,7 +69,7 @@ Terrarium.jl is in a very early stage of development, so this is a golden opport
 
 See the [NOTICE](./NOTICE) file for copyright information.
 
-Terrarium.jl is free and open source licensed under the [European Union Public Lcense v1.2](https://eupl.eu/1.2/en).
+Terrarium.jl is free and open source licensed under the [European Union Public License v1.2](https://eupl.eu/1.2/en).
 
 What does that mean for you? You are 100% free to
 - Copy, modify, and redistribute the code

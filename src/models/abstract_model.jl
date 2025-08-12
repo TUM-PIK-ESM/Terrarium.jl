@@ -60,14 +60,14 @@ get_time_stepping(model::AbstractModel) = model.time_stepping
 """
     get_boundary_conditions(model::AbstractModel)::AbstractBoundaryConditions
 
-Returns the time stepping scheme associated with this `model`.
+Returns the boundary conditions associated with this `model`.
 """
 get_boundary_conditions(model::AbstractModel) = model.boundary_conditions
 
 """
     get_initializer(model::AbstractModel)::AbstractInitializer
 
-Returns the time stepping scheme associated with this `model`.
+Returns the initializer associated with this `model`.
 """
 get_initializer(model::AbstractModel) = model.initializer
 
