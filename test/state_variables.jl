@@ -10,8 +10,8 @@ DEFAULT_NF = Float32
 
     @kwdef struct SubModel{NF} <: Terrarium.AbstractModel{NF}
         grid
-        boundary_conditions = Terrarium.FieldBoundaryConditions()
-        initializer = Terrarium.FieldInitializers()
+        initializer = DefaultInitializer()
+        boundary_conditions = DefaultBoundaryConditions()
         time_stepping::Terrarium.AbstractTimeStepper{NF} = Terrarium.ForwardEuler{DEFAULT_NF}()
     end
 
@@ -23,8 +23,8 @@ DEFAULT_NF = Float32
     @kwdef struct TestModel{NF} <: Terrarium.AbstractModel{NF}
         grid
         submodel = SubModel(; grid)
-        boundary_conditions = Terrarium.FieldBoundaryConditions()
-        initializer = Terrarium.FieldInitializers()
+        initializer = DefaultInitializer()
+        boundary_conditions = DefaultBoundaryConditions()
         time_stepping::Terrarium.AbstractTimeStepper{NF} = Terrarium.ForwardEuler{DEFAULT_NF}()
     end
 

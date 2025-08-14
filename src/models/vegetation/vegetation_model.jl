@@ -47,10 +47,10 @@ $TYPEDFIELDS
     constants::Constants = PhysicalConstants{eltype(grid)}()
 
     "Boundary conditions"
-    boundary_conditions::BoundaryConditions = FieldBoundaryConditions()
+    boundary_conditions::BoundaryConditions = DefaultBoundaryConditions()
 
     "State variable initializer"
-    initializer::Initializer = FieldInitializers()
+    initializer::Initializer = VarInitializers()
 
     "Timestepping scheme"
     time_stepping::TimeStepper = ForwardEuler()

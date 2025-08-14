@@ -10,6 +10,9 @@ include("physics_utils.jl")
 
 include("soil/abstract_types.jl")
 
+export SoilTexture
+include("soil/soil_texture.jl")
+
 export SoilThermalConductivities, SoilHeatCapacities, SoilThermalProperties, InverseQuadratic
 include("soil/soil_thermal_properties.jl")
 
