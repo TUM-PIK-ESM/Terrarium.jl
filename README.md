@@ -12,7 +12,7 @@
 
 [Terrarium.jl](https://tum-pik-esm.github.io/Terrarium.jl/dev) is a new and upcoming land model that aims to support hybrid physics- and data-driven land modeling across multiple spatial and temporal scales. We envision Terrarium to be part of a new generation of Earth system component models that combine modularity, interactivity, GPU-compability and auto-differentiability (AD) for seamless integration of process-based and data-driven model components in both global and regional scale simulations.
 
-Terrarium is being developed alongside [SpeedyWeather.jl](https://github.com/SpeedyWeather/SpeedyWeather.jl) and [Oceananigans.jl](https://github.com/CliMA/Oceananigans.jl) as the land component of the proposed DELTA-ESM project which aims to realize this vision by building a new, user-friendly, and fully GPU/AD-compatible Earth System Model in the Julia programming language.
+Terrarium is being developed alongside [SpeedyWeather.jl](https://github.com/SpeedyWeather/SpeedyWeather.jl) and [Oceananigans.jl](https://github.com/CliMA/Oceananigans.jl) as the land component of a new, user-friendly, and fully GPU/AD-compatible Earth System Model in the Julia programming language.
 
 > [!WARNING]
 > 🚧🚧 Under Construction! 🚧🚧
@@ -38,7 +38,7 @@ It is important to emphasize, however, what Terrarium is not:
 It might initially seem strange that a land model would be built on top of a framework for ocean modeling. There are, however, some key advantages in doing so:
 
 
-1. Firstly, like ocean models, land models are commonly implemented using the finite volume method (FVM) to approximate spatial gradients in mass and energy conservation laws. Oceananigans provides state-of-the-art tools for FVM simulation in Julia, with a focus on geophysical applications, which aligns well with our goals. Although Terrarium will primarily focus on 1D (vertical) dynamics in the beginning, using Oceananigans affords us the possibility of very feasibly expanding to 2D and 3D simulations of surface and subsurface heat and water transport in the future!
+1. Firstly, like ocean models, land models are commonly implemented using finite difference and/or finite volume method (FDM/FVM) to approximate spatial gradients in mass and energy conservation laws. Oceananigans provides state-of-the-art tools for FVM simulation in Julia, with a focus on geophysical applications, which aligns well with our goals. Like most land models, Terrarium will initially focus on 1D column modeling; however, using Oceananigans affords us the possibility of very feasibly expanding to 2D and 3D simulations in the future!
 2. Secondly, the numerical operators provided by Oceananigans are built to be both auto-differentiable and GPU-compatible out-of-the-box, which means that Terrarium can inherit these capabilities almost “for free”.
 3. Finally, and perhaps most importantly, we believe in the vision pioneered by the [Climate Modeling Alliance](https://clima.caltech.edu/) and the Oceananigans team for the development of a new generation of Earth System Models that are open, accessible, interactive, and capable of learning from data in ways that go beyond traditional data assimilation.
 
