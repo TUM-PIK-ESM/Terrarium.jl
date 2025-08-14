@@ -61,18 +61,18 @@ include("timesteppers/abstract_timestepper.jl")
 
 # model interface
 export get_grid, get_time_stepping, get_boundary_conditions, variables, compute_auxiliary!, compute_tendencies!
-include("models/abstract_model.jl")
+include("abstract_model.jl")
+
+# default initializers
+export VarInitializer, DefaultInitializer, Initializers
+include("initializers.jl")
+
+export VarBoundaryConditions, DefaultBoundaryConditions, BoundaryConditions
+include("boundary_conditions.jl")
 
 # timestepper implementations
 export ForwardEuler
 include("timesteppers/forward_euler.jl")
-
-# default initializers
-export VarInitializer, DefaultInitializer, Initializers
-include("models/initializers.jl")
-
-export VarBoundaryConditions, DefaultBoundaryConditions, BoundaryConditions
-include("models/boundary_conditions.jl")
 
 # state variables
 export StateVariables
@@ -82,14 +82,7 @@ include("state_variables.jl")
 include("processes/processes.jl")
 
 # concrete model implementations
-export SoilModel
-include("models/soil_model.jl")
-
-export VegetationModel
-include("models/vegetation_model.jl")
-
-export LandModel
-include("models/land_model.jl")
+include("models/models.jl")
 
 # simulation types
 export Simulation, initialize, run!, current_time
