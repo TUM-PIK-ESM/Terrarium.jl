@@ -11,7 +11,10 @@ initializer = Initializers(
     VarInitializer(1.0, :pore_water_ice_saturation),
 )
 # temperature boundary condition
-boundary_conditions = SoilBoundaryConditions(grid, top = (temperature = ValueBoundaryCondition(1.0),))
+boundary_conditions = SoilBoundaryConditions(
+    grid,
+    top = (temperature = ValueBoundaryCondition(1.0),)
+)
 model = SoilModel(; grid, initializer, boundary_conditions)
 sim = initialize(model)
 # test one timestep

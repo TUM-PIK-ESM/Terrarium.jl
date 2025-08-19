@@ -1,7 +1,7 @@
 using Terrarium
 using Test
 
-import Terrarium: XY, XYZ, prognostic, auxiliary, namespace
+import Terrarium: VarDims, XY, XYZ, prognostic, auxiliary, namespace
 import Oceananigans: Field, Center
 
 DEFAULT_NF = Float32
@@ -30,7 +30,7 @@ DEFAULT_NF = Float32
 
     struct TestClosure <: Terrarium.AbstractClosureRelation end
 
-    Terrarium.varname(::TestClosure) = :closurevar
+    Terrarium.getvar(::TestClosure, dims::VarDims) = auxiliary(:closurevar, dims)
 
     Terrarium.variables(model::TestModel) = (
         prognostic(:progvar3D, XYZ()),

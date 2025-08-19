@@ -25,17 +25,51 @@ end
     T₀ = 2.0
     A = 1.0
     P = 24*3600
+    k = 2.0
+    c = 1e6
+    α = k / c
+    T_sol = heat_conduction_linear_periodic_ub(T₀, A, P, α)
+
     # model setup
-    grid = ColumnGrid(ExponentialSpacing(Δz_min=0.05, Δz_max=1.0, N=50))
-    # specify periodic upper boundary condition
-    upperbc(x, y, t) = sin(2π*t / P)
-    boundary_conditions = VarBoundaryConditions(:temperature, top=ValueBoundaryCondition(upperbc))
+    grid = ColumnGrid(ExponentialSpacing(Δz_min=0.05, Δz_max=100.0, N=100))
     # temperature initial condition
-    initializer = VarInitializer(T₀, :temperature)
-    model = SoilModel(; grid, initializer, boundary_conditions)
+    initializer = VarInitializer(:temperature) do x, z
+        T_sol(-z, 0.0)
+    end
+    # periodic upper boundary
+    upperbc(z, t) = T₀ + A*sin(2π*t/P)
+    boundary_conditions = SoilBoundaryConditions(grid, top=(temperature=ValueBoundaryCondition(upperbc),))
+    # set carbon content to zero so the soil has only a mineral constituent
+    biogeochem = ConstantSoilCarbonDenisty(ρ_soc=0.0)
+    # set porosity to zero to remove influence of pore space;
+    # this is just a hack to configure the model to simulate heat conduction in a fully solid medium
+    hydraulic_properties = PrescribedHydraulics(porosity=0.0)
+    # set thermal properties
+    thermal_properties = SoilThermalProperties(
+        cond=SoilThermalConductivities(mineral=k),
+        heatcap=SoilHeatCapacities(mineral=c),
+    )
+    hydrology = SoilHydrology(; hydraulic_properties)
+    energy = SoilEnergyBalance(; thermal_properties)
+    model = SoilModel(; grid, energy, hydrology, biogeochem, initializer, boundary_conditions)
     sim = initialize(model)
-    # timestep!(sim)
-    # TODO add check
+    # TODO: Rewrite this part once we have a proper output handling system
+    Ts_buf = [deepcopy(sim.state.temperature)]
+    ts = [0.0]
+    dt = 60.0
+    # run for one hour, saving every time step
+    while current_time(sim) < 2*P
+        timestep!(sim, dt)
+        push!(Ts_buf, deepcopy(sim.state.temperature))
+        push!(ts, current_time(sim))
+    end
+
+    z_centers = znodes(sim.state.temperature)
+    Ts = reduce(hcat, Ts_buf)[1,:,:]
+    Ts_target = T_sol.(reshape(-z_centers, 1, :), reshape(ts, :, 1))
+    relative_error = abs.((Ts .- Ts_target) ./ Ts_target)
+    @show maximum(relative_error)
+    @test maximum(relative_error) < 0.1
 end
 
 @testset "Step heat diffusion" begin
@@ -43,12 +77,11 @@ end
     T₀ = 1.0
     T₁ = 2.0
     # model setup
-    grid = ColumnGrid(UniformSpacing(Δz=0.01, N=50))
-    z_centers = grid.grid.z.cᵃᵃᶜ[1:end-3]
+    grid = ColumnGrid(ExponentialSpacing(Δz_min=0.01, Δz_max=100.0, N=100))
     # temperature initial condition
     initializer = VarInitializer(T₀, :temperature)
     # constant upper boundary temperature set to T₁
-    boundary_conditions = VarBoundaryConditions(:temperature, top=ValueBoundaryCondition(T₁))
+    boundary_conditions = SoilBoundaryConditions(grid, top=(temperature=ValueBoundaryCondition(T₁),))
     # set carbon content to zero so the soil has only a mineral constituent
     biogeochem = ConstantSoilCarbonDenisty(ρ_soc=0.0)
     # set porosity to zero to remove influence of pore space;
@@ -60,9 +93,9 @@ end
     # TODO: Rewrite this part once we have a proper output handling system
     Ts_buf = [deepcopy(sim.state.temperature)]
     ts = [0.0]
-    dt = 1.0
-    # run for one hour, saving every time step
-    while current_time(sim) < 3600
+    dt = 10.0
+    # run for 24 hours, saving every time step
+    while current_time(sim) < 24*3600
         timestep!(sim, dt)
         push!(Ts_buf, deepcopy(sim.state.temperature))
         push!(ts, current_time(sim))
@@ -72,19 +105,20 @@ end
     k = soil_thermal_props.cond.mineral
     c = soil_thermal_props.heatcap.mineral
     α = k / c
+    z_centers = znodes(sim.state.temperature)
     ΔT_sol = heat_conduction_linear_step_ub(T₁ - T₀, α)
     Ts = reduce(hcat, Ts_buf)[1,:,:]
-    Ts_target = T₀ .+ ΔT_sol.(reshape(abs.(z_centers), 1, :), reshape(ts, :, 1))
-    error = Ts .- Ts_target
+    Ts_target = T₀ .+ ΔT_sol.(reshape(-z_centers, 1, :), reshape(ts, :, 1))
+    relative_error = abs.((Ts .- Ts_target) ./ Ts_target)
+    @show maximum(relative_error)
 
     # Check error at last time step
     last_error_threshold = 1e-3
-    @test maximum(abs.(error[end,:])) < last_error_threshold
+    @test maximum(relative_error[end,:]) < last_error_threshold
 
     # Check total error over all time steps
-    # TODO: This threshold is too high, need to double check this and see if there is an actual bug.
-    total_error_threshold = 0.5
-    @test maximum(abs.(error)) < total_error_threshold
+    max_error_threshold = 0.1
+    @test maximum(relative_error) < max_error_threshold
 end
 
 @testset "Thermal properties" begin
