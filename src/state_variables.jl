@@ -38,7 +38,7 @@ function StateVariables(
     # get tendencies from prognostic variables
     tendencies = map(var -> var.tendency, prognostic)
     # create closure variables and add to auxiliary variables
-    closurevars = map(var -> AuxiliaryVariable(varname(var.closure), vardims(var)), filter(hasclosure, prognostic))
+    closurevars = map(var -> getvar(var.closure, vardims(var)), filter(hasclosure, prognostic))
     auxiliary_ext = tuplejoin(auxiliary, closurevars)
     # merge all variable names
     varnames = tuplejoin(map(varname, prognostic), map(varname, auxiliary_ext), map(varname, namespace_vars))
@@ -171,4 +171,9 @@ function create_field(
         set!(field, field_init)
     end
     return field
+end
+
+module Vars
+    const temperature = :temperature
+    const pore_water_ice_saturation = :pore_water_ice_saturation
 end

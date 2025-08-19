@@ -6,6 +6,11 @@ include("physical_constants.jl")
 # Utilities
 include("physics_utils.jl")
 
+# Atmosphere
+
+export AtmosphericState, TwoPhasePrecipitation, TwoBandSolarRadiation, TracerGas, AmbientCO2
+include("atmos/atmosphere.jl")
+
 # Soil
 
 include("soil/abstract_types.jl")

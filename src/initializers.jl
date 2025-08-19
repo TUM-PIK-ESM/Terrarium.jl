@@ -78,7 +78,7 @@ function get_field_initializer(inits::Initializers, grid::AbstractLandGrid, var:
     # get all non-nothing values
     matched_idx = findall(!isnothing, field_inits)
     if length(matched_idx) > 1
-        @warn "Found more than one matching initializer for $(varname(var)); selecting $(typeof(field_inits[matched_idx[1]] ))"
+        @warn "Found more than one matching initializer for $(varname(var)); selecting $(typeof(field_inits[matched_idx[1]]))"
     end
     return length(matched_idx) >= 1 ? field_inits[matched_idx[1]] : nothing
 end

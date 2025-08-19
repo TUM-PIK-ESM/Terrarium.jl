@@ -3,7 +3,7 @@ using Dates
 
 import CairoMakie as Makie
 
-grid = ColumnGrid(ExponentialSpacing(Δz_min=0.05, Δz_max=10.0, N=30))
+grid = ColumnGrid(ExponentialSpacing())
 initializer = Initializers(
     # steady-ish state initial condition for temperature
     VarInitializer((x,z) -> -1 - 0.05*z, :temperature),
@@ -11,7 +11,7 @@ initializer = Initializers(
     VarInitializer(1.0, :pore_water_ice_saturation),
 )
 # temperature boundary condition
-boundary_conditions = VarBoundaryConditions(:temperature, top=ValueBoundaryCondition(1.0))
+boundary_conditions = SoilBoundaryConditions(grid, top = (temperature = ValueBoundaryCondition(1.0),))
 model = SoilModel(; grid, initializer, boundary_conditions)
 sim = initialize(model)
 # test one timestep

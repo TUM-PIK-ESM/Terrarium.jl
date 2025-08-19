@@ -13,21 +13,28 @@ import Flatten
 # Oceananigans numerics
 # TODO: Raise an issue on Oceananigans.jl about refactoring numerics
 # into a separate package.
-import Oceananigans: Field, Center, Face, set!, interior, xnodes, ynodes, znodes
+import Oceananigans: Field, AbstractField, Center, Face, set!, interior, xnodes, ynodes, znodes
 import Oceananigans.Advection: AbstractAdvectionScheme, UpwindBiased
 import Oceananigans.Architectures: AbstractArchitecture, CPU, GPU, architecture, on_architecture
 import Oceananigans.Grids: Grids, Periodic, Flat, Bounded
 import Oceananigans.Operators: ∂zᵃᵃᶜ, ∂zᵃᵃᶠ, ℑzᵃᵃᶠ, Δzᵃᵃᶜ
 import Oceananigans.TimeSteppers: Clock, tick_time!, reset!
+import Oceananigans.Units: Time
 import Oceananigans.Utils: launch!
 # Boundary conditions
-import Oceananigans.BoundaryConditions: FieldBoundaryConditions, ValueBoundaryCondition,
-                                        FluxBoundaryCondition, NoFluxBoundaryCondition,
+import Oceananigans.BoundaryConditions: FieldBoundaryConditions, BoundaryCondition,
+                                        ValueBoundaryCondition, FluxBoundaryCondition, NoFluxBoundaryCondition,
                                         fill_halo_regions!, regularize_field_boundary_conditions
 
 # Adapt and KernelAbstractions for GPU parallelization
 import Adapt: Adapt, adapt
 import KernelAbstractions: @kernel, @index
+
+# Units
+# Unit dimensions for length (𝐋), mass (𝐌), and time (𝐓)
+import Unitful: 𝐋, 𝐌, 𝐓
+import Unitful: Units, AbstractQuantity, NoUnits
+import Unitful: @u_str, uconvert, upreferred
 
 # Freeze curves for soil energy balance
 import FreezeCurves
@@ -67,7 +74,7 @@ include("abstract_model.jl")
 export VarInitializer, DefaultInitializer, Initializers
 include("initializers.jl")
 
-export VarBoundaryConditions, DefaultBoundaryConditions, BoundaryConditions
+export VerticalBoundaryConditions, DefaultBoundaryConditions, PrescribedFlux
 include("boundary_conditions.jl")
 
 # timestepper implementations
