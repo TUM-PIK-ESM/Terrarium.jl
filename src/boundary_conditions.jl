@@ -1,6 +1,11 @@
 abstract type AbstractBoundaryConditions end
 
 """
+Alias for a `NamedTuple` of `BoundaryCondition` types.
+"""
+const VarBoundaryConditions{names, BCs} = NamedTuple{names, BCs} where {names, BCs<:Tuple{Vararg{BoundaryCondition}}}
+
+"""
     $SIGNATURES
 
 Constructs a suitable Oceananigans `BoundaryCondition` for the given state variable `var` on `grid`.
@@ -23,11 +28,15 @@ Like models/processes, boundary conditions can define state variables which may 
 other state variables or from input data in `compute_auxiliary!`.
 """
 variables(::AbstractBoundaryConditions) = ()
+variables(bc::BoundaryCondition) = ()
+variables(bcs::VarBoundaryConditions) = tuplejoin(map(variables, bcs)...)
 
 """
 Updates any state variables associated with the given boundary conditions.
 """
 compute_auxiliary!(state, model, ::AbstractBoundaryConditions) = nothing
+compute_auxiliary!(state, model, ::BoundaryCondition) = nothing
+compute_auxiliary!(state, model, ::VarBoundaryConditions) = nothing
 
 """
     $SIGNATURES
@@ -100,10 +109,14 @@ $TYPEDFIELDS
     bottom::BottomBC = DefaultBoundaryConditions()
 end
 
-function get_field_boundary_conditions(bcs::VerticalBoundaryConditions, grid::AbstractLandGrid, var::AbstractVariable)
+function get_field_boundary_conditions(
+    bcs::VerticalBoundaryConditions,
+    grid::AbstractLandGrid,
+    var::AbstractVariable{XYZ} # only for variables with vertical dimension
+)
     top = get_field_boundary_conditions(bcs.top, grid, var)
     bottom = get_field_boundary_conditions(bcs.bottom, grid, var)
-    return field_boundary_conditions(grid; top, bottom)
+    return field_boundary_conditions(grid, (Center(), Center(), nothing); top, bottom)
 end
 
 variables(bcs::VerticalBoundaryConditions) = tuplejoin(variables(bcs.top), variables(bcs.bottom))
@@ -123,9 +136,7 @@ this is usually `(Center(), Center(), nothing)`.
 """
 function field_boundary_conditions(grid::AbstractLandGrid, loc::Tuple=(Center(), Center(), nothing); at...)
     field_grid = get_field_grid(grid)
-    # select only the field boundary condition arguments that are not nothing;
-    # Note that since the keyword arguments are pairs we have to first select the value with `last`
-    bcs = filter(!isnothing ∘ last, at)
+    bcs = map(((k, bc)) -> k => isnothing(bc) ? NoFluxBoundaryCondition() : bc, keys(at), values(at))
     # create the FieldBoundaryConditions type
     field_bcs = FieldBoundaryConditions(field_grid, loc; bcs...)
     # return the regularized boundary conditions

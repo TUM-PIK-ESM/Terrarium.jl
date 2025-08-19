@@ -44,7 +44,7 @@ function getvar end
 
 Base type for state variable specification.
 """
-abstract type AbstractVariable end
+abstract type AbstractVariable{VD<:VarDims} end
 
 """
     $SIGNATURES
@@ -75,7 +75,7 @@ varunits(var::AbstractVariable) = var.units
 Represents an auxiliary (sometimes called "diagnostic") variable with the given `name`
 and `dims` on the spatial grid.
 """
-struct AuxiliaryVariable{VD<:VarDims, UT<:Units} <: AbstractVariable
+struct AuxiliaryVariable{VD<:VarDims, UT<:Units} <: AbstractVariable{VD}
     "Name of the auxiliary variable"
     name::Symbol
 
@@ -99,7 +99,7 @@ struct PrognosticVariable{
     UT<:Units,
     TendencyVar<:AuxiliaryVariable,
     Closure<:Union{Nothing, AbstractClosureRelation}
-} <: AbstractVariable
+} <: AbstractVariable{VD}
     "Name of the prognostic variable"
     name::Symbol
 
@@ -122,15 +122,17 @@ end
 hasclosure(var::PrognosticVariable) = !isnothing(var.closure)
 
 """
-    Namespace <: AbstractVariable
+    $TYPEDEF
 
 Represents a new variable namespace, typically from a subcomponent of the model.
 It is (currently) assumed that tha name of the namesapce corresponds to a property
 defined on the model type.
 """
-struct Namespace <: AbstractVariable
+struct Namespace
     name::Symbol
 end
+
+varname(ns::Namespace) = ns.name
 
 """
     $SIGNATURES
