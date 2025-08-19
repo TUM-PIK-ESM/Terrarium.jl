@@ -142,7 +142,7 @@ prognostic(name::Symbol, dims::VarDims; units=NoUnits, desc="") =
         name,
         dims,
         nothing,
-        tendency(name, dims; units),
+        tendency(name, dims, units),
         units,
         desc
     )

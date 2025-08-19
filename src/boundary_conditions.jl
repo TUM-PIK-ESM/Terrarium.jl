@@ -62,8 +62,10 @@ struct PrescribedFlux{F, D<:VarDims} <: AbstractBoundaryConditions
     dims::D
 end
 
+PrescribedFlux(name::Symbol, value, dims=XY()) = PrescribedFlux(name, value, dims)
+
 variables(bc::PrescribedFlux) = (
-    auxiliary(bc.name, bc.dims)
+    auxiliary(bc.name, bc.dims),
 )
 
 function compute_auxiliary!(state, model, bc::PrescribedFlux)
@@ -104,7 +106,7 @@ function get_field_boundary_conditions(bcs::VerticalBoundaryConditions, grid::Ab
     return field_boundary_conditions(grid; top, bottom)
 end
 
-variables(bcs::VerticalBoundaryConditions) = tuplejoin(bcs.top, bcs.bottom)
+variables(bcs::VerticalBoundaryConditions) = tuplejoin(variables(bcs.top), variables(bcs.bottom))
 
 function compute_auxiliary!(state, model, bcs::VerticalBoundaryConditions)
     compute_auxiliary!(state, model, bcs.top)
