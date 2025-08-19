@@ -138,7 +138,7 @@ function field_boundary_conditions(grid::AbstractLandGrid, loc::Tuple=(Center(),
     field_grid = get_field_grid(grid)
     bcs = map(((k, bc)) -> k => isnothing(bc) ? NoFluxBoundaryCondition() : bc, keys(at), values(at))
     # create the FieldBoundaryConditions type
-    field_bcs = FieldBoundaryConditions(field_grid, loc; bcs...)
+    field_bcs = FieldBoundaryConditions(field_grid, loc; immersed=DefaultBoundaryCondition(), bcs...)
     # return the regularized boundary conditions
     return regularize_field_boundary_conditions(field_bcs, field_grid, loc)
 end

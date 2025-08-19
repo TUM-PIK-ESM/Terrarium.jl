@@ -22,7 +22,7 @@ import Oceananigans.TimeSteppers: Clock, tick_time!, reset!
 import Oceananigans.Units: Time
 import Oceananigans.Utils: launch!
 # Boundary conditions
-import Oceananigans.BoundaryConditions: FieldBoundaryConditions, BoundaryCondition,
+import Oceananigans.BoundaryConditions: FieldBoundaryConditions, BoundaryCondition, DefaultBoundaryCondition,
                                         ValueBoundaryCondition, FluxBoundaryCondition, NoFluxBoundaryCondition,
                                         fill_halo_regions!, regularize_field_boundary_conditions
 
