@@ -172,8 +172,3 @@ function create_field(
     end
     return field
 end
-
-module Vars
-    const temperature = :temperature
-    const pore_water_ice_saturation = :pore_water_ice_saturation
-end
