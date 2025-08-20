@@ -29,19 +29,21 @@ or callable struct of the form `f(x,y,z)::Real` where `z` is the vertical coordi
 Properties:
 $TYPEDFIELDS
 """
-@kwdef struct VarInitializer{InitFunc} <: AbstractInitializer
-    name::Symbol
+struct VarInitializer{name, InitFunc} <: AbstractInitializer
+    "Intializer function"
     init::InitFunc
+
+    VarInitializer(name::Symbol, init) = new{name, typeof(init)}(init)
 end
 
-varname(init::VarInitializer) = init.name
+varname(::VarInitializer{name}) where {name} = name
 
 """
     $SIGNATURES
 
 Convenience constructor of `VarInitializer` for a state variable with the given `name` and
-initializer function `init`. The initializer function
-may optionally be declared using Julia's do syntax:
+initializer function `init`. The initializer function may optionally be declared using Julia's
+`do` syntax:
 
 ```julia
 var_init = VarInitializer(:var) do (x,z)
@@ -49,15 +51,14 @@ var_init = VarInitializer(:var) do (x,z)
 end
 ````
 """
-VarInitializer(name::Symbol; init=nothing) = VarInitializer(; name, init)
-VarInitializer(init, name::Symbol) = VarInitializer(name; init)
+VarInitializer(init, name::Symbol) = VarInitializer(name, init)
 
 """
     $SIGNATURES
 
 Retrieves the initializer for the given variable `var` or returns `nothing` if not defined.
 """
-get_field_initializer(init::VarInitializer, grid::AbstractLandGrid, var::AbstractVariable) = varname(var) == init.name ? init.init : nothing
+get_field_initializer(init::VarInitializer, grid::AbstractLandGrid, var::AbstractVariable) = varname(var) == varname(init) ? init.init : nothing
 
 """
     $TYPEDEF

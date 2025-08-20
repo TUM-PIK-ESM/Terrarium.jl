@@ -60,31 +60,30 @@ Represents a flux prescribed at the boundary of a spatial domain and applied as 
 Properties:
 $TYPEDFIELDS
 """
-struct PrescribedFlux{F, D<:VarDims} <: AbstractBoundaryConditions
-    "Name of the flux state variable"
-    name::Symbol
-
+struct PrescribedFlux{name, F, D<:VarDims} <: AbstractBoundaryConditions
     "Constant, `Field`, or function corresponding to the prescribed boundary flux"
     value::F
 
     "Dimensions of the flux variable"
     dims::D
+
+    PrescribedFlux(name::Symbol, value, dims=XY()) = new{name, typeof(value), typeof(dims)}(value, dims)
 end
 
-PrescribedFlux(name::Symbol, value, dims=XY()) = PrescribedFlux(name, value, dims)
+@inline varname(::PrescribedFlux{name}) where {name} = name
 
 variables(bc::PrescribedFlux) = (
-    auxiliary(bc.name, bc.dims),
+    auxiliary(varname(bc), bc.dims),
 )
 
 function compute_auxiliary!(state, model, bc::PrescribedFlux)
-    F = getproperty(state, bc.name)
+    F = getproperty(state, varname(bc))
     set!(F, bc.value)
 end
 
 @inline function boundary_tendency(i, j, k, grid, loc, state, bc::PrescribedFlux)
     field_grid = get_field_grid(grid)
-    Q = getproperty(state, bc.name)
+    Q = getproperty(state, varname(bc))
     Δz = Δzᵃᵃᶜ(i, j, k, field_grid)
     return all(map(==, (i, j, k), loc)) * (Q[i, j, k] / Δz)
 end

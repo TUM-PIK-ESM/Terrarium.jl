@@ -5,20 +5,19 @@ abstract type AbstractPrecipitation end
 """
 Generic type representing the concentration of a particular tracer gas in the atmosphere.
 """
-@kwdef struct TracerGas{T}
-    "Name of the tracer gas"
-    name::Symbol
-
+@kwdef struct TracerGas{name, T}
     "Tracer gas concentration in ppm"
     conc::T = nothing
+
+    TracerGas(name::Symbol, conc) = new{name, typeof(conc)}(conc)
 end
 
-variables(gas::TracerGas) = (
-    auxiliary(gas.name, XY(), units=u"ppm", desc="Ambient atmospheric $(gas.name) concentration in ppm"),
+variables(gas::TracerGas{name}) where {name} = (
+    auxiliary(name, XY(), units=u"ppm", desc="Ambient atmospheric $(gas.name) concentration in ppm"),
 )
 
-function compute_auxiliary!(state, model, gas::TracerGas)
-    conc = getproperty(state, gas.name)
+function compute_auxiliary!(state, model, gas::TracerGas{name}) where {name}
+    conc = getproperty(state, name)
     set!(conc, gas.conc)
 end
 
@@ -76,8 +75,7 @@ variables(atm::AtmosphericState) = (
     auxiliary(:T_air, XY(), units=u"°C", desc="Air temperature"),
     auxiliary(:humidity, XY(), units=u"kg/kg", desc="Specific humidity"),
     auxiliary(:pres, XY(), units=u"Pa", desc="Atmospheric pressure at the surface"),
-    auxiliary(:wind_u, XY(), units="m/s", desc="Wind speed u-component"),
-    auxiliary(:wind_v, XY(), units="m/s", desc="Wind speed v-component"),
+    auxiliary(:wind, XY(), units="m/s", desc="Wind speed"),
     variables(atm.precip)...,
     variables(atm.solar)...,
     # splat all tracer variables into tuple
@@ -88,13 +86,13 @@ function compute_auxiliary!(state, model, atm::AtmosphericState)
     set!(state.T_air, atm.T_air)
     set!(state.humidity, atm.humidity)
     set!(state.pres, atm.pres)
-    set!(state.wind_u, atm.wind_u)
-    set!(state.wind_v, atm.wind_v)
+    set!(state.wind, atm.wind)
     compute_auxiliary!(state, model, atm.precip)
     compute_auxiliary!(state, model, atm.solar)
     for tracer in atm.tracers
         compute_auxiliary!(state, model, tracer)
     end
+    return nothing
 end
 
 @kwdef struct TwoPhasePrecipitation{RF, SF} <: AbstractPrecipitation
@@ -110,6 +108,7 @@ variables(::TwoPhasePrecipitation) = (
 function compute_auxiliary!(state, model, precip::TwoPhasePrecipitation)
     set!(state.rainfall, precip.rainfall)
     set!(state.snowfall, precip.snowfall)
+    return nothing
 end
 
 @kwdef struct TwoBandSolarRadiation{SW, LW} <: AbstractSolarRadiation
@@ -125,4 +124,5 @@ variables(::TwoBandSolarRadiation) = (
 function compute_auxiliary!(state, model, rad::TwoBandSolarRadiation)
     set!(state.SwIn, rad.SwIn)
     set!(state.LwIn, rad.LwIn)
+    return nothing
 end
