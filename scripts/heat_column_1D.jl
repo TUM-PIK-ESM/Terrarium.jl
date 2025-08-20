@@ -16,6 +16,10 @@ boundary_conditions = SoilBoundaryConditions(
     top = (temperature = ValueBoundaryCondition(1.0),)
 )
 model = SoilModel(; grid, initializer, boundary_conditions)
+
+atmos = AtmosphericState(grid, T_air=TimeVaryingInput(t -> sin(2π*t - π/2)))
+Terrarium.current_value(atmos.T_air)
+
 sim = initialize(model)
 # test one timestep
 @time timestep!(sim)
