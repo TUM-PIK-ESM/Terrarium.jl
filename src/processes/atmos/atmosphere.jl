@@ -23,9 +23,14 @@ function compute_auxiliary!(state, model, gas::TracerGas)
 end
 
 """
-Createas a `TracerGas` for ambient CO2 with a prescribed concentration `conc`.
+Creates a `TracerGas` for ambient CO2 with a prescribed concentration `conc`.
 """
-AmbientCO2(conc) = TracerGas(:CO2, conc)
+AmbientCO2(conc=nothing) = TracerGas(:CO2, conc)
+
+"""
+Creates a `NamedTuple` from the given tracer gas types.
+"""
+TracerGases(tracers::TracerGas...) = (; map(tracer -> tracer.name => tracer, tracers)...)
 
 @kwdef struct AtmosphericState{
     NF,
@@ -34,7 +39,7 @@ AmbientCO2(conc) = TracerGas(:CO2, conc)
     AirTemp,
     Humidity,
     Pressure,
-    Windspeed<:NTuple{2},
+    Windspeed,
     Precip<:AbstractPrecipitation,
     SolarRad<:AbstractSolarRadiation,
     Tracers<:NamedTuple{tracervars,<:Tuple{Vararg{TracerGas}}},
@@ -43,7 +48,7 @@ AmbientCO2(conc) = TracerGas(:CO2, conc)
     grid::Grid
 
     "Surface-relative altitude in meters at which the atmospheric forcings are assumed to be applied"
-    altiude::NF = 2.0
+    altitude::NF = 2.0
     
     "Near-surface air temperature in °C"
     T_air::AirTemp = nothing
@@ -54,8 +59,8 @@ AmbientCO2(conc) = TracerGas(:CO2, conc)
     "Near-surface atmospheric pressure in Pa"
     pressure::Pressure = nothing
 
-    "Windspeed velocity components in m/s"
-    windspeed::NamedTuple{(:u,:v), Windspeed} = (u=nothing, v=nothing)
+    "Non-directional windspeed in m/s"
+    windspeed::Windspeed = nothing
 
     "Precipitation scheme"
     precip::Precip = TwoPhasePrecipitation()
@@ -64,7 +69,7 @@ AmbientCO2(conc) = TracerGas(:CO2, conc)
     solar::SolarRad = TwoBandSolarRadiation()
 
     "Atmospheric tracer gases"
-    tracers::Tracers = default_tracers(grid)
+    tracers::Tracers = TracerGases(AmbientCO2())
 end
 
 variables(atm::AtmosphericState) = (
