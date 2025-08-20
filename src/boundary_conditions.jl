@@ -92,7 +92,7 @@ end
 """
     $TYPEDEF
 
-Represents a the boundary conditions applied at the top and bottom of a 1D column model
+Represents the boundary conditions applied at the top and bottom of a 1D column model
 discrietized along the vertical (depthwise) axis.
 
 Properties:
