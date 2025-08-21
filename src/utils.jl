@@ -1,5 +1,5 @@
 """
-    tuplejoin([x, y], z...)
+    $SIGNATURES
 
 Concatenates one or more tuples together.
 """
@@ -9,18 +9,34 @@ tuplejoin(x, y) = (x..., y...)
 tuplejoin(x, y, z...) = (x..., tuplejoin(y, z...)...)
 
 """
-    merge_duplicates(values::Tuple)
+    $SIGNATURES
     
 Filters out duplicates from the given tuple. Note that this method is not type stable or allocation-free!
 """
 merge_duplicates(values::Tuple) = Tuple(unique(values))
 
 """
-    safediv(x, y)
+    $SIGNATURES
 
 Evaluates `x / y` unless `iszero(y)` is true, then returns zero.
 """
 safediv(x, y) = ifelse(iszero(y), zero(x), x / y)
+
+"""
+    $SIGNATURES
+
+Returns a function `f(z)` that linearly interpolates between the given `knots`.
+"""
+function piecewise_linear(knots::Pair{<:LengthQuantity}...; extrapolation=Interpolations.Flat())
+    # extract coordinates and strip units
+    zs = collect(map(ustrip ∘ first, knots))
+    ys = collect(map(last, knots))
+    @assert issorted(zs, rev=true) "depths must be sorted in descending order"
+    interp = Interpolations.interpolate((reverse(zs),), reverse(ys), Interpolations.Gridded(Interpolations.Linear()))
+    return Interpolations.extrapolate(interp, extrapolation)
+end
+
+# fastmap
 
 # Note that fastmap is borrowed (with self permission!) from CryoGrid.jl:
 # https://github.com/CryoGrid/CryoGrid.jl/blob/master/src/Utils/Utils.jl

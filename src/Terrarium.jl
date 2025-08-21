@@ -10,6 +10,8 @@ import Dates: Period, Year, Month, Day, Second
 
 import Flatten
 
+import Interpolations
+
 import NamedTupleTools: merge_recursive
 
 # Oceananigans numerics
@@ -32,17 +34,19 @@ import Oceananigans.BoundaryConditions: FieldBoundaryConditions, BoundaryConditi
 import Adapt: Adapt, adapt
 import KernelAbstractions: @kernel, @index
 
-# Units
-# Unit dimensions for length (𝐋), mass (𝐌), and time (𝐓)
-import Unitful: 𝐋, 𝐌, 𝐓
-import Unitful: Units, AbstractQuantity, NoUnits
-import Unitful: @u_str, uconvert, upreferred
-
 # Freeze curves for soil energy balance
 import FreezeCurves
 
 # temporary dependency on SpeedyWeather until RingGrids is registered
 import SpeedyWeather: RingGrids
+
+# Units (for testing and UI)
+# Unit dimensions for length (𝐋), mass (𝐌), and time (𝐓)
+import Unitful: 𝐋, 𝐌, 𝐓
+import Unitful: Units, Quantity, AbstractQuantity, NoUnits
+import Unitful: @u_str, uconvert, ustrip, upreferred
+
+const LengthQuantity{NF, U} = Quantity{NF, 𝐋, U} where {NF, U<:Units}
 
 # Re-export selected types and methods from Oceananigans
 export CPU, GPU, Clock, Center, Face, ValueBoundaryCondition, FluxBoundaryCondition, NoFluxBoundaryCondition
