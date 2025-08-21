@@ -1,4 +1,31 @@
 """
+    $TYPEDEF
+
+Boundary condition type for soil models that represents the conditions applied at one
+of the boundaries of the soil domain.
+"""
+struct SoilBoundaryCondition{EnergyBC, WaterBC} <: AbstractBoundaryConditions
+    "Boundary conditions for the soil energy balance"
+    energy::EnergyBC
+
+    "Boundary conditions for the soil water balance"
+    hydrology::WaterBC
+end
+
+variables(bc::SoilBoundaryCondition) = tuplejoin(variables(bc.hydrology), variables(bc.energy))
+
+function compute_auxiliary!(state, model, bc::SoilBoundaryCondition)
+    compute_auxiliary!(state, model, bc.hydrology)
+    compute_auxiliary!(state, model, bc.energy)
+end
+
+function get_field_boundary_conditions(bcs::SoilBoundaryCondition, grid::AbstractLandGrid)
+    water_bc = get_field_boundary_conditions(bcs.hydrology, grid)
+    energy_bc = get_field_boundary_conditions(bcs.energy, grid)
+    return merge(water_bc, energy_bc)
+end
+
+"""
 Alias for `PrescribedFlux` with name `Q_g` representing the 
 """
 GroundHeatFlux(value) = PrescribedFlux(:Q_g, value, XY())
@@ -39,30 +66,3 @@ SoilLowerBoundaryConditions(
     energy = GeothermalHeatFlux(zero(eltype(grid))),
     hydrology = ImpermeableBoundary(eltype(grid)),
 ) = SoilBoundaryCondition(energy, hydrology)
-
-"""
-    $TYPEDEF
-
-Boundary condition type for soil models that represents the conditions applied at one
-of the boundaries of the soil domain.
-"""
-struct SoilBoundaryCondition{EnergyBC, WaterBC} <: AbstractBoundaryConditions
-    "Boundary conditions for the soil energy balance"
-    energy::EnergyBC
-
-    "Boundary conditions for the soil water balance"
-    hydrology::WaterBC
-end
-
-variables(bc::SoilBoundaryCondition) = tuplejoin(variables(bc.hydrology), variables(bc.energy))
-
-function compute_auxiliary!(state, model, bc::SoilBoundaryCondition)
-    compute_auxiliary!(state, model, bc.hydrology)
-    compute_auxiliary!(state, model, bc.energy)
-end
-
-function get_field_boundary_conditions(bcs::SoilBoundaryCondition, grid::AbstractLandGrid)
-    water_bc = get_field_boundary_conditions(bcs.hydrology, grid)
-    energy_bc = get_field_boundary_conditions(bcs.energy, grid)
-    return merge(water_bc, energy_bc)
-end
