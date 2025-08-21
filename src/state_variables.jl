@@ -32,27 +32,28 @@ function StateVariables(
 )
     vars = variables(model)
     # filter out variables from tuple by type
-    prognostic = merge_duplicates(filter(var -> isa(var, PrognosticVariable), vars))
-    auxiliary = merge_duplicates(filter(var -> isa(var, AuxiliaryVariable), vars))
+    prognostic_vars = merge_duplicates(filter(var -> isa(var, PrognosticVariable), vars))
+    auxiliary_vars = merge_duplicates(filter(var -> isa(var, AuxiliaryVariable), vars))
     namespace_vars = filter(var -> isa(var, Namespace), vars)
     # get tendencies from prognostic variables
-    tendencies = map(var -> var.tendency, prognostic)
+    tendency_vars = map(var -> var.tendency, prognostic_vars)
     # create closure variables and add to auxiliary variables
-    closurevars = map(var -> getvar(var.closure, vardims(var)), filter(hasclosure, prognostic))
-    auxiliary_ext = tuplejoin(auxiliary, closurevars)
+    closure_vars = map(var -> getvar(var.closure, vardims(var)), filter(hasclosure, prognostic_vars))
+    auxiliary_ext = tuplejoin(auxiliary_vars, closure_vars)
     # merge all variable names
-    varnames = tuplejoin(map(varname, prognostic), map(varname, auxiliary_ext), map(varname, namespace_vars))
+    varnames = tuplejoin(map(varname, prognostic_vars), map(varname, auxiliary_ext), map(varname, namespace_vars))
     @assert merge_duplicates(varnames) == varnames "all state variable names within one namespace must be unique! found duplicates in $(varnames)"
     # get progvar => closure pairs
-    closures = map(var -> varname(var) => var.closure, filter(hasclosure, prognostic))
-    # get grid, initializer, and boundary conditions
+    closures = map(var -> varname(var) => var.closure, filter(hasclosure, prognostic_vars))
+    # get grid and boundary conditions
     grid = get_grid(model)
-    init = get_initializer(model)
     bcs = get_boundary_conditions(model)
+    field_bcs = get_field_boundary_conditions(bcs, grid)
     # intialize fields
-    prognostic_fields = map(var -> varname(var) => create_field(var, init, bcs, grid), prognostic)
-    tendency_fields = map(var -> varname(var) => create_field(var, init, bcs, grid), tendencies)
-    auxiliary_fields = map(var -> varname(var) => create_field(var, init, bcs, grid), auxiliary_ext)
+    init(var) = varname(var) => create_field(var, grid, get(field_bcs, varname(var), nothing))
+    prognostic_fields = map(init, prognostic_vars)
+    tendency_fields = map(init, tendency_vars)
+    auxiliary_fields = map(init, auxiliary_ext)
     # recursively initialize state variables for namespaces
     namespaces = map(ns -> varname(ns) => StateVariables(getproperty(model, varname(ns)), clock), namespace_vars)
     # construct and return StateVariables struct
@@ -145,30 +146,23 @@ field_type(::XYZ) = Field{Center,Center,Center}
 """
     $SIGNATURES
 
-Initializes a `Field` on `grid` for the variable, `var`, using the given initializer, `init`, and boundary conditions, `bcs`.
-Additional arguments are passed direclty to the `Field` constructor. The location of the `Field` is determined by the specified
-`VarDims` on `var`.
+Allocates an Oceananigans `Field` on `grid` for the variable, `var`, with the given boundary conditions.
+Additional arguments are passed direclty to the `Field` constructor. The location of the `Field` is determined
+by `VarDims` defined on `var`.
 """
 function create_field(
     var::AbstractVariable,
-    init::AbstractInitializer,
-    bcs::AbstractBoundaryConditions,
     grid::AbstractLandGrid,
+    boundary_conditions=nothing,
     args...;
     kwargs...
 )
     FT = field_type(vardims(var))
     # Specify BCs if defined
-    boundary_conditions = get_field_boundary_conditions(bcs, grid, var)
     field = if !isnothing(boundary_conditions)
         FT(get_field_grid(grid), args...; boundary_conditions, kwargs...)
     else
         FT(get_field_grid(grid), args...; kwargs...)
-    end
-    # Apply initializer if defined
-    field_init = get_field_initializer(init, grid, var)
-    if !isnothing(field_init)
-        set!(field, field_init)
     end
     return field
 end

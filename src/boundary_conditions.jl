@@ -13,15 +13,9 @@ If `bcs` is a `NamedTuple`, it is assumed that the keys correspond to variable n
 is invoked recursively on the entry matching the name of `var`, if it exists. Otherwise, `nothing` is
 returned.
 """
-get_field_boundary_conditions(bcs::AbstractBoundaryConditions, grid::AbstractLandGrid, var::AbstractVariable) = nothing
-get_field_boundary_conditions(bc::BoundaryCondition, ::AbstractLandGrid, var::AbstractVariable) = bc
-function get_field_boundary_conditions(bcs::NamedTuple, grid::AbstractLandGrid, var::AbstractVariable)
-    if haskey(bcs, varname(var))
-        return get_field_boundary_conditions(getproperty(bcs, varname(var)), grid, var)
-    else
-        return nothing
-    end
-end
+get_field_boundary_conditions(::AbstractBoundaryConditions, grid::AbstractLandGrid) = (;)
+get_field_boundary_conditions(bc::BoundaryCondition, ::AbstractLandGrid) = bc
+get_field_boundary_conditions(bcs::VarBoundaryConditions, ::AbstractLandGrid) = bcs
 
 """
 Like models/processes, boundary conditions can define state variables which may be computed from
@@ -111,11 +105,15 @@ end
 function get_field_boundary_conditions(
     bcs::VerticalBoundaryConditions,
     grid::AbstractLandGrid,
-    var::AbstractVariable{XYZ} # only for variables with vertical dimension
 )
-    top = get_field_boundary_conditions(bcs.top, grid, var)
-    bottom = get_field_boundary_conditions(bcs.bottom, grid, var)
-    return field_boundary_conditions(grid, (Center(), Center(), nothing); top, bottom)
+    top = get_field_boundary_conditions(bcs.top, grid)
+    bottom = get_field_boundary_conditions(bcs.bottom, grid)
+    # invert the nested structure of the top/bottom named tuples;
+    # this way we have a single named tuple of variable names where the entries 
+    var_bcs = merge_recursive(map(bc -> (top=bc,), top), map(bc -> (bottom=bc,), bottom))
+    return map(var_bcs) do bc
+        FieldBoundaryConditions(grid, (Center(), Center(), nothing); bc...)
+    end
 end
 
 variables(bcs::VerticalBoundaryConditions) = tuplejoin(variables(bcs.top), variables(bcs.bottom))
@@ -126,14 +124,14 @@ function compute_auxiliary!(state, model, bcs::VerticalBoundaryConditions)
 end
 
 """
-    field_boundary_conditions(grid::AbstractLandGrid, loc::Tuple; at...)
+    FieldBoundaryConditions(grid::AbstractLandGrid, loc::Tuple; at...)
 
 Creates a regularized `FieldBoundaryConditions` type from the given keyword arugments of Oceananigans `BoundaryCondition`s
 with keys corresponding to their positions on the domain (i.e. `top`, `bottom`, etc.), as well as the grid and location `loc`.
 The location refers the position on the staggered grid at which the boundary conditions are defined. For 1D (vertical) domains,
 this is usually `(Center(), Center(), nothing)`.
 """
-function field_boundary_conditions(grid::AbstractLandGrid, loc::Tuple=(Center(), Center(), nothing); at...)
+function FieldBoundaryConditions(grid::AbstractLandGrid, loc::Tuple; at...)
     field_grid = get_field_grid(grid)
     bcs = map(((k, bc)) -> k => isnothing(bc) ? NoFluxBoundaryCondition() : bc, keys(at), values(at))
     # create the FieldBoundaryConditions type

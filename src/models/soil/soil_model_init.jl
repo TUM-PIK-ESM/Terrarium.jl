@@ -1,14 +1,15 @@
 # Initialization
 
-function initialize!(state, model::SoilModel, initializer::AbstractInitializer)
-    # launch kernel
+function initialize!(state, model::SoilModel)
+    # run model initializer
+    initialize!(state, model, model.initializer)
+    # launch kernel for generic initailization routine
     grid = get_grid(model)
     launch!(
         grid,
         :xyz,
         initialize_kernel!,
         state,
-        initializer,
         model.energy,
         model.hydrology,
         model.strat,
@@ -18,7 +19,7 @@ function initialize!(state, model::SoilModel, initializer::AbstractInitializer)
 end
 
 @kernel function initialize_kernel!(
-    state, initializer::AbstractInitializer,
+    state,
     energy::AbstractSoilEnergyBalance,
     hydrology::AbstractSoilHydrology,
     strat::AbstractStratigraphy,
@@ -27,7 +28,7 @@ end
 )
     idx = @index(Global, NTuple)
     # TODO: need a more comprehensive initialization scheme for all soil model components
-    # Note that this assumes temperature has already been iniitialized
+    # Note that this assumes temperature has already been iniitialized!
     fc = get_freezecurve(hydrology)
     temperature_to_energy!(idx, state, fc, energy, hydrology, strat, bgc, constants)
 end

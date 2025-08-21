@@ -6,9 +6,11 @@ import ConstructionBase: getproperties, setproperties
 
 import DataStructures: OrderedDict
 
-import Dates: Period, Second
+import Dates: Period, Year, Month, Day, Second
 
 import Flatten
+
+import NamedTupleTools: merge_recursive
 
 # Oceananigans numerics
 # TODO: Raise an issue on Oceananigans.jl about refactoring numerics
@@ -46,6 +48,9 @@ import SpeedyWeather: RingGrids
 export CPU, GPU, Clock, Center, Face, ValueBoundaryCondition, FluxBoundaryCondition, NoFluxBoundaryCondition
 export set!, interior, architecture, on_architecture, xnodes, ynodes, znodes
 
+# Re-export Dates types
+export Year, Month, Day, Second
+
 # Re-export adapt
 export adapt
 
@@ -71,7 +76,7 @@ export get_grid, get_time_stepping, get_boundary_conditions, variables, compute_
 include("abstract_model.jl")
 
 # default initializers
-export VarInitializer, DefaultInitializer, Initializers
+export Initializers, DefaultInitializer
 include("initializers.jl")
 
 export VerticalBoundaryConditions, DefaultBoundaryConditions, PrescribedFlux

@@ -61,10 +61,8 @@ function compute_auxiliary!(state, model, bc::SoilBoundaryCondition)
     compute_auxiliary!(state, model, bc.energy)
 end
 
-function get_field_boundary_conditions(bcs::SoilBoundaryCondition, grid::AbstractLandGrid, var::AbstractVariable)
-    water_bc = get_field_boundary_conditions(bcs.hydrology, grid, var)
-    energy_bc = get_field_boundary_conditions(bcs.energy, grid, var)
-    # return whichever is not nothing for the given variable;
-    # note that this assumes that both do not return non-nothing values... which would imply redundant boundary conditions
-    return isnothing(energy_bc) ? energy_bc : water_bc
+function get_field_boundary_conditions(bcs::SoilBoundaryCondition, grid::AbstractLandGrid)
+    water_bc = get_field_boundary_conditions(bcs.hydrology, grid)
+    energy_bc = get_field_boundary_conditions(bcs.energy, grid)
+    return merge(water_bc, energy_bc)
 end

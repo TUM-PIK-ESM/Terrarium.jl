@@ -3,13 +3,14 @@ using CUDA
 
 import SpeedyWeather.RingGrids
 
-grid = GlobalRingGrid(GPU(), ExponentialSpacing(N=50), RingGrids.FullHEALPixGrid(16, RingGrids.Architectures.GPU()))
+ring_grid = RingGrids.FullHEALPixGrid(16, RingGrids.Architectures.GPU())
+grid = GlobalRingGrid(GPU(), ExponentialSpacing(N=50), ring_grid)
 # initial conditions
 initializer = Initializers(
     # steady-ish state initial condition for temperature
-    VarInitializer((x,z) -> -1 - 0.05*z, :temperature),
+    temperature = (x,z) -> -1 - 0.02*z,
     # dry soil
-    VarInitializer(0.0, :pore_water_ice_saturation),
+    pore_water_ice_saturation = 0.0,
 )
 model = SoilModel(; grid, initializer)
 sim = initialize(model)

@@ -33,9 +33,9 @@ end
     # model setup
     grid = ColumnGrid(ExponentialSpacing(Δz_min=0.05, Δz_max=100.0, N=100))
     # temperature initial condition
-    initializer = VarInitializer(:temperature) do x, z
-        T_sol(-z, 0.0)
-    end
+    initializer = Initializers(
+        temperature = (x,z) -> T_sol(-z, 0.0)
+    )
     # periodic upper boundary
     upperbc(z, t) = T₀ + A*sin(2π*t/P)
     boundary_conditions = SoilBoundaryConditions(grid, top=(temperature=ValueBoundaryCondition(upperbc),))
@@ -79,7 +79,7 @@ end
     # model setup
     grid = ColumnGrid(ExponentialSpacing(Δz_min=0.01, Δz_max=100.0, N=100))
     # temperature initial condition
-    initializer = VarInitializer(T₀, :temperature)
+    initializer = Initializers(temperature=T₀)
     # constant upper boundary temperature set to T₁
     boundary_conditions = SoilBoundaryConditions(grid, top=(temperature=ValueBoundaryCondition(T₁),))
     # set carbon content to zero so the soil has only a mineral constituent
