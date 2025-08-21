@@ -110,11 +110,11 @@ end
 function fill_halo_regions!(state::StateVariables)
     # fill_halo_regions! for all prognostic variables
     for var in state.prognostic
-        fill_halo_regions!(var)
+        fill_halo_regions!(var, state.clock)
     end
     # fill_halo_regions! for all auxiliary variables
     for var in state.auxiliary
-        fill_halo_regions!(var)
+        fill_halo_regions!(var, state.clock)
     end
     # recurse over namespaces
     for ns in state.namespaces
