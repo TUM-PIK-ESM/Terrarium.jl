@@ -12,24 +12,27 @@ Generic type representing the concentration of a particular tracer gas in the at
     TracerGas(name::Symbol, conc) = new{name, typeof(conc)}(conc)
 end
 
-variables(gas::TracerGas{name}) where {name} = (
-    auxiliary(name, XY(), units=u"ppm", desc="Ambient atmospheric $(gas.name) concentration in ppm"),
+Base.nameof(::TracerGas{name}) where {name} = name
+
+variables(::TracerGas{name}) where {name} = (
+    auxiliary(name, XY(), units=u"ppm", desc="Ambient atmospheric $(name) concentration in ppm"),
 )
 
-function compute_auxiliary!(state, model, gas::TracerGas{name}) where {name}
-    conc = getproperty(state, name)
+function compute_auxiliary!(state, model, gas::TracerGas)
+    conc = getproperty(state, nameof(gas))
     set!(conc, gas.conc)
 end
 
 """
 Creates a `TracerGas` for ambient CO2 with a prescribed concentration `conc`.
 """
-AmbientCO2(conc=nothing) = TracerGas(:CO2, conc)
+AmbientCO2(conc=0.0) = TracerGas(:CO2, conc)
+AmbientCO2(::Type{NF}) where {NF} = AmbientCO2(zero(NF))
 
 """
 Creates a `NamedTuple` from the given tracer gas types.
 """
-TracerGases(tracers::TracerGas...) = (; map(tracer -> tracer.name => tracer, tracers)...)
+TracerGases(tracers::TracerGas...) = (; map(tracer -> nameof(tracer) => tracer, tracers)...)
 
 @kwdef struct AtmosphericState{
     NF,
@@ -47,35 +50,35 @@ TracerGases(tracers::TracerGas...) = (; map(tracer -> tracer.name => tracer, tra
     grid::Grid
 
     "Surface-relative altitude in meters at which the atmospheric forcings are assumed to be applied"
-    altitude::NF = 2.0
+    altitude::NF = 2*one(eltype(grid))
     
     "Near-surface air temperature in °C"
-    T_air::AirTemp = nothing
+    T_air::AirTemp = zero(eltype(grid))
 
     "Near-surface specific humidity in kg/kg"
-    humidity::Humidity = nothing
+    humidity::Humidity = zero(eltype(grid))
 
     "Near-surface atmospheric pressure in Pa"
-    pressure::Pressure = nothing
+    pressure::Pressure = zero(eltype(grid))
 
     "Non-directional windspeed in m/s"
-    windspeed::Windspeed = nothing
+    windspeed::Windspeed = zero(eltype(grid))
 
     "Precipitation scheme"
-    precip::Precip = TwoPhasePrecipitation()
+    precip::Precip = TwoPhasePrecipitation(eltype(grid))
 
     "Downwelling solar radiation scheme"
-    solar::SolarRad = TwoBandSolarRadiation()
+    solar::SolarRad = TwoBandSolarRadiation(eltype(grid))
 
     "Atmospheric tracer gases"
-    tracers::Tracers = TracerGases(AmbientCO2())
+    tracers::Tracers = TracerGases(AmbientCO2(zero(eltype(grid))))
 end
 
 variables(atm::AtmosphericState) = (
     auxiliary(:T_air, XY(), units=u"°C", desc="Air temperature"),
     auxiliary(:humidity, XY(), units=u"kg/kg", desc="Specific humidity"),
-    auxiliary(:pres, XY(), units=u"Pa", desc="Atmospheric pressure at the surface"),
-    auxiliary(:wind, XY(), units="m/s", desc="Wind speed"),
+    auxiliary(:pressure, XY(), units=u"Pa", desc="Atmospheric pressure at the surface"),
+    auxiliary(:windspeed, XY(), units=u"m/s", desc="Wind speed"),
     variables(atm.precip)...,
     variables(atm.solar)...,
     # splat all tracer variables into tuple
@@ -85,8 +88,8 @@ variables(atm::AtmosphericState) = (
 function compute_auxiliary!(state, model, atm::AtmosphericState)
     set!(state.T_air, atm.T_air)
     set!(state.humidity, atm.humidity)
-    set!(state.pres, atm.pres)
-    set!(state.wind, atm.wind)
+    set!(state.pressure, atm.pressure)
+    set!(state.windspeed, atm.windspeed)
     compute_auxiliary!(state, model, atm.precip)
     compute_auxiliary!(state, model, atm.solar)
     for tracer in atm.tracers
@@ -96,9 +99,11 @@ function compute_auxiliary!(state, model, atm::AtmosphericState)
 end
 
 @kwdef struct TwoPhasePrecipitation{RF, SF} <: AbstractPrecipitation
-    rainfall::RF = nothing
-    snowfall::SF = nothing
+    rainfall::RF = 0.0
+    snowfall::SF = 0.0
 end
+
+TwoPhasePrecipitation(::Type{NF}) where {NF} = TwoPhasePrecipitation(zero(NF), zero(NF))
 
 variables(::TwoPhasePrecipitation) = (
     auxiliary(:rainfall, XY(), units=u"m/s", desc="Liquid precipitation (rainfall) rate"),
@@ -112,9 +117,11 @@ function compute_auxiliary!(state, model, precip::TwoPhasePrecipitation)
 end
 
 @kwdef struct TwoBandSolarRadiation{SW, LW} <: AbstractSolarRadiation
-    shortwave::SW = nothing
-    longwave::LW = nothing
+    shortwave::SW = 0.0
+    longwave::LW = 0.0
 end
+
+TwoBandSolarRadiation(::Type{NF}) where {NF} = TwoBandSolarRadiation(zero(NF), zero(NF))
 
 variables(::TwoBandSolarRadiation) = (
     auxiliary(:SwIn, XY(), units=u"W/m^2", desc="Incoming (downwelling) shortwave radiation"),
@@ -122,7 +129,7 @@ variables(::TwoBandSolarRadiation) = (
 )
 
 function compute_auxiliary!(state, model, rad::TwoBandSolarRadiation)
-    set!(state.SwIn, rad.SwIn)
-    set!(state.LwIn, rad.LwIn)
+    set!(state.SwIn, rad.shortwave)
+    set!(state.LwIn, rad.longwave)
     return nothing
 end
