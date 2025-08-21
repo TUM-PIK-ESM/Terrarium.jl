@@ -4,7 +4,7 @@ import Dates: Hour
 
 @testset "run!" begin
     grid = GlobalRingGrid(CPU(), ExponentialSpacing(N=50), RingGrids.FullHEALPixGrid(16, RingGrids.Architectures.CPU()))
-    initializer = VarInitializer(:temperature) do x, y
+    initializer = VarInitializer(:temperature) do x, z
         -1.0 - 0.01*z + exp(z/10)*sin(2π*z/10)
     end
     model = SoilModel(; grid, initializer)
