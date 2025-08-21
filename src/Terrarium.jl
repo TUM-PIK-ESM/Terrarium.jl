@@ -62,6 +62,9 @@ include("timesteppers/forward_euler.jl")
 export FieldInitializers
 include("models/initializers.jl")
 
+export FieldBoundaryConditions
+include("models/boundary_conditions.jl")
+
 # state variables
 export StateVariables
 include("state_variables.jl")

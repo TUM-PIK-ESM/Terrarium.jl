@@ -1,5 +1,4 @@
 using Terrarium
-using CryoGrid: SoilTexture
 using Test
 
 @testset "Hydraulic properties (prescribed)" begin

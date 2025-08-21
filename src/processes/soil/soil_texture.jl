@@ -16,7 +16,7 @@ Represents soil texture as a fractional mixture of sand, silt, and clay.
     end
 end
 
-function Base.convert(SoilTexture{NewType}, texture::SoilTexture) where {NewType}
+function Base.convert(::SoilTexture{NewType}, texture::SoilTexture) where {NewType}
     return SoilTexture(
         convert(NewType, texture.sand),
         convert(NewType, texture.silt),
