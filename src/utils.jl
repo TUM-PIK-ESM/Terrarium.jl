@@ -15,6 +15,13 @@ Filters out duplicates from the given tuple. Note that this method is not type s
 """
 merge_duplicates(values::Tuple) = Tuple(unique(values))
 
+"""
+    safediv(x, y)
+
+Evaluates `x / y` unless `iszero(y)` is true, then returns zero.
+"""
+safediv(x, y) = ifelse(iszero(y), zero(x), x / y)
+
 # Note that fastmap is borrowed (with self permission!) from CryoGrid.jl:
 # https://github.com/CryoGrid/CryoGrid.jl/blob/master/src/Utils/Utils.jl
 """
