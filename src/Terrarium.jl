@@ -6,7 +6,9 @@ import ConstructionBase: getproperties, setproperties
 
 import DataStructures: OrderedDict
 
-import Dates: Period, Second
+import Rasters: Raster, RasterStack, X, Y, Z, Ti, rebuild
+
+import Dates: Dates, TimeType, Period, Second
 
 import Flatten
 
@@ -18,6 +20,7 @@ import Oceananigans.Advection: AbstractAdvectionScheme, UpwindBiased
 import Oceananigans.Architectures: AbstractArchitecture, CPU, GPU, architecture, on_architecture
 import Oceananigans.Grids: Grids, Periodic, Flat, Bounded
 import Oceananigans.Operators: ∂zᵃᵃᶜ, ∂zᵃᵃᶠ, ℑzᵃᵃᶠ, Δzᵃᵃᶜ
+import Oceananigans.OutputReaders: FieldTimeSeries
 import Oceananigans.TimeSteppers: Clock, tick_time!, reset!
 import Oceananigans.Units: Time
 import Oceananigans.Utils: launch!
@@ -69,6 +72,10 @@ include("timesteppers/abstract_timestepper.jl")
 # model interface
 export get_grid, get_time_stepping, get_boundary_conditions, variables, compute_auxiliary!, compute_tendencies!
 include("abstract_model.jl")
+
+# input handlers
+export InputProvider, load_dataset, get_input, current_value
+include("inputs/inputs.jl")
 
 # default initializers
 export VarInitializer, DefaultInitializer, Initializers
