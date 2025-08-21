@@ -1,34 +1,34 @@
-# Initialization
+@kwdef struct SoilInitializer{
+    EnergyInit,
+    HydrologyInit,
+    StratInit,
+    BGCInit
+} <: AbstractInitializer
+    "Soil energy/temperature state initializer"
+    energy::EnergyInit = DefaultInitializer()
 
-function initialize!(state, model::SoilModel)
-    # run model initializer
-    initialize!(state, model, model.initializer)
-    # launch kernel for generic initailization routine
-    grid = get_grid(model)
-    launch!(
-        grid,
-        :xyz,
-        initialize_kernel!,
-        state,
-        model.energy,
-        model.hydrology,
-        model.strat,
-        model.biogeochem,
-        model.constants
-    )
+    "Soil hydrology state initializer"
+    hydrology::HydrologyInit = DefaultInitializer()
+
+    "Soil stratigraphy state initializer"
+    strat::StratInit = DefaultInitializer()
+
+    "Soil biogeochemistry state initializer"
+    biogeochem::BGCInit = DefaultInitializer()
 end
 
-@kernel function initialize_kernel!(
-    state,
-    energy::AbstractSoilEnergyBalance,
-    hydrology::AbstractSoilHydrology,
-    strat::AbstractStratigraphy,
-    bgc::AbstractSoilBiogeochemistry,
-    constants::PhysicalConstants,
-)
-    idx = @index(Global, NTuple)
-    # TODO: need a more comprehensive initialization scheme for all soil model components
-    # Note that this assumes temperature has already been iniitialized!
-    fc = get_freezecurve(hydrology)
-    temperature_to_energy!(idx, state, fc, energy, hydrology, strat, bgc, constants)
+function initialize!(state, model::AbstractModel, init::SoilInitializer)
+    initialize!(state, model, init.energy)
+    initialize!(state, model, init.hydrology)
+    initialize!(state, model, init.strat)
+    initialize!(state, model, init.biogeochem)
+end
+
+function get_field_initializers(inits::SoilInitializer)
+    return merge(
+        get_field_initializers(inits.energy),
+        get_field_initializers(inits.hydrology),
+        get_field_initializers(inits.strat),
+        get_field_initializers(inits.biogeochem),
+    )
 end
