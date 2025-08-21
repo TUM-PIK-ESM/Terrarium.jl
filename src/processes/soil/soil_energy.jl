@@ -198,20 +198,21 @@ end
 
 @inline function energy_to_temperature!(
     idx, state, ::FreezeCurves.FreeWater,
-    energy::SoilEnergyBalance,
+    energy::SoilEnergyBalance{NF},
     hydrology::AbstractSoilHydrology,
     strat::AbstractStratigraphy,
     bgc::AbstractSoilBiogeochemistry,
     constants::PhysicalConstants,
-)
+) where {NF}
     i, j, k = idx
     U = state.internal_energy[i, j, k] # assumed given
     L = constants.ρw*constants.Lsl
     por = porosity(idx, state, hydrology, strat, bgc)
     sat = state.pore_water_ice_saturation[i, j, k]
     Lθ = L*sat*por
-    # calculate unfrozen water content
-    state.liquid_water_fraction[i, j, k] = (U >= -Lθ)*(one(sat) - (U < zero(U))*U/-Lθ)
+    # calculate unfrozen water content;
+    # note the use of safediv to handle the edge case where porosity, and thus Lθ, is zero
+    state.liquid_water_fraction[i, j, k] = NF(U >= -Lθ)*(one(NF) - NF(U < zero(NF))*safediv(U, -Lθ))
     # This is the original implementation for clarity; however, this causes weird errors on GPU
     # state.liquid_water_fraction[i, j, k] = ifelse(
     #     U < -Lθ,
