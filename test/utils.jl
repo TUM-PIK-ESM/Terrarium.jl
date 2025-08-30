@@ -1,7 +1,8 @@
 using Terrarium
 using Test
+using Unitful
 
-using Terrarium: tuplejoin, merge_duplicates, safediv, fastmap
+using Terrarium: tuplejoin, merge_duplicates, merge_recursive, safediv, fastmap, piecewise_linear
 
 @testset "Utilities" begin
     # tuplejoin
@@ -16,6 +17,22 @@ using Terrarium: tuplejoin, merge_duplicates, safediv, fastmap
     @test merge_duplicates((1,)) == (1,)
     @test merge_duplicates((1,1,)) == (1,)
     @test merge_duplicates((1,2,2,3,4)) == (1,2,3,4)
+
+    # merge recursive
+    @test merge_recursive((;), (;)) == merge((;), (;)) == (;)
+    @test merge_recursive((;), (a=1,)) == merge((;), (a=1,)) == (a=1,)
+    @test merge_recursive((a=1,), (;)) == merge((a=1,), (;)) == (a=1,)
+    @test merge_recursive((a=1,), (b=2,)) == merge((a=1,), (b=2,)) == (a=1, b=2)
+    @test merge_recursive((a=1,), (a=2,)) == merge((a=1,), (a=2,)) == (a=2,)
+    @test merge_recursive((a=1, b=2), (a=2, c=3)) == merge((a=1, b=2), (a=2, c=3)) == (a=2, b=2, c=3)
+    @test merge_recursive((a=1, b=(x=2, y=3)), (a=2, b=(x=3, z=4))) == (a=2, b=(x=3, y=3, z=4))
+    @test merge_recursive(
+        (a=1, b=(x=(u=-1, v=-2), y=3)),
+        (a=2, b=(x=(v=-3, w=0), z=4))
+    ) == (a=2, b=(x=(u=-1, v=-3, w=0), y=3, z=4))
+    @test merge_recursive((a=1,), nothing) == (a=1,)
+    @test merge_recursive(nothing, (a=1,)) == (a=1,)
+    @test_throws MethodError merge_recursive(nothing, nothing)
 
     # safediv
     @test safediv(1, 2) ≈ 1/2
