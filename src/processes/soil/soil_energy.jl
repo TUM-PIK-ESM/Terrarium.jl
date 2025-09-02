@@ -219,7 +219,8 @@ end
     sat = state.pore_water_ice_saturation[i, j, k]
     Lθ = L*sat*por
     # calculate unfrozen water content
-    state.liquid_water_fraction[i, j, k] = clamp(one(sat) + U/Lθ, zero(sat), one(sat))
+    # Case 1: U < -Lθ -> frozen; Case 2: U ≥ -Lθ, Case 2a: U ≥ Lθ -> thawed, Case 2b: -Lθ ≤ U < 0 → phase change
+    state.liquid_water_fraction[i, j, k] = NF(U >= -Lθ)*(one(NF) - NF(U < zero(NF))*safediv(U, -Lθ))
 
     fracs = soil_volumetric_fractions(idx, state, strat, hydrology, bgc)
     C = heatcapacity(energy.thermal_properties, fracs)
