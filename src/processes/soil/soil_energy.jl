@@ -206,35 +206,39 @@ end
 
 @inline function energy_to_temperature!(
     idx, state, ::FreezeCurves.FreeWater,
-    energy::SoilEnergyBalance,
+    energy::SoilEnergyBalance{NF},
     hydrology::AbstractSoilHydrology,
     strat::AbstractStratigraphy,
     bgc::AbstractSoilBiogeochemistry,
     constants::PhysicalConstants,
-)
+) where {NF}
     i, j, k = idx
     U = state.internal_energy[i, j, k] # assumed given
     L = constants.ρw*constants.Lsl
     por = porosity(idx, state, hydrology, strat, bgc)
     sat = state.pore_water_ice_saturation[i, j, k]
     Lθ = L*sat*por
-    # calculate unfrozen water content
-    state.liquid_water_fraction[i, j, k] = ifelse(
-        U < -Lθ,
-        # Case 1: U < -Lθ -> frozen
-        zero(sat),
-        # Case 2: U ≥ -Lθ
-        ifelse(
-            U >= zero(U),
-            # Case 2a: U ≥ Lθ -> thawed
-            one(sat),
-            # Case 2b: 0-Lθ ≤ U ≤ 0 -> phase change
-            one(sat) - (U / -Lθ)
-        )
-    )
+    # calculate unfrozen water content;
+    # note the use of safediv to handle the edge case where porosity, and thus Lθ, is zero
+    state.liquid_water_fraction[i, j, k] = NF(U >= -Lθ)*(one(NF) - NF(U < zero(NF))*safediv(U, -Lθ))
+    # This is the original implementation for clarity; however, this causes weird errors on GPU
+    # state.liquid_water_fraction[i, j, k] = ifelse(
+    #     U < -Lθ,
+    #     # Case 1: U < -Lθ -> frozen
+    #     zero(sat),
+    #     # Case 2: U ≥ -Lθ
+    #     ifelse(
+    #         U >= zero(U),
+    #         # Case 2a: U ≥ Lθ -> thawed
+    #         one(sat),
+    #         # Case 2b: 0-Lθ ≤ U ≤ 0 -> phase change
+    #         one(sat) - (U / -Lθ)
+    #     )
+    # )
     fracs = soil_volumetric_fractions(idx, state, strat, hydrology, bgc)
     C = heatcapacity(energy.thermal_properties, fracs)
     # calculate temperature from internal energy and liquid water fraction
+    # T = state.temperature[i, j, k] = (U < -Lθ)*(U + Lθ) / C
     T = state.temperature[i, j, k] = ifelse(
         U < -Lθ,
         # Case 1: U < -Lθ → frozen

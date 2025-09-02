@@ -1,4 +1,5 @@
 using Terrarium
+using CUDA
 
 import SpeedyWeather.RingGrids
 
@@ -7,3 +8,4 @@ initializer = FieldInitializers(temperature = (x,z) -> -1.0 - 0.01*z + exp(z/10)
 model = SoilModel(; grid, initializer)
 sim = initialize(model)
 @time timestep!(sim)
+@time run!(sim, period=Day(10))
