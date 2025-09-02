@@ -218,14 +218,39 @@ end
     por = porosity(idx, state, hydrology, strat, bgc)
     sat = state.pore_water_ice_saturation[i, j, k]
     Lθ = L*sat*por
-    # calculate unfrozen water content
-    # Case 1: U < -Lθ -> frozen; Case 2: U ≥ -Lθ, Case 2a: U ≥ Lθ -> thawed, Case 2b: -Lθ ≤ U < 0 → phase change
+    # calculate unfrozen water content;
+    # note the use of safediv to handle the edge case where porosity, and thus Lθ, is zero
     state.liquid_water_fraction[i, j, k] = NF(U >= -Lθ)*(one(NF) - NF(U < zero(NF))*safediv(U, -Lθ))
-
+    # This is the original implementation for clarity; however, this causes weird errors on GPU
+    # state.liquid_water_fraction[i, j, k] = ifelse(
+    #     U < -Lθ,
+    #     # Case 1: U < -Lθ -> frozen
+    #     zero(sat),
+    #     # Case 2: U ≥ -Lθ
+    #     ifelse(
+    #         U >= zero(U),
+    #         # Case 2a: U ≥ Lθ -> thawed
+    #         one(sat),
+    #         # Case 2b: 0-Lθ ≤ U ≤ 0 -> phase change
+    #         one(sat) - (U / -Lθ)
+    #     )
+    # )
     fracs = soil_volumetric_fractions(idx, state, strat, hydrology, bgc)
     C = heatcapacity(energy.thermal_properties, fracs)
     # calculate temperature from internal energy and liquid water fraction
-    # Case 1: U < -L0 -> frozen; Case 2: U ≥ -L0; Case 2a: U ≥ 0 -> thawed; Case 2b: -L0 ≤ U < 0 -> phase change                            
-    T = state.temperature[i, j, k] = (U < -Lθ) * (U + Lθ) / C + (U >= zero(U)) * U / C
+    # T = state.temperature[i, j, k] = (U < -Lθ)*(U + Lθ) / C
+    T = state.temperature[i, j, k] = ifelse(
+        U < -Lθ,
+        # Case 1: U < -Lθ → frozen
+        (U + Lθ) / C,
+        # Case 2: U ≥ -Lθ
+        ifelse(
+            U >= zero(U),
+            # Case 2a: U ≥ 0 → thawed
+            U / C,
+            # Case 2b: -Lθ ≤ U < 0 → phase change
+            zero(eltype(state.temperature))
+        )
+    )
     return T
 end
