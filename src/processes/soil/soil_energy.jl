@@ -206,12 +206,12 @@ end
 
 @inline function energy_to_temperature!(
     idx, state, ::FreezeCurves.FreeWater,
-    energy::SoilEnergyBalance,
+    energy::SoilEnergyBalance{NF},
     hydrology::AbstractSoilHydrology,
     strat::AbstractStratigraphy,
     bgc::AbstractSoilBiogeochemistry,
     constants::PhysicalConstants,
-)
+) where {NF}
     i, j, k = idx
     U = state.internal_energy[i, j, k] # assumed given
     L = constants.ρw*constants.Lsl
