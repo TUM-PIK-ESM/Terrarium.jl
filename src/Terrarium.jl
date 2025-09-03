@@ -60,7 +60,7 @@ export adapt
 # internal utilities
 include("utils.jl")
 
-export PrognosticVariable, AuxiliaryVariable
+export PrognosticVariable, AuxiliaryVariable, InputVariable, XY, XYZ
 include("abstract_variables.jl")
 
 # grids
@@ -70,6 +70,9 @@ include("grids/vertical_discretization.jl")
 export ColumnGrid, GlobalRingGrid, get_field_grid
 include("grids/grids.jl")
 
+export InputFields, InputProvider, FieldInput, FieldTimeSeriesInput, update_inputs!
+include("inputs/inputs.jl")
+
 # timestepping
 export timestep!, get_dt, is_adaptive
 include("timesteppers/abstract_timestepper.jl")
@@ -77,6 +80,10 @@ include("timesteppers/abstract_timestepper.jl")
 # model interface
 export get_grid, get_time_stepping, get_boundary_conditions, variables, compute_auxiliary!, compute_tendencies!
 include("abstract_model.jl")
+
+# state variables
+export StateVariables
+include("state_variables.jl")
 
 # default initializers
 export Initializers, DefaultInitializer
@@ -88,10 +95,6 @@ include("boundary_conditions.jl")
 # timestepper implementations
 export ForwardEuler
 include("timesteppers/forward_euler.jl")
-
-# state variables
-export StateVariables
-include("state_variables.jl")
 
 # physical processes
 include("processes/processes.jl")
