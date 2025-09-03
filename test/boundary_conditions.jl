@@ -1,5 +1,5 @@
 using Terrarium
-using Terrarium: prognostic, varname, XY, XYZ
+using Terrarium: prognostic, varname, vardims, XY, XYZ
 using Oceananigans: CenterField
 using Test
 
@@ -18,7 +18,7 @@ using Test
     @test Terrarium.varname(flux_vars[1]) == :flux
     @test Terrarium.vardims(flux_vars[1]) == XY()
     @test flux.value == 1.0
-    fluxfield = Terrarium.create_field(flux_vars[1], DefaultInitializer(), DefaultBoundaryConditions(), grid)
+    fluxfield = Terrarium.create_field(grid, vardims(flux_vars[1]), DefaultBoundaryConditions())
     # check that compute_auxiliary! works
     compute_auxiliary!((flux=fluxfield,), nothing, flux)
     @test all(fluxfield .== 1.0)
@@ -28,20 +28,20 @@ using Test
     vars = variables(bcs)
     @test length(vars) == 2
     @test map(varname, vars) == (:fluxtop, :fluxbot)
-    fluxtop = Terrarium.create_field(vars[1], DefaultInitializer(), DefaultBoundaryConditions(), grid)
-    fluxbot = Terrarium.create_field(vars[2], DefaultInitializer(), DefaultBoundaryConditions(), grid)
+    fluxtop = Terrarium.create_field(grid, vardims(vars[1]), DefaultBoundaryConditions())
+    fluxbot = Terrarium.create_field(grid, vardims(vars[2]), DefaultBoundaryConditions())
     compute_auxiliary!((; fluxtop, fluxbot), nothing, bcs)
     @test all(fluxtop .== 1.0)
     @test all(fluxbot .== -1.0)
     # check that directly specified Field boundary conditions are correctly assigned
     test_bcs = VerticalBoundaryConditions(top=(test=ValueBoundaryCondition(1.0),), bottom=DefaultBoundaryConditions())
-    testfield = Terrarium.create_field(var, DefaultInitializer(), test_bcs, grid)
+    testfield = Terrarium.create_field(grid, vardims(var), test_bcs)
     @test testfield.boundary_conditions.top == ValueBoundaryCondition(1.0)
     test_bcs = VerticalBoundaryConditions(top=DefaultBoundaryConditions(), bottom=(test=ValueBoundaryCondition(1.0),))
-    testfield = Terrarium.create_field(var, DefaultInitializer(), test_bcs, grid)
+    testfield = Terrarium.create_field(grid, vardims(var), test_bcs)
     @test testfield.boundary_conditions.bottom == ValueBoundaryCondition(1.0)
     test_bcs = VerticalBoundaryConditions(top=(test=ValueBoundaryCondition(1.0),), bottom=(test=ValueBoundaryCondition(1.0),))
-    testfield = Terrarium.create_field(var, DefaultInitializer(), test_bcs, grid)
+    testfield = Terrarium.create_field(grid, vardims(var), test_bcs)
     @test testfield.boundary_conditions.top == ValueBoundaryCondition(1.0)
     @test testfield.boundary_conditions.bottom == ValueBoundaryCondition(1.0)
 end

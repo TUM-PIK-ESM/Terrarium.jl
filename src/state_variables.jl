@@ -14,55 +14,55 @@ however, they are assigned their own category here since they need to be handled
 by the timestepping scheme.
 """
 @kwdef struct StateVariables{
-    prognames, tendnames, auxnames, subnames, closurenames,
-    ProgVars, TendVars, AuxVars, SubVars, Closures,
+    prognames, tendnames, auxnames, inputnames, nsnames, closurenames,
+    ProgFields, TendFields, AuxFields, InputFields, SubFields, Closures,
     ClockType,
 } <: AbstractStateVariables
-    prognostic::NamedTuple{prognames, ProgVars} = (;)
-    tendencies::NamedTuple{tendnames, TendVars} = (;)
-    auxiliary::NamedTuple{auxnames, AuxVars} = (;)
-    namespaces::NamedTuple{subnames, SubVars} = (;)
+    prognostic::NamedTuple{prognames, ProgFields} = (;)
+    tendencies::NamedTuple{tendnames, TendFields} = (;)
+    auxiliary::NamedTuple{auxnames, AuxFields} = (;)
+    inputs::NamedTuple{inputnames, InputFields} = (;)
+    namespaces::NamedTuple{nsnames, SubFields} = (;)
     closures::NamedTuple{closurenames, Closures} = (;)
     clock::ClockType = Clock()
 end
 
 function StateVariables(
     model::AbstractModel,
-    clock::Clock
+    clock::Clock,
+    inputs::InputFields,
 )
-    vars = variables(model)
-    # filter out variables from tuple by type
-    prognostic_vars = merge_duplicates(filter(var -> isa(var, PrognosticVariable), vars))
-    auxiliary_vars = merge_duplicates(filter(var -> isa(var, AuxiliaryVariable), vars))
-    namespace_vars = filter(var -> isa(var, Namespace), vars)
-    # get tendencies from prognostic variables
-    tendency_vars = map(var -> var.tendency, prognostic_vars)
-    # create closure variables and add to auxiliary variables
-    closure_vars = map(var -> getvar(var.closure, vardims(var)), filter(hasclosure, prognostic_vars))
-    auxiliary_ext = tuplejoin(auxiliary_vars, closure_vars)
-    # merge all variable names
-    varnames = tuplejoin(map(varname, prognostic_vars), map(varname, auxiliary_ext), map(varname, namespace_vars))
-    @assert merge_duplicates(varnames) == varnames "all state variable names within one namespace must be unique! found duplicates in $(varnames)"
-    # get progvar => closure pairs
-    closures = map(var -> varname(var) => var.closure, filter(hasclosure, prognostic_vars))
+    # extract abstract variables from model
+    vars = Variables(variables(model)...)
+    # create named tuples for each variable type
+    prognostic_vars = (; map(var -> varname(var) => var, vars.prognostic)...)
+    tendency_vars = (; map(var -> varname(var) => var, vars.tendencies)...)
+    auxiliary_vars = (; map(var -> varname(var) => var, vars.prognostic)...)
+    input_vars = (; map(var -> varname(var) => var, vars.inputs)...)
     # get grid and boundary conditions
     grid = get_grid(model)
     bcs = get_boundary_conditions(model)
     field_bcs = get_field_boundary_conditions(bcs, grid)
-    # intialize fields
-    init(var) = varname(var) => create_field(var, grid, get(field_bcs, varname(var), nothing))
+    # create fields from abstract variables
+    init(var::AbstractVariable) = varname(var) => create_field(grid, vardims(var), get(field_bcs, varname(var), nothing))
+    init(var::InputVariable) = varname(var) => get_input_field(inputs, grid, varname(var), vardims(var))
     prognostic_fields = map(init, prognostic_vars)
-    tendency_fields = map(init, tendency_vars)
-    auxiliary_fields = map(init, auxiliary_ext)
-    # recursively initialize state variables for namespaces
-    namespaces = map(ns -> varname(ns) => StateVariables(getproperty(model, varname(ns)), clock), namespace_vars)
-    # construct and return StateVariables struct
+    tendency_fields =  map(init, tendency_vars)
+    auxiliary_fields = map(init, auxiliary_vars)
+    # note that the inputs argument is passed as the second argument to merge, meaning it takes precedence
+    input_fields = map(init, merge(input_vars, inputs))
+    # recursively initialize state variables for each namespace
+    namespaces = map(ns -> varname(ns) => StateVariables(getproperty(model, varname(ns)), clock, inputs), namespace_vars)
+    # get named tuple mapping prognostic variabels to their respective closure relations, if defined
+    closures = (; map(var -> varname(var) => var.closure, filter(hasclosure, prognostic_vars))...)
+    # construct and return StateVariables
     return StateVariables(
-        (; prognostic_fields...),
-        (; tendency_fields...),
-        (; auxiliary_fields...),
-        (; namespaces...),
-        (; closures...),
+        prognostic_fields,
+        tendency_fields,
+        auxiliary_fields,
+        input_fields,
+        namespaces,
+        closures,
         clock,
     )
 end
@@ -132,37 +132,4 @@ function reset_tendencies!(state::StateVariables)
     for ns in state.namespaces
         reset_tendencies!(ns)
     end
-end
-
-# Field construction
-
-## Retrieves the Oceananigans `Field` type for the given variable dimensions.
-## The first three type parameters refer to the location of the variable on the staggered finite volume grid:
-## Center refers to the grid cell centroid, Face to the boundary, and Nothing to a quantity that has no dimensionality
-## in that direction.
-field_type(::XY) = Field{Center,Center,Nothing}
-field_type(::XYZ) = Field{Center,Center,Center}
-
-"""
-    $SIGNATURES
-
-Allocates an Oceananigans `Field` on `grid` for the variable, `var`, with the given boundary conditions.
-Additional arguments are passed direclty to the `Field` constructor. The location of the `Field` is determined
-by `VarDims` defined on `var`.
-"""
-function create_field(
-    var::AbstractVariable,
-    grid::AbstractLandGrid,
-    boundary_conditions=nothing,
-    args...;
-    kwargs...
-)
-    FT = field_type(vardims(var))
-    # Specify BCs if defined
-    field = if !isnothing(boundary_conditions)
-        FT(get_field_grid(grid), args...; boundary_conditions, kwargs...)
-    else
-        FT(get_field_grid(grid), args...; kwargs...)
-    end
-    return field
 end

@@ -37,7 +37,6 @@ TracerGases(tracers::TracerGas...) = (; map(tracer -> nameof(tracer) => tracer, 
 @kwdef struct AtmosphericState{
     NF,
     tracervars,
-    Grid<:AbstractLandGrid{NF},
     AirTemp,
     Humidity,
     Pressure,
@@ -45,6 +44,7 @@ TracerGases(tracers::TracerGas...) = (; map(tracer -> nameof(tracer) => tracer, 
     Precip<:AbstractPrecipitation,
     SolarRad<:AbstractSolarRadiation,
     Tracers<:NamedTuple{tracervars,<:Tuple{Vararg{TracerGas}}},
+    Grid<:AbstractLandGrid{NF},
 } <: AbstractBoundaryConditions
     "Spatial grid"
     grid::Grid

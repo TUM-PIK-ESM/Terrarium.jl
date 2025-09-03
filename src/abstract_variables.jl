@@ -19,6 +19,26 @@ struct XY <: VarDims end
 # TODO: do we need to support state variables not defined on a grid?
 
 """
+    $SIGNATURES
+
+Retrieves the Oceananigans field "location" for the given variable dimensions.
+The location refers to the where the variable is defined on a staggered finite volume grid:
+Center refers to the grid cell centroid, Face to the boundary, and Nothing to a quantity that has no dimensionality
+in that direction. Currently, we assume all variables to be defined on grid cell centers, but this could be relaxed
+later if necessary by modifying or extending `VarDims`.
+"""
+inferloc(::XY) = (Center(), Center(), nothing)
+inferloc(::XYZ) = (Center(), Center(), Center())
+
+"""
+    $SIGNATURES
+
+Complement of [inferloc](@ref) that infers the appropriate `VarDims` from the given `Field`.
+"""
+inferdims(::AbstractField{Center,Center,Nothing}) = XY()
+inferdims(::AbstractField{Center,Center,Center}) = XYZ()
+
+"""
     $TYPEDEF
 
 Base type for prognostic variable closure relations for differential equations of the form:
@@ -69,6 +89,20 @@ Retrieves the physical units for the given variable.
 """
 varunits(var::AbstractVariable) = var.units
 
+Base.:(==)(var1::AbstractVariable, var2::AbstractVariable) =
+    varname(var1) == varname(var2) &&
+    vardims(var1) == vardims(var2) &&
+    varunits(var1) == varunits(var2)
+
+function Base.show(io::IO, ::MIME"text/plain", var::AbstractVariable)
+    units = varunits(var)
+    if units != NoUnits
+        println(io, "$(nameof(typeof(var))){$(typeof(vardims(var)))} with units $(string(varunits(var)))")
+    else
+        println(io, "$(nameof(typeof(var))){$(typeof(vardims(var)))}")
+    end
+end
+
 """
     $TYPEDEF
 
@@ -92,13 +126,32 @@ end
 """
     $TYPEDEF
 
+Represents an input (e.g. forcing) variable with the given `name` and `dims` on the spatial grid.
+"""
+struct InputVariable{VD<:VarDims, UT<:Units} <: AbstractVariable{VD}
+    "Name of the auxiliary variable"
+    name::Symbol
+
+    "Grid dimensions on which the variable is defined"
+    dims::VD
+
+    "Physical untis associated with this state variable"
+    units::UT
+
+    "Human-readable description of this state variable"
+    desc::String
+end
+
+"""
+    $TYPEDEF
+
 Represents a prognostic variable with the given `name` and `dims` on the spatial grid.
 """
 struct PrognosticVariable{
     VD<:VarDims,
     UT<:Units,
-    TendencyVar<:AuxiliaryVariable,
-    Closure<:Union{Nothing, AbstractClosureRelation}
+    TV<:Union{Nothing, AuxiliaryVariable},
+    CL<:Union{Nothing, AbstractClosureRelation}
 } <: AbstractVariable{VD}
     "Name of the prognostic variable"
     name::Symbol
@@ -107,10 +160,10 @@ struct PrognosticVariable{
     dims::VD
 
     "Closure relation for the tendency of the prognostic variable"
-    closure::Closure
+    closure::CL
 
-    "Tendency corresponding to this prognostic variable"
-    tendency::TendencyVar
+    "Variable corresponding to the tendency for prognostic variables"
+    tendency::TV
 
     "Physical untis associated with this state variable"
     units::UT
@@ -121,6 +174,53 @@ end
 
 hasclosure(var::PrognosticVariable) = !isnothing(var.closure)
 
+# Variable container
+
+struct Variables{ProgVars, TendVars, AuxVars, InputVars, Namespaces}
+    prognostic::ProgVars
+    tendencies::TendVars
+    auxiliary::AuxVars
+    inputs::InputVars
+    namespaces::Namespaces
+
+    function Variables(vars...)
+        # partition variables into prognostic, auxiliary, input, and namespace groups;
+        # duplicates within each group are automatically merged
+        prognostic_vars = merge_duplicates(filter(var -> isa(var, PrognosticVariable), vars))
+        auxiliary_vars = merge_duplicates(filter(var -> isa(var, AuxiliaryVariable), vars))
+        input_vars = merge_duplicates(filter(var -> isa(var, InputVariable), vars))
+        namespaces = merge_duplicates(filter(var -> isa(var, Namespace), vars))
+        # get tendencies from prognostic variables
+        tendency_vars = map(var -> var.tendency, prognostic_vars)
+        # create closure variables and add to auxiliary variables
+        closure_vars = map(var -> getvar(var.closure, vardims(var)), filter(hasclosure, prognostic_vars))
+        auxiliary_ext = tuplejoin(auxiliary_vars, closure_vars)
+        # drop inputs with matching prognostic or auxiliary variables
+        input_vars = filter(var -> var ∉ prognostic_vars && var ∉ auxiliary_vars, input_vars)
+        # check for duplicates
+        check_duplicates(prognostic_vars..., tendency_vars..., auxiliary_vars..., input_vars..., namespaces...)
+        return new{typeof(prognostic_vars), typeof(tendency_vars), typeof(auxiliary_ext), typeof(input_vars), typeof(namespaces)}(
+            prognostic_vars,
+            tendency_vars,
+            auxiliary_ext,
+            input_vars,
+            namespaces,
+        )
+    end
+end
+
+function check_duplicates(vars...)
+    names = unique(map(varname, vars))
+    groups = Dict(map(n -> n => filter(==(n) ∘ varname, vars), names)...)
+    for key in keys(groups)
+        if length(groups[key]) > 1
+            error("Found conflicting variable/namespace definitions for $key:\n$(join(groups[key], "\n"))")
+        end
+    end
+end
+
+# Namespaces
+
 """
     $TYPEDEF
 
@@ -128,8 +228,9 @@ Represents a new variable namespace, typically from a subcomponent of the model.
 It is (currently) assumed that tha name of the namespace corresponds to a property
 defined on the model type.
 """
-struct Namespace
+struct Namespace{Vars}
     name::Symbol
+    vars::Vars
 end
 
 varname(ns::Namespace) = ns.name
@@ -170,6 +271,13 @@ auxiliary(name::Symbol, dims::VarDims; units=NoUnits, desc="") = AuxiliaryVariab
 """
     $SIGNATURES
 
+Convenience constructor method for `InputVariable`.
+"""
+input(name::Symbol, dims::VarDims; units=NoUnits, desc="") = InputVariable(name, dims, units, desc)
+
+"""
+    $SIGNATURES
+
 Creates an `AuxiliaryVariable` for the tendency of a prognostic variable with the given name, dimensions, and physical units.
 This constructor is primarily used internally by other constructors and does not usually need to be called by implementations of `variables`.
 """
@@ -184,6 +292,12 @@ end
 """
     $SIGNATURES
 
-Convenience constructor method for `Namespace` provided only for consistency.
+Convenience constructor method for variable `Namespace`s.
 """
-namespace(name::Symbol) = Namespace(name)
+namespace(name::Symbol, vars::Variables) = Namespace(name, vars)
+namespace(name::Symbol, vars::Tuple) = Namespace(name, Variables(vars...))
+
+"""
+Alias for `Variables(vars...)`
+"""
+variables(vars::Union{AbstractVariable, Namespace}...) = Variables(vars...)
