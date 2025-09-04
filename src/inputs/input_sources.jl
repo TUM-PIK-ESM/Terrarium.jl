@@ -26,8 +26,9 @@ struct FieldInputSource{NF, VD<:VarDims, names, Fields<:Tuple{Vararg{AnyField{NF
     fields::NamedTuple{names, Fields}
 end
 
-function FieldInputSource(dims=nothing; named_fields...)
-    dims = validate_dims(dims; named_fields...)
+function FieldInputSource(; named_fields...)
+    @assert all(fts -> isa(fts, Field), values(named_fields)) "all keyword arguments must be instances of Field"
+    dims = checkdims(; named_fields...)
     return FieldInputSource(dims, (; named_fields...))
 end
 
@@ -53,30 +54,29 @@ struct FieldTimeSeriesInputSource{NF, VD<:VarDims, names, FTS<:Tuple{Vararg{AnyF
     fts::NamedTuple{names, FTS}
 end
 
-function FieldTimeSeriesInputSource(dims=nothing; named_fts...)
-    dims = validate_dims(dims; named_fts...)
+function FieldTimeSeriesInputSource(; named_fts...)
+    @assert all(fts -> isa(fts, FieldTimeSeries), values(named_fts)) "all keyword arguments must be instances of FieldTimeSeries"
+    dims = checkdims(; named_fts...)
     return FieldTimeSeriesInputSource(dims, (; named_fts...))
 end
 
 function update_inputs!(inputs::InputFields, source::FieldTimeSeriesInputSource, clock::Clock)
     fields = get_input_fields(inputs, source.dims)
     for name in keys(source.fts)
-        field_t = get(fields, name) do
+        field_t = get!(fields, name) do
             # lazily instantiate input field if not yet defined
-            create_field(inputs.grid, source.dims)
+            Field(inputs.grid, source.dims)
         end
         fts = source.fts[name]
-        set!(field_t, fts[clock.time])
+        set!(field_t, fts[Time(clock.time)])
     end
 end
 
-# Internal helper method to check that all Field dimensions match;
-# Currently this does not check that the dimension sizes match... but maybe it should?
-function validate_dims(dims::Union{Nothing, VarDims}=nothing; named_fields...)
+# Internal helper method to check that all Field dimensions match
+function checkdims(; named_fields...)
     @assert length(named_fields) >= 1 "at least one input field must be provided"
     # infer dimensions of all provided fields
     field_dims = map(inferdims, values(named_fields))
-    dims = isnothing(dims) ? field_dims[1] : dims
-    @assert foldl(==, field_dims, init=dims) "all fields must have matching dimensions $dims"
-    return dims
+    @assert length(field_dims) == 1 || foldl(==, field_dims) "all fields must have matching dimensions"
+    return first(field_dims)
 end

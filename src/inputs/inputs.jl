@@ -18,8 +18,8 @@ end
 
 function InputFields(grid::AbstractLandGrid)
     # create dummy fields to get type info
-    dummy_field2D = create_field(grid, XY())
-    dummy_field3D = create_field(grid, XYZ())
+    dummy_field2D = Field(grid, XY())
+    dummy_field3D = Field(grid, XYZ())
     return InputFields(
         grid,
         OrderedDict{Symbol, typeof(dummy_field2D)}(),
@@ -30,12 +30,12 @@ end
 get_input_fields(inputs::InputFields, ::XY) = inputs.inputs2D
 get_input_fields(inputs::InputFields, ::XYZ) = inputs.inputs3D
 
-get_input_field(inputs::InputFields, grid::AbstractLandGrid, var::AbstractVariable) = get_input_field(inputs, grid, varname(var), vardims(var))
-function get_input_field(inputs::InputFields, grid::AbstractLandGrid, name::Symbol, dims::VarDims)
+get_input_field(inputs::InputFields, var::AbstractVariable) = get_input_field(inputs, varname(var), vardims(var))
+function get_input_field(inputs::InputFields, name::Symbol, dims::VarDims)
     fields = get_input_fields(inputs, dims)
     return get!(fields, name) do
         # Lazily instantiate field if it doesn't yet exist
-        create_field(grid, dims)
+        Field(inputs.grid, dims)
     end
 end
 

@@ -13,9 +13,8 @@ import Flatten
 import Interpolations
 
 # Oceananigans numerics
-# TODO: Raise an issue on Oceananigans.jl about refactoring numerics
-# into a separate package.
-import Oceananigans: Field, AbstractField, Center, Face, set!, interior, xnodes, ynodes, znodes
+# TODO: Raise an issue on Oceananigans.jl about refactoring numerics into a separate package.
+import Oceananigans: Field, AbstractField, Center, Face, set!, interior, xnodes, ynodes, znodes, location
 import Oceananigans.Advection: AbstractAdvectionScheme, UpwindBiased
 import Oceananigans.Architectures: AbstractArchitecture, CPU, GPU, architecture, on_architecture
 import Oceananigans.Grids: Grids, AbstractGrid, Periodic, Flat, Bounded
@@ -48,8 +47,8 @@ import Unitful: @u_str, uconvert, ustrip, upreferred
 const LengthQuantity{NF, U} = Quantity{NF, 𝐋, U} where {NF, U<:Units}
 
 # Re-export selected types and methods from Oceananigans
-export CPU, GPU, Clock, Center, Face, ValueBoundaryCondition, FluxBoundaryCondition, NoFluxBoundaryCondition
-export set!, interior, architecture, on_architecture, xnodes, ynodes, znodes
+export Field, FieldTimeSeries, CPU, GPU, Clock, Center, Face, ValueBoundaryCondition, FluxBoundaryCondition, NoFluxBoundaryCondition
+export set!, interior, architecture, on_architecture, xnodes, ynodes, znodes, location
 
 # Re-export Dates types
 export Year, Month, Day, Second
@@ -70,7 +69,8 @@ include("grids/vertical_discretization.jl")
 export ColumnGrid, GlobalRingGrid, get_field_grid
 include("grids/grids.jl")
 
-export InputFields, InputProvider, FieldInputSource, FieldTimeSeriesInputSource, update_inputs!
+export InputFields, InputProvider, FieldInputSource, FieldTimeSeriesInputSource
+export update_inputs!, get_input_fields, get_input_field
 include("inputs/inputs.jl")
 
 # timestepping

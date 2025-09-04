@@ -112,13 +112,19 @@ end
 # Field construction
 
 """
-    $SIGNATURES
+    Field(
+        grid::AbstractLandGrid,
+        dims::VarDims,
+        boundary_conditions=nothing,
+        args...;
+        kwargs...
+    )
 
-Allocates an Oceananigans `Field` on `grid` with the given `dims` and boundary conditions.
+Auxiliary constructor for an Oceananigans `Field` on `grid` with the given Terrarium variable `dims` and boundary conditions.
 Additional arguments are passed direclty to the `Field` constructor. The location of the `Field`
 is determined by `VarDims` defined on `var`.
 """
-function create_field(
+function Field(
     grid::AbstractLandGrid,
     dims::VarDims,
     boundary_conditions=nothing,
@@ -135,4 +141,13 @@ function create_field(
         FT(get_field_grid(grid), args...; kwargs...)
     end
     return field
+end
+
+function FieldTimeSeries(
+    grid::AbstractLandGrid,
+    dims::VarDims,
+    times=eltype(grid)[]
+)
+    loc = inferloc(dims)
+    return FieldTimeSeries(loc, get_field_grid(grid), times)
 end

@@ -2,11 +2,10 @@ using Terrarium
 using Test
 
 import Terrarium: VarDims, XY, XYZ, prognostic, auxiliary, namespace
-import Oceananigans: Field, Center
 
 DEFAULT_NF = Float32
 
-@testset "State variables for mock type" begin
+@testset "State variables for mock model type" begin
 
     @kwdef struct SubModel{NF} <: Terrarium.AbstractModel{NF}
         grid
@@ -38,7 +37,7 @@ DEFAULT_NF = Float32
         prognostic(:progvar2D, XY()),
         auxiliary(:auxvar3D, XYZ()),
         auxiliary(:auxvar2D, XY()),
-        namespace(:submodel),
+        namespace(:submodel, variables(model.submodel)),
     )
 
     grid = ColumnGrid(ExponentialSpacing(N=10))

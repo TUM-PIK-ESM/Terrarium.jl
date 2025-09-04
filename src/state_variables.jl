@@ -37,24 +37,25 @@ function StateVariables(
     # create named tuples for each variable type
     prognostic_vars = (; map(var -> varname(var) => var, vars.prognostic)...)
     tendency_vars = (; map(var -> varname(var) => var, vars.tendencies)...)
-    auxiliary_vars = (; map(var -> varname(var) => var, vars.prognostic)...)
+    auxiliary_vars = (; map(var -> varname(var) => var, vars.auxiliary)...)
     input_vars = (; map(var -> varname(var) => var, vars.inputs)...)
+    namespace_vars = (; map(var -> varname(var) => var, vars.namespaces)...)
     # get grid and boundary conditions
     grid = get_grid(model)
     bcs = get_boundary_conditions(model)
     field_bcs = get_field_boundary_conditions(bcs, grid)
     # create fields from abstract variables
-    init(var::AbstractVariable) = varname(var) => create_field(grid, vardims(var), get(field_bcs, varname(var), nothing))
+    init(var::AbstractVariable) = Field(grid, vardims(var), get(field_bcs, varname(var), nothing))
     # input variables are retrieved (or allocated) in the external storage provided
-    init(var::InputVariable) = varname(var) => get_input_field(inputs, grid, varname(var), vardims(var))
+    init(var::InputVariable) = get_input_field(inputs, varname(var), vardims(var))
     prognostic_fields = map(init, prognostic_vars)
     tendency_fields =  map(init, tendency_vars)
     auxiliary_fields = map(init, auxiliary_vars)
     input_fields = map(init, input_vars)
     # recursively initialize state variables for each namespace
-    namespaces = map(ns -> varname(ns) => StateVariables(getproperty(model, varname(ns)), clock, inputs), namespace_vars)
+    namespaces = map(ns -> StateVariables(getproperty(model, varname(ns)), clock, inputs), namespace_vars)
     # get named tuple mapping prognostic variabels to their respective closure relations, if defined
-    closures = (; map(var -> varname(var) => var.closure, filter(hasclosure, prognostic_vars))...)
+    closures = map(var -> var.closure, filter(hasclosure, prognostic_vars))
     # construct and return StateVariables
     return StateVariables(
         prognostic_fields,
@@ -63,7 +64,6 @@ function StateVariables(
         input_fields,
         namespaces,
         closures,
-        inputs,
         clock,
     )
 end
