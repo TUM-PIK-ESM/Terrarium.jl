@@ -8,9 +8,9 @@ include("physics_utils.jl")
 
 # Atmosphere
 
-export AtmosphericState, TwoPhasePrecipitation, TwoBandSolarRadiation
+export PrescribedAtmosphere, TwoPhasePrecipitation, TwoBandSolarRadiation
 export TracerGas, TracerGases, AmbientCO2
-include("atmos/atmosphere.jl")
+include("prescribed_atmosphere.jl")
 
 # Soil
 
