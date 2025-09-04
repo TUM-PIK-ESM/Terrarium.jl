@@ -58,7 +58,7 @@ Returns the time stepping scheme associated with this `model`.
 get_time_stepping(model::AbstractModel) = model.time_stepping
 
 """
-    get_boundary_conditions(model::AbstractModel)::AbstractInitializer
+    get_boundary_conditions(model::AbstractModel)::AbstractBoundaryConditions
 
 Returns the boundary conditions associated with this `model`.
 """
