@@ -109,7 +109,7 @@ function get_field_boundary_conditions(
     top = get_field_boundary_conditions(bcs.top, grid)
     bottom = get_field_boundary_conditions(bcs.bottom, grid)
     # invert the nested structure of the top/bottom named tuples;
-    # this way we have a single named tuple of variable names where the entries 
+    # this way we have a single named tuple where each entry has `top` and `bottom` as properties
     var_bcs = merge_recursive(map(bc -> (top=bc,), top), map(bc -> (bottom=bc,), bottom))
     return map(var_bcs) do bc
         FieldBoundaryConditions(grid, (Center(), Center(), nothing); bc...)

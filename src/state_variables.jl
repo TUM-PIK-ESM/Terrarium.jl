@@ -81,20 +81,21 @@ function Adapt.adapt_structure(to, sv::StateVariables)
 end
 
 Base.propertynames(
-    vars::StateVariables{prognames, tendnames, auxnames, namespaces, closures}
-) where {prognames, tendnames, auxnames, namespaces, closures} = (
+    vars::StateVariables{prognames, tendnames, auxnames, inputnames, nsnames, closures}
+) where {prognames, tendnames, auxnames, inputnames, nsnames, closures} = (
     prognames...,
     tendnames...,
     auxnames...,
-    namespaces...,
+    inputnames...,
+    nsnames...,
     closures...,
     fieldnames(typeof(vars))...,
 )
 
 function Base.getproperty(
-    vars::StateVariables{prognames, tendnames, auxnames, namespaces, closures},
+    vars::StateVariables{prognames, tendnames, auxnames, inputnames, nsnames, closures},
     name::Symbol
-) where {prognames, tendnames, auxnames, namespaces, closures}
+) where {prognames, tendnames, auxnames, inputnames, nsnames, closures}
     # forward getproperty calls to variable groups
     if name ∈ prognames
         return getproperty(getfield(vars, :prognostic), name)
@@ -102,7 +103,9 @@ function Base.getproperty(
         return getproperty(getfield(vars, :tendencies), name)
     elseif name ∈ auxnames
         return getproperty(getfield(vars, :auxiliary), name)
-    elseif name ∈ namespaces
+    elseif name ∈ inputnames
+        return getproperty(getfield(vars, :inputs), name)
+    elseif name ∈ nsnames
         return getproperty(getfield(vars, :namespaces), name)
     else
         return getfield(vars, name)
@@ -112,11 +115,11 @@ end
 function fill_halo_regions!(state::StateVariables)
     # fill_halo_regions! for all prognostic variables
     for var in state.prognostic
-        fill_halo_regions!(var)
+        fill_halo_regions!(var, state.clock, state)
     end
     # fill_halo_regions! for all auxiliary variables
     for var in state.auxiliary
-        fill_halo_regions!(var)
+        fill_halo_regions!(var, state.clock, state)
     end
     # recurse over namespaces
     for ns in state.namespaces
