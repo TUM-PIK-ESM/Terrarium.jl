@@ -51,8 +51,9 @@ should reset all state variables to their values as defiend by the model initial
 function initialize!(sim::Simulation)
     # TODO: reset other variables too?
     reset_tendencies!(sim.state)
-    initialize!(sim.state, sim.model)
     reset!(sim.state.clock)
+    update_inputs!(sim.inputs, sim.state.clock)
+    initialize!(sim.state, sim.model)
     return sim
 end
 
@@ -64,6 +65,7 @@ Advance the simulation forward by one timestep with optional timestep size `dt`.
 timestep!(sim::Simulation) = timestep!(sim, get_dt(get_time_stepping(sim.model)))
 function timestep!(sim::Simulation, dt)
     reset_tendencies!(sim.state)
+    update_inputs!(sim.inputs, sim.state.clock)
     timestep!(sim.state, sim.model, dt)
     tick_time!(sim.state.clock, dt)
 end
