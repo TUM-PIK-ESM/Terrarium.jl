@@ -54,20 +54,19 @@ Represents a flux prescribed at the boundary of a spatial domain and applied as 
 Properties:
 $TYPEDFIELDS
 """
-struct PrescribedFlux{name, F, D<:VarDims} <: AbstractBoundaryConditions
+struct PrescribedFlux{name, units, F} <: AbstractBoundaryConditions
     "Constant, `Field`, or function corresponding to the prescribed boundary flux"
     value::F
 
-    "Dimensions of the flux variable"
-    dims::D
-
-    PrescribedFlux(name::Symbol, value, dims=XY()) = new{name, typeof(value), typeof(dims)}(value, dims)
+    PrescribedFlux(name::Symbol, value, units=NoUnits) = new{name, units, typeof(value)}(value)
 end
 
 @inline varname(::PrescribedFlux{name}) where {name} = name
 
-variables(bc::PrescribedFlux) = (
-    auxiliary(varname(bc), bc.dims),
+variables(::PrescribedFlux{name, units}) where {name, units} = (
+    # TODO: maybe we also want to have descriptions for prescribed flux input variables?
+    # currently this isn't possible because String would make `PrescribedFlux` non-kernelizable
+    input(name, XY(); units),
 )
 
 function compute_auxiliary!(state, model, bc::PrescribedFlux)
