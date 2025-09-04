@@ -12,12 +12,16 @@ struct Simulation{
     Model<:AbstractModel,
     TimeStepperCache<:AbstractTimeStepperCache,
     StateVars<:AbstractStateVariables,
+    Inputs<:InputProvider
 } <: AbstractSimulation
     "The type of model used for the simulation."
     model::Model
 
     "Time stepper state cache."
     cache::TimeStepperCache
+
+    "Input provider type"
+    inputs::Inputs
 
     "Collection of all state variables defined on the simulation `model`."
     state::StateVars
@@ -30,10 +34,10 @@ Creates and initializes a `Simulation` for the given `model` with the given `clo
 This method allocates all necessary `Field`s for the state variables and calls `initialize!(sim)`.
 Note that this method is **not type stable** and should not be called in an Enzyme `autodiff` call.
 """
-function initialize(model::AbstractModel; clock::Clock=Clock(time=0.0))
+function initialize(model::AbstractModel, inputs=InputProvider(get_grid(model)); clock::Clock=Clock(time=0.0))
     state = StateVariables(model, clock)
     time_stepping_cache = initialize(model, get_time_stepping(model))
-    sim = Simulation(model, time_stepping_cache, state)
+    sim = Simulation(model, time_stepping_cache, inputs, state)
     initialize!(sim)
     return sim
 end

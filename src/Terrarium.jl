@@ -70,7 +70,7 @@ include("grids/vertical_discretization.jl")
 export ColumnGrid, GlobalRingGrid, get_field_grid
 include("grids/grids.jl")
 
-export InputFields, InputProvider, FieldInput, FieldTimeSeriesInput, update_inputs!
+export InputFields, InputProvider, FieldInputSource, FieldTimeSeriesInputSource, update_inputs!
 include("inputs/inputs.jl")
 
 # timestepping

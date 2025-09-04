@@ -45,12 +45,12 @@ function StateVariables(
     field_bcs = get_field_boundary_conditions(bcs, grid)
     # create fields from abstract variables
     init(var::AbstractVariable) = varname(var) => create_field(grid, vardims(var), get(field_bcs, varname(var), nothing))
+    # input variables are retrieved (or allocated) in the external storage provided
     init(var::InputVariable) = varname(var) => get_input_field(inputs, grid, varname(var), vardims(var))
     prognostic_fields = map(init, prognostic_vars)
     tendency_fields =  map(init, tendency_vars)
     auxiliary_fields = map(init, auxiliary_vars)
-    # note that the inputs argument is passed as the second argument to merge, meaning it takes precedence
-    input_fields = map(init, merge(input_vars, inputs))
+    input_fields = map(init, input_vars)
     # recursively initialize state variables for each namespace
     namespaces = map(ns -> varname(ns) => StateVariables(getproperty(model, varname(ns)), clock, inputs), namespace_vars)
     # get named tuple mapping prognostic variabels to their respective closure relations, if defined
@@ -63,6 +63,7 @@ function StateVariables(
         input_fields,
         namespaces,
         closures,
+        inputs,
         clock,
     )
 end
