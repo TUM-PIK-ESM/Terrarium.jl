@@ -3,7 +3,7 @@ using Terrarium
 import CairoMakie as Makie
 
 grid = ColumnGrid(ExponentialSpacing())
-initializer = Initializers(
+initializer = FieldInitializers(
     # steady-ish state initial condition for temperature
     temperature = (x,z) -> -1 - 0.02*z,
     # fully saturated soil pores

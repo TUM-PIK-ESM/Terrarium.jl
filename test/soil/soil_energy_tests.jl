@@ -33,7 +33,7 @@ end
     # model setup
     grid = ColumnGrid(ExponentialSpacing(Δz_min=0.05, Δz_max=100.0, N=100))
     # temperature initial condition
-    initializer = Initializers(
+    initializer = FieldInitializers(
         temperature = (x,z) -> T_sol(-z, 0.0)
     )
     # periodic upper boundary
@@ -79,7 +79,7 @@ end
     # model setup
     grid = ColumnGrid(ExponentialSpacing(Δz_min=0.01, Δz_max=100.0, N=100))
     # temperature initial condition
-    initializer = Initializers(temperature=T₀)
+    initializer = FieldInitializers(temperature=T₀)
     # constant upper boundary temperature set to T₁
     boundary_conditions = SoilBoundaryConditions(grid, top=(temperature=ValueBoundaryCondition(T₁),))
     # set carbon content to zero so the soil has only a mineral constituent

@@ -86,7 +86,7 @@ export StateVariables
 include("state_variables.jl")
 
 # default initializers
-export Initializers, DefaultInitializer
+export FieldInitializers, DefaultInitializer
 include("initializers.jl")
 
 export VerticalBoundaryConditions, DefaultBoundaryConditions, PrescribedFlux

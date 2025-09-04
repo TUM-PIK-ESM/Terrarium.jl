@@ -38,14 +38,14 @@ end
 """
 Creates a constant soil temperature initializer.
 """
-ConstantInitialSoilTemperature(T₀) = Initializers(temperature = T₀)
+ConstantInitialSoilTemperature(T₀) = FieldInitializers(temperature = T₀)
 
 # TODO: Add "real" thermal steady state Initializer
 """
 Computes a linear temperature profile in quasi-steady state based on the given
 surface temperature, geothermal heat flux, and bulk thermal conductivity.
 """
-QuasiThermalSteadyState(T₀, Qgeo, k_eff) = Initializers(temperature = (x,z) -> T₀ + Qgeo / k_eff*z)
+QuasiThermalSteadyState(T₀, Qgeo, k_eff) = FieldInitializers(temperature = (x,z) -> T₀ + Qgeo / k_eff*z)
 
 """
 Creates a piecwise linear temperature initializer from the given knots.
@@ -62,5 +62,5 @@ initializer = PiecewiseLinearInitialSoilTemperature(
 """
 function PiecewiseLinearInitialSoilTemperature(knots::Pair{<:LengthQuantity}...)
     f = piecewise_linear(knots...)
-    return Initializers(temperature = (x, z) -> f(z))
+    return FieldInitializers(temperature = (x, z) -> f(z))
 end

@@ -6,7 +6,7 @@ import SpeedyWeather.RingGrids
 ring_grid = RingGrids.FullHEALPixGrid(16, RingGrids.Architectures.GPU())
 grid = GlobalRingGrid(GPU(), ExponentialSpacing(N=50), ring_grid)
 # initial conditions
-initializer = Initializers(
+initializer = FieldInitializers(
     # steady-ish state initial condition for temperature
     temperature = (x,z) -> -1 - 0.02*z,
     # dry soil

@@ -75,6 +75,11 @@ function compute_auxiliary!(state, model, bc::PrescribedFlux)
     set!(F, bc.value)
 end
 
+"""
+    $SIGNATURES
+
+Computes the boundary tendency for the grid cell at `loc`; zero for all other grid cells.
+"""
 @inline function boundary_tendency(i, j, k, grid, loc, state, bc::PrescribedFlux)
     field_grid = get_field_grid(grid)
     Q = getproperty(state, varname(bc))

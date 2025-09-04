@@ -50,7 +50,7 @@ $TYPEDFIELDS
     boundary_conditions::BoundaryConditions = DefaultBoundaryConditions()
 
     "State variable initializer"
-    initializer::Initializer = Initializers()
+    initializer::Initializer = DefaultInitializer()
 
     "Timestepping scheme"
     time_stepping::TimeStepper = ForwardEuler()
