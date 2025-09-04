@@ -28,25 +28,25 @@ end
 """
 Alias for `PrescribedFlux` with name `Q_g` representing the 
 """
-GroundHeatFlux(value) = PrescribedFlux(:Q_g, value, XY())
+GroundHeatFlux(value) = PrescribedFlux(:Q_g, value, u"W/m^2")
 
 """
 Alias for `PrescribedFlux` with name `Q_geo` representing the geothermal heat flux
 at the bottom of a deep soil column.
 """
-GeothermalHeatFlux(value) = PrescribedFlux(:Q_geo, value, XY())
+GeothermalHeatFlux(value) = PrescribedFlux(:Q_geo, value, u"W/m^2")
 
 """
 Alias for `PrescribedFlux` with name `Q_inf` representing topsoil infiltration.
 """
-InfiltrationFlux(value) = PrescribedFlux(:Q_inf, value, XY())
+InfiltrationFlux(value) = PrescribedFlux(:Q_inf, value, u"m/s")
 
 """
 Alias for `PrescribedFlux` with name `Q_out` representing water drainage at the bottom of
 a soil column. When this flux is set to zero, it corresponds to an impermeable boundary.
 """
-FreeDrainage(value) = PrescribedFlux(:Q_out, value, XY())
-ImpermeableBoundary(::Type{NF}) where {NF<:AbstractFloat} = PrescribedFlux(:Q_out, zero(NF), XY())
+FreeDrainage(value) = PrescribedFlux(:Q_out, value, u"m/s")
+ImpermeableBoundary(::Type{NF}) where {NF<:AbstractFloat} = FreeDrainage(zero(NF))
 
 # Convenience constructors for common soil upper and lower boundary conditions
 SoilBoundaryConditions(
