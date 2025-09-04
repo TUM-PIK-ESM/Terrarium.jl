@@ -1,17 +1,20 @@
 # Base type for processes
 """
-    AbstractLandProcess{NF}
+    AbstractProcess{NF}
 
-Base type for all land processes which define physics or parameterizations but are not standalone models.
+Base type for all processes which define physics or parameterizations but are not standalone models.
 """
-abstract type AbstractLandProcess{NF} end
+abstract type AbstractProcess{NF} end
+
+variables(process::AbstractProcess) = ()
+
+compute_auxiliary!(state, model, ::AbstractProcess) = nothing
+
+compute_tendencies!(state, model, ::AbstractProcess) = nothing
 
 """
-    $SIGNATURES
-"""
-compute_auxiliary!(idx, state, model, process::AbstractLandProcess, args...) = nothing
+    AbstractInteraction
 
+Base type for interactions between models or processes.
 """
-    $SIGNATURES
-"""
-compute_tendencies!(idx, state, model, process::AbstractLandProcess, args...) = nothing
+abstract type AbstractInteraction end

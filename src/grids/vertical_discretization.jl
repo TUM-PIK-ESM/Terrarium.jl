@@ -16,16 +16,16 @@ get_spacing(spacing::AbstractVerticalSpacing) = spacing.(1:get_npoints(spacing))
 
 Base.@kwdef struct UniformSpacing{NF} <: AbstractVerticalSpacing{NF}
     Δz::NF = 0.5
-    N::Int = 100
+    N::Int = 50
 end
 
 (spacing::UniformSpacing)(i::Int) = spacing.Δz
 
 Base.@kwdef struct ExponentialSpacing{NF,ST<:Union{Nothing,Integer}} <: AbstractVerticalSpacing{NF}
     Δz_min::NF = 0.1
-    Δz_max::NF = 500.0
+    Δz_max::NF = 100.0
     sig::ST = 3
-    N::Int = 100
+    N::Int = 50
 
     function ExponentialSpacing(Δz_min::NF, Δz_max::NF, sig, N) where {NF}
         @assert N > 1 "number of grid points for exponential spacing must be > 1"

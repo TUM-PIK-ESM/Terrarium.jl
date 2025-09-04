@@ -1,36 +1,37 @@
 using Terrarium
 using Test
 
-import Terrarium: XY, XYZ, prognostic, auxiliary, namespace
-import Oceananigans: Field, Center
+import Terrarium: VarDims, XY, XYZ, prognostic, auxiliary, input, namespace
 
 DEFAULT_NF = Float32
 
-@testset "State variables for mock type" begin
+@testset "State variables for mock model type" begin
 
     @kwdef struct SubModel{NF} <: Terrarium.AbstractModel{NF}
         grid
-        boundary_conditions = Terrarium.FieldBoundaryConditions()
-        initializer = Terrarium.FieldInitializers()
+        initializer = DefaultInitializer()
+        boundary_conditions = DefaultBoundaryConditions()
         time_stepping::Terrarium.AbstractTimeStepper{NF} = Terrarium.ForwardEuler{DEFAULT_NF}()
     end
 
     Terrarium.variables(model::SubModel) = (
         # duplicate naming allowed in new namesapce
         auxiliary(:auxvar2D, XY()),
+        # inputs are handled "globally" (i.e. all inputs with a given name refer to the same field)
+        input(:forcing, XY()),
     )
 
     @kwdef struct TestModel{NF} <: Terrarium.AbstractModel{NF}
         grid
         submodel = SubModel(; grid)
-        boundary_conditions = Terrarium.FieldBoundaryConditions()
-        initializer = Terrarium.FieldInitializers()
+        initializer = DefaultInitializer()
+        boundary_conditions = DefaultBoundaryConditions()
         time_stepping::Terrarium.AbstractTimeStepper{NF} = Terrarium.ForwardEuler{DEFAULT_NF}()
     end
 
     struct TestClosure <: Terrarium.AbstractClosureRelation end
 
-    Terrarium.varname(::TestClosure) = :closurevar
+    Terrarium.getvar(::TestClosure, dims::VarDims) = auxiliary(:closurevar, dims)
 
     Terrarium.variables(model::TestModel) = (
         prognostic(:progvar3D, XYZ()),
@@ -38,7 +39,8 @@ DEFAULT_NF = Float32
         prognostic(:progvar2D, XY()),
         auxiliary(:auxvar3D, XYZ()),
         auxiliary(:auxvar2D, XY()),
-        namespace(:submodel),
+        input(:forcing, XY()),
+        namespace(:submodel, variables(model.submodel)),
     )
 
     grid = ColumnGrid(ExponentialSpacing(N=10))
@@ -57,8 +59,11 @@ DEFAULT_NF = Float32
     # Check that all auxiliary variables are defined correctly
     @test hasproperty(sim.state, :auxvar3D) && isa(sim.state.auxvar3D, Field{Center,Center,Center})
     @test hasproperty(sim.state, :auxvar2D) && isa(sim.state.auxvar2D, Field{Center,Center,Nothing})
+    # Check that all input variables are defined correctly
+    @test hasproperty(sim.state, :forcing) && isa(sim.state.auxvar2D, Field{Center,Center,Nothing})
     # Check submodel namespace
     @test hasproperty(sim.state, :submodel) && isa(sim.state.submodel, StateVariables)
     @test hasproperty(sim.state.submodel, :auxvar2D) && isa(sim.state.submodel.auxvar2D, Field{Center,Center,Nothing})
-
+    # Check that input variable is identical across namespaces
+    @test sim.state.forcing === sim.state.submodel.forcing
 end

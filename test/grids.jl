@@ -1,7 +1,8 @@
 using Terrarium
-using Oceananigans.Grids
-using Terrarium.RingGrids
 using Test
+
+import Oceananigans.Grids: Grids, RectilinearGrid
+import Terrarium.RingGrids: FullHEALPixGrid, get_npoints
 
 @testset "Vertical discretizations" begin
     # Uniform spacing
@@ -30,11 +31,11 @@ end
 
 @testset "GlobalRingGrid" begin
     # test with 10-ring HEALPix 
-    ring_grid = RingGrids.FullHEALPixGrid(8)
+    ring_grid = FullHEALPixGrid(8)
     grid = GlobalRingGrid(UniformSpacing(Δz=0.5, N=10), ring_grid)
     field_grid = get_field_grid(grid)
     @test isa(field_grid, RectilinearGrid)
-    @test field_grid.Nx == RingGrids.get_npoints(ring_grid)
+    @test field_grid.Nx == get_npoints(ring_grid)
     @test field_grid.Ny == 1
     @test field_grid.Nz == 10
     @test Grids.z_domain(field_grid) == (-5.0, 0.0)
