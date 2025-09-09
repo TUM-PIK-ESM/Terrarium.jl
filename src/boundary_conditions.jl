@@ -35,7 +35,7 @@ compute_auxiliary!(state, model, ::VarBoundaryConditions) = nothing
 """
     $SIGNATURES
 
-Computes the boudnary tendency for the grid cell at `loc`; zero for all other grid cells.
+Computes the boundary tendency for the grid cell at `loc`; zero for all other grid cells.
 """
 boundary_tendency(i, j, k, grid, loc, state, bc::AbstractBoundaryConditions, args...) = zero(eltype(grid))
 

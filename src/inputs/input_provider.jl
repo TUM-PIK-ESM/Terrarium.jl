@@ -2,7 +2,7 @@
     $TYPEDEF
 
 Acts as an interface between a given `InputFields` container and one or more `AbstractInputSource`s
-that are responsible for intiializing and updating the input `Field`s at each time step.
+that are responsible for initializing and updating the input `Field`s at each time step.
 """
 struct InputProvider{
     NF,
