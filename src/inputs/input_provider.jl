@@ -10,7 +10,7 @@ struct InputProvider{
     Inputs<:InputFields{NF, Grid},
     SourceType<:AbstractInputSource
 }
-    "Input varaible `Field` states"
+    "Input variable `Field` states"
     fields::Inputs
 
     "A list of input sources to be invoked by `update_inputs!`"
