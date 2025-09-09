@@ -57,9 +57,9 @@ function piecewise_linear(knots::Pair{<:LengthQuantity}...; extrapolation=Interp
     return Interpolations.extrapolate(interp, extrapolation)
 end
 
-# fastmap
+# fastmap and fastiterate
 
-# Note that fastmap is borrowed (with self permission!) from CryoGrid.jl:
+# Note that fastmap and fastiterate are borrowed (with self permission!) from CryoGrid.jl:
 # https://github.com/CryoGrid/CryoGrid.jl/blob/master/src/Utils/Utils.jl
 """
     fastmap(f::F, iter::NTuple{N,Any}...) where {F,N}
@@ -94,3 +94,18 @@ tuples must have the same keys but in no particular order. The returned `NamedTu
     end
     return expr
 end
+
+"""
+    fastiterate(f!::F, iters::NTuple{N,Any}...) where {F,N}
+
+Same as `fastmap` but simply invokes `f!` on each argument set without constructing a tuple.
+"""
+@generated function fastiterate(f!::F, iters::NTuple{N,Any}...) where {F,N}
+    expr = Expr(:block)
+    for j in 1:N
+        push!(expr.args, :(f!($(map(i -> :(iters[$i][$j]), 1:length(iters))...))))
+    end
+    push!(expr.args, :(return nothing))
+    return expr
+end
+fastiterate(f!::F, iters::NamedTuple) where {F} = fastiterate(f!, values(iters))
