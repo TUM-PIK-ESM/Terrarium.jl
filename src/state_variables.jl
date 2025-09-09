@@ -15,14 +15,14 @@ by the timestepping scheme.
 """
 @kwdef struct StateVariables{
     prognames, tendnames, auxnames, inputnames, nsnames, closurenames,
-    ProgFields, TendFields, AuxFields, InputFields, SubFields, Closures,
+    ProgFields, TendFields, AuxFields, InputFields, Namespaces, Closures,
     ClockType,
 } <: AbstractStateVariables
     prognostic::NamedTuple{prognames, ProgFields} = (;)
     tendencies::NamedTuple{tendnames, TendFields} = (;)
     auxiliary::NamedTuple{auxnames, AuxFields} = (;)
     inputs::NamedTuple{inputnames, InputFields} = (;)
-    namespaces::NamedTuple{nsnames, SubFields} = (;)
+    namespaces::NamedTuple{nsnames, Namespaces} = (;)
     closures::NamedTuple{closurenames, Closures} = (;)
     clock::ClockType = Clock()
 end
