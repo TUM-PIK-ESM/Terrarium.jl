@@ -34,12 +34,18 @@ Creates and initializes a `Simulation` for the given `model` with the given `clo
 This method allocates all necessary `Field`s for the state variables and calls `initialize!(sim)`.
 Note that this method is **not type stable** and should not be called in an Enzyme `autodiff` call.
 """
-function initialize(model::AbstractModel{NF}, inputs=InputProvider(get_grid(model)); clock::Clock=Clock(time=zero(NF))) where {NF}
+function initialize(model::AbstractModel{NF}, inputs::InputProvider; clock::Clock=Clock(time=zero(NF))) where {NF}
     state = StateVariables(model, clock, inputs.fields)
     time_stepping_cache = initialize(model, get_time_stepping(model))
     sim = Simulation(model, time_stepping_cache, inputs, state)
     initialize!(sim)
     return sim
+end
+
+# Convenience dispatch that constructs an InputProvider from zero or more input sources
+function initialize(model::AbstractModel{NF}, inputs::AbstractInputSource...; clock::Clock=Clock(time=zero(NF))) where {NF}
+    provider = InputProvider(get_grid(model), inputs...)
+    return initialize(model, provider; clock)
 end
 
 """
