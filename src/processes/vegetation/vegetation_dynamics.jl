@@ -20,8 +20,6 @@ end
 
 variables(::PALADYNVegetationDynamics) = (
     prognostic(:ν, XY()), # PFT fractional area coverage [-]
-    auxiliary(:C_veg, XY()), # Vegetation carbon pool [kgC/m²]
-    auxiliary(:LAI_b, XY()), # Balanced Leaf Area Index [m²/m²]
 )
 
 """

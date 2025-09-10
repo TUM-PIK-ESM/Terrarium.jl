@@ -71,7 +71,6 @@ get_vegetation_dynamics(model::VegetationModel) = model.vegetation_dynamics
 
 get_constants(model::VegetationModel) = model.constants
 
-
 # Model interface methods
 variables(model::VegetationModel) = (
     variables(model.photosynthesis)...,

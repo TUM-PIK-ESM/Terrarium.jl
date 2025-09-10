@@ -47,6 +47,9 @@ include("vegetation/carbon_dynamics.jl")
 export PALADYNVegetationDynamics
 include("vegetation/vegetation_dynamics.jl")
 
+export PALADYNPhenology
+include("vegetation/phenology.jl")
+
 export LUEPhotosynthesis
 include("vegetation/photosynthesis.jl")
 
@@ -55,6 +58,3 @@ include("vegetation/stomatal_conductance.jl")
 
 export PALADYNAutotrophicRespiration
 include("vegetation/autotrophic_respiration.jl")
-
-export PALADYNPhenology
-include("vegetation/phenology.jl")
