@@ -1,7 +1,7 @@
 using Terrarium
 using CUDA
 
-import SpeedyWeather.RingGrids
+import RingGrids
 
 grid = GlobalRingGrid(GPU(), ExponentialSpacing(N=50), RingGrids.FullHEALPixGrid(16, RingGrids.Architectures.GPU()))
 initializer = FieldInitializers(temperature = (x,z) -> -1.0 - 0.01*z + exp(z/10)*sin(2π*z/10))
