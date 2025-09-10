@@ -33,11 +33,9 @@ function FieldInputSource(; named_fields...)
 end
 
 function update_inputs!(inputs::InputFields, source::FieldInputSource, ::Clock)
-    fields = get_input_fields(inputs, source.dims)
-    # directly set input fields to source fields
-    # this avoids memory duplication and allows for direct changes to the souce field without copying
     for name in keys(source.fields)
-        fields[name] = source.fields[name]
+        field = get_input_field(inputs, name, source.dims)
+        set!(field, source.fields[name])
     end
 end
 
