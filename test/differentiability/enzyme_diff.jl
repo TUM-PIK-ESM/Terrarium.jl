@@ -1,7 +1,7 @@
 using Terrarium, Enzyme
 using Oceananigans: Average, Field
 
-import SpeedyWeather.RingGrids
+import RingGrids
 
 grid = GlobalRingGrid(CPU(), Float64, ExponentialSpacing(N=10), RingGrids.FullHEALPixGrid(16, RingGrids.Architectures.CPU()))
 initializer = FieldInitializers(temperature = (x,z) -> -1.0 - 0.01*z + exp(z/10)*sin(2π*z/10))

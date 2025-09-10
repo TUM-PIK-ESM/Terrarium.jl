@@ -26,8 +26,7 @@ import KernelAbstractions: @kernel, @index
 # Freeze curves for soil energy balance
 import FreezeCurves
 
-# temporary dependency on SpeedyWeather until RingGrids is registered
-import SpeedyWeather: RingGrids
+import RingGrids
 
 # Re-export important types and methods
 export CPU, GPU, Clock
