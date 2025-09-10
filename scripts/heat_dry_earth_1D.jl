@@ -1,7 +1,7 @@
 using Terrarium
 using CUDA
 
-import SpeedyWeather.RingGrids
+import RingGrids
 
 ring_grid = RingGrids.FullHEALPixGrid(16, RingGrids.Architectures.GPU())
 grid = GlobalRingGrid(GPU(), ExponentialSpacing(N=50), ring_grid)

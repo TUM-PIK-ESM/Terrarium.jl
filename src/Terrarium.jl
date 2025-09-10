@@ -35,8 +35,7 @@ import KernelAbstractions: @kernel, @index
 # Freeze curves for soil energy balance
 import FreezeCurves
 
-# temporary dependency on SpeedyWeather until RingGrids is registered
-import SpeedyWeather: RingGrids
+import RingGrids
 
 # Units (for testing and UI)
 # Unit dimensions for length (𝐋), mass (𝐌), and time (𝐓)
