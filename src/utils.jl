@@ -9,6 +9,12 @@ tuplejoin(x, y) = (x..., y...)
 tuplejoin(x, y, z...) = (x..., tuplejoin(y, z...)...)
 
 """
+    $SIGNATURES
+Evaluates `x / y` unless `iszero(y)` is true, then returns zero.
+"""
+safediv(x, y) = ifelse(iszero(y), zero(x), x / y)
+
+"""
     merge_duplicates(values::Tuple)
     
 Filters out duplicates from the given tuple. Note that this method is not type stable or allocation-free!
