@@ -13,8 +13,7 @@ $TYPEDFIELDS
     # TODO add phenology parameters
 end
 
-variables(phenol::PALADYNPhenology) = (
-    auxiliary(:LAI_b, XY()), # Balanced Leaf Area Index [m²/m²]
+variables(::PALADYNPhenology) = (
     auxiliary(:phen, XY()), # Phenology factor [-]
     auxiliary(:LAI, XY()), # Leaf Area Index [m²/m²]
 )

@@ -47,10 +47,10 @@ $TYPEDFIELDS
     constants::Constants = PhysicalConstants{eltype(grid)}()
 
     "Boundary conditions"
-    boundary_conditions::BoundaryConditions = FieldBoundaryConditions()
+    boundary_conditions::BoundaryConditions = DefaultBoundaryConditions()
 
     "State variable initializer"
-    initializer::Initializer = FieldInitializers()
+    initializer::Initializer = DefaultInitializer()
 
     "Timestepping scheme"
     time_stepping::TimeStepper = ForwardEuler()
@@ -70,7 +70,6 @@ get_carbon_dynamics(model::VegetationModel) = model.carbon_dynamics
 get_vegetation_dynamics(model::VegetationModel) = model.vegetation_dynamics
 
 get_constants(model::VegetationModel) = model.constants
-
 
 # Model interface methods
 variables(model::VegetationModel) = (
