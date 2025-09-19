@@ -29,10 +29,10 @@ end
     @test Grids.z_domain(field_grid) == (-0.5, 0.0)
 end
 
-@testset "GlobalRingGrid" begin
+@testset "ColumnRingGrid" begin
     # test with 10-ring HEALPix 
     ring_grid = FullHEALPixGrid(8)
-    grid = GlobalRingGrid(UniformSpacing(Δz=0.5, N=10), ring_grid)
+    grid = ColumnRingGrid(UniformSpacing(Δz=0.5, N=10), ring_grid)
     field_grid = get_field_grid(grid)
     @test isa(field_grid, RectilinearGrid)
     @test field_grid.Nx == get_npoints(ring_grid)

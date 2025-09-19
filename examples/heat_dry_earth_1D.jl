@@ -1,10 +1,14 @@
 using Terrarium
+
+using CDSAPI
 using CUDA
+using Rasters
 
 import RingGrids
 
-ring_grid = RingGrids.FullHEALPixGrid(16, RingGrids.Architectures.GPU())
-grid = GlobalRingGrid(GPU(), ExponentialSpacing(N=50), ring_grid)
+ring_grid = RingGrids.FullGaussianGrid(16)
+
+grid = ColumnRingGrid(CPU(), ExponentialSpacing(N=30), ring_grid)
 # initial conditions
 initializer = FieldInitializers(
     # steady-ish state initial condition for temperature

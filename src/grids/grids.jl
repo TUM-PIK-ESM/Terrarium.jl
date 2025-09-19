@@ -60,7 +60,7 @@ get_field_grid(grid::ColumnGrid) = grid.grid
 
 Convenience wrapper around `ColumnGrid` that defines the columns as points on a global `RingGrid`.
 """
-struct GlobalRingGrid{
+struct ColumnRingGrid{
     NF,
     RingGrid<:RingGrids.AbstractGrid,
     RectGrid<:Grids.AbstractGrid,
@@ -71,14 +71,14 @@ struct GlobalRingGrid{
     "Underlying grid type for all independent vertical columns."
     grid::RectGrid
     
-    GlobalRingGrid(vert::AbstractVerticalSpacing, rings::RingGrids.AbstractGrid) = GlobalRingGrid(CPU(), Float32, vert, rings)
-    GlobalRingGrid(arch::AbstractArchitecture, vert::AbstractVerticalSpacing, rings::RingGrids.AbstractGrid) = GlobalRingGrid(arch, Float32, vert, rings)
-    GlobalRingGrid(rings::RingGrid, grid::RectGrid) where {RingGrid, RectGrid} = new{eltype(grid), RingGrid, RectGrid}(rings, grid)
+    ColumnRingGrid(vert::AbstractVerticalSpacing, rings::RingGrids.AbstractGrid) = ColumnRingGrid(CPU(), Float32, vert, rings)
+    ColumnRingGrid(arch::AbstractArchitecture, vert::AbstractVerticalSpacing, rings::RingGrids.AbstractGrid) = ColumnRingGrid(arch, Float32, vert, rings)
+    ColumnRingGrid(rings::RingGrid, grid::RectGrid) where {RingGrid, RectGrid} = new{eltype(grid), RingGrid, RectGrid}(rings, grid)
 
     """
         $SIGNATURES
     """
-    function GlobalRingGrid(
+    function ColumnRingGrid(
         arch::AbstractArchitecture,
         ::Type{NF},
         vert::AbstractVerticalSpacing,
@@ -96,11 +96,11 @@ struct GlobalRingGrid{
     end
 end
 
-get_field_grid(grid::GlobalRingGrid) = grid.grid
+get_field_grid(grid::ColumnRingGrid) = grid.grid
 
-function Adapt.adapt_structure(to, grid::GlobalRingGrid)
+function Adapt.adapt_structure(to, grid::ColumnRingGrid)
     inner_grid = Adapt.adapt_structure(to, grid.grid)
-    return GlobalRingGrid(Adapt.adapt_structure(to, grid.rings), inner_grid)
+    return ColumnRingGrid(Adapt.adapt_structure(to, grid.rings), inner_grid)
 end
 
 # Convenience dispatch for Oceananigans.launch!

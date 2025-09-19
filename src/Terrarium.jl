@@ -65,7 +65,7 @@ include("abstract_variables.jl")
 export UniformSpacing, ExponentialSpacing, PrescribedSpacing
 include("grids/vertical_discretization.jl")
 
-export ColumnGrid, GlobalRingGrid, get_field_grid
+export ColumnGrid, ColumnRingGrid, get_field_grid
 include("grids/grids.jl")
 
 export InputFields, InputProvider, FieldInputSource, FieldTimeSeriesInputSource
