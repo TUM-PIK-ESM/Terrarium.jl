@@ -44,7 +44,7 @@ function compute_tendencies! end
 variables(::AbstractModel) = ()
 
 """
-    get_grid(model::AbstractModel)::AbstractGrid
+    get_grid(model::AbstractModel)::AbstractLandGrid
 
 Return the spatial grid associated with this `model`.
 """
