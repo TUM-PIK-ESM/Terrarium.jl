@@ -1,10 +1,10 @@
 """
-    ColumnGrid{NF,RectGrid<:Grids.RectilinearGrid} <: AbstractLandGrid
+    ColumnGrid{NF,RectGrid<:OceananigansGrids.RectilinearGrid} <: AbstractLandGrid
 
 Represents a set of laterally independent vertical columns with dimensions (x, y, z)
 where `x` is the column dimension, `y=1` is constant, and `z` is the vertical axis.
 """
-struct ColumnGrid{NF,RectGrid<:Grids.RectilinearGrid} <: AbstractLandGrid{NF}
+struct ColumnGrid{NF,RectGrid<:OceananigansGrids.RectilinearGrid} <: AbstractLandGrid{NF}
     "Underlying Oceananigans rectilinear grid on which `Field`s are defined."
     grid::RectGrid
 
@@ -27,13 +27,13 @@ struct ColumnGrid{NF,RectGrid<:Grids.RectilinearGrid} <: AbstractLandGrid{NF}
         # since most or all land computations will be along this axis
         z_thick = get_spacing(vert)
         z_coords = vcat(-reverse(cumsum(z_thick)), zero(eltype(z_thick)))
-        grid = Grids.RectilinearGrid(arch, size=(num_columns, Nz), x=(0, 1), z=z_coords, topology=(Periodic, Flat, Bounded))
+        grid = OceananigansGrids.RectilinearGrid(arch, size=(num_columns, Nz), x=(0, 1), z=z_coords, topology=(Periodic, Flat, Bounded))
         return new{NF,typeof(grid)}(grid)
     end
     # Default constructors
     ColumnGrid(vert::AbstractVerticalSpacing{NF}, num_columns::Int=1) where {NF} = ColumnGrid(CPU(), NF, vert, num_columns)
     ColumnGrid(arch::AbstractArchitecture, vert::AbstractVerticalSpacing{NF}, num_columns::Int=1) where {NF} = ColumnGrid(arch, NF, vert, num_columns)
-    ColumnGrid(grid::Grids.RectilinearGrid{NF}) where {NF} = new{NF, typeof(grid)}(grid)
+    ColumnGrid(grid::OceananigansGrids.RectilinearGrid{NF}) where {NF} = new{NF, typeof(grid)}(grid)
 end
 
 get_field_grid(grid::ColumnGrid) = grid.grid

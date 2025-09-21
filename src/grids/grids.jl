@@ -12,10 +12,6 @@ Returns the underlying `Oceananigans` grid type for `Field`s defined on the give
 """
 function get_field_grid end
 
-abstract type GridCellMask end
-
-masked(grid, mask::GridCellMask) = grid
-
 include("grid_utils.jl")
 
 include("column_grid.jl")

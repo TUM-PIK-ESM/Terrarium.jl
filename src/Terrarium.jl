@@ -14,10 +14,11 @@ import Interpolations
 
 # Oceananigans numerics
 # TODO: Raise an issue on Oceananigans.jl about refactoring numerics into a separate package.
-import Oceananigans: Field, AbstractField, Center, Face, set!, interior, xnodes, ynodes, znodes, location
+import Oceananigans: Oceananigans, Field, AbstractField, Center, Face, set!, interior, xnodes, ynodes, znodes, location
 import Oceananigans.Advection: AbstractAdvectionScheme, UpwindBiased
 import Oceananigans.Architectures: AbstractArchitecture, CPU, GPU, architecture, on_architecture
-import Oceananigans.Grids: Grids, AbstractGrid, Periodic, Flat, Bounded
+import Oceananigans.Grids as OceananigansGrids
+import Oceananigans.Grids: Periodic, Flat, Bounded
 import Oceananigans.Operators: ∂zᵃᵃᶜ, ∂zᵃᵃᶠ, ℑzᵃᵃᶠ, Δzᵃᵃᶜ
 import Oceananigans.OutputReaders: FieldTimeSeries
 import Oceananigans.TimeSteppers: Clock, tick_time!, reset!

@@ -1,7 +1,7 @@
 using Terrarium
 using Test
 
-import Oceananigans.Grids: Grids, RectilinearGrid
+import Oceananigans.Grids: RectilinearGrid, z_domain
 import Terrarium.RingGrids: FullHEALPixGrid, get_npoints
 
 @testset "Vertical discretizations" begin
@@ -26,7 +26,7 @@ end
     @test field_grid.Nx == num_columns
     @test field_grid.Ny == 1
     @test field_grid.Nz == 5
-    @test Grids.z_domain(field_grid) == (-0.5, 0.0)
+    @test z_domain(field_grid) == (-0.5, 0.0)
 end
 
 @testset "ColumnRingGrid" begin
@@ -38,5 +38,5 @@ end
     @test field_grid.Nx == get_npoints(ring_grid)
     @test field_grid.Ny == 1
     @test field_grid.Nz == 10
-    @test Grids.z_domain(field_grid) == (-5.0, 0.0)
+    @test z_domain(field_grid) == (-5.0, 0.0)
 end
