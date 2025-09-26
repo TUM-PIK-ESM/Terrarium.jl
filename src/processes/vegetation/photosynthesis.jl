@@ -84,12 +84,6 @@ $TYPEDFIELDS
 end
 
 variables(::LUEPhotosynthesis) = (
-    # TODO for now define atmospheric inputs/forcings here, move later
-    auxiliary(:T_air, XY()), # Surface air temperature in Celsius [°C]
-    auxiliary(:q_air, XY()), # Surface air specific humidity [kg/kg]
-    auxiliary(:pres, XY()), # Surface pressure [Pa]
-    auxiliary(:swdown, XY()), # Downwelling shortwave radiation at the surface [W/m²]
-    auxiliary(:co2, XY()), # Atmospheric CO2 concentration [ppm]
     auxiliary(:λc, XY()), # Ratio of leaf-internal and air CO2 concentration [-]
     auxiliary(:LAI, XY()), # Leaf Area Index [m²/m²]
     auxiliary(:Rd, XY()), # Daily leaf respiration [gC/m²/day]
@@ -335,18 +329,25 @@ end
 
 function compute_auxiliary!(state, model, photo::LUEPhotosynthesis)
     grid = get_grid(model)
-    launch!(grid, :xy, compute_auxiliary_kernel!, state, photo)
+    bcs = get_boundary_conditions(model)
+    phen = get_phenology(model)
+    launch!(grid, :xy, compute_auxiliary_kernel!, state, photo, phen, bcs.top)
 end
 
-@kernel function compute_auxiliary_kernel!(state, photo::LUEPhotosynthesis{NF}) where NF
+@kernel function compute_auxiliary_kernel!(
+    state,
+    photo::LUEPhotosynthesis{NF},
+    ::PALADYNPhenology,
+    ::PrescribedAtmosphere
+) where NF
     # TODO checks for positive/negative values in the original PALADYN code ignored for now
     i, j = @index(Global, NTuple)
 
     # Get inputs
     T_air = state.T_air[i, j] 
-    pres = state.pres[i, j] 
-    swdown = state.swdown[i, j] 
-    co2 = state.co2[i, j]  
+    pres = state.pressure[i, j] 
+    swdown = state.SwIn[i, j] 
+    co2 = state.CO2[i, j]  
     LAI = state.LAI[i, j]
     λc = state.λc[i, j]
 

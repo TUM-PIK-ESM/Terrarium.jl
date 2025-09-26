@@ -14,11 +14,7 @@ $TYPEDFIELDS
     g1::NF = 2.3 # Value for Needleleaf tree PFT 
 end
 
-variables(stomcond::MedlynStomatalConductance) = (
-    # TODO for now define atmospheric inputs/forcings here, move later
-    auxiliary(:T_air, XY()), # Surface air temperature in Celsius [°C]
-    auxiliary(:q_air, XY()), # Surface air specific humidity [kg/kg]
-    auxiliary(:pres, XY()), # Surface pressure [Pa]
+variables(::MedlynStomatalConductance) = (
     auxiliary(:λc, XY()), # Ratio of leaf-internal and air CO2 concentration [-]
 )
 
@@ -36,16 +32,21 @@ end
 
 function compute_auxiliary!(state, model, stomcond::MedlynStomatalConductance)
     grid = get_grid(model)
-    launch!(grid, :xy, compute_auxiliary_kernel!, state, stomcond)
+    bcs = get_boundary_conditions(model)
+    launch!(grid, :xy, compute_auxiliary_kernel!, state, stomcond, bcs.top)
 end
 
-@kernel function compute_auxiliary_kernel!(state, stomcond::MedlynStomatalConductance{NF}) where NF
+@kernel function compute_auxiliary_kernel!(
+    state,
+    stomcond::MedlynStomatalConductance{NF},
+    ::PrescribedAtmosphere
+) where NF
     i, j = @index(Global, NTuple)
 
     # Get inputs
     T_air = state.T_air[i, j] # °C
     q_air = state.q_air[i, j] # kg/kg
-    pres = state.pres[i, j] # Pa
+    pres = state.pressure[i, j] # Pa
 
     # Compute vpd [Pa]
     vpd = compute_vpd(T_air, q_air, pres)

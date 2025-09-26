@@ -12,12 +12,16 @@ struct Simulation{
     Model<:AbstractModel,
     TimeStepperCache<:AbstractTimeStepperCache,
     StateVars<:AbstractStateVariables,
+    Inputs<:InputProvider
 } <: AbstractSimulation
     "The type of model used for the simulation."
     model::Model
 
     "Time stepper state cache."
     cache::TimeStepperCache
+
+    "Input provider type"
+    inputs::Inputs
 
     "Collection of all state variables defined on the simulation `model`."
     state::StateVars
@@ -30,12 +34,18 @@ Creates and initializes a `Simulation` for the given `model` with the given `clo
 This method allocates all necessary `Field`s for the state variables and calls `initialize!(sim)`.
 Note that this method is **not type stable** and should not be called in an Enzyme `autodiff` call.
 """
-function initialize(model::AbstractModel; clock::Clock=Clock(time=0.0))
-    state = StateVariables(model, clock)
+function initialize(model::AbstractModel{NF}, inputs::InputProvider; clock::Clock=Clock(time=zero(NF))) where {NF}
+    state = StateVariables(model, clock, inputs.fields)
     time_stepping_cache = initialize(model, get_time_stepping(model))
-    sim = Simulation(model, time_stepping_cache, state)
+    sim = Simulation(model, time_stepping_cache, inputs, state)
     initialize!(sim)
     return sim
+end
+
+# Convenience dispatch that constructs an InputProvider from zero or more input sources
+function initialize(model::AbstractModel{NF}, inputs::AbstractInputSource...; clock::Clock=Clock(time=zero(NF))) where {NF}
+    provider = InputProvider(get_grid(model), inputs...)
+    return initialize(model, provider; clock)
 end
 
 """
@@ -47,8 +57,9 @@ should reset all state variables to their values as defiend by the model initial
 function initialize!(sim::Simulation)
     # TODO: reset other variables too?
     reset_tendencies!(sim.state)
-    initialize!(sim.state, sim.model)
     reset!(sim.state.clock)
+    update_inputs!(sim.inputs, sim.state.clock)
+    initialize!(sim.state, sim.model)
     return sim
 end
 
@@ -60,6 +71,7 @@ Advance the simulation forward by one timestep with optional timestep size `dt`.
 timestep!(sim::Simulation) = timestep!(sim, get_dt(get_time_stepping(sim.model)))
 function timestep!(sim::Simulation, dt)
     reset_tendencies!(sim.state)
+    update_inputs!(sim.inputs, sim.state.clock)
     timestep!(sim.state, sim.model, dt)
     tick_time!(sim.state.clock, dt)
 end

@@ -23,14 +23,10 @@ $TYPEDFIELDS
 end
 
 variables(::PALADYNAutotrophicRespiration) = (
-    # TODO for now define atmospheric inputs/forcings here, move later
-    auxiliary(:T_air, XY()), # Surface air temperature in Celsius [°C]
     auxiliary(:Rd, XY()), # Daily leaf respiration [gC/m²/day]
     auxiliary(:phen, XY()), # Phenology factor [-]
-    auxiliary(:C_veg, XY()), # Vegetation carbon content [kgC/m²]
     auxiliary(:GPP, XY()), # Gross Primary Production [kgC/m²/day]
     auxiliary(:Ra, XY()), # Autotrophic respiration [kgC/m²/day]
-    auxiliary(:NPP, XY()), # Net Primary Productivity [kgC/m²/day]
 )
 
 """
@@ -148,13 +144,15 @@ end
 
 function compute_auxiliary!(state, model, autoresp::PALADYNAutotrophicRespiration)
     grid = get_grid(model)
-    launch!(grid, :xy, compute_auxiliary_kernel!, state, autoresp, get_carbon_dynamics(model))
+    bcs = get_boundary_conditions(model)
+    launch!(grid, :xy, compute_auxiliary_kernel!, state, autoresp, get_carbon_dynamics(model), bcs.top)
 end
 
 @kernel function compute_auxiliary_kernel!(
     state,
     autoresp::PALADYNAutotrophicRespiration{NF},
     vegcarbon_dynamics::PALADYNCarbonDynamics{NF},
+    ::PrescribedAtmosphere
 ) where NF
     i, j = @index(Global, NTuple)
 

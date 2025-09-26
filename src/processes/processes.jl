@@ -6,6 +6,12 @@ include("physical_constants.jl")
 # Utilities
 include("physics_utils.jl")
 
+# Atmosphere
+
+export PrescribedAtmosphere, TwoPhasePrecipitation, TwoBandSolarRadiation
+export TracerGas, TracerGases, AmbientCO2
+include("prescribed_atmosphere.jl")
+
 # Soil
 
 include("soil/abstract_types.jl")
@@ -41,6 +47,9 @@ include("vegetation/carbon_dynamics.jl")
 export PALADYNVegetationDynamics
 include("vegetation/vegetation_dynamics.jl")
 
+export PALADYNPhenology
+include("vegetation/phenology.jl")
+
 export LUEPhotosynthesis
 include("vegetation/photosynthesis.jl")
 
@@ -49,6 +58,3 @@ include("vegetation/stomatal_conductance.jl")
 
 export PALADYNAutotrophicRespiration
 include("vegetation/autotrophic_respiration.jl")
-
-export PALADYNPhenology
-include("vegetation/phenology.jl")
