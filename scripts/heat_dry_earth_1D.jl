@@ -4,7 +4,7 @@ using CUDA
 import RingGrids
 
 ring_grid = RingGrids.FullHEALPixGrid(16, RingGrids.Architectures.GPU())
-grid = GlobalRingGrid(GPU(), ExponentialSpacing(N=50), ring_grid)
+grid = GlobalRingGrid(GPU(), Float64, ExponentialSpacing(N=50), ring_grid)
 # initial conditions
 initializer = FieldInitializers(
     # steady-ish state initial condition for temperature
