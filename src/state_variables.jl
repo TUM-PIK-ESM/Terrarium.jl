@@ -74,6 +74,7 @@ function Adapt.adapt_structure(to, sv::StateVariables)
         Adapt.adapt_structure(to, sv.prognostic),
         Adapt.adapt_structure(to, sv.tendencies),
         Adapt.adapt_structure(to, sv.auxiliary),
+        Adapt.adapt_structure(to, sv.inputs),
         Adapt.adapt_structure(to, sv.namespaces),
         Adapt.adapt_structure(to, sv.closures),
         Adapt.adapt_structure(to, sv.clock),
