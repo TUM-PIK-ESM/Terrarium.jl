@@ -1,3 +1,5 @@
+using FreezeCurves: FreeWater
+
 abstract type AbstractHeatOperator end
 struct ExplicitHeatConduction <: AbstractHeatOperator end
 
@@ -165,7 +167,6 @@ end
     L = constants.ρw*constants.Lsl
     por = porosity(idx, state, hydrology, strat, bgc)
     sat = state.pore_water_ice_saturation[i, j, k]
-    Lθ = L*sat*por
     # calculate unfrozen water content from temperature
     # N.B. For the free water freeze curve, the mapping from temperature to unfrozen water content
     # within the phase change region is indeterminate since it is assumed that T = 0. As such, we
@@ -197,7 +198,7 @@ end
 end
 
 @inline function energy_to_temperature!(
-    idx, state, ::FreezeCurves.FreeWater,
+    idx, state, fc::FreeWater,
     energy::SoilEnergyBalance{NF},
     hydrology::AbstractSoilHydrology,
     strat::AbstractStratigraphy,
@@ -210,10 +211,20 @@ end
     por = porosity(idx, state, hydrology, strat, bgc)
     sat = state.pore_water_ice_saturation[i, j, k]
     Lθ = L*sat*por
-    # calculate unfrozen water content;
-    # note the use of safediv to handle the edge case where porosity, and thus Lθ, is zero
-    state.liquid_water_fraction[i, j, k] = NF(U >= -Lθ)*(one(NF) - NF(U < zero(NF))*safediv(U, -Lθ))
-    # This is the original implementation for clarity; however, this causes weird errors on GPU
+    # calculate unfrozen water content
+    state.liquid_water_fraction[i, j, k] = liquid_water_fraction(fc, U, Lθ)
+    fracs = soil_volumetric_fractions(idx, state, strat, hydrology, bgc)
+    C = heatcapacity(energy.thermal_properties, fracs)
+    # calculate temperature from internal energy and liquid water fraction
+    T = state.temperature[i, j, k] = energy_to_temperature(fc, U, Lθ, C)
+    return T
+end
+
+"""
+Calculate the unfrozen water content from 
+"""
+@inline function liquid_water_fraction(::FreeWater, U::NF, Lθ::NF) where {NF}
+    # This is the original implementation for clarity; however, this seems to cause weird errors on GPU
     # state.liquid_water_fraction[i, j, k] = ifelse(
     #     U < -Lθ,
     #     # Case 1: U < -Lθ -> frozen
@@ -227,11 +238,15 @@ end
     #         one(sat) - (U / -Lθ)
     #     )
     # )
-    fracs = soil_volumetric_fractions(idx, state, strat, hydrology, bgc)
-    C = heatcapacity(energy.thermal_properties, fracs)
-    # calculate temperature from internal energy and liquid water fraction
-    # T = state.temperature[i, j, k] = (U < -Lθ)*(U + Lθ) / C
-    T = state.temperature[i, j, k] = ifelse(
+
+    # note the use of safediv to handle the edge case where porosity, and thus Lθ, is zero
+    return NF(U >= -Lθ)*(one(NF) - NF(U < zero(NF))*safediv(U, -Lθ))
+end
+
+@inline function energy_to_temperature(::FreeWater, U::NF, Lθ::NF, C::NF) where {NF}
+    # One-liner version:
+    # return (U < -Lθ)*(U + Lθ) / C
+    return ifelse(
         U < -Lθ,
         # Case 1: U < -Lθ → frozen
         (U + Lθ) / C,
@@ -241,8 +256,7 @@ end
             # Case 2a: U ≥ 0 → thawed
             U / C,
             # Case 2b: -Lθ ≤ U < 0 → phase change
-            zero(eltype(state.temperature))
+            zero(NF),
         )
     )
-    return T
 end
