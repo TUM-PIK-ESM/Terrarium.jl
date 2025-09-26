@@ -63,10 +63,21 @@ struct ColumnRingGrid{
     ) = ColumnRingGrid(arch, Float32, vert, rings, mask)
 
     ColumnRingGrid(
+        arch::AbstractArchitecture,
+        vert::AbstractVerticalSpacing,
+        mask::RingGrids.AbstractField{Bool}
+    ) = ColumnRingGrid(arch, Float32, vert, mask.grid, mask)
+
+    ColumnRingGrid(
         vert::AbstractVerticalSpacing,
         rings::RingGrids.AbstractGrid,
         mask::RingGrids.AbstractField{Bool}=convert.(Bool, ones(rings))
     ) = ColumnRingGrid(CPU(), Float32, vert, rings, mask)
+
+    ColumnRingGrid(
+        vert::AbstractVerticalSpacing,
+        mask::RingGrids.AbstractField{Bool}
+    ) = ColumnRingGrid(CPU(), Float32, vert, mask.grid, mask)
 end
 
 get_field_grid(grid::ColumnRingGrid) = grid.grid

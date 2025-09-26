@@ -37,7 +37,7 @@ end
         temperature = (x,z) -> T_sol(-z, 0.0)
     )
     # periodic upper boundary
-    upperbc(z, t) = T₀ + A*sin(2π*t/P)
+    upperbc(z, t, inputs) = T₀ + A*sin(2π*t/P)
     boundary_conditions = SoilBoundaryConditions(grid, top=(temperature=ValueBoundaryCondition(upperbc),))
     # set carbon content to zero so the soil has only a mineral constituent
     biogeochem = ConstantSoilCarbonDenisty(ρ_soc=0.0)
