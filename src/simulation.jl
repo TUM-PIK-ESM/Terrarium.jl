@@ -43,7 +43,7 @@ function initialize(model::AbstractModel{NF}, inputs::InputProvider; clock::Cloc
 end
 
 # Convenience dispatch that constructs an InputProvider from zero or more input sources
-function initialize(model::AbstractModel{NF}, inputs::AbstractInputSource...; clock::Clock=Clock(time=zero(NF))) where {NF}
+function initialize(model::AbstractModel{NF}, inputs::InputSource...; clock::Clock=Clock(time=zero(NF))) where {NF}
     provider = InputProvider(get_grid(model), inputs...)
     return initialize(model, provider; clock)
 end
