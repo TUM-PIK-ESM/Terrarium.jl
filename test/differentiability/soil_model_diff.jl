@@ -40,11 +40,11 @@ end
     sat = 1.0
     por = 0.5
     Lθ = 3.34e8*sat*por
-    lwc_grad, = Enzyme.autodiff(Reverse, Terrarium.liquid_water_fraction, Active, Const(FreeWater()), Active(U), Const(Lθ))
+    lwc_grad, = Enzyme.autodiff(Reverse, Terrarium.liquid_water_fraction, Active, Const(FreeWater()), Active(U), Const(Lθ), Const(sat))
     @test lwc_grad[2] ≈ 1 / Lθ
     ## check case where Lθ is zero
     Lθ = 0.0
-    lwc_grad, = Enzyme.autodiff(Reverse, Terrarium.liquid_water_fraction, Active, Const(FreeWater()), Active(U), Const(Lθ))
+    lwc_grad, = Enzyme.autodiff(Reverse, Terrarium.liquid_water_fraction, Active, Const(FreeWater()), Active(U), Const(Lθ), Const(sat))
     @test iszero(lwc_grad[2])
 
     # test energy_to_temperature

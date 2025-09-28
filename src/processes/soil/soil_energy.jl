@@ -223,7 +223,7 @@ end
 """
 Calculate the unfrozen water content from the given internal energy, latent heat content, and saturation.
 """
-@inline function liquid_water_fraction(::FreeWater, U, Lθ, sat)
+@inline function liquid_water_fraction(::FreeWater, U::NF, Lθ::NF, sat::NF) where {NF}
     return if U >= zero(U)
         # Case 1: U ≥ Lθ -> thawed
         one(sat)
