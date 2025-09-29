@@ -11,6 +11,11 @@ function assert_field_matches_grid(field, grid)
     @assert field_matches_grid(field, grid) "Field grid $(typeof(field.grid)) does not match $(typeof(grid))"
 end
 
+const RingGridOrField = Union{RingGrids.AbstractGrid, RingGrids.AbstractField}
+
+on_architecture(::GPU, obj::RingGridOrField) = RingGrids.Architectures.on_architecture(RingGrids.Architectures.GPU(), obj)
+on_architecture(::CPU, obj::RingGridOrField) = RingGrids.Architectures.on_architecture(RingGrids.Architectures.CPU(), obj)
+
 # Field construction
 
 """

@@ -52,6 +52,9 @@ struct ColumnRingGrid{
         z_thick = get_spacing(vert)
         z_coords = vcat(-reverse(cumsum(z_thick)), zero(eltype(z_thick)))
         grid = OceananigansGrids.RectilinearGrid(arch, NF, size=(Nh, Nz), x=(0, 1), z=z_coords, topology=(Periodic, Flat, Bounded))
+        # adapt ring grid and mask
+        rings = on_architecture(arch, rings)
+        mask = on_architecture(arch, mask)
         return new{NF, typeof(rings), typeof(mask), typeof(grid)}(rings, mask, grid)
     end
 
@@ -83,6 +86,9 @@ end
 get_field_grid(grid::ColumnRingGrid) = grid.grid
 
 function Adapt.adapt_structure(to, grid::ColumnRingGrid)
-    inner_grid = Adapt.adapt_structure(to, grid.grid)
-    return ColumnRingGrid(Adapt.adapt_structure(to, grid.rings), inner_grid)
+    return ColumnRingGrid(
+        Adapt.adapt(to, grid.rings),
+        Adapt.adapt(to, grid.mask),
+        Adapt.adapt(to, grid.grid)
+    )
 end

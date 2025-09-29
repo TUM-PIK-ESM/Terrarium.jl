@@ -38,6 +38,8 @@ end
 
 get_field_grid(grid::ColumnGrid) = grid.grid
 
+architecture(grid::ColumnGrid) = architecture(grid.grid)
+
 function Adapt.adapt_structure(to, grid::ColumnGrid)
     inner_grid = Adapt.adapt_structure(to, grid.grid)
     return ColumnGrid(inner_grid)

@@ -16,7 +16,7 @@ import Interpolations
 # TODO: Raise an issue on Oceananigans.jl about refactoring numerics into a separate package.
 import Oceananigans: Oceananigans, Field, AbstractField, Center, Face, set!, interior, xnodes, ynodes, znodes, location
 import Oceananigans.Advection: AbstractAdvectionScheme, UpwindBiased
-import Oceananigans.Architectures: AbstractArchitecture, CPU, GPU, architecture, on_architecture
+import Oceananigans.Architectures: AbstractArchitecture, CPU, GPU, architecture, on_architecture, array_type
 import Oceananigans.Grids as OceananigansGrids
 import Oceananigans.Grids: Periodic, Flat, Bounded
 import Oceananigans.Operators: ∂zᵃᵃᶜ, ∂zᵃᵃᶠ, ℑzᵃᵃᶠ, Δzᵃᵃᶜ

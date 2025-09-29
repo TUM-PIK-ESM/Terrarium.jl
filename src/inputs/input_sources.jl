@@ -11,14 +11,6 @@ The type argument `NF` corresponds to the numeric type of the input data.
 abstract type InputSource{NF} end
 
 """
-    InputSource(; inputs...)
-
-Constructs a subtype of `InputSource`s from named inputs given as
-keyword arguments. The return type will depend on the type of the input arguments.
-"""
-InputSource(; inputs...) = InputSource(inputs...)
-
-"""
     $SIGNATURES
 
 Updates the values of input variables stored in `fields` from the given input `source`.
