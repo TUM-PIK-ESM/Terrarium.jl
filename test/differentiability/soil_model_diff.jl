@@ -1,7 +1,9 @@
-using Terrarium, Enzyme
-using Oceananigans: Average, Field
+using Terrarium
+using Test
 
+using Enzyme
 using FreezeCurves
+using Oceananigans: Average, Field
 
 grid = ColumnGrid(CPU(), Float64, ExponentialSpacing(N=10))
 # initial conditions
@@ -18,8 +20,8 @@ timestep!(sim)
 state = sim.state
 dstate = make_zero(state)
 
-function dostep!(state, model, ts, dt)
-    timestep!(state, model, ts, dt)
+function dostep!(state, model, timestepper, dt)
+    timestep!(state, model, timestepper, dt)
     # need to use the Oceananigans reduction operators or
     # turn the Field into an Array rather than directly apply
     # reduction methods like sum, otherwise Enzyme complains.
@@ -34,7 +36,7 @@ dostep!(state, model, model.time_stepping, 1.0)
     @test all(isfinite.(dstate.temperature))
 end
 
-@testset "Soil energy: FreeWater freezing characteristics" begin
+@testset "Soil energy: FreeWater freeze-thaw" begin
     # test liquid_water_fraction
     U = -1e7
     sat = 1.0
