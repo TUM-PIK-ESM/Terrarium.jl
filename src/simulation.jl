@@ -98,9 +98,6 @@ end
 
 current_time(sim::Simulation) = sim.state.clock.time
 
-convert_dt(dt::Real) = dt
-convert_dt(dt::Period) = Second(dt).value
-
 get_steps(steps::Nothing, period::Period, dt::Real) = div(Second(period).value, dt)
 get_steps(steps::Int, period::Nothing, dt::Real) = steps
 get_steps(steps::Nothing, period::Nothing, dt::Real) = throw(ArgumentError("either `steps` or `period` must be specified"))
