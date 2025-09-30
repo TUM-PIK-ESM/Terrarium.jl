@@ -41,7 +41,7 @@ function compute_tendencies! end
 
 # Default getter methods for standard `AbstractModel` fields.
 
-variables(::AbstractModel) = ()
+variables(::Any) = ()
 
 """
     get_grid(model::AbstractModel)::AbstractLandGrid
@@ -126,6 +126,12 @@ abstract type AbstractHydrologyModel{NF} <: AbstractModel{NF} end
 Base type for full land models which couple together multiple component models.
 """
 abstract type AbstractLandModel{NF} <: AbstractModel{NF} end
+
+"""
+Convenience constructor for all `AbstractLandModel` types that allows the `grid` to be passed
+as the first positional argument.
+"""
+(::Type{Model})(grid::AbstractLandGrid; kwargs...) where {Model<:AbstractModel} = Model(; grid, kwargs...)
 
 function Adapt.adapt_structure(to, model::AbstractModel)
     return setproperties(model, map(prop -> Adapt.adapt_structure(to, prop), getproperties(model)))

@@ -55,8 +55,11 @@ export Field, FieldTimeSeries, CPU, GPU, Clock, Center, Face
 export Value, Flux, Gradient, ValueBoundaryCondition, GradientBoundaryCondition, FluxBoundaryCondition, NoFluxBoundaryCondition
 export set!, interior, architecture, on_architecture, xnodes, ynodes, znodes, location
 
-# Re-export Dates types
+# Re-export common Dates types
 export Year, Month, Day, Second
+
+# Re-export unit types
+export @u_str, uconvert, ustrip
 
 # Re-export adapt
 export adapt

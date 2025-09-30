@@ -316,4 +316,4 @@ struct Input{name, units, VD, IT}
 end
 
 # TODO: Figure out how to also include description as string; a natural workaround here would be a state variable registry
-variables(input::Input{name, units}) where {name, units} = (input(name, input.dims; units),)
+variables(in::Input{name, units}) where {name, units} = (input(name, in.dims; units),)

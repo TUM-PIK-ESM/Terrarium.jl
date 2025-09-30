@@ -33,8 +33,8 @@ compute_auxiliary!(state, model, ::AbstractBoundaryConditions) = nothing
 compute_auxiliary!(state, model, ::BoundaryCondition) = nothing
 function compute_auxiliary!(state, model, bcs::FieldBCs{names}) where names
     fastiterate(names) do name
-        # automatically forward call to FieldBoundaryCondition
-        compute_auxiliary!(state, model, FieldBoundaryCondition(name, bcs[name]))
+        # automatically forward call to PrescribedBC
+        compute_auxiliary!(state, model, PrescribedBC(name, bcs[name]))
     end
 end
 
@@ -45,16 +45,9 @@ compute_tendencies!(state, model, ::AbstractBoundaryConditions) = nothing
 compute_tendencies!(state, model, ::BoundaryCondition) = nothing
 function compute_tendencies!(state, model, bcs::FieldBCs{names}) where names
     fastiterate(names) do name
-        compute_tendencies!(state, model, FieldBoundaryCondition(name, bcs[name]))
+        compute_tendencies!(state, model, PrescribedBC(name, bcs[name]))
     end
 end
-
-"""
-    $SIGNATURES
-
-Computes the boundary tendency for the grid cell at `loc`; zero for all other grid cells.
-"""
-boundary_tendency(i, j, k, grid, loc, state, bc::AbstractBoundaryConditions, args...) = zero(eltype(grid))
 
 """
 Represents default boundary conditions for all state variables. This typically
@@ -71,25 +64,17 @@ Container type for an Oceananigans `BoundaryCondition` applied to prognostic (or
 Properties:
 $TYPEDFIELDS
 """
-struct FieldBoundaryCondition{progvar, BC} <: AbstractBoundaryConditions
-    "Field boundary condition type"
-    bc::BC
+struct PrescribedBC{progvar, BC, FT} <: AbstractBoundaryConditions
+    "Boundary condition value"
+    value::FT
 
-    FieldBoundaryCondition(progvar::Symbol, bc::BoundaryCondition) = new{progvar, typeof(bc)}(bc)
+    PrescribedBC(progvar::Symbol, bctype::BCType, value) = new{progvar, typeof(bctype), typeof(value)}(value)
 end
 
-variables(bc::FieldBoundaryCondition) = variables(bc.bc)
-
-function compute_auxiliary!(state, model, bc::FieldBoundaryCondition)
-    compute_auxiliary!(state, model, bc.bc)
-end
-
-function compute_tendencies!(state, model, bc::FieldBoundaryCondition)
-    compute_tendencies!(state, model, bc.bc)
-end
+variables(bc::PrescribedBC) = variables(bc.value)
 
 # compute_tendencies! for flux-valued boundary conditions
-function compute_tendencies!(state, model, ::FieldBoundaryCondition{progvar, <:BoundaryCondition{Flux}}) where {progvar}
+function compute_tendencies!(state, model, ::PrescribedBC{progvar, <:Flux}) where {progvar}
     tend = getproperty(state, tendencyof(progvar))
     prog = getproprerty(state, progvar)
     arch = architecture(get_grid(model))
@@ -97,12 +82,19 @@ function compute_tendencies!(state, model, ::FieldBoundaryCondition{progvar, <:B
     compute_z_bcs!(tend, prog, arch, clock, state)
 end
 
-get_field_boundary_conditions(bc::FieldBoundaryCondition{progvar}) where {progvar} = (; progvar => bc.bc)
+function get_field_boundary_conditions(bc::PrescribedBC{progvar, BC}) where {progvar, BC}
+    (; progvar => BoundaryCondition(BC(), bc.value))
+end
 
-# Convenience aliases for FieldBoundaryCondition
-PrescribedFlux(progvar::Symbol, value; kwargs...) = FieldBoundaryCondition(progvar, FluxBoundaryCondition(value; kwargs...))
-PrescribedValue(progvar::Symbol, value; kwargs...) = FieldBoundaryCondition(progvar, ValueBoundaryCondition(value; kwargs...))
-PrescribedGradient(progvar::Symbol, value; kwargs...) = FieldBoundaryCondition(progvar, GradientBoundaryCondition(value; kwargs...))
+function get_field_boundary_conditions(bc::PrescribedBC{progvar, BC, <:Input{name}}) where {progvar, name, BC}
+    (; progvar => BoundaryCondition(BC(), (x, z, input) -> input, field_dependencies=(name,)))
+end
+
+# Convenience aliases for PrescribedBC
+NoFlux(progvar::Symbol) = PrescribedBC(progvar, Flux(), nothing)
+PrescribedFlux(progvar::Symbol, value; kwargs...) = PrescribedBC(progvar, Flux(), value)
+PrescribedValue(progvar::Symbol, value; kwargs...) = PrescribedBC(progvar, Value(), value)
+PrescribedGradient(progvar::Symbol, value; kwargs...) = PrescribedBC(progvar, Gradient(), value)
 
 """
     $TYPEDEF
@@ -153,7 +145,7 @@ end
 """
     FieldBoundaryConditions(grid::AbstractLandGrid, loc::Tuple; at...)
 
-Creates a regularized `FieldBoundaryConditions` type from the given keyword arugments of Oceananigans `BoundaryCondition`s
+Creates a regularized `PrescribedBCs` type from the given keyword arugments of Oceananigans `BoundaryCondition`s
 with keys corresponding to their positions on the domain (i.e. `top`, `bottom`, etc.), as well as the grid and location `loc`.
 The location refers the position on the staggered grid at which the boundary conditions are defined. For 1D (vertical) domains,
 this is usually `(Center(), Center(), nothing)`.
@@ -161,7 +153,7 @@ this is usually `(Center(), Center(), nothing)`.
 function FieldBoundaryConditions(grid::AbstractLandGrid, loc::Tuple; at...)
     field_grid = get_field_grid(grid)
     bcs = map(((k, bc)) -> k => isnothing(bc) ? NoFluxBoundaryCondition() : bc, keys(at), values(at))
-    # create the FieldBoundaryConditions type
+    # create the PrescribedBCs type
     field_bcs = FieldBoundaryConditions(field_grid, loc; immersed=DefaultBoundaryCondition(), bcs...)
     # return the regularized boundary conditions
     return regularize_field_boundary_conditions(field_bcs, field_grid, loc)
