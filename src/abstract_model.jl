@@ -130,3 +130,13 @@ abstract type AbstractLandModel{NF} <: AbstractModel{NF} end
 function Adapt.adapt_structure(to, model::AbstractModel)
     return setproperties(model, map(prop -> Adapt.adapt_structure(to, prop), getproperties(model)))
 end
+
+function Base.show(io::IO, mime::MIME"text/plain", model::AbstractModel{NF}) where {NF}
+    println(io, "$(nameof(typeof(model))){$NF} with $(nameof(typeof(get_grid(model)))) on $(architecture(get_grid(model)))")
+    for name in propertynames(model)
+        print(io, "  $name:  ")
+        # Indent property value by two spaces
+        show(IOContext(io, :indent => 2), mime, getproperty(model, name))
+        println(io)
+    end
+end

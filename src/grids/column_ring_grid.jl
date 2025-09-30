@@ -92,3 +92,10 @@ function Adapt.adapt_structure(to, grid::ColumnRingGrid)
         Adapt.adapt(to, grid.grid)
     )
 end
+
+function Base.show(io::IO, mime::MIME"text/plain", grid::ColumnRingGrid{NF}) where {NF}
+    println(io, "ColumnRingGrid{$NF} on $(architecture(grid)) with")
+    show(io, mime, grid.rings)
+    println(io)
+    show(io, mime, grid.grid)
+end

@@ -44,3 +44,9 @@ function Adapt.adapt_structure(to, grid::ColumnGrid)
     inner_grid = Adapt.adapt_structure(to, grid.grid)
     return ColumnGrid(inner_grid)
 end
+
+function Base.show(io::IO, mime::MIME"text/plain", grid::ColumnGrid{NF}) where {NF}
+    println(io, "ColumnGrid{$NF} on $(architecture(grid)) with")
+    show(io, mime, grid.grid)
+end
+
