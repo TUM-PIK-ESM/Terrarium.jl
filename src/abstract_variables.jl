@@ -312,7 +312,7 @@ struct Input{name, units, VD, IT}
     dims::VD
     init::IT
 
-    Input(name::Symbol, init=nothing; units::Units=NoUnits, dims::VarDims=XY()) = new{name, units, typeof(dims)}(dims, init)
+    Input(name::Symbol, init=nothing; units::Units=NoUnits, dims::VarDims=XY()) = new{name, units, typeof(dims), typeof(init)}(dims, init)
 end
 
 # TODO: Figure out how to also include description as string; a natural workaround here would be a state variable registry

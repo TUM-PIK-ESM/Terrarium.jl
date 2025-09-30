@@ -44,18 +44,18 @@ InfiltrationFlux(init) = PrescribedFlux(:pore_water_ice_saturation, Input(:Q_inf
 """
 Alias for `NoFlux` representing a zero-flux boundary condition for water flow (prognostic variable `pore_water_ice_saturation`).
 """
-ImpermeableBoundary() where {NF<:AbstractFloat} = NoFlux(:pore_water_ice_saturation)
+ImpermeableBoundary() = NoFlux(:pore_water_ice_saturation)
 
 """
 Alias for `PrescribedGradient` representing a Neumann-type zero pressure gradient at the bottom of the soil
 column, thereby allowing free drainage of water.
 """
-FreeDrainage(::Type{NF}) = PrescribedGradient(:water_potential, zero(NF))
+FreeDrainage(::Type{NF}) where {NF} = PrescribedGradient(:water_potential, zero(NF))
 
 """
-Alias for `VerticalBoundaryConditions` with defaults suitable for `SoilModel`s.
+Alias for `ColumnBoundaryConditions` with defaults suitable for `SoilModel`s.
 """
-SoilBoundaryConditions(grid::AbstractLandGrid{NF}; top=default_soil_upperbc(grid), bottom=default_soil_lowerbc(grid)) = VerticalBoundaryConditions(; top, bottom)
+SoilBoundaryConditions(grid::AbstractLandGrid{NF}; top=default_soil_upperbc(grid), bottom=default_soil_lowerbc(grid)) where {NF} = ColumnBoundaryConditions(; top, bottom)
 
 default_soil_upperbc(grid::AbstractLandGrid{NF}, energy=GroundHeatFlux(zero(NF)), hydrology=InfiltrationFlux(zero(NF))) where {NF} = SoilBC(; energy, hydrology)
 default_soil_lowerbc(grid::AbstractLandGrid{NF}, energy=GeothermalHeatFlux(zero(NF)), hydrology=ImpermeableBoundary()) where {NF} = SoilBC(; energy, hydrology)

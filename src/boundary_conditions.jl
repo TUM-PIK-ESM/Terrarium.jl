@@ -102,7 +102,7 @@ get_field_boundary_conditions(bc::FieldBoundaryCondition{progvar}) where {progva
 # Convenience aliases for FieldBoundaryCondition
 PrescribedFlux(progvar::Symbol, value; kwargs...) = FieldBoundaryCondition(progvar, FluxBoundaryCondition(value; kwargs...))
 PrescribedValue(progvar::Symbol, value; kwargs...) = FieldBoundaryCondition(progvar, ValueBoundaryCondition(value; kwargs...))
-PrescribedGradient(progvar::Symbol, value); kwargs... = FieldBoundaryCondition(progvar, GradientBoundaryCondition(value; kwargs...))
+PrescribedGradient(progvar::Symbol, value; kwargs...) = FieldBoundaryCondition(progvar, GradientBoundaryCondition(value; kwargs...))
 
 """
     $TYPEDEF
@@ -113,7 +113,7 @@ discrietized along the vertical (depthwise) axis.
 Properties:
 $TYPEDFIELDS
 """
-@kwdef struct VerticalBoundaryConditions{
+@kwdef struct ColumnBoundaryConditions{
     TopBC,
     BottomBC
 } <: AbstractBoundaryConditions
@@ -125,7 +125,7 @@ $TYPEDFIELDS
 end
 
 function get_field_boundary_conditions(
-    bcs::VerticalBoundaryConditions,
+    bcs::ColumnBoundaryConditions,
     grid::AbstractLandGrid,
 )
     top = get_field_boundary_conditions(bcs.top, grid)
@@ -138,9 +138,14 @@ function get_field_boundary_conditions(
     end
 end
 
-variables(bcs::VerticalBoundaryConditions) = tuplejoin(variables(bcs.top), variables(bcs.bottom))
+"""
+Alias for `ColumnBoundaryConditions`
+"""
+const ColumnBCs{Top, Bottom} = ColumnBoundaryConditions{Top, Bottom} where {Top, Bottom}
 
-function compute_auxiliary!(state, model, bcs::VerticalBoundaryConditions)
+variables(bcs::ColumnBoundaryConditions) = tuplejoin(variables(bcs.top), variables(bcs.bottom))
+
+function compute_auxiliary!(state, model, bcs::ColumnBoundaryConditions)
     compute_auxiliary!(state, model, bcs.top)
     compute_auxiliary!(state, model, bcs.bottom)
 end

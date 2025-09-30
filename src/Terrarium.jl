@@ -94,7 +94,7 @@ include("state_variables.jl")
 export FieldInitializers, DefaultInitializer
 include("initializers.jl")
 
-export VerticalBoundaryConditions, DefaultBoundaryConditions, PrescribedFlux, PrescribedValue, PrescribedGradient
+export ColumnBoundaryConditions, ColumnBCs, DefaultBoundaryConditions, PrescribedFlux, PrescribedValue, PrescribedGradient
 include("boundary_conditions.jl")
 
 # timestepper implementations

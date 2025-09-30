@@ -21,4 +21,4 @@ VegetationBoundaryConditions(
     grid::AbstractLandGrid;
     top = PrescribedAtmosphere(; grid),
     bottom = PrescribedSoil(; grid),
-) = VerticalBoundaryConditions(; top, bottom)
+) = ColumnBoundaryConditions(; top, bottom)
