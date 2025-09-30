@@ -57,5 +57,5 @@ Alias for `ColumnBoundaryConditions` with defaults suitable for `SoilModel`s.
 """
 SoilBoundaryConditions(grid::AbstractLandGrid{NF}; top=default_soil_upperbc(grid), bottom=default_soil_lowerbc(grid)) where {NF} = ColumnBoundaryConditions(; top, bottom)
 
-default_soil_upperbc(grid::AbstractLandGrid{NF}, energy=GroundHeatFlux(zero(NF)), hydrology=InfiltrationFlux(zero(NF))) where {NF} = SoilBC(; energy, hydrology)
-default_soil_lowerbc(grid::AbstractLandGrid{NF}, energy=GeothermalHeatFlux(zero(NF)), hydrology=ImpermeableBoundary()) where {NF} = SoilBC(; energy, hydrology)
+default_soil_upperbc(grid::AbstractLandGrid{NF}, energy=GroundHeatFlux(zero(NF)), hydrology=InfiltrationFlux(zero(NF))) where {NF} = SoilBC(energy, hydrology)
+default_soil_lowerbc(grid::AbstractLandGrid{NF}, energy=GeothermalHeatFlux(zero(NF)), hydrology=ImpermeableBoundary()) where {NF} = SoilBC(energy, hydrology)

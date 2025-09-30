@@ -31,23 +31,14 @@ Updates any state variables associated with the given boundary conditions.
 """
 compute_auxiliary!(state, model, ::AbstractBoundaryConditions) = nothing
 compute_auxiliary!(state, model, ::BoundaryCondition) = nothing
-function compute_auxiliary!(state, model, bcs::FieldBCs{names}) where names
-    fastiterate(names) do name
-        # automatically forward call to PrescribedBC
-        compute_auxiliary!(state, model, PrescribedBC(name, bcs[name]))
-    end
-end
+compute_auxiliary!(state, model, ::FieldBCs) = nothing
 
 """
 Computes any tendency contributions from the given boundary conditions.
 """
 compute_tendencies!(state, model, ::AbstractBoundaryConditions) = nothing
 compute_tendencies!(state, model, ::BoundaryCondition) = nothing
-function compute_tendencies!(state, model, bcs::FieldBCs{names}) where names
-    fastiterate(names) do name
-        compute_tendencies!(state, model, PrescribedBC(name, bcs[name]))
-    end
-end
+compute_tendencies!(state, model, ::FieldBCs) = nothing
 
 """
 Represents default boundary conditions for all state variables. This typically
@@ -73,6 +64,9 @@ end
 
 variables(bc::PrescribedBC) = variables(bc.value)
 
+compute_auxiliary!(state, model, ::PrescribedBC) = nothing
+compute_tendencies!(state, model, ::PrescribedBC) = nothing
+
 # compute_tendencies! for flux-valued boundary conditions
 function compute_tendencies!(state, model, ::PrescribedBC{progvar, <:Flux}) where {progvar}
     tend = getproperty(state, tendencyof(progvar))
@@ -82,12 +76,8 @@ function compute_tendencies!(state, model, ::PrescribedBC{progvar, <:Flux}) wher
     compute_z_bcs!(tend, prog, arch, clock, state)
 end
 
-function get_field_boundary_conditions(bc::PrescribedBC{progvar, BC}) where {progvar, BC}
+function get_field_boundary_conditions(bc::PrescribedBC{progvar, BC}, ::AbstractLandGrid) where {progvar, BC}
     (; progvar => BoundaryCondition(BC(), bc.value))
-end
-
-function get_field_boundary_conditions(bc::PrescribedBC{progvar, BC, <:Input{name}}) where {progvar, name, BC}
-    (; progvar => BoundaryCondition(BC(), (x, z, input) -> input, field_dependencies=(name,)))
 end
 
 # Convenience aliases for PrescribedBC
@@ -95,6 +85,11 @@ NoFlux(progvar::Symbol) = PrescribedBC(progvar, Flux(), nothing)
 PrescribedFlux(progvar::Symbol, value; kwargs...) = PrescribedBC(progvar, Flux(), value)
 PrescribedValue(progvar::Symbol, value; kwargs...) = PrescribedBC(progvar, Value(), value)
 PrescribedGradient(progvar::Symbol, value; kwargs...) = PrescribedBC(progvar, Gradient(), value)
+
+@inline function getbc(::Input{name, units, XY}, i::Integer, j::Integer, grid::OceananigansGrids.AbstractGrid, clock, state) where {name, units}
+    input_field = getproperty(state, name)
+    return @inbounds input_field[i, j]
+end
 
 """
     $TYPEDEF
@@ -125,8 +120,10 @@ function get_field_boundary_conditions(
     # invert the nested structure of the top/bottom named tuples;
     # this way we have a single named tuple where each entry has `top` and `bottom` as properties
     var_bcs = merge_recursive(map(bc -> (top=bc,), top), map(bc -> (bottom=bc,), bottom))
+    println(var_bcs)
     return map(var_bcs) do bc
-        FieldBoundaryConditions(grid, (Center(), Center(), nothing); bc...)
+        bc = map(x -> isnothing(x) ? NoFluxBoundaryCondition() : x, bc)
+        FieldBoundaryConditions(get_field_grid(grid), (Center(), Center(), nothing); bc...)
     end
 end
 
@@ -140,21 +137,4 @@ variables(bcs::ColumnBoundaryConditions) = tuplejoin(variables(bcs.top), variabl
 function compute_auxiliary!(state, model, bcs::ColumnBoundaryConditions)
     compute_auxiliary!(state, model, bcs.top)
     compute_auxiliary!(state, model, bcs.bottom)
-end
-
-"""
-    FieldBoundaryConditions(grid::AbstractLandGrid, loc::Tuple; at...)
-
-Creates a regularized `PrescribedBCs` type from the given keyword arugments of Oceananigans `BoundaryCondition`s
-with keys corresponding to their positions on the domain (i.e. `top`, `bottom`, etc.), as well as the grid and location `loc`.
-The location refers the position on the staggered grid at which the boundary conditions are defined. For 1D (vertical) domains,
-this is usually `(Center(), Center(), nothing)`.
-"""
-function FieldBoundaryConditions(grid::AbstractLandGrid, loc::Tuple; at...)
-    field_grid = get_field_grid(grid)
-    bcs = map(((k, bc)) -> k => isnothing(bc) ? NoFluxBoundaryCondition() : bc, keys(at), values(at))
-    # create the PrescribedBCs type
-    field_bcs = FieldBoundaryConditions(field_grid, loc; immersed=DefaultBoundaryCondition(), bcs...)
-    # return the regularized boundary conditions
-    return regularize_field_boundary_conditions(field_bcs, field_grid, loc)
 end

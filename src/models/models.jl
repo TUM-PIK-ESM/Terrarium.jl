@@ -3,7 +3,7 @@
 export SoilModel
 include("soil/soil_model.jl")
 
-export SoilBC, GroundHeatFlux, GeothermalHeatFlux, FreeDrainage, ImpermeableBoundary
+export SoilBoundaryConditions, SoilBC, GroundHeatFlux, GeothermalHeatFlux, FreeDrainage, ImpermeableBoundary
 include("soil/soil_model_bcs.jl")
 
 include("soil/soil_model_init.jl")
