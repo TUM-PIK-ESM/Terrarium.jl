@@ -80,8 +80,9 @@ function compute_auxiliary!(state, model::SoilModel)
 end
 
 function compute_tendencies!(state, model::SoilModel)
-    # Fill halo regions for fields with boundary conditions
+    # Fill halo regions and compute boundary tendencies
     fill_halo_regions!(state)
+    compute_tendencies!(state, model, model.boundary_conditions)
     # Default implementation forwards the method dispatch to processes in the order:
     # Stratigraphy -> Hydrology -> Energy -> Biogeochemistry
     compute_tendencies!(state, model, model.strat)

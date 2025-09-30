@@ -26,7 +26,9 @@ import Oceananigans.Units: Time
 import Oceananigans.Utils: launch!
 # Boundary conditions
 import Oceananigans.BoundaryConditions: FieldBoundaryConditions, BoundaryCondition, DefaultBoundaryCondition,
-                                        ValueBoundaryCondition, FluxBoundaryCondition, NoFluxBoundaryCondition,
+                                        ValueBoundaryCondition, FluxBoundaryCondition, GradientBoundaryCondition, NoFluxBoundaryCondition,
+                                        ContinuousBoundaryFunction, DiscreteBoundaryFunction,
+                                        AbstractBoundaryConditionClassification, Value, Flux, Gradient, # BC type classifications
                                         fill_halo_regions!, regularize_field_boundary_conditions
 
 # Adapt and KernelAbstractions for GPU parallelization
@@ -46,8 +48,11 @@ import Unitful: @u_str, uconvert, ustrip, upreferred
 
 const LengthQuantity{NF, U} = Quantity{NF, 𝐋, U} where {NF, U<:Units}
 
+const BCType = AbstractBoundaryConditionClassification
+
 # Re-export selected types and methods from Oceananigans
-export Field, FieldTimeSeries, CPU, GPU, Clock, Center, Face, ValueBoundaryCondition, FluxBoundaryCondition, NoFluxBoundaryCondition
+export Field, FieldTimeSeries, CPU, GPU, Clock, Center, Face
+export Value, Flux, Gradient, ValueBoundaryCondition, GradientBoundaryCondition, FluxBoundaryCondition, NoFluxBoundaryCondition
 export set!, interior, architecture, on_architecture, xnodes, ynodes, znodes, location
 
 # Re-export Dates types
@@ -59,7 +64,7 @@ export adapt
 # internal utilities
 include("utils.jl")
 
-export PrognosticVariable, AuxiliaryVariable, InputVariable, XY, XYZ
+export PrognosticVariable, AuxiliaryVariable, InputVariable, Input, XY, XYZ
 include("abstract_variables.jl")
 
 # grids
@@ -89,7 +94,7 @@ include("state_variables.jl")
 export FieldInitializers, DefaultInitializer
 include("initializers.jl")
 
-export VerticalBoundaryConditions, DefaultBoundaryConditions, PrescribedFlux
+export VerticalBoundaryConditions, DefaultBoundaryConditions, PrescribedFlux, PrescribedValue, PrescribedGradient
 include("boundary_conditions.jl")
 
 # timestepper implementations
