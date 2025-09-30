@@ -281,13 +281,15 @@ input(name::Symbol, dims::VarDims; units=NoUnits, desc="") = InputVariable(name,
 Creates an `AuxiliaryVariable` for the tendency of a prognostic variable with the given name, dimensions, and physical units.
 This constructor is primarily used internally by other constructors and does not usually need to be called by implementations of `variables`.
 """
-tendency(progname::Symbol, progdims::VarDims, progunits::Units) = AuxiliaryVariable(Symbol(progname, :_, :tendency), progdims, progunits/u"s", "")
+tendency(progname::Symbol, progdims::VarDims, progunits::Units) = AuxiliaryVariable(tendencyof(progname), progdims, progunits/u"s", "")
 function tendency(closure::AbstractClosureRelation, dims::VarDims)
     # get the auxiliary closure variable
     var = getvar(closure, dims)
     # create a tendency variable based on its name and units
     return tendency(varname(var), dims, varunits(var))
 end
+
+tendencyof(progname::Symbol) = Symbol(progname, :_, :tendency)
 
 """
     $SIGNATURES
@@ -301,3 +303,17 @@ namespace(name::Symbol, vars::Tuple) = Namespace(name, Variables(vars...))
 Alias for `Variables(vars...)`
 """
 variables(vars::Union{AbstractVariable, Namespace}...) = Variables(vars...)
+
+"""
+Type-stable and GPU-friendly placeholder for input variables in model/process `struct`s, allowing parameters/constants to
+be easily replaced by input `Field`s.
+"""
+struct Input{name, units, VD, IT}
+    dims::VD
+    init::IT
+
+    Input(name::Symbol, init=nothing; units::Units=NoUnits, dims::VarDims=XY()) = new{name, units, typeof(dims)}(dims, init)
+end
+
+# TODO: Figure out how to also include description as string; a natural workaround here would be a state variable registry
+variables(input::Input{name, units}) where {name, units} = (input(name, input.dims; units),)
