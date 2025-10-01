@@ -21,7 +21,8 @@ import Oceananigans.Grids as OceananigansGrids
 import Oceananigans.Grids: Periodic, Flat, Bounded
 import Oceananigans.Operators: ∂zᵃᵃᶜ, ∂zᵃᵃᶠ, ℑzᵃᵃᶠ, Δzᵃᵃᶜ
 import Oceananigans.OutputReaders: FieldTimeSeries
-import Oceananigans.TimeSteppers: Clock, tick_time!, reset!
+import Oceananigans.Simulations: Simulation, run!, timestepper
+import Oceananigans.TimeSteppers: Clock, time_step!, tick_time!, reset!
 import Oceananigans.Units: Time
 import Oceananigans.Utils: launch!
 # Boundary conditions
@@ -51,9 +52,9 @@ const LengthQuantity{NF, U} = Quantity{NF, 𝐋, U} where {NF, U<:Units}
 const BCType = AbstractBoundaryConditionClassification
 
 # Re-export selected types and methods from Oceananigans
-export Field, FieldTimeSeries, CPU, GPU, Clock, Center, Face
+export Simulation, Field, FieldTimeSeries, CPU, GPU, Clock, Center, Face
 export Value, Flux, Gradient, ValueBoundaryCondition, GradientBoundaryCondition, FluxBoundaryCondition, NoFluxBoundaryCondition
-export set!, interior, architecture, on_architecture, xnodes, ynodes, znodes, location
+export run!, set!, interior, architecture, on_architecture, xnodes, ynodes, znodes, location
 
 # Re-export common Dates types
 export Year, Month, Day, Second
@@ -110,8 +111,8 @@ include("processes/processes.jl")
 # concrete model implementations
 include("models/models.jl")
 
-# simulation types
-export Simulation, initialize, run!, current_time
-include("simulation.jl")
+# model simulation types and methods
+export ModelState, initialize, current_time, iteration
+include("model_state.jl")
 
 end # module Terrarium
