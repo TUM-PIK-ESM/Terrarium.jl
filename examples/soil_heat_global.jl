@@ -15,7 +15,7 @@ heatmap(land_sea_frac_field)
 
 # Load ERA-5 2 meter air temperature at ~1° resolution
 Tair_raster = Raster("data/era5-land/2m_temperature/era5_land_2m_temperature_2023_N72.nc")
-Tair_raster = convert.(Float32, replace_missing(Tair_raster, NaN)) .- 273.15f0
+Tsurf_0 = convert.(Float32, replace_missing(Tair_raster, NaN)) .- 273.15f0
 # heatmap(Tair_raster[:,:,1])
 
 # Set up grids
@@ -24,23 +24,20 @@ grid = ColumnRingGrid(GPU(), ExponentialSpacing(N=30), land_mask)
 
 # Construct input sources
 forcings = InputSource(grid, rebuild(Tair_raster, name=:Tair))
+Tsurf_0 = Tair_raster[Ti(1)][findall(land_mask)]
 
 # Initial conditions
 initializer = FieldInitializers(
     # steady-ish state initial condition for temperature
-    temperature = (x,z) -> -1 - 0.02*z,
+    temperature = (x,z) -> Tsurf_0[Int(round(x))+1] - 0.02*z,
     # dry soil
-    pore_water_ice_saturation = 0.0,
+    pore_water_ice_saturation = 1.0,
 )
-boundary_conditions = SoilBoundaryConditions(grid)
-model = SoilModel(; grid, initializer);
+T_ub = PrescribedValue(:temperature, Input(:Tair, units=u"°C"))
+boundary_conditions = SoilBoundaryConditions(grid, top=T_ub)
+model = SoilModel(grid; initializer, boundary_conditions)
 sim = initialize(model, forcings)
 @time timestep!(sim)
-@profview run!(sim, period=Day(1))
+@time run!(sim, period=Day(5), dt=120.0)
 
-using Oceananigans
-
-A = CUDA.ones(length(field))
-
-field = Field(grid, XY())
-@time field .= A
+@time run!(sim, period=Day(1), dt=120.0); heatmap(RingGrids.Field(interior(sim.state.temperature, :, :, 30), grid))
