@@ -3,15 +3,15 @@ module StateVariablesTests
 using Terrarium
 using Test
 
-import Terrarium: VarDims, XY, XYZ, prognostic, auxiliary, input, namespace
+import Terrarium: AbstractLandGrid, VarDims, XY, XYZ, prognostic, auxiliary, input, namespace
 
 DEFAULT_NF = Float32
 
-@kwdef struct SubModel{NF} <: Terrarium.AbstractModel{NF}
-    grid
+@kwdef struct SubModel{NF, Grid<:AbstractLandGrid{NF}, TS} <: Terrarium.AbstractModel{NF, Grid, TS}
+    grid::Grid
     initializer = DefaultInitializer()
     boundary_conditions = DefaultBoundaryConditions()
-    time_stepping::Terrarium.AbstractTimeStepper{NF} = Terrarium.ForwardEuler{DEFAULT_NF}()
+    time_stepping::TS = Terrarium.ForwardEuler{DEFAULT_NF}()
 end
 
 Terrarium.variables(model::SubModel) = (
@@ -21,12 +21,12 @@ Terrarium.variables(model::SubModel) = (
     input(:forcing, XY()),
 )
 
-@kwdef struct TestModel{NF} <: Terrarium.AbstractModel{NF}
-    grid
+@kwdef struct TestModel{NF, Grid<:AbstractLandGrid{NF}, TS} <: Terrarium.AbstractModel{NF, Grid, TS}
+    grid::Grid
     submodel = SubModel(; grid)
     initializer = DefaultInitializer()
     boundary_conditions = DefaultBoundaryConditions()
-    time_stepping::Terrarium.AbstractTimeStepper{NF} = Terrarium.ForwardEuler{DEFAULT_NF}()
+    time_stepping::TS = Terrarium.ForwardEuler{DEFAULT_NF}()
 end
 
 struct TestClosure <: Terrarium.AbstractClosureRelation end
@@ -45,8 +45,8 @@ Terrarium.variables(model::TestModel) = (
 
 @testset "State variable initialization" begin
 
-    grid = ColumnGrid(ExponentialSpacing(N=10))
-    model = TestModel{DEFAULT_NF}(; grid)
+    grid = ColumnGrid(CPU(), DEFAULT_NF, ExponentialSpacing(N=10))
+    model = TestModel(; grid)
     sim = initialize(model)
     # Check that all prognostic variables are defined correctly
     @test hasproperty(sim.state, :progvar3D) && isa(sim.state.prognostic.progvar3D, Field{Center,Center,Center})

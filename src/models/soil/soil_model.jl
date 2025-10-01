@@ -17,7 +17,7 @@ $(TYPEDFIELDS)
     BoundaryConditions<:AbstractBoundaryConditions,
     Initializer<:AbstractInitializer,
     TimeStepper<:AbstractTimeStepper,
-} <: AbstractSoilModel{NF}
+} <: AbstractSoilModel{NF, GridType, TimeStepper}
     "Spatial grid type"
     grid::GridType
 
