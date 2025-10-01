@@ -102,3 +102,7 @@ get_steps(steps::Nothing, period::Period, dt::Real) = div(Second(period).value, 
 get_steps(steps::Int, period::Nothing, dt::Real) = steps
 get_steps(steps::Nothing, period::Nothing, dt::Real) = throw(ArgumentError("either `steps` or `period` must be specified"))
 get_steps(steps::Int, period::Period, dt::Real) = throw(ArgumentError("both `steps` and `period` cannot be specified"))
+
+function Base.show(io::IO, mime::MIME"text/plain", sim::Simulation)
+    println(io, "Simulation of $(typeof(sim.model))")
+end
