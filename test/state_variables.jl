@@ -53,11 +53,11 @@ Terrarium.variables(model::TestModel) = (
     @test hasproperty(sim.state, :progvar2D) && isa(sim.state.prognostic.progvar2D, Field{Center,Center,Nothing})
     @test hasproperty(sim.state, :cprogvar3D) && isa(sim.state.prognostic.cprogvar3D, Field{Center,Center,Center})
     # Check that all tendencies are defined correctly
-    @test hasproperty(sim.state, :progvar3D_tendency) && isa(sim.state.progvar3D_tendency, Field{Center,Center,Center})
-    @test hasproperty(sim.state, :progvar2D_tendency) && isa(sim.state.progvar2D, Field{Center,Center,Nothing})
+    @test hasproperty(sim.state.tendencies, :progvar3D) && isa(sim.state.tendencies.progvar3D, Field{Center,Center,Center})
+    @test hasproperty(sim.state.tendencies, :progvar2D) && isa(sim.state.tendencies.progvar2D, Field{Center,Center,Nothing})
     # Check that tendency for prognostic variable with closure relation is defined only on the clousre variable
-    @test hasproperty(sim.state, :closurevar_tendency) && isa(sim.state.progvar2D, Field{Center,Center,Nothing})
-    @test !hasproperty(sim.state, :cprogvar3D_tendency)
+    @test hasproperty(sim.state.tendencies, :closurevar) && isa(sim.state.progvar2D, Field{Center,Center,Nothing})
+    @test !hasproperty(sim.state.tendencies, :cprogvar3D)
     # Check that all auxiliary variables are defined correctly
     @test hasproperty(sim.state, :auxvar3D) && isa(sim.state.auxvar3D, Field{Center,Center,Center})
     @test hasproperty(sim.state, :auxvar2D) && isa(sim.state.auxvar2D, Field{Center,Center,Nothing})

@@ -49,7 +49,7 @@ end
     bgc::AbstractSoilBiogeochemistry,
 )
     idx = @index(Global, NTuple)
-    state.internal_energy_tendency[idx...] += energy_tendency(idx, state, grid, energy, hydrology, strat, bgc)
+    state.tendencies.internal_energy[idx...] += energy_tendency(idx, state, grid, energy, hydrology, strat, bgc)
 end
 
 @inline function energy_tendency(

@@ -13,7 +13,7 @@ struct ModelState{
     Grid<:AbstractLandGrid{NF, Arch},
     TimeStepper<:AbstractTimeStepper,
     Model<:AbstractModel{NF, Grid, TimeStepper},
-    TimeStepperCache<:AbstractTimeStepperCache,
+    TimeStepperCache<:Union{Nothing, AbstractTimeStepperCache},
     StateVars<:AbstractStateVariables,
     Inputs<:InputProvider
 } <: Oceananigans.AbstractModel{TimeStepper, Arch}
