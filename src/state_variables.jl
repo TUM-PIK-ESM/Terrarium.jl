@@ -100,8 +100,6 @@ function Base.getproperty(
     # forward getproperty calls to variable groups
     if name ∈ prognames
         return getproperty(getfield(vars, :prognostic), name)
-    elseif name ∈ tendnames
-        return getproperty(getfield(vars, :tendencies), name)
     elseif name ∈ auxnames
         return getproperty(getfield(vars, :auxiliary), name)
     elseif name ∈ inputnames
@@ -140,9 +138,10 @@ function reset_tendencies!(state::StateVariables)
 end
 
 # helper function e.g. for usage with Enzyme 
-function Base.fill!(state::StateVariables{prognames, tendnames, auxnames, namespaces, closures}, 
+function Base.fill!(
+    state::StateVariables{prognames, tendnames, auxnames, namespaces, closures}, 
     value
-    ) where {prognames, tendnames, auxnames, namespaces, closures}
+) where {prognames, tendnames, auxnames, namespaces, closures}
     
     for progname in prognames
         fill!(getproperty(state, progname), value)
@@ -154,4 +153,48 @@ function Base.fill!(state::StateVariables{prognames, tendnames, auxnames, namesp
         fill!(getproperty(state, auxname), value)
     end
     return nothing 
-end 
+end
+
+"""
+    prognostic_fields(state::StateVariables, ::Val{with_closures}=Val{true}())
+
+Return all prognostic `Field`s in `state` in a (possibly nested) named tuple. By default,
+all prognostic variables are returned (i.e. `with_closures=true`); passing `Val{false}()`
+will instead return the fields for only closure-free prognostic variables.
+"""
+@generated function prognostic_fields(
+    state::StateVariables{prognames, tendnames, auxnames, inputnames, nsnames, closures},
+    ::Val{with_closures}=Val{true}()
+) where {prognames, tendnames, auxnames, inputnames, nsnames, closures, with_closures}
+    progn = with_closures ? prognames : filter(∉(closures), prognames)
+    pv_exprs = map(pv -> :($(QuoteNode(pv)) => state.prognostic.$pv), progn)
+    ns_exprs = map(ns -> :($(QuoteNode(ns)) => prognostic_fields(state.namespaces.$ns, Val{with_closures}())), nsnames)
+    return :((; $(pv_exprs...), $(ns_exprs...)))
+end
+
+"""
+    tendency_fields(state::StateVariables)
+
+Return all tendency `Field`s in `state` in a (possibly nested) named tuple.
+"""
+@generated function tendency_fields(
+    state::StateVariables{prognames, tendnames, auxnames, inputnames, nsnames}
+) where {prognames, tendnames, auxnames, inputnames, nsnames}
+    tv_exprs = map(tv -> :($(QuoteNode(tv)) => state.prognostic.$tv), tendnames)
+    ns_exprs = map(ns -> :($(QuoteNode(ns)) => tendency_fields(state.namespaces.$ns)), nsnames)
+    return :((; $(tv_exprs...), $(ns_exprs...)))
+end
+
+"""
+    tendency_fields(state::StateVariables)
+
+Return all closure `Field`s and relations in `state` in a (possibly nested) named tuple. The keys
+are the prognostic variable names and the values the `Field`s of the corresponding closure variables.
+"""
+@generated function closure_fields(
+    state::StateVariables{prognames, tendnames, auxnames, inputnames, nsnames, closures}
+) where {prognames, tendnames, auxnames, inputnames, nsnames, closures}
+    cv_exprs = map(pv -> :($(QuoteNode(pv)) => state.auxiliary[varname(getvar(state.closures.$pv))]), closures)
+    ns_exprs = map(ns -> :($(QuoteNode(ns)) => closure_fields(state.namespaces.$ns)), nsnames)
+    return :((; $(cv_exprs...), $(ns_exprs...)))
+end

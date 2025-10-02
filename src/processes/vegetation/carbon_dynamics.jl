@@ -133,5 +133,5 @@ end
     C_veg_tendency = compute_C_veg_tend(vegcarbon_dynamics, LAI_b, NPP)
 
     # Store result
-    state.C_veg_tendency[i, j] = C_veg_tendency
+    state.tendencies.C_veg[i, j] = C_veg_tendency
 end
