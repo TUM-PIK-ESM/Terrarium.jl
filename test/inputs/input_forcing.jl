@@ -20,12 +20,12 @@ Terrarium.variables(model::TestModel) = (
 
 function Terrarium.compute_tendencies!(state, model::TestModel)
     # set tendency to forcing term
-    state.x_tendency .= state.F
+    state.tendencies.x .= state.F
 end
 
 function Terrarium.timestep!(state, model::TestModel, euler::ForwardEuler, dt)
     Terrarium.compute_tendencies!(state, model)
-    @. state.x += dt*state.x_tendency
+    @. state.x += dt*state.tendencies.x
 end
 
 @testset "Forcing input" begin

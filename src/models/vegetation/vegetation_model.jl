@@ -106,10 +106,10 @@ function compute_tendencies!(state, model::VegetationModel)
     # Fill halo regions for fields with boundary conditions
     fill_halo_regions!(state)
 
-    # Needs NPP(t), C_veg(t-1), LAI_b(t-1) and computes C_veg_tendency
+    # Needs NPP(t), C_veg(t-1), LAI_b(t-1) and computes tendency for C_veg
     compute_tendencies!(state, model, model.carbon_dynamics)
 
-    # Needs NPP(t), C_veg(t-1), LAI_b(t-1), ν(t-1) and computes ν_tendency
+    # Needs NPP(t), C_veg(t-1), LAI_b(t-1), ν(t-1) and computes tendency for ν
     compute_tendencies!(state, model, model.vegetation_dynamics)
 
     return nothing
@@ -126,7 +126,7 @@ end
 @kernel function timestep_vegetation_kernel!(state, euler::ForwardEuler, dt)
     i, j = @index(Global, NTuple)
     # Update vegetation carbon pool, compute C_veg(t)
-    state.C_veg[i, j] = step(euler, state.C_veg[i, j], state.C_veg_tendency[i, j], dt)
+    state.C_veg[i, j] = step(euler, state.C_veg[i, j], state.tendencies.C_veg[i, j], dt)
     # Update vegetation fraction, compute ν(t)
-    state.ν[i, j] = step(euler, state.ν[i, j], state.ν_tendency[i, j], dt)
+    state.ν[i, j] = step(euler, state.ν[i, j], state.tendencies.ν[i, j], dt)
 end
