@@ -5,7 +5,7 @@ Represents the state of a "simulation" for a given `model`. `ModelState` consist
 `clock`, a `model`, and an initialized `StateVariables` data structure, as well as a `cache`
 for the timestepper and any relevant `inputs` provided by a corresponding `InputProvider`.
 The `ModelState` implements the `Oceananigans.AbstractModel` interface and can thus be
-provided as a "model" to all `Oceananigans` types.
+treated as a "model" in `Oceananigans` `Simulation`s and output reading/writing utilities.
 """
 struct ModelState{
     NF,
@@ -71,12 +71,14 @@ current_time(state::ModelState) = state.clock.time
 
 Advance the model forward by one timestep with optional timestep size `dt`.
 """
-timestep!(state::ModelState) = timestep!(state, get_dt(get_time_stepping(state.model)))
-function timestep!(state::ModelState, dt)
+timestep!(state::ModelState; finalize=true) = timestep!(state, get_dt(get_time_stepping(state.model)); finalize)
+function timestep!(state::ModelState, dt; finalize=true)
     reset_tendencies!(state.state)
     update_inputs!(state.inputs, state.clock)
     timestep!(state.state, state.model, dt)
-    tick_time!(state.clock, dt)
+    if finalize
+        compute_auxiliary!(state.state, state.model)
+    end
 end
 
 """
@@ -94,8 +96,11 @@ function run!(
     steps = get_steps(steps, period, dt)
 
     for _ in 1:steps
-        timestep!(state, dt)
+        timestep!(state, dt, finalize=false)
     end
+
+    # Update auxiliary variables for final timestep
+    compute_auxiliary!(state.state, state.model)
 
     return state 
 end
