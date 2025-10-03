@@ -46,6 +46,8 @@ function explicit_step!(state, model::AbstractModel, timestepper::AbstractTimeSt
     closurefields = closure_fields(state)
     # Evaluate step
     explicit_step!(progfields, closurefields, tendencies, get_grid(model), timestepper, dt, args...)
+    # Update clock
+    tick_time!(state.clock, dt)
     # Evaluate inverse closure relations (i.e. map from closure fields to prognostic fields)
     for name in keys(state.closures)
         invclosure!(state, model, state.closures[name])
