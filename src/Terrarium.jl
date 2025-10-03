@@ -8,7 +8,7 @@ import DataStructures: OrderedDict
 
 import Dates: Dates, TimeType, Period, Year, Month, Day, Second
 
-import Flatten
+import Flatten: flatten, flattenable, reconstruct
 
 import Interpolations
 

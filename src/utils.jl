@@ -1,4 +1,9 @@
 """
+Alias for `Type{Val{x}}`
+"""
+const TypeVal{x} = Type{Val{x}} where {x}
+
+"""
     $SIGNATURES
 
 Concatenate one or more tuples together.
