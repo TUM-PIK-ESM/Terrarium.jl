@@ -1,5 +1,4 @@
-# test that the run! function runs the full model (on CPU)
-import Terrarium.RingGrids
+import RingGrids
 import Dates: Hour
 
 @testset "run!" begin
