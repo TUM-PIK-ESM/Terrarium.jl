@@ -13,18 +13,18 @@ It is worth noting that tendencies are also treated internally as auxiliary vari
 however, they are assigned their own category here since they need to be handled separately
 by the timestepping scheme.
 """
-@kwdef struct StateVariables{
+struct StateVariables{
     prognames, tendnames, auxnames, inputnames, nsnames, closurenames,
     ProgFields, TendFields, AuxFields, InputFields, Namespaces, Closures,
-    ClockType,
+    ClockType
 } <: AbstractStateVariables
-    prognostic::NamedTuple{prognames, ProgFields} = (;)
-    tendencies::NamedTuple{tendnames, TendFields} = (;)
-    auxiliary::NamedTuple{auxnames, AuxFields} = (;)
-    inputs::NamedTuple{inputnames, InputFields} = (;)
-    namespaces::NamedTuple{nsnames, Namespaces} = (;)
-    closures::NamedTuple{closurenames, Closures} = (;)
-    clock::ClockType = Clock()
+    prognostic::NamedTuple{prognames, ProgFields}
+    tendencies::NamedTuple{tendnames, TendFields}
+    auxiliary::NamedTuple{auxnames, AuxFields}
+    inputs::NamedTuple{inputnames, InputFields}
+    namespaces::NamedTuple{nsnames, Namespaces}
+    closures::NamedTuple{closurenames, Closures}
+    clock::ClockType
 end
 
 function StateVariables(
@@ -56,6 +56,8 @@ function StateVariables(
     namespaces = map(ns -> StateVariables(getproperty(model, varname(ns)), clock, inputs), namespace_vars)
     # get named tuple mapping prognostic variabels to their respective closure relations, if defined
     closures = map(var -> var.closure, filter(hasclosure, prognostic_vars))
+    # get closure fields
+    closure_fields = map(closure -> auxiliary_fields[varname(getvar(closure))], values(closures))
     # construct and return StateVariables
     return StateVariables(
         prognostic_fields,
@@ -71,13 +73,13 @@ end
 # adapt_structure dispatch for GPU compat
 function Adapt.adapt_structure(to, sv::StateVariables)
     return StateVariables(
-        Adapt.adapt_structure(to, sv.prognostic),
-        Adapt.adapt_structure(to, sv.tendencies),
-        Adapt.adapt_structure(to, sv.auxiliary),
-        Adapt.adapt_structure(to, sv.inputs),
-        Adapt.adapt_structure(to, sv.namespaces),
-        Adapt.adapt_structure(to, sv.closures),
-        Adapt.adapt_structure(to, sv.clock),
+        Adapt.adapt(to, sv.prognostic),
+        Adapt.adapt(to, sv.tendencies),
+        Adapt.adapt(to, sv.auxiliary),
+        Adapt.adapt(to, sv.inputs),
+        Adapt.adapt(to, sv.namespaces),
+        Adapt.adapt(to, sv.closures),
+        Adapt.adapt(to, sv.clock),
     )
 end
 
@@ -113,12 +115,12 @@ end
 
 function fill_halo_regions!(state::StateVariables)
     # fill_halo_regions! for all prognostic variables
-    fastiterate(state.prognostic) do var
-        fill_halo_regions!(var, state.clock, state)
+    fastiterate(state.prognostic) do field
+        fill_halo_regions!(field, state.clock, state)
     end
     # fill_halo_regions! for all auxiliary variables
-    fastiterate(state.auxiliary) do var
-        fill_halo_regions!(var, state.clock, state)
+    fastiterate(state.auxiliary) do field
+        fill_halo_regions!(field, state.clock, state)
     end
     # recurse over namespaces
     fastiterate(state.namespaces) do ns
@@ -128,11 +130,11 @@ end
 
 function reset_tendencies!(state::StateVariables)
     # reset all tendency fields
-    for var in state.tendencies
-        set!(var, zero(eltype(var)))
+    fastiterate(state.tendencies) do field
+        set!(field, zero(eltype(field)))
     end
     # recurse over namespaces
-    for ns in state.namespaces
+    fastiterate(state.namespaces) do ns
         reset_tendencies!(ns)
     end
 end
@@ -153,48 +155,4 @@ function Base.fill!(
         fill!(getproperty(state, auxname), value)
     end
     return nothing 
-end
-
-"""
-    prognostic_fields(state::StateVariables, ::TypeVal{with_closures}=Val{true})
-
-Return all prognostic `Field`s in `state` in a (possibly nested) named tuple. By default,
-all prognostic variables are returned (i.e. `with_closures=true`); passing `Val{false}`
-will instead return the fields for only closure-free prognostic variables.
-"""
-@generated function prognostic_fields(
-    state::StateVariables{prognames, tendnames, auxnames, inputnames, nsnames, closures},
-    ::TypeVal{with_closures}=Val{true}
-) where {prognames, tendnames, auxnames, inputnames, nsnames, closures, with_closures}
-    progn = with_closures ? prognames : filter(∉(closures), prognames)
-    pv_exprs = map(pv -> :($(QuoteNode(pv)) => state.$pv), progn)
-    ns_exprs = map(ns -> :($(QuoteNode(ns)) => prognostic_fields(state.namespaces.$ns, Val{with_closures}())), nsnames)
-    return :((; $(pv_exprs...), $(ns_exprs...)))
-end
-
-"""
-    tendency_fields(state::StateVariables)
-
-Return all tendency `Field`s in `state` in a (possibly nested) named tuple.
-"""
-@generated function tendency_fields(
-    state::StateVariables{prognames, tendnames, auxnames, inputnames, nsnames}
-) where {prognames, tendnames, auxnames, inputnames, nsnames}
-    tv_exprs = map(tv -> :($(QuoteNode(tv)) => state.$tv), tendnames)
-    ns_exprs = map(ns -> :($(QuoteNode(ns)) => tendency_fields(state.namespaces.$ns)), nsnames)
-    return :((; $(tv_exprs...), $(ns_exprs...)))
-end
-
-"""
-    tendency_fields(state::StateVariables)
-
-Return all closure `Field`s and relations in `state` in a (possibly nested) named tuple. The keys
-are the prognostic variable names and the values the `Field`s of the corresponding closure variables.
-"""
-@generated function closure_fields(
-    state::StateVariables{prognames, tendnames, auxnames, inputnames, nsnames, closures}
-) where {prognames, tendnames, auxnames, inputnames, nsnames, closures}
-    cv_exprs = map(pv -> :($(QuoteNode(pv)) => state[varname(getvar(state.closures.$pv))]), closures)
-    ns_exprs = map(ns -> :($(QuoteNode(ns)) => closure_fields(state.namespaces.$ns)), nsnames)
-    return :((; $(cv_exprs...), $(ns_exprs...)))
 end

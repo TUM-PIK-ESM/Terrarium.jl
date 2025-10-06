@@ -7,7 +7,7 @@ The resulting
 """
 struct ColumnRingGrid{
     NF,
-    Arch<:AbstractArchitecture,
+    Arch,
     RingGrid<:RingGrids.AbstractGrid,
     MaskField<:RingGrids.AbstractField{Bool},
     RectGrid<:OceananigansGrids.RectilinearGrid,
@@ -118,7 +118,7 @@ function Adapt.adapt_structure(to, grid::ColumnRingGrid)
     return ColumnRingGrid(
         Adapt.adapt(to, grid.rings),
         Adapt.adapt(to, grid.mask),
-        Adapt.adapt(to, grid.grid)
+        Adapt.adapt(to, grid.grid),
     )
 end
 
