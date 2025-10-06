@@ -6,15 +6,20 @@ Simple forward Euler time stepping scheme.
     dt::NF = 300.0
 end
 
-get_dt(euler::ForwardEuler) = euler.dt
+default_dt(euler::ForwardEuler) = euler.dt
 
 is_adaptive(euler::ForwardEuler) = false
 
-initialize(::AbstractModel{NF}, ::ForwardEuler) where {NF} = nothing
-
-function timestep!(state, model::AbstractModel, timestepper::AbstractTimeStepper, dt = get_dt(timestepper))
+function timestep!(state, model::AbstractModel, timestepper::ForwardEuler, dt = default_dt(timestepper))
     compute_auxiliary!(state, model)
     compute_tendencies!(state, model)
-    # perform Euler step
-    explicit_step!(state, model, timestepper, dt)
+    # Euler step
+    explicit_step!(state, get_grid(model), timestepper, dt)
+    # Apply inverse closure relations
+    for closure in state.closures
+        invclosure!(state, model, closure)
+    end
+    # Update clock
+    tick!(state.clock, dt)
+    return nothing
 end

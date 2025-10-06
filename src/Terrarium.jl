@@ -22,7 +22,7 @@ import Oceananigans.Grids: Periodic, Flat, Bounded
 import Oceananigans.Operators: ∂zᵃᵃᶜ, ∂zᵃᵃᶠ, ℑzᵃᵃᶠ, Δzᵃᵃᶜ
 import Oceananigans.OutputReaders: FieldTimeSeries
 import Oceananigans.Simulations: Simulation, run!, timestepper
-import Oceananigans.TimeSteppers: Clock, time_step!, tick_time!, reset!
+import Oceananigans.TimeSteppers: Clock, time_step!, tick!, reset!
 import Oceananigans.Units: Time
 import Oceananigans.Utils: launch!
 # Boundary conditions
@@ -83,7 +83,7 @@ export update_inputs!, get_input_fields, get_input_field
 include("inputs/inputs.jl")
 
 # timestepping
-export timestep!, get_dt, is_adaptive
+export timestep!, default_dt, is_adaptive
 include("timesteppers/abstract_timestepper.jl")
 
 # model interface

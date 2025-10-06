@@ -104,9 +104,9 @@ and the unfrozen fraction of pore water. Note that this formulation implies that
 """
 struct TemperatureEnergyClosure <: AbstractClosureRelation end
 
-getvar(::TemperatureEnergyClosure, dims::VarDims) = auxiliary(
+getvar(::TemperatureEnergyClosure) = auxiliary(
     :internal_energy,
-    dims;
+    XYZ();
     units=u"J/m^3",
     desc="Internal energy of the grid cell, including both latent and sensible components"
 )

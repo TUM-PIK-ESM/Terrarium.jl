@@ -36,6 +36,7 @@ function compute_auxiliary! end
     compute_tendencies!(state, model::AbstractModel)
 
 Computes tendencies for all prognostic state variables for `model` stored in the given `state`.
+This method should be called after `compute_auxiliary!`.
 """
 function compute_tendencies! end
 

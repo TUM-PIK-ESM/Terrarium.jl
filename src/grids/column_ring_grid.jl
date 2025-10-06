@@ -7,7 +7,7 @@ The resulting
 """
 struct ColumnRingGrid{
     NF,
-    Arch<:AbstractArchitecture,
+    Arch,
     RingGrid<:RingGrids.AbstractGrid,
     MaskField<:RingGrids.AbstractField{Bool},
     RectGrid<:OceananigansGrids.RectilinearGrid,

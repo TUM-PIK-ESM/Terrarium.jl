@@ -31,7 +31,7 @@ end
 
 struct TestClosure <: Terrarium.AbstractClosureRelation end
 
-Terrarium.getvar(::TestClosure, dims::VarDims) = auxiliary(:closurevar, dims)
+Terrarium.getvar(::TestClosure) = auxiliary(:closurevar)
 
 Terrarium.variables(model::TestModel) = (
     prognostic(:progvar3D, XYZ()),

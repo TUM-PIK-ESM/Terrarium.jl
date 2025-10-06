@@ -4,7 +4,7 @@ using Terrarium
     dt = 10.0
     euler = ForwardEuler(; dt)
     @test !is_adaptive(euler)
-    @test get_dt(euler) == dt
+    @test default_dt(euler) == dt
     # Forward Euler is simple so we can just directly test it here
     progvar = 1.0
     tendency = 0.1
