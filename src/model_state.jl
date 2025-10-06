@@ -11,9 +11,8 @@ struct ModelState{
     NF,
     Arch<:AbstractArchitecture,
     Grid<:AbstractLandGrid{NF, Arch},
-    TimeStepper<:AbstractTimeStepper,
+    TimeStepper<:AbstractTimeStepper{NF},
     Model<:AbstractModel{NF, Grid, TimeStepper},
-    TimeStepperCache<:Union{Nothing, AbstractTimeStepperCache},
     StateVars<:AbstractStateVariables,
     Inputs<:InputProvider
 } <: Oceananigans.AbstractModel{TimeStepper, Arch}
@@ -22,9 +21,6 @@ struct ModelState{
 
     "The type of model used for the simulation."
     model::Model
-
-    "Time stepper state cache."
-    cache::TimeStepperCache
 
     "Input provider type"
     inputs::Inputs
@@ -71,7 +67,7 @@ current_time(state::ModelState) = state.clock.time
 
 Advance the model forward by one timestep with optional timestep size `dt`.
 """
-timestep!(state::ModelState; finalize=true) = timestep!(state, get_dt(get_time_stepping(state.model)); finalize)
+timestep!(state::ModelState; finalize=true) = timestep!(state, default_dt(get_time_stepping(state.model)); finalize)
 function timestep!(state::ModelState, dt; finalize=true)
     reset_tendencies!(state.state)
     update_inputs!(state.inputs, state.clock)
@@ -79,6 +75,7 @@ function timestep!(state::ModelState, dt; finalize=true)
     if finalize
         compute_auxiliary!(state.state, state.model)
     end
+    return nothing
 end
 
 """
@@ -90,7 +87,7 @@ function run!(
     state::ModelState;
     steps::Union{Int, Nothing} = nothing,
     period::Union{Period, Nothing} = nothing,
-    dt = get_dt(get_time_stepping(state.model))
+    dt = default_dt(get_time_stepping(state.model))
 )
     dt = convert_dt(dt)
     steps = get_steps(steps, period, dt)
@@ -114,8 +111,7 @@ Note that this method is **not type stable** and should not be called in an Enzy
 """
 function initialize(model::AbstractModel{NF}, inputs::InputProvider; clock::Clock=Clock(time=zero(NF))) where {NF}
     statevars = StateVariables(model, clock, inputs.fields)
-    time_stepping_cache = initialize(model, get_time_stepping(model))
-    state = ModelState(clock, model, time_stepping_cache, inputs, statevars)
+    state = ModelState(clock, model, inputs, statevars)
     initialize!(state)
     return state
 end
@@ -132,7 +128,7 @@ get_steps(steps::Nothing, period::Nothing, dt::Real) = throw(ArgumentError("eith
 get_steps(steps::Int, period::Period, dt::Real) = throw(ArgumentError("both `steps` and `period` cannot be specified"))
 
 function Base.show(io::IO, mime::MIME"text/plain", state::ModelState)
-    println(io, "$(typeof(state.model)) state")
+    println(io, "ModelState of $(typeof(state.model))")
     println(io, "  current time: $(current_time(state))")
     # TODO: add more information?
 end

@@ -114,19 +114,3 @@ function compute_tendencies!(state, model::VegetationModel)
 
     return nothing
 end
-
-function timestep!(state, model::VegetationModel, euler::ForwardEuler, dt=get_dt(timestepper))
-    compute_auxiliary!(state, model)
-    compute_tendencies!(state, model)
-    grid = get_grid(model)
-    launch!(grid, :xy, timestep_vegetation_kernel!, state, euler, dt)
-    return nothing
-end
-
-@kernel function timestep_vegetation_kernel!(state, euler::ForwardEuler, dt)
-    i, j = @index(Global, NTuple)
-    # Update vegetation carbon pool, compute C_veg(t)
-    state.C_veg[i, j] = step(euler, state.C_veg[i, j], state.tendencies.C_veg[i, j], dt)
-    # Update vegetation fraction, compute ν(t)
-    state.ν[i, j] = step(euler, state.ν[i, j], state.tendencies.ν[i, j], dt)
-end
