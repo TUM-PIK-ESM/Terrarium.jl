@@ -1,7 +1,9 @@
 using Terrarium
 
 using CUDA
+using Dates
 using Rasters, NCDatasets
+using Statistics
 
 using CairoMakie, GeoMakie
 
@@ -24,18 +26,31 @@ grid = ColumnRingGrid(GPU(), ExponentialSpacing(N=30), land_mask)
 
 # Construct input sources
 forcings = InputSource(grid, rebuild(Tair_raster, name=:Tair))
-Tsurf_0 = Tair_raster[Ti(1)][findall(land_mask)]
+# Calculate mean annual air temperature assuming hourly time resolution
+Tsurf_avg = aggregate(mean, Tair_raster, (Ti(365*24), X(1), Y(1)))
+heatmap(Tsurf_avg)
 
 # Initial conditions
+Tsurf_initial = Tsurf_avg[findall(land_mask)]
 initializer = FieldInitializers(
-    # steady-ish state initial condition for temperature
-    temperature = (x,z) -> Tsurf_0[Int(round(x))+1] - 0.02*z,
+    # steady-ish state initial condition calculated from initial air temperature
+    temperature = (x,z) -> Tsurf_initial[Int(round(x))+1] - 0.02*z,
     # dry soil
     pore_water_ice_saturation = 1.0,
 )
 T_ub = PrescribedValue(:temperature, Input(:Tair, units=u"°C"))
 boundary_conditions = SoilBoundaryConditions(grid, top=T_ub)
 model = SoilModel(grid; initializer, boundary_conditions)
-sim = initialize(model, forcings)
-@time timestep!(sim, 900.0)
-@time run!(sim, period=Day(30), dt=900.0)
+state = initialize(model, forcings)
+# advance one timestep with Δt = 15 minutes
+@time timestep!(state, 900.0)
+# run multiple timesteps over a given time period
+@time run!(state, period=Day(1), Δt=900.0)
+
+using Oceananigans.OutputWriters: JLD2Writer, AveragedTimeInterval
+using Oceananigans.Utils: days
+
+# set up and run an Oceananigans Simulation
+sim = Simulation(state; Δt=900.0, stop_iteration=100)
+# sim.output_writers[:temperature] = JLD2Writer(state, get_fields(state, :temperature); filename="output/soil_model_temperature.jld2", schedule=AveragedTimeInterval(1days))
+run!(sim)

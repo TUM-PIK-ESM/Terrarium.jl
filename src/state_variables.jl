@@ -113,6 +113,24 @@ function Base.getproperty(
     end
 end
 
+# helper function e.g. for usage with Enzyme 
+function Base.fill!(
+    state::StateVariables{prognames, tendnames, auxnames, namespaces, closures}, 
+    value
+) where {prognames, tendnames, auxnames, namespaces, closures}
+    
+    for progname in prognames
+        fill!(getproperty(state, progname), value)
+    end
+    for tendname in tendnames
+        fill!(getproperty(state, tendname), value)
+    end
+    for auxname in auxnames
+        fill!(getproperty(state, auxname), value)
+    end
+    return nothing 
+end
+
 function fill_halo_regions!(state::StateVariables)
     # fill_halo_regions! for all prognostic variables
     fastiterate(state.prognostic) do field
@@ -139,20 +157,14 @@ function reset_tendencies!(state::StateVariables)
     end
 end
 
-# helper function e.g. for usage with Enzyme 
-function Base.fill!(
-    state::StateVariables{prognames, tendnames, auxnames, namespaces, closures}, 
-    value
-) where {prognames, tendnames, auxnames, namespaces, closures}
-    
-    for progname in prognames
-        fill!(getproperty(state, progname), value)
+function get_fields(state::StateVariables, queries::Union{Symbol, Pair}...)
+    fields = map(queries) do query
+        if isa(query, Symbol)
+            query => getproperty(state, query)
+        else isa(query, Pair)
+            key, value = query
+            key => get_fields(getproperty(state, key), value...)
+        end
     end
-    for tendname in tendnames
-        fill!(getproperty(state, tendname), value)
-    end
-    for auxname in auxnames
-        fill!(getproperty(state, auxname), value)
-    end
-    return nothing 
+    return (; fields...)
 end

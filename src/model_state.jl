@@ -19,6 +19,9 @@ struct ModelState{
     "The clock holding all information about the current timestep/iteration of a simulation"
     clock::Clock
 
+    "Spatial discretization of the underlying `model`"
+    grid::Grid
+
     "The type of model used for the simulation."
     model::Model
 
@@ -33,15 +36,26 @@ end
 
 Base.time(state::ModelState) = state.clock.time
 
+Base.eltype(::ModelState{NF}) where {NF} = NF
+
 iteration(state::ModelState) = state.clock.iteration
 
 architecture(state::ModelState) = architecture(get_grid(state.model))
 
 timestepper(state::ModelState) = get_time_stepping(state.model)
 
+function update_state!(state::ModelState; compute_tendencies = true)
+    reset_tendencies!(state.state)
+    update_inputs!(state.inputs, state.clock)
+    compute_auxiliary!(state.state, state.model)
+    if compute_tendencies
+        compute_tendencies!(state.state, state.model)
+    end
+end
+
 # for now, just forward Oceananigans.time_step! to timestep!
 # consider renaming later...
-time_step!(state::ModelState, args...) = timestep!(state, args...)
+time_step!(state::ModelState, Δt; kwargs...) = timestep!(state, Δt)
 
 """
     $TYPEDEF
@@ -61,6 +75,8 @@ end
 # Terrarium method interfaces
 
 current_time(state::ModelState) = state.clock.time
+
+get_fields(state::ModelState, queries...) = get_fields(state.state, queries...)
 
 """
     $SIGNATURES
@@ -111,7 +127,7 @@ Note that this method is **not type stable** and should not be called in an Enzy
 """
 function initialize(model::AbstractModel{NF}, inputs::InputProvider; clock::Clock=Clock(time=zero(NF))) where {NF}
     statevars = StateVariables(model, clock, inputs.fields)
-    state = ModelState(clock, model, inputs, statevars)
+    state = ModelState(clock, get_grid(model), model, inputs, statevars)
     initialize!(state)
     return state
 end
