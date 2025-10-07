@@ -39,9 +39,9 @@ merge_recursive(_, val) = val # select second value to match behavior of merge
 """
     $SIGNATURES
 
-Evaluates `x / y` unless `iszero(y)` is true, then returns zero.
+Evaluates `x / (y + eps(NF))` if and only if `y != zero(y)`; returns `Inf` otherwise.
 """
-safediv(x, y) = ifelse(iszero(y), zero(x), x / y)
+safediv(x::NF, y::NF) where {NF} = ifelse(iszero(y), Inf, x / (y + eps(NF)))
 
 """
     $SIGNATURES

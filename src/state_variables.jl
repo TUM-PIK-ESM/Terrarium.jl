@@ -74,6 +74,7 @@ function Adapt.adapt_structure(to, sv::StateVariables)
         Adapt.adapt_structure(to, sv.prognostic),
         Adapt.adapt_structure(to, sv.tendencies),
         Adapt.adapt_structure(to, sv.auxiliary),
+        Adapt.adapt_structure(to, sv.inputs),
         Adapt.adapt_structure(to, sv.namespaces),
         Adapt.adapt_structure(to, sv.closures),
         Adapt.adapt_structure(to, sv.clock),
@@ -137,3 +138,20 @@ function reset_tendencies!(state::StateVariables)
         reset_tendencies!(ns)
     end
 end
+
+# helper function e.g. for usage with Enzyme 
+function Base.fill!(state::StateVariables{prognames, tendnames, auxnames, namespaces, closures}, 
+    value
+    ) where {prognames, tendnames, auxnames, namespaces, closures}
+    
+    for progname in prognames
+        fill!(getproperty(state, progname), value)
+    end
+    for tendname in tendnames
+        fill!(getproperty(state, tendname), value)
+    end
+    for auxname in auxnames
+        fill!(getproperty(state, auxname), value)
+    end
+    return nothing 
+end 
