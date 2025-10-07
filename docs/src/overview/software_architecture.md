@@ -21,7 +21,7 @@ All `AbstractModel` and `AbstractProcess` types must additional provide dispatch
 
 In addition, `AbstractModel`  implementations must also provide dispatches for the following methods:
 - `initialize!(state, ::Model, ::Initializer)` computes any necessary initialization of the model state based on the user-supplied configuration and parameter settings. The additional initializer argument is extracted from the model and allows for alternative dispatches based on various initialization schemes for each model.
-- `timestep!(state, ::Model, ::TimeStepper, dt)` updates the prognostic state variables according to the given timestepping scheme. This method can and should be implemented generically for any timestepping scheme but allows for model-specific overrides where necessary.
+- `timestep!(state, ::Model, ::TimeStepper, Δt)` updates the prognostic state variables according to the given timestepping scheme. This method can and should be implemented generically for any timestepping scheme but allows for model-specific overrides where necessary.
 - `get_grid(::Model)` returns the spatial grid associated with the model. A default implementation is provided which assumes that the model defines a field named `grid`.
 - `get_initializer(::Model)` returns the initializer for the model. A default implementation is provided which assumes that the model defines a field named `initializer`.
 

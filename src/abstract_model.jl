@@ -73,9 +73,9 @@ Returns the initializer associated with this `model`.
 get_initializer(model::AbstractModel) = model.initializer
 
 """
-Convenience dispatch for `timestep!` that forwards to `timestep!(state, model, get_time_stepping(model), dt)`.
+Convenience dispatch for `timestep!` that forwards to `timestep!(state, model, get_time_stepping(model), Δt)`.
 """
-timestep!(state, model::AbstractModel, dt) = timestep!(state, model, get_time_stepping(model), dt)
+timestep!(state, model::AbstractModel, Δt) = timestep!(state, model, get_time_stepping(model), Δt)
 
 # TODO: define general method interfaces (as needed) for all model types
 

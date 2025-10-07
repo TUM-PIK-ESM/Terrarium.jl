@@ -23,9 +23,9 @@ function Terrarium.compute_tendencies!(state, model::TestModel)
     state.tendencies.x .= state.F
 end
 
-function Terrarium.timestep!(state, model::TestModel, euler::ForwardEuler, dt)
+function Terrarium.timestep!(state, model::TestModel, euler::ForwardEuler, Δt)
     Terrarium.compute_tendencies!(state, model)
-    @. state.x += dt*state.tendencies.x
+    @. state.x += Δt*state.tendencies.x
 end
 
 @testset "Forcing input" begin
