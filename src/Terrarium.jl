@@ -22,7 +22,7 @@ import Oceananigans.Grids: Periodic, Flat, Bounded
 import Oceananigans.Operators: ∂zᵃᵃᶜ, ∂zᵃᵃᶠ, ℑzᵃᵃᶠ, Δzᵃᵃᶜ
 import Oceananigans.OutputReaders: FieldTimeSeries
 import Oceananigans.Simulations: Simulation, run!, timestepper
-import Oceananigans.TimeSteppers: Clock, time_step!, tick!, reset!
+import Oceananigans.TimeSteppers: Clock, update_state!, time_step!, tick!, reset!
 import Oceananigans.Units: Time
 import Oceananigans.Utils: launch!
 # Boundary conditions
@@ -54,7 +54,7 @@ const BCType = AbstractBoundaryConditionClassification
 # Re-export selected types and methods from Oceananigans
 export Simulation, Field, FieldTimeSeries, CPU, GPU, Clock, Center, Face
 export Value, Flux, Gradient, ValueBoundaryCondition, GradientBoundaryCondition, FluxBoundaryCondition, NoFluxBoundaryCondition
-export run!, set!, interior, architecture, on_architecture, xnodes, ynodes, znodes, location
+export run!, time_step!, set!, interior, architecture, on_architecture, xnodes, ynodes, znodes, location
 
 # Re-export common Dates types
 export Year, Month, Day, Second
@@ -91,7 +91,7 @@ export get_grid, get_time_stepping, get_boundary_conditions, variables, compute_
 include("abstract_model.jl")
 
 # state variables
-export StateVariables
+export StateVariables, get_fields
 include("state_variables.jl")
 
 # default initializers
