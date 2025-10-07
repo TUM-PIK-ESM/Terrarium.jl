@@ -24,6 +24,8 @@ $TYPEDFIELDS
     wilting_point::NF = 0.05
 end
 
+PrescribedHydraulics(::Type{NF}; kwargs...) where {NF} = PrescribedHydraulics{NF}(; kwargs...)
+
 @inline saturated_hydraulic_conductivity(hydraulics::PrescribedHydraulics, args...) = hydraulics.cond_sat
 
 @inline mineral_porosity(hydraulics::PrescribedHydraulics, args...) = hydraulics.porosity
@@ -56,6 +58,8 @@ SURFEX parameterization of mineral soil porosity (Masson et al. 2013).
     "Exponent of field capacity adjustment due to clay content [-]"
     field_capacity_exp::NF = 0.35
 end
+
+SURFEXHydraulics(::Type{NF}; kwargs...) where {NF} = SURFEXHydraulics{NF}(; kwargs...)
 
 # TODO: this is not quite correct, SURFEX uses a hydraulic conductivity function that decreases exponentially with depth
 @inline saturated_hydraulic_conductivity(hydraulics::SURFEXHydraulics, args...) = hydraulics.cond_sat

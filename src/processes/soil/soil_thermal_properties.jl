@@ -13,6 +13,8 @@ $TYPEDFIELDS
     organic::NF = 0.25 # thermal conductivity of organic soil constituents [W/m/K] Hillel (1982)
 end
 
+SoilThermalConductivities(::Type{NF}; kwargs...) where {NF} = SoilThermalConductivities{NF}(; kwargs...)
+
 """
 Base type for bulk weighting/mixing schemes that calculate weighted mixture of material properties
 such as conductivities or densities.
@@ -33,6 +35,8 @@ $TYPEDFIELDS
     organic::NF = 2.5e6 # volumetric heat capacity of organic soil [J/m^3]
 end
 
+SoilHeatCapacities(::Type{NF}; kwargs...) where {NF} = SoilHeatCapacities{NF}(; kwargs...)
+
 # TODO: In principle, these types could change for different soil parameterizations.
 # This is something we should ideally allow for.
 """
@@ -41,16 +45,23 @@ end
 Properties:
 $TYPEDFIELDS
 """
-@kwdef struct SoilThermalProperties{NF,CondWeighting}
+struct SoilThermalProperties{NF, CondWeighting}
     "Thermal conductivities for all constituents"
-    cond::SoilThermalConductivities{NF} = SoilThermalConductivities()
+    cond::SoilThermalConductivities{NF}
 
     "Thermal conductivity mixing scheme"
-    cond_bulk::CondWeighting = InverseQuadratic()
+    cond_bulk::CondWeighting
 
     "Thermal conductivities for all constituents"
-    heatcap::SoilHeatCapacities{NF} = SoilHeatCapacities()
+    heatcap::SoilHeatCapacities{NF}
 end
+
+SoilThermalProperties(
+    ::Type{NF};
+    cond::SoilThermalConductivities{NF} = SoilThermalConductivities(NF),
+    cond_bulk::AbstractBulkWeightingScheme = InverseQuadratic(),
+    heatcap::SoilHeatCapacities{NF} = SoilHeatCapacities(NF),
+) where {NF} = SoilThermalProperties{NF, typeof(cond_bulk)}(cond, cond_bulk, heatcap)
 
 """
     $SIGNATURES

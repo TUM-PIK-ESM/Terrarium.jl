@@ -18,6 +18,8 @@ Base.@kwdef struct ConstantSoilCarbonDenisty{NF} <: AbstractSoilBiogeochemistry{
     por_org::NF = 0.90
 end
 
+ConstantSoilCarbonDenisty(::Type{NF}; kwargs...) where {NF} = ConstantSoilCarbonDenisty{NF}(; kwargs...)
+
 variables(::ConstantSoilCarbonDenisty) = ()
 
 """

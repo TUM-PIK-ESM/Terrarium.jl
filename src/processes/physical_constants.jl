@@ -22,3 +22,5 @@ A collection of general physical constants that do not (usually) need to be vari
     "Reference temperature (0°C in Kelvin)"
     T0::NF = 273.15
 end
+
+PhysicalConstants(::Type{NF}; kwargs...) where {NF} = PhysicalConstants{NF}(; kwargs...)

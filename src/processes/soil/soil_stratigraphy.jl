@@ -6,10 +6,12 @@ Represents a soil stratigraphy of well mixed material with homogeneous soil text
 Properties:
 $TYPEDFIELDS
 """
-@kwdef struct HomogeneousSoil{NF} <: AbstractStratigraphy{NF}
+struct HomogeneousSoil{NF} <: AbstractStratigraphy{NF}
     "Material composition of mineral soil componnet"
-    texture::SoilTexture{NF} = SoilTexture(:sand)
+    texture::SoilTexture{NF}
 end
+
+HomogeneousSoil(::Type{NF}; texture::SoilTexture{NF} = SoilTexture(NF, :sand)) where {NF} = HomogeneousSoil{NF}(texture)
 
 get_soil_texture(strat::HomogeneousSoil) = strat.texture
 

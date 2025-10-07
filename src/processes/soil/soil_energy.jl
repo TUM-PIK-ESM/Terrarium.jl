@@ -1,5 +1,3 @@
-using FreezeCurves: FreeWater
-
 abstract type AbstractHeatOperator end
 struct ExplicitHeatConduction <: AbstractHeatOperator end
 
@@ -11,17 +9,24 @@ Standard implementation of the soil energy balance accounting for freezing and t
 Properties:
 $TYPEDFIELDS
 """
-@kwdef struct SoilEnergyBalance{
+struct SoilEnergyBalance{
     NF,
     HeatOperator<:AbstractHeatOperator,
     ThermalProps<:SoilThermalProperties{NF},
 } <: AbstractSoilEnergyBalance{NF}
     "Heat transport operator"
-    operator::HeatOperator = ExplicitHeatConduction()
+    operator::HeatOperator
 
     "Soil thermal properties"
-    thermal_properties::ThermalProps = SoilThermalProperties()
+    thermal_properties::ThermalProps
 end
+
+SoilEnergyBalance(
+    ::Type{NF};
+    operator::AbstractHeatOperator = ExplicitHeatConduction(),
+    thermal_properties::SoilThermalProperties{NF} = SoilThermalProperties(NF)
+
+) where {NF} = SoilEnergyBalance(operator, thermal_properties)
 
 variables(::SoilEnergyBalance) = (
     prognostic(:temperature, XYZ(), TemperatureEnergyClosure()),
@@ -147,7 +152,7 @@ end
 end
 
 @inline function temperature_to_energy!(
-    idx, state, ::FreezeCurves.FreeWater,
+    idx, state, ::FreeWater,
     energy::SoilEnergyBalance,
     hydrology::AbstractSoilHydrology,
     strat::AbstractStratigraphy,
