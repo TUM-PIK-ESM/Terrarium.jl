@@ -15,7 +15,7 @@ heatmap(land_sea_frac_field)
 
 # Load ERA-5 2 meter air temperature at ~1° resolution
 Tair_raster = Raster("data/era5-land/2m_temperature/era5_land_2m_temperature_2023_N72.nc")
-Tsurf_0 = convert.(Float32, replace_missing(Tair_raster, NaN)) .- 273.15f0
+Tair_raster = convert.(Float32, replace_missing(Tair_raster, NaN)) .- 273.15f0
 # heatmap(Tair_raster[:,:,1])
 
 # Set up grids
@@ -37,7 +37,5 @@ T_ub = PrescribedValue(:temperature, Input(:Tair, units=u"°C"))
 boundary_conditions = SoilBoundaryConditions(grid, top=T_ub)
 model = SoilModel(grid; initializer, boundary_conditions)
 sim = initialize(model, forcings)
-@time timestep!(sim)
-@time run!(sim, period=Day(5), dt=120.0)
-
-@time run!(sim, period=Day(1), dt=120.0); heatmap(RingGrids.Field(interior(sim.state.temperature, :, :, 30), grid))
+@time timestep!(sim, 900.0)
+@time run!(sim, period=Day(30), dt=900.0)
