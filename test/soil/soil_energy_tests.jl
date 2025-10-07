@@ -56,10 +56,10 @@ end
     # TODO: Rewrite this part once we have a proper output handling system
     Ts_buf = [deepcopy(sim.state.temperature)]
     ts = [0.0]
-    dt = 60.0
+    Δt = 60.0
     # run for one hour, saving every time step
     while current_time(sim) < 2*P
-        timestep!(sim, dt)
+        timestep!(sim, Δt)
         push!(Ts_buf, deepcopy(sim.state.temperature))
         push!(ts, current_time(sim))
     end
@@ -93,10 +93,10 @@ end
     # TODO: Rewrite this part once we have a proper output handling system
     Ts_buf = [deepcopy(sim.state.temperature)]
     ts = [0.0]
-    dt = 10.0
+    Δt = 10.0
     # run for 24 hours, saving every time step
     while current_time(sim) < 24*3600
-        timestep!(sim, dt)
+        timestep!(sim, Δt)
         push!(Ts_buf, deepcopy(sim.state.temperature))
         push!(ts, current_time(sim))
     end

@@ -65,13 +65,13 @@ current_time(state::ModelState) = state.clock.time
 """
     $SIGNATURES
 
-Advance the model forward by one timestep with optional timestep size `dt`.
+Advance the model forward by one timestep with optional timestep size `Δt`.
 """
 timestep!(state::ModelState; finalize=true) = timestep!(state, default_dt(get_time_stepping(state.model)); finalize)
-function timestep!(state::ModelState, dt; finalize=true)
+function timestep!(state::ModelState, Δt; finalize=true)
     reset_tendencies!(state.state)
     update_inputs!(state.inputs, state.clock)
-    timestep!(state.state, state.model, dt)
+    timestep!(state.state, state.model, Δt)
     if finalize
         compute_auxiliary!(state.state, state.model)
     end
@@ -81,19 +81,19 @@ end
 """
     $SIGNATURES
 
-Run the simulation by `steps` or a `period` with `dt` timestep size (in seconds or Dates.Period).
+Run the simulation by `steps` or a `period` with `Δt` timestep size (in seconds or Dates.Period).
 """
 function run!(
     state::ModelState;
     steps::Union{Int, Nothing} = nothing,
     period::Union{Period, Nothing} = nothing,
-    dt = default_dt(get_time_stepping(state.model))
+    Δt = default_dt(get_time_stepping(state.model))
 )
-    dt = convert_dt(dt)
-    steps = get_steps(steps, period, dt)
+    Δt = convert_dt(Δt)
+    steps = get_steps(steps, period, Δt)
 
     for _ in 1:steps
-        timestep!(state, dt, finalize=false)
+        timestep!(state, Δt, finalize=false)
     end
 
     # Update auxiliary variables for final timestep
@@ -122,10 +122,10 @@ function initialize(model::AbstractModel{NF}, inputs::InputSource...; clock::Clo
     return initialize(model, provider; clock)
 end
 
-get_steps(steps::Nothing, period::Period, dt::Real) = div(Second(period).value, dt)
-get_steps(steps::Int, period::Nothing, dt::Real) = steps
-get_steps(steps::Nothing, period::Nothing, dt::Real) = throw(ArgumentError("either `steps` or `period` must be specified"))
-get_steps(steps::Int, period::Period, dt::Real) = throw(ArgumentError("both `steps` and `period` cannot be specified"))
+get_steps(steps::Nothing, period::Period, Δt::Real) = div(Second(period).value, Δt)
+get_steps(steps::Int, period::Nothing, Δt::Real) = steps
+get_steps(steps::Nothing, period::Nothing, Δt::Real) = throw(ArgumentError("either `steps` or `period` must be specified"))
+get_steps(steps::Int, period::Period, Δt::Real) = throw(ArgumentError("both `steps` and `period` cannot be specified"))
 
 function Base.show(io::IO, mime::MIME"text/plain", state::ModelState)
     println(io, "ModelState of $(typeof(state.model))")

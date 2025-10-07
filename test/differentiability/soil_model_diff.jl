@@ -21,8 +21,8 @@ timestep!(sim)
 state = sim.state
 dstate = make_zero(state)
 
-function dostep!(state, model, timestepper, dt)
-    timestep!(state, model, timestepper, dt)
+function dostep!(state, model, timestepper, Δt)
+    timestep!(state, model, timestepper, Δt)
     return mean(interior(state.temperature))
     # TODO: Figure out why this is segfaulting in Enzyme
     # Tavg = Field(Average(state.temperature, dims=(1, 2, 3)))
@@ -32,7 +32,7 @@ end
 dostep!(state, model, model.time_stepping, 1.0)
 
 @testset "Soil model: timestep!" begin
-    @time Enzyme.autodiff(set_runtime_activity(Reverse), dostep!, Active, Duplicated(state, dstate), Const(model), Const(model.time_stepping), Const(model.time_stepping.dt))
+    @time Enzyme.autodiff(set_runtime_activity(Reverse), dostep!, Active, Duplicated(state, dstate), Const(model), Const(model.time_stepping), Const(model.time_stepping.Δt))
     @test all(isfinite.(dstate.temperature))
 end
 
