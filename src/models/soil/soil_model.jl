@@ -22,28 +22,28 @@ $(TYPEDFIELDS)
     grid::GridType
 
     "Stratigraphy of the soil"
-    strat::Stratigraphy = HomogeneousSoil()
+    strat::Stratigraphy = HomogeneousSoil(eltype(grid))
 
     "Soil energy balance"
-    energy::SoilEnergy = SoilEnergyBalance()
+    energy::SoilEnergy = SoilEnergyBalance(eltype(grid))
 
     "Soil hydrology/water balance"
-    hydrology::SoilHydrology = SoilHydrology()
+    hydrology::SoilHydrology = SoilHydrology(eltype(grid))
 
     "Soil biogeochemistry"
-    biogeochem::Biogeochemistry = ConstantSoilCarbonDenisty()
+    biogeochem::Biogeochemistry = ConstantSoilCarbonDenisty(eltype(grid))
 
     "Physical constants"
-    constants::Constants = PhysicalConstants{eltype(grid)}()
+    constants::Constants = PhysicalConstants(eltype(grid))
 
     "Boundary conditions"
-    boundary_conditions::BoundaryConditions = SoilBoundaryConditions(grid)
+    boundary_conditions::BoundaryConditions = SoilBoundaryConditions(eltype(grid))
 
     "State variable initializer"
     initializer::Initializer = SoilInitializer()
 
     "Timestepping scheme"
-    time_stepping::TimeStepper = ForwardEuler{eltype(grid)}()
+    time_stepping::TimeStepper = ForwardEuler(eltype(grid))
 end
 
 # SoilModel getter methods

@@ -37,7 +37,7 @@ import Adapt: Adapt, adapt
 import KernelAbstractions: @kernel, @index
 
 # Freeze curves for soil energy balance
-import FreezeCurves
+import FreezeCurves: FreezeCurve, FreeWater
 
 import RingGrids
 
