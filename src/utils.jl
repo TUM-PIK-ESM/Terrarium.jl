@@ -44,10 +44,10 @@ merge_recursive(_, val) = val # select second value to match behavior of merge
 """
     $SIGNATURES
 
-Convert `dt`s of type `Period` to a numeric value in seconds. Return `dt` if already a number.
+Convert `Δt`s of type `Period` to a numeric value in seconds. Return `Δt` if already a number.
 """
-convert_dt(dt::Number) = dt
-convert_dt(dt::Period) = Second(dt).value
+convert_dt(Δt::Number) = Δt
+convert_dt(Δt::Period) = Second(Δt).value
 
 """
     $SIGNATURES

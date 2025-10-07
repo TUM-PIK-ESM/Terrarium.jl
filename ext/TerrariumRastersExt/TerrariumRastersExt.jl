@@ -86,9 +86,9 @@ function update_from_raster!(
         x2 = on_architecture(arch, raster[Ti(right)])[idxmap]
         t1 = timedim[left]
         t2 = timedim[right]
-        dt = Terrarium.convert_dt(t2 - t1)
+        Δt = Terrarium.convert_dt(t2 - t1)
         ϵ = Terrarium.convert_dt(t - t1)
-        x_interp = dt > 0 ? x1 + ϵ*(x2 - x1) / dt : x2
+        x_interp = Δt > 0 ? x1 + ϵ*(x2 - x1) / Δt : x2
         set!(field, x_interp)
     else
         # Note: this implicitly results in flat extrapolation beyond the bounds of the time axis;
