@@ -157,6 +157,23 @@ function reset_tendencies!(state::StateVariables)
     end
 end
 
+"""
+    get_fields(state::StateVariables, queries::Union{Symbol, Pair}...)
+
+Retrieves fields with names given in `queries` and returns them in a `NamedTuple`. Each argument
+in `queries` can either be a `Symbol` corresponding to a field/variable defined in the namespace
+of `state` or a `Pair{Symbol, Tuple}` where the key is the child namespace and the value is a
+tuple of queries from that namespace.
+
+```julia
+# initialize model
+state = initialize(model)
+# get the temperature and pore_water_ice_saturation fields
+fields = get_fields(state, :temperature, :pore_water_ice_saturation)
+# extract temperature as well as variables from a namespace
+nested_fields = get_fields(state, :temperature, :namespace => (:subvar1, :subvar2))
+```
+"""
 function get_fields(state::StateVariables, queries::Union{Symbol, Pair}...)
     fields = map(queries) do query
         if isa(query, Symbol)
