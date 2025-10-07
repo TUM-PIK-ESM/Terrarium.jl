@@ -80,9 +80,7 @@ function update_from_raster!(
     arch = architecture(idxmap)
     indexes = searchsorted(timedim.val, t)
     left, right = last(indexes), first(indexes)
-    if right > left && right <= length(timedim)
-        @assert all(isfinite.(raster[Ti(left)][on_architecture(CPU(), idxmap)]))
-        @assert all(isfinite.(raster[Ti(right)][on_architecture(CPU(), idxmap)])) "$right $(timedim[right])"
+    @inbounds if right > left && right <= length(timedim)
         # Linear interpolation between points
         x1 = on_architecture(arch, raster[Ti(left)])[idxmap]
         x2 = on_architecture(arch, raster[Ti(right)])[idxmap]
