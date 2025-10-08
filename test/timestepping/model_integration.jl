@@ -1,9 +1,9 @@
 import RingGrids
 import Dates: Hour
 
-@testset "run!" begin
-    grid = ColumnRingGrid(CPU(), Float64, ExponentialSpacing(N=50), RingGrids.FullHEALPixGrid(16, RingGrids.Architectures.CPU()))
-    model = SoilModel(; grid)
+@testset "run! SoilModel w/ ForwardEuler" begin
+    grid = ColumnRingGrid(CPU(), Float64, ExponentialSpacing(N=50), RingGrids.FullHEALPixGrid(16))
+    model = SoilModel(; grid, time_stepping=ForwardEuler())
     sim = initialize(model)
 
     run!(sim; steps=2)
