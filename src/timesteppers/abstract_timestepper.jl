@@ -60,7 +60,7 @@ function explicit_step!(state, grid::AbstractLandGrid, timestepper::AbstractTime
 
     end
     fastiterate(state.namespaces) do ns
-        explicit_step!(state, grid, timestepper, Δt)
+        explicit_step!(ns, grid, timestepper, Δt)
     end
     return nothing
 end

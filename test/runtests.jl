@@ -19,8 +19,8 @@ if MAIN_TESTS
         include("state_variables.jl")
     end
     @testset "Timestepping" begin
-        include("timestepping/forward_euler.jl")
-        include("timestepping/run_full_model.jl")
+        include("timestepping/explicit_step.jl")
+        include("timestepping/run_simulation.jl")
     end
     @testset "Soil model and processes" begin
         include("soil/soil_model_tests.jl")
