@@ -87,7 +87,7 @@ timestep!(state::ModelState; finalize=true) = timestep!(state, default_dt(get_ti
 function timestep!(state::ModelState, Δt; finalize=true)
     reset_tendencies!(state.state)
     update_inputs!(state.inputs, state.clock)
-    timestep!(state.state, state.model, Δt)
+    timestep!(state.state, state.model, convert_dt(Δt))
     if finalize
         compute_auxiliary!(state.state, state.model)
     end
