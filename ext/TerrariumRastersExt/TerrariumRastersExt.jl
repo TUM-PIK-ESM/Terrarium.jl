@@ -80,7 +80,7 @@ function update_from_raster!(
     arch = architecture(idxmap)
     indexes = searchsorted(timedim.val, t)
     left, right = last(indexes), first(indexes)
-    @inbounds if right > left && right <= length(timedim)
+    @inbounds if left >= 1 && right <= length(timedim)
         # Linear interpolation between points
         x1 = on_architecture(arch, raster[Ti(left)])[idxmap]
         x2 = on_architecture(arch, raster[Ti(right)])[idxmap]
@@ -93,7 +93,7 @@ function update_from_raster!(
     else
         # Note: this implicitly results in flat extrapolation beyond the bounds of the time axis;
         # We may want to make this configurable in the future.
-        set!(field, on_architecture(arch, raster[Ti(right)])[idxmap])
+        set!(field, on_architecture(arch, raster[Ti(min(right, length(timedim)))])[idxmap])
     end
 end
 
