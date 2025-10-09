@@ -52,8 +52,8 @@ freezecurve(
 
 variables(energy::SoilEnergyBalance) = (
     prognostic(:temperature, XYZ(), get_closure(energy.operator), units=u"°C", desc="Temperature of the grid cell in °C"),
-    auxiliary(:saturation_water_ice, XYZ(), desc="Saturation level of water and ice in the pore space"),
-    auxiliary(:liquid_water_fraction, XYZ(), desc="Fraction of pore water unfrozen"),
+    auxiliary(:saturation_water_ice, XYZ(), domain=UnitInterval(), desc="Saturation level of water and ice in the pore space"),
+    auxiliary(:liquid_water_fraction, XYZ(), domain=UnitInterval(), desc="Fraction of unfrozen water in the pore space"),
 )
 
 compute_auxiliary!(state, model, energy::SoilEnergyBalance) = nothing

@@ -109,7 +109,7 @@ end
 Represents an auxiliary (sometimes called "diagnostic") variable with the given `name`
 and `dims` on the spatial grid.
 """
-struct AuxiliaryVariable{VD<:VarDims, UT<:Units} <: AbstractVariable{VD}
+struct AuxiliaryVariable{VD<:VarDims, DT<:AbstractInterval, UT<:Units} <: AbstractVariable{VD}
     "Name of the auxiliary variable"
     name::Symbol
 
@@ -118,6 +118,9 @@ struct AuxiliaryVariable{VD<:VarDims, UT<:Units} <: AbstractVariable{VD}
 
     "Physical untis associated with this state variable"
     units::UT
+
+    "Interval domain on which scalar fields of this variable are defined"
+    domain::DT
 
     "Human-readable description of this state variable"
     desc::String
@@ -151,6 +154,7 @@ struct PrognosticVariable{
     VD<:VarDims,
     UT<:Units,
     TV<:Union{Nothing, AuxiliaryVariable},
+    DT<:AbstractInterval,
     CL<:Union{Nothing, AbstractClosureRelation}
 } <: AbstractVariable{VD}
     "Name of the prognostic variable"
@@ -168,14 +172,37 @@ struct PrognosticVariable{
     "Physical untis associated with this state variable"
     units::UT
 
+    "Interval domain on which scalar fields of this variable are defined"
+    domain::DT
+
     "Human-readable description of this state variable"
     desc::String
 end
 
 hasclosure(var::PrognosticVariable) = !isnothing(var.closure)
 
+"""
+    $TYPEDEF
+
+Represents a new variable namespace, typically from a subcomponent of the model.
+It is (currently) assumed that tha name of the namespace corresponds to a property
+defined on the model type.
+"""
+struct Namespace{Vars}
+    name::Symbol
+    vars::Vars
+end
+
+varname(ns::Namespace) = ns.name
+
 # Variable container
 
+"""
+    $TYPEDEF
+
+Container for abstract state variable definitions. Automatically sorts and merges all variables
+and namespaces passed into the constructor.
+"""
 struct Variables{ProgVars, TendVars, AuxVars, InputVars, Namespaces}
     prognostic::ProgVars
     tendencies::TendVars
@@ -183,7 +210,7 @@ struct Variables{ProgVars, TendVars, AuxVars, InputVars, Namespaces}
     inputs::InputVars
     namespaces::Namespaces
 
-    function Variables(vars...)
+    function Variables(vars::Union{AbstractVariable, Namespace}...)
         # partition variables into prognostic, auxiliary, input, and namespace groups;
         # duplicates within each group are automatically merged
         prognostic_vars = merge_duplicates(filter(var -> isa(var, PrognosticVariable), vars))
@@ -219,37 +246,22 @@ function check_duplicates(vars...)
     end
 end
 
-# Namespaces
-
-"""
-    $TYPEDEF
-
-Represents a new variable namespace, typically from a subcomponent of the model.
-It is (currently) assumed that tha name of the namespace corresponds to a property
-defined on the model type.
-"""
-struct Namespace{Vars}
-    name::Symbol
-    vars::Vars
-end
-
-varname(ns::Namespace) = ns.name
-
 """
     $SIGNATURES
 
 Convenience constructors for `PrognosticVariable`.
 """
-prognostic(name::Symbol, dims::VarDims, closure::Nothing=nothing; units=NoUnits, desc="") =
+prognostic(name::Symbol, dims::VarDims, closure::Nothing=nothing; units=NoUnits, domain=RealLine(), desc="") =
     PrognosticVariable(
         name,
         dims,
         closure,
         tendency(name, dims, units),
         units,
+        domain,
         desc
     )
-prognostic(name::Symbol, dims::VarDims, closure::AbstractClosureRelation; units=NoUnits, desc="") =
+prognostic(name::Symbol, dims::VarDims, closure::AbstractClosureRelation; units=NoUnits, domain=RealLine(), desc="") =
     PrognosticVariable(
         name,
         dims,
@@ -258,6 +270,7 @@ prognostic(name::Symbol, dims::VarDims, closure::AbstractClosureRelation; units=
         # tendency variable
         tendency(closure, dims),
         units,
+        domain,
         desc
     )
 
@@ -266,7 +279,7 @@ prognostic(name::Symbol, dims::VarDims, closure::AbstractClosureRelation; units=
 
 Convenience constructor method for `AuxiliaryVariable`.
 """
-auxiliary(name::Symbol, dims::VarDims; units=NoUnits, desc="") = AuxiliaryVariable(name, dims, units, desc)
+auxiliary(name::Symbol, dims::VarDims; units=NoUnits, domain=RealLine(), desc="") = AuxiliaryVariable(name, dims, units, domain, desc)
 
 """
     $SIGNATURES

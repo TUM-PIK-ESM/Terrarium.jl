@@ -8,6 +8,8 @@ import DataStructures: OrderedDict
 
 import Dates: Dates, TimeType, Period, Year, Month, Day, Second
 
+import DomainSets: RealLine, HalfLine, PositiveRealLine, UnitInterval, AbstractInterval
+
 import Flatten: flatten, flattenable, reconstruct
 
 import Interpolations
