@@ -24,10 +24,9 @@ grid = ColumnRingGrid(arch, Float64, ExponentialSpacing(N=30), land_mask.grid, l
 lon, lat = RingGrids.get_londlatds(grid.rings)
 
 # Initial conditions
-Tsurf_initial = Tsurf_avg[findall(land_mask)]
 initializer = FieldInitializers(
-    # steady-ish state initial condition for temperature
-    temperature = (x, z) -> -0.02*z,
+    # steady-ish state initial condition for soil temperature
+    temperature = (x,z) -> 0.02*z,
     # fully saturated soil
     pore_water_ice_saturation = 1.0,
 )
