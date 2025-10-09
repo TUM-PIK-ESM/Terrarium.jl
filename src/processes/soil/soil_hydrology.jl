@@ -10,6 +10,12 @@ Represents the simplest case of immobile soil water.
 """
 struct NoFlow <: AbstractSoilWaterFlowOperator end
 
+"""
+    RichardsEq{NF} <: AbstractSoilWaterFlowOperator
+
+Operator for soil hydrology corresponding to the Richardson-Richards equation for variably saturated
+flow in porous media.
+"""
 @kwdef struct RichardsEq{NF} <: AbstractSoilWaterFlowOperator
     "Exponential scaling factor for ice impedance"
     Ω::NF = 7
@@ -68,9 +74,7 @@ get_soil_water_retention_curve(hydrology::SoilHydrology) = hydrology.swrc
 @inline function porosity(idx, state, hydrology::SoilHydrology, strat::AbstractStratigraphy, bgc::AbstractSoilBiogeochemistry)
     props = get_hydraulic_properties(hydrology)
     org = organic_fraction(idx, state, bgc)
-    # note that this currently assumes the natural porosities of both the mineral and organic components to be constant;
-    # we probably want to relax this in the future since there are global products of soil texture at least for the upper layers
-    texture = get_soil_texture(strat)
+    texture = soil_texture(idx, state, strat)
     return (1 - org)*mineral_porosity(props, texture) + org*organic_porosity(bgc)
 end
 
