@@ -28,7 +28,7 @@ variables(strat::HomogeneousSoil) = ()
     hydrology::AbstractSoilHydrology,
     bgc::AbstractSoilBiogeochemistry
 )
-    sat = state.pore_water_ice_saturation[idx...]
+    sat = state.saturation_water_ice[idx...]
     por = porosity(idx, state, hydrology, strat, bgc)
     ## there is some slight redundant computation here; consider merging into one method?
     org = organic_fraction(idx, state, bgc)

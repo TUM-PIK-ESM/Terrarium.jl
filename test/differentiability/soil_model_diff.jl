@@ -12,7 +12,7 @@ initializer = FieldInitializers(
     # steady-ish state initial condition for temperature
     temperature = (x,z) -> -1 - 0.02*z,
     # saturated soil
-    pore_water_ice_saturation = 1.0,
+    saturation_water_ice = 1.0,
 )
 model = SoilModel(; grid, initializer)
 sim = initialize(model)

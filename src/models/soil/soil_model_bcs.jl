@@ -39,12 +39,12 @@ GeothermalHeatFlux(init) = PrescribedFlux(:U, Input(:Q_geo, init, units=u"W/m^2"
 """
 Alias for `PrescribedFlux` with name `Q_inf` representing liquid water infiltration at the soil surface.
 """
-InfiltrationFlux(init) = PrescribedFlux(:pore_water_ice_saturation, Input(:Q_inf, init, units=u"m/s"))
+InfiltrationFlux(init) = PrescribedFlux(:saturation_water_ice, Input(:Q_inf, init, units=u"m/s"))
 
 """
-Alias for `NoFlux` representing a zero-flux boundary condition for water flow (prognostic variable `pore_water_ice_saturation`).
+Alias for `NoFlux` representing a zero-flux boundary condition for water flow (prognostic variable `saturation_water_ice`).
 """
-ImpermeableBoundary() = NoFlux(:pore_water_ice_saturation)
+ImpermeableBoundary() = NoFlux(:saturation_water_ice)
 
 """
 Alias for `PrescribedGradient` representing a Neumann-type zero pressure gradient at the bottom of the soil

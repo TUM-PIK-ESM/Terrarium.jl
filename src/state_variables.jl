@@ -157,8 +157,8 @@ tuple of queries from that namespace.
 ```julia
 # initialize model
 state = initialize(model)
-# get the temperature and pore_water_ice_saturation fields
-fields = get_fields(state, :temperature, :pore_water_ice_saturation)
+# get the temperature and saturation_water_ice fields
+fields = get_fields(state, :temperature, :saturation_water_ice)
 # extract temperature as well as variables from a namespace
 nested_fields = get_fields(state, :temperature, :namespace => (:subvar1, :subvar2))
 ```

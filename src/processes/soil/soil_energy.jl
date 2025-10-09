@@ -51,9 +51,9 @@ freezecurve(
 ) where {NF, OP} = FreeWater()
 
 variables(energy::SoilEnergyBalance) = (
-    variables(energy.operator)...,
-    auxiliary(:pore_water_ice_saturation, XYZ()),
-    auxiliary(:liquid_water_fraction, XYZ()),
+    prognostic(:temperature, XYZ(), get_closure(energy.operator), units=u"°C", desc="Temperature of the grid cell in °C"),
+    auxiliary(:saturation_water_ice, XYZ(), desc="Saturation level of water and ice in the pore space"),
+    auxiliary(:liquid_water_fraction, XYZ(), desc="Fraction of pore water unfrozen"),
 )
 
 compute_auxiliary!(state, model, energy::SoilEnergyBalance) = nothing
