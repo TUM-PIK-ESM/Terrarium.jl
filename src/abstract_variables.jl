@@ -238,13 +238,13 @@ varname(ns::Namespace) = ns.name
 """
     $SIGNATURES
 
-Convenience constructor method for `PrognosticVariable`.
+Convenience constructors for `PrognosticVariable`.
 """
-prognostic(name::Symbol, dims::VarDims; units=NoUnits, desc="") =
+prognostic(name::Symbol, dims::VarDims, closure::Nothing=nothing; units=NoUnits, desc="") =
     PrognosticVariable(
         name,
         dims,
-        nothing,
+        closure,
         tendency(name, dims, units),
         units,
         desc
