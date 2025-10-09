@@ -7,7 +7,7 @@ initializer = FieldInitializers(
     # steady-ish state initial condition for temperature
     temperature = (x,z) -> -2 - 0.01*z,
     # fully saturated soil pores
-    pore_water_ice_saturation = 1.0,
+    saturation_water_ice = 1.0,
 )
 # temperature boundary condition
 boundary_conditions = SoilBoundaryConditions(

@@ -81,7 +81,7 @@ end
 # Immobile soil water (NoFlow)
 
 variables(::SoilHydrology{NF,NoFlow}) where {NF} = (
-    auxiliary(:pore_water_ice_saturation, XYZ()),
+    auxiliary(:saturation_water_ice, XYZ()),
 )
 
 @inline compute_auxiliary!(state, model, hydrology::SoilHydrology) = nothing
@@ -90,7 +90,7 @@ variables(::SoilHydrology{NF,NoFlow}) where {NF} = (
 
 # TODO: Richardson-Richards equation diffusion/advection
 
-variables(::SoilHydrology{NF,<:RichardsEq}) where {NF} = (
-    prognosic(:pore_water_ice_potential, XYZ()),
-    auxiliary(:pore_water_ice_saturation, XYZ()),
+variables(hydrology::SoilHydrology{NF,<:RichardsEq}) where {NF} = (
+    prognosic(:matric_potential, XYZ()),
+    auxiliary(:saturation_water_ice, XYZ(), desc=""),
 )
