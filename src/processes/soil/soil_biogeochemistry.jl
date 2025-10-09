@@ -23,28 +23,19 @@ ConstantSoilCarbonDenisty(::Type{NF}; kwargs...) where {NF} = ConstantSoilCarbon
 variables(::ConstantSoilCarbonDenisty) = ()
 
 """
-    organic_porosity(bgc::ConstantSoilCarbonDenisty)
+    organic_porosity(idx, state, bgc::ConstantSoilCarbonDenisty)
 
 Get the prescribed natural porosity of organic soil.
 """
-organic_porosity(bgc::ConstantSoilCarbonDenisty) = bgc.por_org
-
-"""
-    organic_fraction(bgc::ConstantSoilCarbonDenisty)
-
-Calculate the organic solid fraction based on the prescribed SOC and natural porosity/density of
-the organic material.
-"""
-organic_fraction(bgc::ConstantSoilCarbonDenisty) = bgc.ρ_soc / ((1 - bgc.por_org)*bgc.ρ_org)
+@inline organic_porosity(idx, state, bgc::ConstantSoilCarbonDenisty) = bgc.por_org
 
 """
     organic_fraction(idx, state, bgc::ConstantSoilCarbonDenisty)
 
-Calculate the soil organic carbon fraction at the given grid index. For `ConstantSoilCarbonDenisty`,
-this simply returns a constant parameter. Implementations of soil carbon dynamics would want to compute
-this based on the prognostic state of the carbon content/pool stored in the soil.
+Calculate the organic solid fraction at the given `idx` based on the prescribed SOC and natural porosity/density of
+the organic material.
 """
-@inline organic_fraction(idx, state, bgc::ConstantSoilCarbonDenisty) = organic_fraction(bgc)
+@inline organic_fraction(idx, state, bgc::ConstantSoilCarbonDenisty) = bgc.ρ_soc / ((1 - bgc.por_org)*bgc.ρ_org)
 
 @inline compute_auxiliary!(state, model, bgc::ConstantSoilCarbonDenisty) = nothing
 
