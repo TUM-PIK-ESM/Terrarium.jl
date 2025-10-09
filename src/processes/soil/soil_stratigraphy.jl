@@ -13,7 +13,7 @@ end
 
 HomogeneousSoil(::Type{NF}; texture::SoilTexture{NF} = SoilTexture(NF, :sand)) where {NF} = HomogeneousSoil{NF}(texture)
 
-get_soil_texture(strat::HomogeneousSoil) = strat.texture
+soil_texture(idx, state, strat::HomogeneousSoil) = strat.texture
 
 variables(strat::HomogeneousSoil) = ()
 
