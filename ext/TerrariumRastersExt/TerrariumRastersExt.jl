@@ -42,7 +42,7 @@ function Terrarium.InputSource(grid::ColumnRingGrid{NF}, rasters::AbstractRaster
     # get indices from grid mask
     idxmap = on_architecture(architecture(grid), findall(Array(grid.mask)))
     # infer the VarDims and subsequently the Field location from the data dimensions
-    vardims = Terrarium.inferdims(first(rasters))
+    vardims = Terrarium.vardims(first(rasters))
     named_rasters = map(data -> data.name => data, rasters)
     # infer reference times
     reftimes = filter(!isnothing, map(data -> default_reftime(data, reftime), rasters))
@@ -119,9 +119,9 @@ default_reftime(timedim::Ti) = first(timedim)
 default_reftime(::Nothing) = nothing
 
 # Infer VarDims based on the axes defined in the Raster
-Terrarium.inferdims(A::AbstractDimArray) = Terrarium.inferdims(dims(A, X, Y, Z)...)
-Terrarium.inferdims(::X, ::Y) = XY()
-Terrarium.inferdims(::X, ::Y, ::Z) = XYZ()
+Terrarium.vardims(A::AbstractDimArray) = Terrarium.vardims(dims(A, X, Y, Z)...)
+Terrarium.vardims(::X, ::Y) = XY()
+Terrarium.vardims(::X, ::Y, ::Z) = XYZ()
 
 # Adapt rules for Rasters
 on_architecture(to, raster::AbstractRaster) = rebuild(

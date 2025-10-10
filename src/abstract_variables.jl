@@ -7,36 +7,36 @@ abstract type VarDims end
 
 Indicator type for variables that should be assigned a 3D field on their associated grid.
 """
-struct XYZ <: VarDims end
+@kwdef struct XYZ{LX, LY, LZ} <: VarDims
+    x::LX = Center()
+    y::LY = Center()
+    z::LZ = Center()
+end
+
+# Dispatch for Oceananigans `location` method
+location(dims::XYZ) = (dims.x, dims.y, dims.z)
 
 """
     XY <: VarDims
 
 Indicator type for variables that should be assigned a 2D (lateral only) field on their associated grid.
 """
-struct XY <: VarDims end
+@kwdef struct XY{LX, LY} <: VarDims
+    x::LX = Center()
+    y::LY = Center()
+end
+
+location(dims::XY) = (dims.x, dims.y, nothing)
 
 # TODO: do we need to support state variables not defined on a grid?
 
 """
     $SIGNATURES
 
-Retrieves the Oceananigans field "location" for the given variable dimensions.
-The location refers to the where the variable is defined on a staggered finite volume grid:
-Center refers to the grid cell centroid, Face to the boundary, and Nothing to a quantity that has no dimensionality
-in that direction. Currently, we assume all variables to be defined on grid cell centers, but this could be relaxed
-later if necessary by modifying or extending `VarDims`.
+Infer the appropriate `VarDims` from the given `Field`.
 """
-inferloc(::XY) = (Center(), Center(), nothing)
-inferloc(::XYZ) = (Center(), Center(), Center())
-
-"""
-    $SIGNATURES
-
-Complement of [inferloc](@ref) that infers the appropriate `VarDims` from the given `Field`.
-"""
-inferdims(::AbstractField{Center,Center,Nothing}) = XY()
-inferdims(::AbstractField{Center,Center,Center}) = XYZ()
+vardims(::AbstractField{LX, LY, Nothing}) where {LX, LY} = XY(LX(), LY())
+vardims(::AbstractField{LX, LY, LZ}) where {LX, LY, LZ} = XYZ(LX(), LY(), LZ())
 
 """
     $TYPEDEF
@@ -55,7 +55,7 @@ abstract type AbstractClosureRelation end
 """
     getvar(::AbstractClosureRelation)
 
-Returns an `AuxiliaryVariable` corresponding to the closure variable defined by the given closure relation.
+Return an `AuxiliaryVariable` corresponding to the closure variable defined by the given closure relation.
 """
 function getvar end
 
@@ -69,7 +69,7 @@ abstract type AbstractVariable{VD<:VarDims} end
 """
     $SIGNATURES
 
-Retrieves the name of the given variable or closure. For closure relations, `varname`
+Retrieve the name of the given variable or closure. For closure relations, `varname`
 should return the name of the variable returned by the closure relation.
 """
 varname(var::AbstractVariable) = var.name
@@ -78,14 +78,14 @@ varname(namespace::Pair{Symbol}) = first(namespace)
 """
     $SIGNATURES
 
-Retrieves the grid dimensions on which this variable is defined.
+Retrieve the grid dimensions on which this variable is defined.
 """
 vardims(var::AbstractVariable) = var.dims
 
 """
     $SIGNATURES
 
-Retrieves the physical units for the given variable.
+Retrieve the physical units for the given variable.
 """
 varunits(var::AbstractVariable) = var.units
 

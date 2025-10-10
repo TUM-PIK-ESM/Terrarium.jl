@@ -47,7 +47,7 @@ function Field(
     kwargs...
 )
     # infer the location of the Field on the FVM grid and specify its type
-    loc = inferloc(dims)
+    loc = location(dims)
     FT = Field{map(typeof, loc)...}
     # Specify BCs if defined
     field = if !isnothing(boundary_conditions)
@@ -63,6 +63,6 @@ function FieldTimeSeries(
     dims::VarDims,
     times=eltype(grid)[]
 )
-    loc = inferloc(dims)
+    loc = location(dims)
     return FieldTimeSeries(loc, get_field_grid(grid), times)
 end
