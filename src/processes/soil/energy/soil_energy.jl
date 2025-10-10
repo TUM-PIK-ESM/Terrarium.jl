@@ -90,7 +90,7 @@ end
     # operators require the underlying Oceananigans grid
     field_grid = get_field_grid(grid)
 
-    # Interior heat fluxes
+    # Divergence of heat fluxes
     dUdt = -∂zᵃᵃᶜ(i, j, k, field_grid, diffusive_heat_flux, state, energy, hydrology, strat, bgc)
     return dUdt
 end

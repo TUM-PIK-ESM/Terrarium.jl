@@ -26,8 +26,6 @@ end
 
 get_closure(op::RichardsEq) = op.saturation_closure
 
-struct PressureSaturationRelation <: AbstractClosureRelation end
-
 """
     $TYPEDEF
 
@@ -37,7 +35,6 @@ $TYPEDFIELDS
 struct SoilHydrology{
     NF,
     Operator<:AbstractSoilWaterFlowOperator,
-    RetentionCurve<:Union{Nothing, SWRC},
     SoilHydraulicProperties<:AbstractSoilHydraulicProperties{NF}
 } <: AbstractSoilHydrology{NF}
     "Soil water flow scheme"
@@ -45,17 +42,13 @@ struct SoilHydrology{
 
     "Soil hydraulic properties parameterization"
     hydraulic_properties::SoilHydraulicProperties
-    
-    "Soil water retention curve(s) from FreezeCurves.jl"
-    swrc::RetentionCurve
 end
 
 SoilHydrology(
     ::Type{NF};
     operator::AbstractSoilWaterFlowOperator = NoFlow(),
     hydraulic_properties::AbstractSoilHydraulicProperties{NF} = SURFEXHydraulics(NF),
-    swrc::Union{Nothing, SWRC} = default_swrc(operator, hydraulic_properties)
-) where {NF} = SoilHydrology(operator, hydraulic_properties, swrc)
+) where {NF} = SoilHydrology(operator, hydraulic_properties)
 
 """
     default_swrc(::AbstractSoilWaterFlowOperator, ::AbstractSoilHydraulicProperties)
@@ -96,6 +89,109 @@ variables(::SoilHydrology{NF,NoFlow}) where {NF} = (
 # TODO: Richardson-Richards equation diffusion/advection
 
 variables(hydrology::SoilHydrology{NF,<:RichardsEq}) where {NF} = (
-    prognosic(:matric_potential, XYZ()),
-    auxiliary(:saturation_water_ice, XYZ(), domain=UnitInterval(), desc="Saturation level of water and ice in the pore space"),
+    prognosic(:matric_potential, XYZ(), get_closure(hydrology.operator)),
+    # decalre hydraulic_conductivity as auxiliary variable on grid cell faces
+    auxiliary(:hydraulic_conductivity, XYZ(z=Face()), domain=UnitInterval(), units=u"m/s", desc="Hydraulic conductivity at grid cell faces [m/s]"),
+)
+
+function compute_auxiliary!(state, model, hydrology::SoilHydrology{NF, <:RichardsEq}) where {NF}
+    grid = get_grid(model)
+    hydrology = get_soil_hydrology(model)
+    strat = get_stratigraphy(model)
+    launch!(grid, :xyz, compute_hydraulic_conductivity!, state, grid, hydrology, energy, strat, bgc)
+    return nothing
+end
+
+@kernel function compute_hydraulic_conductivity!(
+    state,
+    grid,
+    hydrology::SoilHydrology,
+    energy::AbstractSoilEnergyBalance,
+    strat::AbstractStratigraphy,
+    bgc::AbstractSoilBiogeochemistry,
+)
+    idx = @index(Global, NTuple)
+    state.hydraulic_conductivity[idx...] = hydraulic_conductivity(idx, state, grid, hydrology, energy, strat, bgc)
+end
+
+@inline function hydraulic_conductivity(
+    idx, grid, state,
+    hydrology::SoilHydrology,
+    energy::AbstractSoilEnergyBalance,
+    strat::AbstractStratigraphy,
+    bgc::AbstractSoilBiogeochemistry
+)
+    # Get porosity
+    por = porosity(idx, state, hydrology, strat, bgc)
+
+    # TODO
+end
+
+function compute_tendencies!(state, model, hydrology::SoilHydrology{NF, <:RichardsEq}) where {NF}
+    grid = get_grid(model)
+    hydrology = get_soil_hydrology(model)
+    strat = get_stratigraphy(model)
+    launch!(grid, :xyz, compute_saturation_tendency!, state, grid, hydrology, energy, strat, bgc)
+    return nothing
+end
+
+@kernel function compute_saturation_tendency!(
+    state,
+    grid,
+    hydrology::SoilHydrology,
+    energy::AbstractSoilEnergyBalance,
+    strat::AbstractStratigraphy,
+    bgc::AbstractSoilBiogeochemistry,
+)
+    idx = @index(Global, NTuple)
+    state.tendencies.saturation_water_ice[idx...] += saturation_tendency(idx, state, grid, hydrology, energy, strat, bgc)
+end
+
+@inline function saturation_tendency(
+    idx, state, grid,
+    hydrology::SoilHydrology{NF, <:RichardsEq},
+    energy::AbstractSoilEnergyBalance,
+    strat::AbstractStratigraphy,
+    bgc::AbstractSoilBiogeochemistry,
+) where {NF}
+    i, j, k = idx
+    # Operators require the underlying Oceananigans grid
+    field_grid = get_field_grid(grid)
+
+    # Compute divergence of water fluxes
+    dθdt = (
+        ∂zᵃᵃᶜ(i, j, k, field_grid, darcy_flux, state, hydrology, energy, strat, bgc)
+        + ∂zᵃᵃᶜ(i, j, k, field_grid, gravity_flux, state, hydrology, energy, strat, bgc)
+    )
+
+    # Get porosity
+    por = porosity(idx, state, hydrology, strat, bgc)
+
+    return -dθdt / por
+end
+
+@inline function darcy_flux(i, j, k, grid, state, args...)
+    # Get pressure field
+    ψ = state.matric_potential
+    # Get hydraulic conductivity
+    κ = state.hydraulic_conductivity
+    # Darcy's law: q = -κ ∂ψ/∂z
+    q = -κ * ∂zᵃᵃᶠ(i, j, k, grid, ψ)
+    return q
+end
+
+# Matric potential <--> saturation closure relation
+
+@kwdef struct PressureSaturationClosure{RetentionCurve<:SWRC} <: AbstractClosureRelation
+    "Soil water retention curve(s) from FreezeCurves.jl"
+    swrc::RetentionCurve = BrooksCorey()
+
+    PressureSaturationClosure(swrc::SWRC) = new{typeof(swrc)}(ustrip(swrc))
+end
+
+getvar(::PressureSaturationClosure) = auxiliary(
+    :saturation_water_ice,
+    XYZ();
+    domain=UnitInterval(),
+    desc="Saturation level of water and ice in the pore space",
 )
