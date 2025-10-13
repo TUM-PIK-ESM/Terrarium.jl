@@ -66,10 +66,11 @@ SoilThermalProperties(
 """
     $SIGNATURES
 
-Computes the bulk thermal conductivity of a finite volume from the given volumetric fractions.
+Compute the bulk thermal conductivity of the given soil volume.
 """
-@inline function thermalconductivity(props::SoilThermalProperties, fracs::NamedTuple)
+@inline function thermalconductivity(props::SoilThermalProperties, soil::SoilComposition)
     κs = getproperties(props.cond)
+    fracs = volumetric_fractions(soil)
     # apply bulk conductivity weighting
     return props.cond_bulk(κs, fracs)
 end
@@ -77,10 +78,11 @@ end
 """
     $SIGNATURES
 
-Computes the bulk heat capacity of a finite volume from the given volumetric fractions.
+Compute the bulk heat capacity of the given soil volume.
 """
-@inline function heatcapacity(props::SoilThermalProperties, fracs::NamedTuple)
+@inline function heatcapacity(props::SoilThermalProperties, soil::SoilComposition)
     cs = getproperties(props.heatcap)
+    fracs = volumetric_fractions(soil)
     # for heat capacity, we just do a weighted average
     return sum(fastmap(*, cs, fracs))
 end

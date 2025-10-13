@@ -1,18 +1,22 @@
 abstract type AbstractHeatOperator <: AbstractOperator end
 
 """
-Represents an explicit formulation of the two-phase heat conduction operator:
+    $TYPEDEF
+
+Represents an explicit formulation of the two-phase heat conduction operator in 1D:
 
 ```math
-\\frac{\\partial U(T)}{\\partial t} = ∇ \\cdot \\kappa(T)\\nabla_x T(x,t)
+\\frac{\\partial U(T,\\phi)}{\\partial t} = \\nabla \\cdot \\kappa(T)\\nabla_x T(x,t)
 ```
-where `T` is temperature and `U` is internal energy.
+where \$T\$ is temperature [K], \$U\$ is internal energy [J m⁻³], and \$\\kappa\$ is the thermal conductivity [W m K⁻¹].
+The `closure` field represents the temperature-energy closure \$U(T,\\phi)\$ which relates temperature to internal
+energy via an arbitrary set of additional parameters \$\\phi\$ which are determined by the model configuration.
 """
 @kwdef struct ExplicitTwoPhaseHeatConduction{ET} <: AbstractHeatOperator
-    energy_closure::ET = TemperatureEnergyClosure()
+    closure::ET = TemperatureEnergyClosure()
 end
 
-get_closure(op::ExplicitTwoPhaseHeatConduction) = op.energy_closure
+get_closure(op::ExplicitTwoPhaseHeatConduction) = op.closure
 
 """
     $TYPEDEF
@@ -103,8 +107,8 @@ end
     bgc::AbstractSoilBiogeochemistry,
 )
     idx = (i, j, k)
-    fracs = soil_volumetric_fractions(idx, state, strat, hydrology, bgc)
-    return thermalconductivity(energy.thermal_properties, fracs)
+    soil = soil_composition(idx, state, strat, hydrology, bgc)
+    return thermalconductivity(energy.thermal_properties, soil)
 end
 
 # Diffusive heat flux term passed to ∂z operator
