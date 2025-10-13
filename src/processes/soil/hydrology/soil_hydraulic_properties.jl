@@ -89,7 +89,7 @@ SURFEX parameterization of mineral soil porosity (Masson et al. 2013).
 Properties:
 $TYPEDFIELDS
 """
-@kwdef struct SURFEXHydraulics{NF, UK} <: AbstractSoilHydraulics{UK}
+@kwdef struct SoilHydraulicsSURFEX{NF, UK} <: AbstractSoilHydraulics{UK}
     "Hydraulic conductivity at saturation [m/s]"
     cond_sat::NF = 1e-5
 
@@ -112,25 +112,25 @@ $TYPEDFIELDS
     field_capacity_exp::NF = 0.35
 end
 
-SURFEXHydraulics(::Type{NF}; kwargs...) where {NF} = SURFEXHydraulics{NF}(; kwargs...)
+SoilHydraulicsSURFEX(::Type{NF}; kwargs...) where {NF} = SoilHydraulicsSURFEX{NF}(; kwargs...)
 
 # TODO: this is not quite correct, SURFEX uses a hydraulic conductivity function that decreases exponentially with depth
-@inline saturated_hydraulic_conductivity(hydraulics::SURFEXHydraulics, args...) = hydraulics.cond_sat
+@inline saturated_hydraulic_conductivity(hydraulics::SoilHydraulicsSURFEX, args...) = hydraulics.cond_sat
 
-@inline function mineral_porosity(hydraulics::SURFEXHydraulics, texture::SoilTexture)
+@inline function mineral_porosity(hydraulics::SoilHydraulicsSURFEX, texture::SoilTexture)
     p₀ = hydraulics.porosity
     β_s = hydraulics.porosity_sand_coef
     por = p₀ + β_s*texture.sand*100
     return por
 end
 
-@inline function wilting_point(hydraulics::SURFEXHydraulics, texture::SoilTexture)
+@inline function wilting_point(hydraulics::SoilHydraulicsSURFEX, texture::SoilTexture)
     β_w = hydraulics.wilting_point_coef
     wp = β_w*sqrt(texture.clay*100)
     return wp
 end
 
-@inline function field_capacity(hydraulics::SURFEXHydraulics, texture::SoilTexture)
+@inline function field_capacity(hydraulics::SoilHydraulicsSURFEX, texture::SoilTexture)
     η = hydraulics.field_capacity_exp
     β_c = hydraulics.field_capacity_coef
     fc = β_c*(texture.clay*100)^η

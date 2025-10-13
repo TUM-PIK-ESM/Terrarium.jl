@@ -19,7 +19,7 @@ end
 @testset "Hydraulic properties (SURFEX)" begin
     # mineral porosity
     # TODO: should the hydraulic properties struct constructors also enforce parameter bounds?
-    hydraulic_props = SURFEXHydraulics()
+    hydraulic_props = SoilHydraulicsSURFEX()
     por0 = mineral_porosity(hydraulic_props, SoilTexture(sand=0.0, silt=0.7, clay=0.3))
     @test por0 ≈ hydraulic_props.porosity
     for sand in 0.1:0.1:1.0
