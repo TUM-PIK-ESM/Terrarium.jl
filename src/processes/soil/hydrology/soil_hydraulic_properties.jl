@@ -141,14 +141,14 @@ end
     $TYPEDEF
 
 Simple formulation of hydraulic conductivity as a linear function of the liquid water saturated fraction,
-i.e. `vol.water / (vol.water + vol.ice + vol.air)`.
+i.e. `soil.water / (soil.water + soil.ice + soil.air)`.
 """
 struct UnsatKLinear <: AbstractUnsatK end
 
-function hydraulic_conductivity(hydraulics::AbstractSoilHydraulics{<:UnsatKLinear}, swrc::SWRC, vol, args...)
+function hydraulic_conductivity(hydraulics::AbstractSoilHydraulics{<:UnsatKLinear}, swrc::SWRC, soil, args...)
     let n = swrc.n, # van Genuchten parameter `n`
-        θw = vol.water, # unfrozen water content
-        θsat = vol.water + vol.ice + vol.air, # water + ice content at saturation (porosity)
+        θw = soil.water, # unfrozen water content
+        θsat = soil.water + soil.ice + soil.air, # water + ice content at saturation (porosity)
         K_sat = saturated_hydraulic_conductivity(hydraulics, args...);
         K = K_sat * θw / θsat
         return K
@@ -171,13 +171,13 @@ end
 function hydraulic_conductivity(
     hydraulics::AbstractSoilHydraulics{<:UnsatKVanGenuchten},
     swrc::FreezeCurves.VanGenuchten,
-    vol,
+    soil,
     args...
 )
     let n = swrc.n, # van Genuchten parameter `n`
-        θw = vol.water, # unfrozen water content
-        θwi = vol.water + vol.ice, # total water + ice content
-        θsat = θwi + vol.air, # water + ice content at saturation (porosity)
+        θw = soil.water, # unfrozen water content
+        θwi = soil.water + soil.ice, # total water + ice content
+        θsat = θwi + soil.air, # water + ice content at saturation (porosity)
         Ω = hydraulics.cond_unsat.Ω, # scaling parameter for ice impedance
         I_ice = 10^(-Ω*(1 - θw/θtot)), # ice impedance factor
         K_sat = saturated_hydraulic_conductivity(hydraulics, args...);

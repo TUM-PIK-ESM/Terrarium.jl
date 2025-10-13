@@ -77,8 +77,8 @@ end
         sat,
         zero(sat),
     )
-    fracs = soil_volumetric_fractions(idx, state, strat, hydrology, bgc)
-    C = heatcapacity(energy.thermal_properties, fracs)
+    soil = soil_composition(idx, state, strat, hydrology, bgc)
+    C = heatcapacity(energy.thermal_properties, soil)
     # compute energy from temperature, heat capacity, and ice fraction
     U = state.internal_energy[i, j, k] = T*C - L*sat*por*(1 - liq)
     return U
@@ -113,8 +113,8 @@ end
     Lθ = L*sat*por
     # calculate unfrozen water content
     state.liquid_water_fraction[i, j, k] = liquid_water_fraction(fc, U, Lθ, sat)
-    fracs = soil_volumetric_fractions(idx, state, strat, hydrology, bgc)
-    C = heatcapacity(energy.thermal_properties, fracs)
+    soil = soil_composition(idx, state, strat, hydrology, bgc)
+    C = heatcapacity(energy.thermal_properties, soil)
     # calculate temperature from internal energy and liquid water fraction
     T = state.temperature[i, j, k] = energy_to_temperature(fc, U, Lθ, C)
     return T
