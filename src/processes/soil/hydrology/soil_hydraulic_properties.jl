@@ -1,7 +1,51 @@
-abstract type AbstractSoilHydraulicProperties{NF} end
+"""
+Base type for unsaturated hydraulic conductivity parameterizations.
+"""
+abstract type AbstractUnsatK end
 
 """
-    PrescribedHydraulics{NF} <: AbstractSoilHydraulicProperties
+Base type for soil hydraulic properties and parameterization schemes.
+"""
+abstract type AbstractSoilHydraulics{UK<:AbstractUnsatK} end
+
+"""
+    $SIGNATURES
+
+Compute hydraulic conductivity at saturation.
+"""
+function saturated_hydraulic_conductivity end
+
+"""
+    $SIGNATURES
+
+Compute (variably saturated) hydraulic conductivity based on the given hydraulic properties,
+soil water retention curve (SWRC), and volumetric fractions.
+"""
+function hydraulic_conductivity end
+
+"""
+    $SIGNATURES
+
+Compute the natural porosity of the mineral soil constitutents, i.e. excluding organic material.
+"""
+function mineral_porosity end
+
+"""
+    $SIGNATURES
+
+Compute the empirical wilting point of the soil.
+"""
+function wilting_point end
+
+"""
+    $SIGNATURES
+
+Compute the empirical field capacity of the soil.
+"""
+function field_capacity end
+
+"""
+    PrescribedHydraulics{NF} <: AbstractSoilHydraulics
 
 Represents a simple case where soil hydraulic properties are given as constant values.
 This is mostly provided just for testing, although it may be useful in certain cases where direct
@@ -10,9 +54,12 @@ measurements of hydraulic properites are available.
 Properties:
 $TYPEDFIELDS
 """
-@kwdef struct PrescribedHydraulics{NF} <: AbstractSoilHydraulicProperties{NF}
+@kwdef struct PrescribedHydraulics{NF, UK} <: AbstractSoilHydraulics{UK}
     "Hydraulic conductivity at saturation [m/s]"
     cond_sat::NF = 1e-5
+
+    "Unsaturated hydraulic conductivity formulation; defaults to `cond_sat`"
+    cond_unsat::UK = cond_sat
 
     "Prescribed soil porosity [-]"
     porosity::NF = 0.49
@@ -30,18 +77,24 @@ PrescribedHydraulics(::Type{NF}; kwargs...) where {NF} = PrescribedHydraulics{NF
 
 @inline mineral_porosity(hydraulics::PrescribedHydraulics, args...) = hydraulics.porosity
 
-@inline mineral_wilting_point(hydraulics::PrescribedHydraulics, args...) = hydraulics.wilting_point
+@inline wilting_point(hydraulics::PrescribedHydraulics, args...) = hydraulics.wilting_point
 
-@inline mineral_field_capacity(hydraulics::PrescribedHydraulics, args...) = hydraulics.field_capacity
+@inline field_capacity(hydraulics::PrescribedHydraulics, args...) = hydraulics.field_capacity
 
 """
     $TYPEDEF
 
 SURFEX parameterization of mineral soil porosity (Masson et al. 2013).
+
+Properties:
+$TYPEDFIELDS
 """
-@kwdef struct SURFEXHydraulics{NF} <: AbstractSoilHydraulicProperties{NF}
+@kwdef struct SURFEXHydraulics{NF, UK} <: AbstractSoilHydraulics{UK}
     "Hydraulic conductivity at saturation [m/s]"
     cond_sat::NF = 1e-5
+
+    "Unsaturated hydraulic conductivity formulation; defaults to `cond_sat`"
+    cond_unsat::UK = cond_sat
 
     "Base porosity of soil without any sand [-]"
     porosity::NF = 0.49
@@ -64,8 +117,6 @@ SURFEXHydraulics(::Type{NF}; kwargs...) where {NF} = SURFEXHydraulics{NF}(; kwar
 # TODO: this is not quite correct, SURFEX uses a hydraulic conductivity function that decreases exponentially with depth
 @inline saturated_hydraulic_conductivity(hydraulics::SURFEXHydraulics, args...) = hydraulics.cond_sat
 
-# TODO: Maybe we can borrow something better from SINDABD here; the SURFEX scheme is quite simplistic
-
 @inline function mineral_porosity(hydraulics::SURFEXHydraulics, texture::SoilTexture)
     p₀ = hydraulics.porosity
     β_s = hydraulics.porosity_sand_coef
@@ -73,15 +124,65 @@ SURFEXHydraulics(::Type{NF}; kwargs...) where {NF} = SURFEXHydraulics{NF}(; kwar
     return por
 end
 
-@inline function mineral_wilting_point(hydraulics::SURFEXHydraulics, texture::SoilTexture)
+@inline function wilting_point(hydraulics::SURFEXHydraulics, texture::SoilTexture)
     β_w = hydraulics.wilting_point_coef
     wp = β_w*sqrt(texture.clay*100)
     return wp
 end
 
-@inline function mineral_field_capacity(hydraulics::SURFEXHydraulics, texture::SoilTexture)
+@inline function field_capacity(hydraulics::SURFEXHydraulics, texture::SoilTexture)
     η = hydraulics.field_capacity_exp
     β_c = hydraulics.field_capacity_coef
     fc = β_c*(texture.clay*100)^η
     return fc
+end
+
+"""
+    $TYPEDEF
+
+Simple formulation of hydraulic conductivity as a linear function of the liquid water saturated fraction,
+i.e. `vol.water / (vol.water + vol.ice + vol.air)`.
+"""
+struct UnsatKLinear <: AbstractUnsatK end
+
+function hydraulic_conductivity(hydraulics::AbstractSoilHydraulics{<:UnsatKLinear}, swrc::SWRC, vol, args...)
+    let n = swrc.n, # van Genuchten parameter `n`
+        θw = vol.water, # unfrozen water content
+        θsat = vol.water + vol.ice + vol.air, # water + ice content at saturation (porosity)
+        K_sat = saturated_hydraulic_conductivity(hydraulics, args...);
+        K = K_sat * θw / θsat
+        return K
+    end
+end
+
+"""
+    $TYPEDEF
+
+Formulation of hydraulic conductivity as a function of saturated hydraulic conductivity `K_sat` and
+volumetric fractions, assumed to include those of water, ice, and air.
+
+See van Genuchten (1980) and Westermann et al. (2023).
+"""
+@kwdef struct UnsatKVanGenuchten{NF} <: AbstractUnsatK
+    "Exponential scaling factor for ice impedance"
+    Ω::NF = 7
+end
+
+function hydraulic_conductivity(
+    hydraulics::AbstractSoilHydraulics{<:UnsatKVanGenuchten},
+    swrc::FreezeCurves.VanGenuchten,
+    vol,
+    args...
+)
+    let n = swrc.n, # van Genuchten parameter `n`
+        θw = vol.water, # unfrozen water content
+        θwi = vol.water + vol.ice, # total water + ice content
+        θsat = θwi + vol.air, # water + ice content at saturation (porosity)
+        Ω = hydraulics.cond_unsat.Ω, # scaling parameter for ice impedance
+        I_ice = 10^(-Ω*(1 - θw/θtot)), # ice impedance factor
+        K_sat = saturated_hydraulic_conductivity(hydraulics, args...);
+        # We use `complex` types here to permit illegal state values which may occur when using adaptive time steppers.
+        K = abs(K_sat*I_ice*sqrt(complex(θw/θsat))*(1 - complex(1 - complex(θw/θsat)^(n/(n+1)))^((n-1)/n))^2)
+        return K
+    end
 end

@@ -1,5 +1,3 @@
-import FreezeCurves: BrooksCorey, VanGenuchten
-
 """
 Base type for implementations of soil water flow dynamics.
 """
@@ -17,9 +15,6 @@ Operator for soil hydrology corresponding to the Richardson-Richards equation fo
 flow in porous media.
 """
 @kwdef struct RichardsEq{NF} <: AbstractSoilWaterFlowOperator
-    "Exponential scaling factor for ice impedance"
-    Ω::NF = 7
-
     "Closure relation for mapping between water potential (hydraulic head) and saturation"
     saturation_closure = PressureSaturationRelation()
 end
@@ -35,7 +30,7 @@ $TYPEDFIELDS
 struct SoilHydrology{
     NF,
     Operator<:AbstractSoilWaterFlowOperator,
-    SoilHydraulicProperties<:AbstractSoilHydraulicProperties{NF}
+    SoilHydraulicProperties<:AbstractSoilHydraulics{NF}
 } <: AbstractSoilHydrology{NF}
     "Soil water flow scheme"
     operator::Operator
@@ -47,16 +42,16 @@ end
 SoilHydrology(
     ::Type{NF};
     operator::AbstractSoilWaterFlowOperator = NoFlow(),
-    hydraulic_properties::AbstractSoilHydraulicProperties{NF} = SURFEXHydraulics(NF),
+    hydraulic_properties::AbstractSoilHydraulics{NF} = SURFEXHydraulics(NF),
 ) where {NF} = SoilHydrology(operator, hydraulic_properties)
 
 """
-    default_swrc(::AbstractSoilWaterFlowOperator, ::AbstractSoilHydraulicProperties)
+    default_swrc(::AbstractSoilWaterFlowOperator, ::AbstractSoilHydraulics)
 
 Return the default soil water retention curve (SWRC) for the given soil hydrology configuration.
 Defaults to `nothing` which represents no use of a pressure-saturation relation.
 """
-default_swrc(::AbstractSoilWaterFlowOperator, ::AbstractSoilHydraulicProperties) = nothing
+default_swrc(::AbstractSoilWaterFlowOperator, ::AbstractSoilHydraulics) = nothing
 
 get_hydraulic_properties(hydrology::SoilHydrology) = hydrology.hydraulic_properties
 
@@ -159,10 +154,8 @@ end
     field_grid = get_field_grid(grid)
 
     # Compute divergence of water fluxes
-    dθdt = (
-        ∂zᵃᵃᶜ(i, j, k, field_grid, darcy_flux, state, hydrology, energy, strat, bgc)
-        + ∂zᵃᵃᶜ(i, j, k, field_grid, gravity_flux, state, hydrology, energy, strat, bgc)
-    )
+    dθdt = ∂zᵃᵃᶜ(i, j, k, field_grid, darcy_flux, state, hydrology, energy, strat, bgc)
+         + ∂zᵃᵃᶜ(i, j, k, field_grid, gravity_flux, state, hydrology, energy, strat, bgc)
 
     # Get porosity
     por = porosity(idx, state, hydrology, strat, bgc)
@@ -174,9 +167,9 @@ end
     # Get pressure field
     ψ = state.matric_potential
     # Get hydraulic conductivity
-    κ = state.hydraulic_conductivity
-    # Darcy's law: q = -κ ∂ψ/∂z
-    q = -κ * ∂zᵃᵃᶠ(i, j, k, grid, ψ)
+    K = state.hydraulic_conductivity
+    # Darcy's law: q = -K ∂ψ/∂z
+    q = -K * ∂zᵃᵃᶠ(i, j, k, grid, ψ)
     return q
 end
 

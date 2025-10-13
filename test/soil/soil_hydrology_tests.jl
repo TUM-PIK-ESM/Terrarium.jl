@@ -12,8 +12,8 @@ using Test
     )
     @test saturated_hydraulic_conductivity(hydraulic_props) == hydraulic_props.cond_sat
     @test mineral_porosity(hydraulic_props) == hydraulic_props.porosity
-    @test mineral_field_capacity(hydraulic_props) == hydraulic_props.field_capacity
-    @test mineral_wilting_point(hydraulic_props) == hydraulic_props.wilting_point
+    @test field_capacity(hydraulic_props) == hydraulic_props.field_capacity
+    @test wilting_point(hydraulic_props) == hydraulic_props.wilting_point
 end
 
 @testset "Hydraulic properties (SURFEX)" begin
@@ -33,22 +33,22 @@ end
     end
 
     # check that wilting point is equal to zero when there is no clay
-    wp0 = mineral_wilting_point(hydraulic_props, SoilTexture(sand=0.5, silt=0.5, clay=0.0))
+    wp0 = wilting_point(hydraulic_props, SoilTexture(sand=0.5, silt=0.5, clay=0.0))
     @test iszero(wp0)
     for clay in 0.1:0.1:1.0
         sand = (1-clay)*0.7
         silt = (1-clay)*0.3
-        wp = mineral_wilting_point(hydraulic_props, SoilTexture(; sand, silt, clay))
+        wp = wilting_point(hydraulic_props, SoilTexture(; sand, silt, clay))
         @test 0 < wp < 1
     end
 
     # check that field capacity is equal to zero when there is no clay
-    fc0 = mineral_field_capacity(hydraulic_props, SoilTexture(sand=0.5, silt=0.5, clay=0.0))
+    fc0 = field_capacity(hydraulic_props, SoilTexture(sand=0.5, silt=0.5, clay=0.0))
     @test iszero(fc0)
     for clay in 0.1:0.1:1.0
         sand = (1-clay)*0.7
         silt = (1-clay)*0.3
-        fc = mineral_field_capacity(hydraulic_props, SoilTexture(; sand, silt, clay))
+        fc = field_capacity(hydraulic_props, SoilTexture(; sand, silt, clay))
         @test 0 < fc < 1
     end
 end
