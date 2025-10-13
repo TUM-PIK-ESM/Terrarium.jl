@@ -1,20 +1,20 @@
 """
 Base type for implementations of soil water flow dynamics.
 """
-abstract type AbstractSoilWaterFlowOperator <: AbstractOperator end
+abstract type AbstractSoilWaterFluxOperator <: AbstractOperator end
 
 """
 Represents the simplest case of immobile soil water.
 """
-struct NoFlow <: AbstractSoilWaterFlowOperator end
+struct NoFlow <: AbstractSoilWaterFluxOperator end
 
 """
-    RichardsEq{NF} <: AbstractSoilWaterFlowOperator
+    RichardsEq{NF} <: AbstractSoilWaterFluxOperator
 
 Operator for soil hydrology corresponding to the Richardson-Richards equation for variably saturated
 flow in porous media.
 """
-@kwdef struct RichardsEq{NF} <: AbstractSoilWaterFlowOperator
+@kwdef struct RichardsEq{NF} <: AbstractSoilWaterFluxOperator
     "Closure relation for mapping between water potential (hydraulic head) and saturation"
     saturation_closure = PressureSaturationRelation()
 end
@@ -29,10 +29,10 @@ $TYPEDFIELDS
 """
 struct SoilHydrology{
     NF,
-    Operator<:AbstractSoilWaterFlowOperator,
+    Operator<:AbstractSoilWaterFluxOperator,
     SoilHydraulicProperties<:AbstractSoilHydraulics{NF}
 } <: AbstractSoilHydrology{NF}
-    "Soil water flow scheme"
+    "Soil water flux operator"
     operator::Operator
 
     "Soil hydraulic properties parameterization"
@@ -41,17 +41,17 @@ end
 
 SoilHydrology(
     ::Type{NF};
-    operator::AbstractSoilWaterFlowOperator = NoFlow(),
-    hydraulic_properties::AbstractSoilHydraulics{NF} = SURFEXHydraulics(NF),
+    operator::AbstractSoilWaterFluxOperator = NoFlow(),
+    hydraulic_properties::AbstractSoilHydraulics{NF} = SoilHydraulicsSURFEX(NF),
 ) where {NF} = SoilHydrology(operator, hydraulic_properties)
 
 """
-    default_swrc(::AbstractSoilWaterFlowOperator, ::AbstractSoilHydraulics)
+    default_swrc(::AbstractSoilWaterFluxOperator, ::AbstractSoilHydraulics)
 
 Return the default soil water retention curve (SWRC) for the given soil hydrology configuration.
 Defaults to `nothing` which represents no use of a pressure-saturation relation.
 """
-default_swrc(::AbstractSoilWaterFlowOperator, ::AbstractSoilHydraulics) = nothing
+default_swrc(::AbstractSoilWaterFluxOperator, ::AbstractSoilHydraulics) = nothing
 
 get_hydraulic_properties(hydrology::SoilHydrology) = hydrology.hydraulic_properties
 

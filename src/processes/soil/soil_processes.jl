@@ -9,7 +9,7 @@ include("biogeochem/homogeneous_soil.jl")
 export ConstantSoilCarbonDenisty
 include("biogeochem/constant_soil_carbon.jl")
 
-export PrescribedHydraulics, SURFEXHydraulics, saturated_hydraulic_conductivity, mineral_porosity, field_capacity, wilting_point
+export PrescribedHydraulics, SoilHydraulicsSURFEX, saturated_hydraulic_conductivity, mineral_porosity, field_capacity, wilting_point
 include("hydrology/soil_hydraulic_properties.jl")
 
 export SoilHydrology, ImmobileSoilWater, SoilHydraulicProperties
