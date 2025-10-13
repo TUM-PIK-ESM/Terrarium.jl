@@ -45,7 +45,7 @@ Compute the empirical field capacity of the soil.
 function field_capacity end
 
 """
-    PrescribedHydraulics{NF} <: AbstractSoilHydraulics
+    ConstantHydraulics{NF} <: AbstractSoilHydraulics
 
 Represents a simple case where soil hydraulic properties are given as constant values.
 This is mostly provided just for testing, although it may be useful in certain cases where direct
@@ -54,7 +54,7 @@ measurements of hydraulic properites are available.
 Properties:
 $TYPEDFIELDS
 """
-@kwdef struct PrescribedHydraulics{NF, UK} <: AbstractSoilHydraulics{UK}
+@kwdef struct ConstantHydraulics{NF, UK} <: AbstractSoilHydraulics{UK}
     "Hydraulic conductivity at saturation [m/s]"
     cond_sat::NF = 1e-5
 
@@ -71,15 +71,15 @@ $TYPEDFIELDS
     wilting_point::NF = 0.05
 end
 
-PrescribedHydraulics(::Type{NF}; kwargs...) where {NF} = PrescribedHydraulics{NF}(; kwargs...)
+ConstantHydraulics(::Type{NF}; kwargs...) where {NF} = ConstantHydraulics{NF}(; kwargs...)
 
-@inline saturated_hydraulic_conductivity(hydraulics::PrescribedHydraulics, args...) = hydraulics.cond_sat
+@inline saturated_hydraulic_conductivity(hydraulics::ConstantHydraulics, args...) = hydraulics.cond_sat
 
-@inline mineral_porosity(hydraulics::PrescribedHydraulics, args...) = hydraulics.porosity
+@inline mineral_porosity(hydraulics::ConstantHydraulics, args...) = hydraulics.porosity
 
-@inline wilting_point(hydraulics::PrescribedHydraulics, args...) = hydraulics.wilting_point
+@inline wilting_point(hydraulics::ConstantHydraulics, args...) = hydraulics.wilting_point
 
-@inline field_capacity(hydraulics::PrescribedHydraulics, args...) = hydraulics.field_capacity
+@inline field_capacity(hydraulics::ConstantHydraulics, args...) = hydraulics.field_capacity
 
 """
     $TYPEDEF
