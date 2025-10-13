@@ -4,7 +4,7 @@ using Test
 @testset "Hydraulic properties (prescribed)" begin
     # For prescribed hyraulic properties, just check that the returned values
     # match what was set.
-    hydraulic_props = PrescribedHydraulics(
+    hydraulic_props = ConstantHydraulics(
         cond_sat = 1e-6,
         porosity = 0.3,
         field_capacity = 0.1,
