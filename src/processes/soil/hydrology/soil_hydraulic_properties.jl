@@ -149,7 +149,7 @@ end
 Simple formulation of hydraulic conductivity as a linear function of the liquid water saturated fraction,
 i.e. `soil.water / (soil.water + soil.ice + soil.air)`.
 """
-struct UnsatKLinear{RetentionCurve<:SWRC} <: AbstractUnsatK
+@kwdef struct UnsatKLinear{RetentionCurve<:SWRC} <: AbstractUnsatK
     "Soil water retention curve"
     swrc::RetentionCurve = ustrip(FreezeCurves.BrooksCorey())
 end

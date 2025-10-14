@@ -15,8 +15,9 @@ include("biogeochem/constant_soil_carbon.jl")
 export ConstantHydraulics, SoilHydraulicsSURFEX, saturated_hydraulic_conductivity, mineral_porosity, field_capacity, wilting_point
 include("hydrology/soil_hydraulic_properties.jl")
 
-export SoilHydrology, ImmobileSoilWater, SoilHydraulicProperties
+export SoilHydrology, NoFlow, RichardsEq
 include("hydrology/soil_hydrology.jl")
+include("hydrology/soil_hydrology_rre.jl")
 
 export SoilThermalConductivities, SoilHeatCapacities, SoilThermalProperties, InverseQuadratic
 include("energy/soil_thermal_properties.jl")
