@@ -46,18 +46,12 @@ SoilHydrology(
 ) where {NF} = SoilHydrology(operator, hydraulic_properties)
 
 """
-    default_swrc(::AbstractSoilWaterFluxOperator, ::AbstractSoilHydraulics)
+    get_swrc(hydrology::SoilHydrology)
 
-Return the default soil water retention curve (SWRC) for the given soil hydrology configuration.
-Defaults to `nothing` which represents no use of a pressure-saturation relation.
+Return the soil water retention curve from the `hydraulic_properties` associated with
+the given `SoilHydrology` configuration.
 """
-default_swrc(::AbstractSoilWaterFluxOperator, ::AbstractSoilHydraulics) = nothing
-
-get_hydraulic_properties(hydrology::SoilHydrology) = hydrology.hydraulic_properties
-
-# TODO: This method interface assumes a single water retenction curve for the whole stratigraphy;
-# we should ideally relax this assumption for multi-layer stratigraphies
-get_soil_water_retention_curve(hydrology::SoilHydrology) = hydrology.swrc
+get_swrc(hydrology::SoilHydrology) = hydrology.hydraulic_properties.cond_unsat.swrc
 
 """
     porosity(idx, state, hydrology::SoilHydrology, strat::AbstractStratigraphy, bgc::AbstractSoilBiogeochemistry)
@@ -65,10 +59,9 @@ get_soil_water_retention_curve(hydrology::SoilHydrology) = hydrology.swrc
 Return the porosity of the soil volume at `idx` given the current state, hydrology, stratigraphy, and biogeochemistry configurations.
 """
 @inline function porosity(idx, state, hydrology::SoilHydrology, strat::AbstractStratigraphy, bgc::AbstractSoilBiogeochemistry)
-    props = get_hydraulic_properties(hydrology)
     org = organic_fraction(idx, state, bgc)
     texture = soil_texture(idx, state, strat)
-    return (1 - org)*mineral_porosity(props, texture) + org*organic_porosity(idx, state, bgc)
+    return (1 - org)*mineral_porosity(hydrology.hydraulic_properties, texture) + org*organic_porosity(idx, state, bgc)
 end
 
 # Immobile soil water (NoFlow)
@@ -81,19 +74,16 @@ variables(::SoilHydrology{NF,NoFlow}) where {NF} = (
 
 @inline compute_tendencies!(state, model, strat::SoilHydrology{NF,NoFlow}) where {NF} = nothing
 
-# TODO: Richardson-Richards equation diffusion/advection
-
 variables(hydrology::SoilHydrology{NF,<:RichardsEq}) where {NF} = (
     prognosic(:matric_potential, XYZ(), get_closure(hydrology.operator)),
-    # decalre hydraulic_conductivity as auxiliary variable on grid cell faces
-    auxiliary(:hydraulic_conductivity, XYZ(z=Face()), domain=UnitInterval(), units=u"m/s", desc="Hydraulic conductivity at grid cell faces [m/s]"),
+    auxiliary(:hydraulic_conductivity, XYZ(), units=u"m/s", desc="Hydraulic conductivity of soil volumes [m/s]"),
 )
 
 function compute_auxiliary!(state, model, hydrology::SoilHydrology{NF, <:RichardsEq}) where {NF}
     grid = get_grid(model)
-    hydrology = get_soil_hydrology(model)
     strat = get_stratigraphy(model)
-    launch!(grid, :xyz, compute_hydraulic_conductivity!, state, grid, hydrology, energy, strat, bgc)
+    bgc = get_biogeochemistry(model)
+    launch!(grid, :xyz, compute_hydraulic_conductivity!, state, grid, hydrology, strat, bgc)
     return nothing
 end
 
@@ -101,32 +91,39 @@ end
     state,
     grid,
     hydrology::SoilHydrology,
-    energy::AbstractSoilEnergyBalance,
     strat::AbstractStratigraphy,
     bgc::AbstractSoilBiogeochemistry,
 )
-    idx = @index(Global, NTuple)
-    state.hydraulic_conductivity[idx...] = hydraulic_conductivity(idx, state, grid, hydrology, energy, strat, bgc)
+    i, j, k = @index(Global, NTuple)
+    state.hydraulic_conductivity[i, j, k] = hydraulic_conductivity((i, j, k), state, hydrology, strat, bgc)
+    # Manually set hydraulic conductivity at the boundaries to the conductivity of the cell centers at the boundaries;
+    # note that this is an assumption that could potentially be relaxed in the future.
+    # TODO: maybe this should be done with boundary conditions?
+    field_grid = get_field_grid(grid) 
+    if k == 1
+        state.hydraulic_conductivity[i, j, 0] = state.hydraulic_conductivity[i, j, 1]
+    elseif k == field_grid.Nz
+        state.hydraulic_conductivity[i, j, field_grid.Nz+1] = state.hydraulic_conductivity[i, j, field_grid.Nz]
+    end
 end
 
 @inline function hydraulic_conductivity(
-    idx, grid, state,
+    idx, state,
     hydrology::SoilHydrology,
-    energy::AbstractSoilEnergyBalance,
     strat::AbstractStratigraphy,
     bgc::AbstractSoilBiogeochemistry
 )
-    # Get porosity
-    por = porosity(idx, state, hydrology, strat, bgc)
-
-    # TODO
+    # Get soil composition
+    soil = soil_composition(idx, state, strat, hydrology, bgc)
+    K = hydraulic_conductivity(hydrology.hydraulic_properties, soil)
+    return K
 end
 
 function compute_tendencies!(state, model, hydrology::SoilHydrology{NF, <:RichardsEq}) where {NF}
     grid = get_grid(model)
-    hydrology = get_soil_hydrology(model)
     strat = get_stratigraphy(model)
-    launch!(grid, :xyz, compute_saturation_tendency!, state, grid, hydrology, energy, strat, bgc)
+    bgc = get_soil_hydrology(model)
+    launch!(grid, :xyz, compute_saturation_tendency!, state, grid, hydrology, strat, bgc)
     return nothing
 end
 
@@ -134,18 +131,16 @@ end
     state,
     grid,
     hydrology::SoilHydrology,
-    energy::AbstractSoilEnergyBalance,
     strat::AbstractStratigraphy,
     bgc::AbstractSoilBiogeochemistry,
 )
-    idx = @index(Global, NTuple)
-    state.tendencies.saturation_water_ice[idx...] += saturation_tendency(idx, state, grid, hydrology, energy, strat, bgc)
+    i, j, k = @index(Global, NTuple)
+    state.tendencies.saturation_water_ice[i, j, k] += saturation_tendency((i, j, k), grid, state, hydrology, strat, bgc)
 end
 
 @inline function saturation_tendency(
-    idx, state, grid,
+    idx, grid, state,
     hydrology::SoilHydrology{NF, <:RichardsEq},
-    energy::AbstractSoilEnergyBalance,
     strat::AbstractStratigraphy,
     bgc::AbstractSoilBiogeochemistry,
 ) where {NF}
@@ -154,33 +149,43 @@ end
     field_grid = get_field_grid(grid)
 
     # Compute divergence of water fluxes
-    dθdt = ∂zᵃᵃᶜ(i, j, k, field_grid, darcy_flux, state, hydrology, energy, strat, bgc)
-         + ∂zᵃᵃᶜ(i, j, k, field_grid, gravity_flux, state, hydrology, energy, strat, bgc)
+    # ∂θ∂t = ∇⋅K(θ)(∇ψ + 1) = ∇⋅K(θ)∇ψ + ∇⋅K(θ)
+    ∂θ∂t = ∂zᵃᵃᶜ(i, j, k, field_grid, darcy_flux, state)
+         + ∂zᵃᵃᶜ(i, j, k, field_grid, percolation_flux, state)
 
     # Get porosity
     por = porosity(idx, state, hydrology, strat, bgc)
 
-    return -dθdt / por
+    # Rescale volumetric flux to saturation flux
+    return -∂θ∂t / por
 end
 
-@inline function darcy_flux(i, j, k, grid, state, args...)
+@inline function darcy_flux(i, j, k, grid, state)
     # Get pressure field
     ψ = state.matric_potential
     # Get hydraulic conductivity
     K = state.hydraulic_conductivity
     # Darcy's law: q = -K ∂ψ/∂z
-    q = -K * ∂zᵃᵃᶠ(i, j, k, grid, ψ)
+    # TODO: also account for effect of temperature on matric potential
+    ∇ψ = ∂zᵃᵃᶠ(i, j, k, grid, ψ)
+    ## Take minimum of hydraulic conductivities in the direction of flow
+    Kₖ = (∇ψ < 0)*min(K[i, j, k-1], K[i, j, k]) +
+         (∇ψ >= 0)*min(K[i, j, k], K[i, j, k+1])
+    q = -Kₖ*∇ψ
+    return q
+end
+
+@inline function percolation_flux(i, j, k, grid, state)
+    # Get hydraulic conductivity
+    K = state.hydraulic_conductivity
+    # Select the minimum of the hydraulic conductivities in the downward direction
+    q = -min(K[i, j, k], K[i, j, k+1])
     return q
 end
 
 # Matric potential <--> saturation closure relation
 
-@kwdef struct PressureSaturationClosure{RetentionCurve<:SWRC} <: AbstractClosureRelation
-    "Soil water retention curve(s) from FreezeCurves.jl"
-    swrc::RetentionCurve = BrooksCorey()
-
-    PressureSaturationClosure(swrc::SWRC) = new{typeof(swrc)}(ustrip(swrc))
-end
+@kwdef struct PressureSaturationClosure <: AbstractClosureRelation end
 
 getvar(::PressureSaturationClosure) = auxiliary(
     :saturation_water_ice,
@@ -188,3 +193,71 @@ getvar(::PressureSaturationClosure) = auxiliary(
     domain=UnitInterval(),
     desc="Saturation level of water and ice in the pore space",
 )
+
+function closure!(state, model::AbstractSoilModel, ::PressureSaturationClosure)
+    grid = get_grid(model)
+    hydrology = get_soil_hydrology(model)
+    strat = get_stratigraphy(model)
+    bgc = get_biogeochemistry(model)
+    launch!(grid, :xyz, pressure_to_saturation!, state, hydrology, strat, bgc)
+    return nothing
+end
+
+function invclosure!(state, model::AbstractSoilModel, ::PressureSaturationClosure)
+    grid = get_grid(model)
+    hydrology = get_soil_hydrology(model)
+    strat = get_stratigraphy(model)
+    bgc = get_biogeochemistry(model)
+    launch!(grid, :xyz, saturation_to_pressure!, state, hydrology, strat, bgc)
+    return nothing
+end
+
+@kernel function pressure_to_saturation!(
+    state,
+    hydrology::SoilHydrology{NF, <:RichardsEq},
+    strat::AbstractStratigraphy,
+    bgc::AbstractSoilBiogeochemistry,
+) where {NF}
+    idx = @index(Global, NTuple)
+    pressure_to_saturation!(idx, state, hydrology, strat, bgc)
+end
+
+@inline function pressure_to_saturation!(
+    idx, state,
+    hydrology::SoilHydrology,
+    strat::AbstractStratigraphy,
+    bgc::AbstractSoilBiogeochemistry,
+)
+    i, j, k = idx
+    ψ = state.matric_potential[i, j, k] # assumed given
+    swrc = get_swrc(hydrology)
+    por = porosity(idx, state, hydrology, strat, bgc)
+    vol_water_ice_content = swrc(ψ; θsat=por)
+    state.saturation_water_ice[i, j, k] = vol_water_ice_content / por
+    return nothing
+end
+
+@kernel function saturation_to_pressure!(
+    state,
+    hydrology::SoilHydrology,
+    strat::AbstractStratigraphy,
+    bgc::AbstractSoilBiogeochemistry,
+)
+    idx = @index(Global, NTuple)
+    saturation_to_pressure!(idx, state, hydrology, strat, bgc)
+end
+
+@inline function saturation_to_pressure!(
+    idx, state,
+    hydrology::SoilHydrology,
+    strat::AbstractStratigraphy,
+    bgc::AbstractSoilBiogeochemistry,
+) where {NF}
+    i, j, k = idx
+    sat = state.saturation_water_ice[i, j, k] # assumed given
+    # get inverse of SWRC
+    inv_swrc = inv(get_swrc(hydrology))
+    por = porosity(idx, state, hydrology, strat, bgc)
+    state.matric_potential[i, j, k] = inv_swrc(sat*por; θsat=por)
+    return nothing
+end
