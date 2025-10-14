@@ -59,7 +59,7 @@ function StateVariables(
     # get named tuple mapping prognostic variabels to their respective closure relations, if defined
     closures = map(var -> var.closure, filter(hasclosure, prognostic_vars))
     # get closure fields
-    closure_fields = map(closure -> auxiliary_fields[varname(getvar(closure))], values(closures))
+    closure_fields = map(closure -> auxiliary_fields[varname(closurevar(closure))], values(closures))
     # construct and return StateVariables
     return StateVariables(
         prognostic_fields,

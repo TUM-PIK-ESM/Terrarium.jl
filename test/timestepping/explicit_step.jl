@@ -5,7 +5,7 @@ struct TestClosure
     varname::Symbol
 end
 
-Terrarium.getvar(closure::TestClosure) = Terrarium.auxiliary(closure.varname, XYZ())
+Terrarium.closurevar(closure::TestClosure) = Terrarium.auxiliary(closure.varname, XYZ())
 
 @testset "Forward Euler" begin
     Δt = 10.0
