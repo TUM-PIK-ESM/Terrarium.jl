@@ -32,7 +32,7 @@ import Oceananigans.BoundaryConditions: FieldBoundaryConditions, BoundaryConditi
                                         fill_halo_regions!, regularize_field_boundary_conditions, getbc
 
 # Adapt and KernelAbstractions for GPU parallelization
-import Adapt: Adapt, adapt
+import Adapt: Adapt, adapt, @adapt_structure
 import KernelAbstractions: @kernel, @index
 
 # Freeze curves for soil energy balance

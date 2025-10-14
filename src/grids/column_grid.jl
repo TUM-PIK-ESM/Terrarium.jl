@@ -36,14 +36,11 @@ struct ColumnGrid{NF,RectGrid<:OceananigansGrids.RectilinearGrid} <: AbstractLan
     ColumnGrid(grid::OceananigansGrids.RectilinearGrid{NF}) where {NF} = new{NF, typeof(grid)}(grid)
 end
 
+@adapt_structure ColumnGrid
+
 get_field_grid(grid::ColumnGrid) = grid.grid
 
 architecture(grid::ColumnGrid) = architecture(grid.grid)
-
-function Adapt.adapt_structure(to, grid::ColumnGrid)
-    inner_grid = Adapt.adapt_structure(to, grid.grid)
-    return ColumnGrid(inner_grid)
-end
 
 function Base.show(io::IO, mime::MIME"text/plain", grid::ColumnGrid{NF}) where {NF}
     println(io, "ColumnGrid{$NF} on $(architecture(grid)) with")

@@ -306,7 +306,8 @@ variables(vars::Union{AbstractVariable, Namespace}...) = Variables(vars...)
 
 """
 Type-stable and GPU-friendly placeholder for input variables in model/process `struct`s, allowing parameters/constants to
-be easily replaced by input `Field`s.
+be easily replaced by input `Field`s. `Input` can be provided as the value of a struct field or in an Oceananigans BoundaryCondition type
+and will result in an input variable being allocated with the given name and dimensions during model initialization.
 """
 struct Input{name, units, VD, IT}
     dims::VD

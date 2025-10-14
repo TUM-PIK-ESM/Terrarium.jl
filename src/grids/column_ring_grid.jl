@@ -83,6 +83,8 @@ struct ColumnRingGrid{
     ) = ColumnRingGrid(CPU(), Float32, vert, mask.grid, mask)
 end
 
+@adapt_structure ColumnRingGrid
+
 get_field_grid(grid::ColumnRingGrid) = grid.grid
 
 """
@@ -109,14 +111,6 @@ function on_architecture(arch::AbstractArchitecture, grid::ColumnRingGrid)
         on_architecture(arch, grid.rings),
         on_architecture(arch, grid.mask),
         on_architecture(arch, grid.grid)
-    )
-end
-
-function Adapt.adapt_structure(to, grid::ColumnRingGrid)
-    return ColumnRingGrid(
-        Adapt.adapt(to, grid.rings),
-        Adapt.adapt(to, grid.mask),
-        Adapt.adapt(to, grid.grid)
     )
 end
 
