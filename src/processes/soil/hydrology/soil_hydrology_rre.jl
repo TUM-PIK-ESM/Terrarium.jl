@@ -111,7 +111,7 @@ end
 
 @kwdef struct PressureSaturationClosure <: AbstractClosureRelation end
 
-getvar(::PressureSaturationClosure) = auxiliary(
+closurevar(::PressureSaturationClosure) = auxiliary(
     :saturation_water_ice,
     XYZ();
     domain=UnitInterval(),

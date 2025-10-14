@@ -12,7 +12,7 @@ and the unfrozen fraction of pore water. Note that this formulation implies that
 """
 struct TemperatureEnergyClosure <: AbstractClosureRelation end
 
-getvar(::TemperatureEnergyClosure) = auxiliary(
+closurevar(::TemperatureEnergyClosure) = auxiliary(
     :internal_energy,
     XYZ();
     units=u"J/m^3",

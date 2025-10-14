@@ -52,7 +52,7 @@ function explicit_step!(state, grid::AbstractLandGrid, timestepper::AbstractTime
         # update prognostic or closure state variable
         if haskey(state.closures, name)
             closure = state.closures[name]
-            cname = varname(getvar(closure))
+            cname = varname(closurevar(closure))
             explicit_step!(state.auxiliary[cname], state.tendencies[cname], grid, timestepper, Δt)
         else
             explicit_step!(state.prognostic[name], state.tendencies[name], grid, timestepper, Δt)
