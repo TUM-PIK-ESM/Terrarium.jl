@@ -12,7 +12,8 @@ include("biogeochem/homogeneous_soil.jl")
 export ConstantSoilCarbonDenisty
 include("biogeochem/constant_soil_carbon.jl")
 
-export ConstantHydraulics, SoilHydraulicsSURFEX, saturated_hydraulic_conductivity, mineral_porosity, field_capacity, wilting_point
+export ConstantHydraulics, SoilHydraulicsSURFEX, UnsatKLinear, UnsatKVanGenuchten
+export saturated_hydraulic_conductivity, mineral_porosity, field_capacity, wilting_point
 include("hydrology/soil_hydraulic_properties.jl")
 
 export SoilHydrology, NoFlow, RichardsEq

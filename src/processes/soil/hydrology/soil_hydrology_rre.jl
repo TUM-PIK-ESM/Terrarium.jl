@@ -1,5 +1,18 @@
-variables(hydrology::SoilHydrology{NF,<:RichardsEq}) where {NF} = (
-    prognosic(:matric_potential, XYZ(), get_closure(hydrology.operator)),
+"""
+    RichardsEq{PS} <: AbstractSoilWaterFluxOperator
+
+Operator for soil hydrology corresponding to the Richardson-Richards equation for variably saturated
+flow in porous media.
+"""
+@kwdef struct RichardsEq{PS} <: AbstractSoilWaterFluxOperator
+    "Closure relation for mapping between water potential (hydraulic head) and saturation"
+    saturation_closure::PS = PressureSaturationClosure()
+end
+
+get_closure(op::RichardsEq) = op.saturation_closure
+
+variables(hydrology::SoilHydrology{NF, <:RichardsEq}) where {NF} = (
+    prognostic(:matric_potential, XYZ(), get_closure(hydrology.operator)),
     auxiliary(:hydraulic_conductivity, XYZ(), units=u"m/s", desc="Hydraulic conductivity of soil volumes [m/s]"),
 )
 
