@@ -55,14 +55,14 @@ Container type for an Oceananigans `BoundaryCondition` applied to prognostic (or
 Properties:
 $TYPEDFIELDS
 """
-struct PrescribedBC{progvar, BC, FT} <: AbstractBoundaryConditions
-    "Boundary condition value"
-    value::FT
+struct PrescribedBC{progvar, BC<:BoundaryCondition} <: AbstractBoundaryConditions
+    "Boundary condition"
+    condition::BC
 
-    PrescribedBC(progvar::Symbol, bctype::BCType, value) = new{progvar, typeof(bctype), typeof(value)}(value)
+    PrescribedBC(progvar::Symbol, bc::BoundaryCondition) = new{progvar, typeof(bc)}(bc)
 end
 
-variables(bc::PrescribedBC) = variables(bc.value)
+variables(bc::PrescribedBC) = variables(bc.condition)
 
 compute_auxiliary!(state, model, ::PrescribedBC) = nothing
 compute_tendencies!(state, model, ::PrescribedBC) = nothing
@@ -76,18 +76,18 @@ function compute_tendencies!(state, model, ::PrescribedBC{progvar, <:Flux}) wher
     compute_z_bcs!(tend, prog, arch, clock, state)
 end
 
-function get_field_boundary_conditions(bc::PrescribedBC{progvar, BC}, ::AbstractLandGrid) where {progvar, BC}
-    (; progvar => BoundaryCondition(BC(), bc.value))
+function get_field_boundary_conditions(bc::PrescribedBC{progvar}, ::AbstractLandGrid) where {progvar}
+    (; progvar => bc.condition)
 end
 
 # Convenience aliases for PrescribedBC
-NoFlux(progvar::Symbol) = PrescribedBC(progvar, Flux(), nothing)
-PrescribedFlux(progvar::Symbol, value; kwargs...) = PrescribedBC(progvar, Flux(), value)
-PrescribedValue(progvar::Symbol, value; kwargs...) = PrescribedBC(progvar, Value(), value)
-PrescribedGradient(progvar::Symbol, value; kwargs...) = PrescribedBC(progvar, Gradient(), value)
+NoFlux(progvar::Symbol) = PrescribedBC(progvar, NoFluxBoundaryCondition())
+PrescribedFlux(progvar::Symbol, value; kwargs...) = PrescribedBC(progvar, FluxBoundaryCondition(value; kwargs...))
+PrescribedValue(progvar::Symbol, value; kwargs...) = PrescribedBC(progvar, ValueBoundaryCondition(value; kwargs...))
+PrescribedGradient(progvar::Symbol, value; kwargs...) = PrescribedBC(progvar, GradientBoundaryCondition(value; kwargs...))
 
 @inline function getbc(::Input{name, units, XY}, i::Integer, j::Integer, grid::OceananigansGrids.AbstractGrid, clock, state) where {name, units}
-    input_field = getproperty(state, name)
+    input_field = getproperty(state.inputs, name)
     return @inbounds input_field[i, j]
 end
 
