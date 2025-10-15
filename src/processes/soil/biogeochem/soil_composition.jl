@@ -22,6 +22,14 @@ and a mixture of organic and mineral solid material.
 
     "Soil texture (mineral solid constituents)"
     texture::SoilTexture{NF} = SoilTexture()
+
+    function SoilComposition(porosity::NF, saturation::NF, liquid::NF, organic::NF, texture::SoilTexture{NF}) where {NF}
+        @assert zero(NF) <= porosity <= one(NF)
+        @assert zero(NF) <= saturation <= one(NF)
+        @assert zero(NF) <= liquid <= one(NF)
+        @assert zero(NF) <= organic <= one(NF)
+        return new{NF}(porosity, saturation, liquid, organic, texture)
+    end
 end
 
 porosity(soil::SoilComposition) = soil.porosity
@@ -31,6 +39,10 @@ saturation(soil::SoilComposition) = soil.saturation
 liquid_fraction(soil::SoilComposition) = soil.liquid
 
 organic_fraction(soil::SoilComposition) = soil.organic
+
+mineral_texture(soil::SoilComposition) = soil.texture
+
+water_ice(soil::SoilComposition) = soil.porosity*soil.saturation
 
 """
     volumetric_fractions(soil::SoilComposition)
