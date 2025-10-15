@@ -14,10 +14,11 @@ import Interpolations
 
 # Oceananigans numerics
 # TODO: Raise an issue on Oceananigans.jl about refactoring numerics into a separate package.
-import Oceananigans: Field, AbstractField, Center, Face, set!, interior, xnodes, ynodes, znodes, location
+import Oceananigans: Oceananigans, Field, AbstractField, Center, Face, set!, interior, xnodes, ynodes, znodes, location
 import Oceananigans.Advection: AbstractAdvectionScheme, UpwindBiased
-import Oceananigans.Architectures: AbstractArchitecture, CPU, GPU, architecture, on_architecture
-import Oceananigans.Grids: Grids, AbstractGrid, Periodic, Flat, Bounded
+import Oceananigans.Architectures: AbstractArchitecture, CPU, GPU, architecture, on_architecture, array_type
+import Oceananigans.Grids as OceananigansGrids
+import Oceananigans.Grids: Periodic, Flat, Bounded
 import Oceananigans.Operators: ∂zᵃᵃᶜ, ∂zᵃᵃᶠ, ℑzᵃᵃᶠ, Δzᵃᵃᶜ
 import Oceananigans.OutputReaders: FieldTimeSeries
 import Oceananigans.TimeSteppers: Clock, tick_time!, reset!
@@ -25,11 +26,13 @@ import Oceananigans.Units: Time
 import Oceananigans.Utils: launch!
 # Boundary conditions
 import Oceananigans.BoundaryConditions: FieldBoundaryConditions, BoundaryCondition, DefaultBoundaryCondition,
-                                        ValueBoundaryCondition, FluxBoundaryCondition, NoFluxBoundaryCondition,
-                                        fill_halo_regions!, regularize_field_boundary_conditions
+                                        ValueBoundaryCondition, FluxBoundaryCondition, GradientBoundaryCondition, NoFluxBoundaryCondition,
+                                        ContinuousBoundaryFunction, DiscreteBoundaryFunction,
+                                        AbstractBoundaryConditionClassification, Value, Flux, Gradient, # BC type classifications
+                                        fill_halo_regions!, regularize_field_boundary_conditions, getbc
 
 # Adapt and KernelAbstractions for GPU parallelization
-import Adapt: Adapt, adapt
+import Adapt: Adapt, adapt, @adapt_structure
 import KernelAbstractions: @kernel, @index
 
 # Freeze curves for soil energy balance
@@ -45,12 +48,18 @@ import Unitful: @u_str, uconvert, ustrip, upreferred
 
 const LengthQuantity{NF, U} = Quantity{NF, 𝐋, U} where {NF, U<:Units}
 
+const BCType = AbstractBoundaryConditionClassification
+
 # Re-export selected types and methods from Oceananigans
-export Field, FieldTimeSeries, CPU, GPU, Clock, Center, Face, ValueBoundaryCondition, FluxBoundaryCondition, NoFluxBoundaryCondition
+export Field, FieldTimeSeries, CPU, GPU, Clock, Center, Face
+export Value, Flux, Gradient, ValueBoundaryCondition, GradientBoundaryCondition, FluxBoundaryCondition, NoFluxBoundaryCondition
 export set!, interior, architecture, on_architecture, xnodes, ynodes, znodes, location
 
-# Re-export Dates types
+# Re-export common Dates types
 export Year, Month, Day, Second
+
+# Re-export unit types
+export @u_str, uconvert, ustrip
 
 # Re-export adapt
 export adapt
@@ -58,17 +67,17 @@ export adapt
 # internal utilities
 include("utils.jl")
 
-export PrognosticVariable, AuxiliaryVariable, InputVariable, XY, XYZ
+export PrognosticVariable, AuxiliaryVariable, InputVariable, Input, XY, XYZ
 include("abstract_variables.jl")
 
 # grids
 export UniformSpacing, ExponentialSpacing, PrescribedSpacing
 include("grids/vertical_discretization.jl")
 
-export ColumnGrid, GlobalRingGrid, get_field_grid
+export ColumnGrid, ColumnRingGrid, get_field_grid
 include("grids/grids.jl")
 
-export InputFields, InputProvider, FieldInputSource, FieldTimeSeriesInputSource
+export InputFields, InputProvider, InputSource
 export update_inputs!, get_input_fields, get_input_field
 include("inputs/inputs.jl")
 
@@ -88,7 +97,7 @@ include("state_variables.jl")
 export FieldInitializers, DefaultInitializer
 include("initializers.jl")
 
-export VerticalBoundaryConditions, DefaultBoundaryConditions, PrescribedFlux
+export ColumnBoundaryConditions, ColumnBCs, DefaultBoundaryConditions, PrescribedFlux, PrescribedValue, PrescribedGradient
 include("boundary_conditions.jl")
 
 # timestepper implementations

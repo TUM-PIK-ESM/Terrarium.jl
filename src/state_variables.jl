@@ -27,6 +27,8 @@ by the timestepping scheme.
     clock::ClockType = Clock()
 end
 
+@adapt_structure StateVariables
+
 function StateVariables(
     model::AbstractModel,
     clock::Clock,
@@ -65,19 +67,6 @@ function StateVariables(
         namespaces,
         closures,
         clock,
-    )
-end
-
-# adapt_structure dispatch for GPU compat
-function Adapt.adapt_structure(to, sv::StateVariables)
-    return StateVariables(
-        Adapt.adapt_structure(to, sv.prognostic),
-        Adapt.adapt_structure(to, sv.tendencies),
-        Adapt.adapt_structure(to, sv.auxiliary),
-        Adapt.adapt_structure(to, sv.inputs),
-        Adapt.adapt_structure(to, sv.namespaces),
-        Adapt.adapt_structure(to, sv.closures),
-        Adapt.adapt_structure(to, sv.clock),
     )
 end
 

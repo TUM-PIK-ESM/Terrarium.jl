@@ -32,7 +32,7 @@ JuliaLocalPreferences.toml
 
 # Data and output files
 data/
-output/
+outputs/
 
 # Scratchspace
 scratch/

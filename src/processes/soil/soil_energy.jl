@@ -36,8 +36,7 @@ function compute_tendencies!(state, model, energy::SoilEnergyBalance)
     hydrology = get_soil_hydrology(model)
     strat = get_stratigraphy(model)
     bgc = get_biogeochemistry(model)
-    bcs = get_boundary_conditions(model)
-    launch!(grid, :xyz, compute_energy_tendency!, state, grid, energy, hydrology, strat, bgc, bcs)
+    launch!(grid, :xyz, compute_energy_tendency!, state, grid, energy, hydrology, strat, bgc)
     return nothing
 end
 
@@ -48,10 +47,9 @@ end
     hydrology::AbstractSoilHydrology,
     strat::AbstractStratigraphy,
     bgc::AbstractSoilBiogeochemistry,
-    bcs::AbstractBoundaryConditions,
 )
     idx = @index(Global, NTuple)
-    state.internal_energy_tendency[idx...] += energy_tendency(idx, state, grid, energy, hydrology, strat, bgc, bcs)
+    state.internal_energy_tendency[idx...] += energy_tendency(idx, state, grid, energy, hydrology, strat, bgc)
 end
 
 @inline function energy_tendency(
@@ -60,20 +58,14 @@ end
     hydrology::AbstractSoilHydrology,
     strat::AbstractStratigraphy,
     bgc::AbstractSoilBiogeochemistry,
-    bcs::AbstractBoundaryConditions,
 )
     i, j, k = idx
     # operators require the underlying Oceananigans grid
     field_grid = get_field_grid(grid)
 
-    return (
-        # Interior heat fluxes
-        -∂zᵃᵃᶜ(i, j, k, field_grid, diffusive_heat_flux, state, energy, hydrology, strat, bgc)
-        # Upper boundary flux
-        + boundary_tendency(i, j, k, grid, (i, j, field_grid.Nz), state, bcs)
-        # Lower boundary flux
-        + boundary_tendency(i, j, k, grid, (i, j, 1), state, bcs)
-    )
+    # Interior heat fluxes
+    dUdt = -∂zᵃᵃᶜ(i, j, k, field_grid, diffusive_heat_flux, state, energy, hydrology, strat, bgc)
+    return dUdt
 end
 
 @inline function thermalconductivity(

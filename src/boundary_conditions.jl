@@ -3,7 +3,7 @@ abstract type AbstractBoundaryConditions end
 """
 Alias for a `NamedTuple` of `BoundaryCondition` types.
 """
-const VarBoundaryConditions{names, BCs} = NamedTuple{names, BCs} where {names, BCs<:Tuple{Vararg{BoundaryCondition}}}
+const FieldBCs{names, BCs} = NamedTuple{names, BCs} where {names, BCs<:Tuple{Vararg{BoundaryCondition}}}
 
 """
     $SIGNATURES
@@ -15,29 +15,30 @@ returned.
 """
 get_field_boundary_conditions(::AbstractBoundaryConditions, grid::AbstractLandGrid) = (;)
 get_field_boundary_conditions(bc::BoundaryCondition, ::AbstractLandGrid) = bc
-get_field_boundary_conditions(bcs::VarBoundaryConditions, ::AbstractLandGrid) = bcs
+get_field_boundary_conditions(bcs::FieldBCs, ::AbstractLandGrid) = bcs
 
 """
 Like models/processes, boundary conditions can define state variables which may be computed from
 other state variables or from input data in `compute_auxiliary!`.
 """
 variables(::AbstractBoundaryConditions) = ()
-variables(bc::BoundaryCondition) = ()
-variables(bcs::VarBoundaryConditions) = tuplejoin(map(variables, bcs)...)
+variables(bc::BoundaryCondition) = variables(bc.condition)
+variables(bc::Union{ContinuousBoundaryFunction, DiscreteBoundaryFunction}) = variables(bc.func)
+variables(bcs::FieldBCs) = tuplejoin(map(variables, bcs)...)
 
 """
 Updates any state variables associated with the given boundary conditions.
 """
 compute_auxiliary!(state, model, ::AbstractBoundaryConditions) = nothing
 compute_auxiliary!(state, model, ::BoundaryCondition) = nothing
-compute_auxiliary!(state, model, ::VarBoundaryConditions) = nothing
+compute_auxiliary!(state, model, ::FieldBCs) = nothing
 
 """
-    $SIGNATURES
-
-Computes the boundary tendency for the grid cell at `loc`; zero for all other grid cells.
+Computes any tendency contributions from the given boundary conditions.
 """
-boundary_tendency(i, j, k, grid, loc, state, bc::AbstractBoundaryConditions, args...) = zero(eltype(grid))
+compute_tendencies!(state, model, ::AbstractBoundaryConditions) = nothing
+compute_tendencies!(state, model, ::BoundaryCondition) = nothing
+compute_tendencies!(state, model, ::FieldBCs) = nothing
 
 """
 Represents default boundary conditions for all state variables. This typically
@@ -49,41 +50,49 @@ struct DefaultBoundaryConditions <: AbstractBoundaryConditions end
 """
     $TYPEDEF
 
-Represents a flux prescribed at the boundary of a spatial domain and applied as a forcing term.
+Container type for an Oceananigans `BoundaryCondition` applied to prognostic (or closure) variable `progvar`.
 
 Properties:
 $TYPEDFIELDS
 """
-struct PrescribedFlux{name, units, F} <: AbstractBoundaryConditions
-    "Constant, `Field`, or function corresponding to the prescribed boundary flux"
-    value::F
+struct PrescribedBC{progvar, BC<:BoundaryCondition} <: AbstractBoundaryConditions
+    "Boundary condition"
+    condition::BC
 
-    PrescribedFlux(name::Symbol, value, units=NoUnits) = new{name, units, typeof(value)}(value)
+    PrescribedBC(progvar::Symbol, bc::BoundaryCondition) = new{progvar, typeof(bc)}(bc)
 end
 
-@inline varname(::PrescribedFlux{name}) where {name} = name
+variables(bc::PrescribedBC) = variables(bc.condition)
 
-variables(::PrescribedFlux{name, units}) where {name, units} = (
-    # TODO: maybe we also want to have descriptions for prescribed flux input variables?
-    # currently this isn't possible because String would make `PrescribedFlux` non-kernelizable
-    input(name, XY(); units),
-)
+compute_auxiliary!(state, model, ::PrescribedBC) = nothing
+compute_tendencies!(state, model, ::PrescribedBC) = nothing
 
-function compute_auxiliary!(state, model, bc::PrescribedFlux)
-    F = getproperty(state, varname(bc))
-    set!(F, bc.value)
+# compute_tendencies! for flux-valued boundary conditions
+function compute_tendencies!(state, model, ::PrescribedBC{progvar, <:Flux}) where {progvar}
+    tend = getproperty(state, tendencyof(progvar))
+    prog = getproprerty(state, progvar)
+    arch = architecture(get_grid(model))
+    clock = state.clock
+    compute_z_bcs!(tend, prog, arch, clock, state)
 end
 
-"""
-    $SIGNATURES
+function get_field_boundary_conditions(bc::PrescribedBC{progvar}, ::AbstractLandGrid) where {progvar}
+    (; progvar => bc.condition)
+end
 
-Computes the boundary tendency for the grid cell at `loc`; zero for all other grid cells.
+# Convenience aliases for PrescribedBC
+NoFlux(progvar::Symbol) = PrescribedBC(progvar, NoFluxBoundaryCondition())
+PrescribedFlux(progvar::Symbol, value; kwargs...) = PrescribedBC(progvar, FluxBoundaryCondition(value; kwargs...))
+PrescribedValue(progvar::Symbol, value; kwargs...) = PrescribedBC(progvar, ValueBoundaryCondition(value; kwargs...))
+PrescribedGradient(progvar::Symbol, value; kwargs...) = PrescribedBC(progvar, GradientBoundaryCondition(value; kwargs...))
+
 """
-@inline function boundary_tendency(i, j, k, grid, loc, state, bc::PrescribedFlux)
-    field_grid = get_field_grid(grid)
-    Q = getproperty(state, varname(bc))
-    Δz = Δzᵃᵃᶜ(i, j, k, field_grid)
-    return all(map(==, (i, j, k), loc)) * (Q[i, j, k] / Δz)
+Implementation of `Oceananigans.BoundaryConditions.getbc` for `Input{name}` placeholders that retrieves the input `Field` from
+`state.inputs` and returns the value at the given index.
+"""
+@inline function getbc(::Input{name, units, XY}, i::Integer, j::Integer, grid::OceananigansGrids.AbstractGrid, clock, state) where {name, units}
+    input_field = getproperty(state.inputs, name)
+    return @inbounds input_field[i, j]
 end
 
 """
@@ -95,7 +104,7 @@ discrietized along the vertical (depthwise) axis.
 Properties:
 $TYPEDFIELDS
 """
-@kwdef struct VerticalBoundaryConditions{
+@kwdef struct ColumnBoundaryConditions{
     TopBC,
     BottomBC
 } <: AbstractBoundaryConditions
@@ -107,7 +116,7 @@ $TYPEDFIELDS
 end
 
 function get_field_boundary_conditions(
-    bcs::VerticalBoundaryConditions,
+    bcs::ColumnBoundaryConditions,
     grid::AbstractLandGrid,
 )
     top = get_field_boundary_conditions(bcs.top, grid)
@@ -116,30 +125,19 @@ function get_field_boundary_conditions(
     # this way we have a single named tuple where each entry has `top` and `bottom` as properties
     var_bcs = merge_recursive(map(bc -> (top=bc,), top), map(bc -> (bottom=bc,), bottom))
     return map(var_bcs) do bc
-        FieldBoundaryConditions(grid, (Center(), Center(), nothing); bc...)
+        bc = map(x -> isnothing(x) ? NoFluxBoundaryCondition() : x, bc)
+        FieldBoundaryConditions(get_field_grid(grid), (Center(), Center(), nothing); bc...)
     end
 end
 
-variables(bcs::VerticalBoundaryConditions) = tuplejoin(variables(bcs.top), variables(bcs.bottom))
+"""
+Alias for `ColumnBoundaryConditions`
+"""
+const ColumnBCs{Top, Bottom} = ColumnBoundaryConditions{Top, Bottom} where {Top, Bottom}
 
-function compute_auxiliary!(state, model, bcs::VerticalBoundaryConditions)
+variables(bcs::ColumnBoundaryConditions) = tuplejoin(variables(bcs.top), variables(bcs.bottom))
+
+function compute_auxiliary!(state, model, bcs::ColumnBoundaryConditions)
     compute_auxiliary!(state, model, bcs.top)
     compute_auxiliary!(state, model, bcs.bottom)
-end
-
-"""
-    FieldBoundaryConditions(grid::AbstractLandGrid, loc::Tuple; at...)
-
-Creates a regularized `FieldBoundaryConditions` type from the given keyword arugments of Oceananigans `BoundaryCondition`s
-with keys corresponding to their positions on the domain (i.e. `top`, `bottom`, etc.), as well as the grid and location `loc`.
-The location refers the position on the staggered grid at which the boundary conditions are defined. For 1D (vertical) domains,
-this is usually `(Center(), Center(), nothing)`.
-"""
-function FieldBoundaryConditions(grid::AbstractLandGrid, loc::Tuple; at...)
-    field_grid = get_field_grid(grid)
-    bcs = map(((k, bc)) -> k => isnothing(bc) ? NoFluxBoundaryCondition() : bc, keys(at), values(at))
-    # create the FieldBoundaryConditions type
-    field_bcs = FieldBoundaryConditions(field_grid, loc; immersed=DefaultBoundaryCondition(), bcs...)
-    # return the regularized boundary conditions
-    return regularize_field_boundary_conditions(field_bcs, field_grid, loc)
 end

@@ -1,68 +1,61 @@
 """
     $TYPEDEF
 
-Boundary condition type for soil models that represents the conditions applied at one
-of the boundaries of the soil domain.
+Boundary condition type for soil models that provides boundary conditions for each
+of the relevant internal processes, i.e. energy, hydrology, ...
 """
-struct SoilBoundaryCondition{EnergyBC, WaterBC} <: AbstractBoundaryConditions
-    "Boundary conditions for the soil energy balance"
+struct SoilBC{EnergyBC, WaterBC} <: AbstractBoundaryConditions
+    "Boundary condition for the soil energy balance"
     energy::EnergyBC
 
-    "Boundary conditions for the soil water balance"
+    "Boundary condition for the soil water balance"
     hydrology::WaterBC
 end
 
-variables(bc::SoilBoundaryCondition) = tuplejoin(variables(bc.hydrology), variables(bc.energy))
+variables(bc::SoilBC) = tuplejoin(variables(bc.hydrology), variables(bc.energy))
 
-function compute_auxiliary!(state, model, bc::SoilBoundaryCondition)
+function compute_auxiliary!(state, model, bc::SoilBC)
     compute_auxiliary!(state, model, bc.hydrology)
     compute_auxiliary!(state, model, bc.energy)
 end
 
-function get_field_boundary_conditions(bcs::SoilBoundaryCondition, grid::AbstractLandGrid)
+function get_field_boundary_conditions(bcs::SoilBC, grid::AbstractLandGrid)
     water_bc = get_field_boundary_conditions(bcs.hydrology, grid)
     energy_bc = get_field_boundary_conditions(bcs.energy, grid)
     return merge(water_bc, energy_bc)
 end
 
 """
-Alias for `PrescribedFlux` with name `Q_g` representing the 
+Alias for `PrescribedFlux` with name `Q_g` representing the net ground heat flux at the soil surface.
 """
-GroundHeatFlux(value) = PrescribedFlux(:Q_g, value, u"W/m^2")
+GroundHeatFlux(init) = PrescribedFlux(:U, Input(:Q_g, init, units=u"W/m^2"))
 
 """
-Alias for `PrescribedFlux` with name `Q_geo` representing the geothermal heat flux
-at the bottom of a deep soil column.
+Alias for `PrescribedFlux` with name `Q_geo` representing the geothermal heat flux at the bottom
+boundary of the soil column.
 """
-GeothermalHeatFlux(value) = PrescribedFlux(:Q_geo, value, u"W/m^2")
+GeothermalHeatFlux(init) = PrescribedFlux(:U, Input(:Q_geo, init, units=u"W/m^2"))
 
 """
-Alias for `PrescribedFlux` with name `Q_inf` representing topsoil infiltration.
+Alias for `PrescribedFlux` with name `Q_inf` representing liquid water infiltration at the soil surface.
 """
-InfiltrationFlux(value) = PrescribedFlux(:Q_inf, value, u"m/s")
+InfiltrationFlux(init) = PrescribedFlux(:pore_water_ice_saturation, Input(:Q_inf, init, units=u"m/s"))
 
 """
-Alias for `PrescribedFlux` with name `Q_out` representing water drainage at the bottom of
-a soil column. When this flux is set to zero, it corresponds to an impermeable boundary.
+Alias for `NoFlux` representing a zero-flux boundary condition for water flow (prognostic variable `pore_water_ice_saturation`).
 """
-FreeDrainage(value) = PrescribedFlux(:Q_out, value, u"m/s")
-ImpermeableBoundary(::Type{NF}) where {NF<:AbstractFloat} = FreeDrainage(zero(NF))
+ImpermeableBoundary() = NoFlux(:pore_water_ice_saturation)
 
-# Convenience constructors for common soil upper and lower boundary conditions
-SoilBoundaryConditions(
-    grid::AbstractLandGrid;
-    top = SoilUpperBoundaryConditions(grid),
-    bottom = SoilLowerBoundaryConditions(grid),
-) = VerticalBoundaryConditions(; top, bottom)
+"""
+Alias for `PrescribedGradient` representing a Neumann-type zero pressure gradient at the bottom of the soil
+column, thereby allowing free drainage of water.
+"""
+FreeDrainage(::Type{NF}) where {NF} = PrescribedGradient(:water_potential, zero(NF))
 
-SoilUpperBoundaryConditions(
-    grid::AbstractLandGrid;
-    energy = GroundHeatFlux(zero(eltype(grid))),
-    hydrology = InfiltrationFlux(zero(eltype(grid)))
-) = SoilBoundaryCondition(energy, hydrology)
+"""
+Alias for `ColumnBoundaryConditions` with defaults suitable for `SoilModel`s.
+"""
+SoilBoundaryConditions(grid::AbstractLandGrid{NF}; top=default_soil_upperbc(grid), bottom=default_soil_lowerbc(grid)) where {NF} = ColumnBoundaryConditions(; top, bottom)
 
-SoilLowerBoundaryConditions(
-    grid::AbstractLandGrid;
-    energy = GeothermalHeatFlux(zero(eltype(grid))),
-    hydrology = ImpermeableBoundary(eltype(grid)),
-) = SoilBoundaryCondition(energy, hydrology)
+default_soil_upperbc(grid::AbstractLandGrid{NF}, energy=GroundHeatFlux(zero(NF)), hydrology=InfiltrationFlux(zero(NF))) where {NF} = SoilBC(energy, hydrology)
+default_soil_lowerbc(grid::AbstractLandGrid{NF}, energy=GeothermalHeatFlux(zero(NF)), hydrology=ImpermeableBoundary()) where {NF} = SoilBC(energy, hydrology)

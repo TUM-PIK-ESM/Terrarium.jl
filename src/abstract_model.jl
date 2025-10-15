@@ -41,10 +41,10 @@ function compute_tendencies! end
 
 # Default getter methods for standard `AbstractModel` fields.
 
-variables(::AbstractModel) = ()
+variables(::Any) = ()
 
 """
-    get_grid(model::AbstractModel)::AbstractGrid
+    get_grid(model::AbstractModel)::AbstractLandGrid
 
 Return the spatial grid associated with this `model`.
 """
@@ -127,6 +127,22 @@ Base type for full land models which couple together multiple component models.
 """
 abstract type AbstractLandModel{NF} <: AbstractModel{NF} end
 
+"""
+Convenience constructor for all `AbstractLandModel` types that allows the `grid` to be passed
+as the first positional argument.
+"""
+(::Type{Model})(grid::AbstractLandGrid; kwargs...) where {Model<:AbstractModel} = Model(; grid, kwargs...)
+
 function Adapt.adapt_structure(to, model::AbstractModel)
-    return setproperties(model, map(prop -> Adapt.adapt_structure(to, prop), getproperties(model)))
+    return setproperties(model, map(prop -> Adapt.adapt(to, prop), getproperties(model)))
+end
+
+function Base.show(io::IO, mime::MIME"text/plain", model::AbstractModel{NF}) where {NF}
+    println(io, "$(nameof(typeof(model))){$NF} with $(nameof(typeof(get_grid(model)))) on $(architecture(get_grid(model)))")
+    for name in propertynames(model)
+        print(io, "  $name:  ")
+        # Indent property value by two spaces
+        show(IOContext(io, :indent => 2), mime, getproperty(model, name))
+        println(io)
+    end
 end

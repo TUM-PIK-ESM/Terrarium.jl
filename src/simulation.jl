@@ -43,7 +43,7 @@ function initialize(model::AbstractModel{NF}, inputs::InputProvider; clock::Cloc
 end
 
 # Convenience dispatch that constructs an InputProvider from zero or more input sources
-function initialize(model::AbstractModel{NF}, inputs::AbstractInputSource...; clock::Clock=Clock(time=zero(NF))) where {NF}
+function initialize(model::AbstractModel{NF}, inputs::InputSource...; clock::Clock=Clock(time=zero(NF))) where {NF}
     provider = InputProvider(get_grid(model), inputs...)
     return initialize(model, provider; clock)
 end
@@ -98,10 +98,11 @@ end
 
 current_time(sim::Simulation) = sim.state.clock.time
 
-convert_dt(dt::Real) = dt
-convert_dt(dt::Period) = Second(dt).value
-
 get_steps(steps::Nothing, period::Period, dt::Real) = div(Second(period).value, dt)
 get_steps(steps::Int, period::Nothing, dt::Real) = steps
 get_steps(steps::Nothing, period::Nothing, dt::Real) = throw(ArgumentError("either `steps` or `period` must be specified"))
 get_steps(steps::Int, period::Period, dt::Real) = throw(ArgumentError("both `steps` and `period` cannot be specified"))
+
+function Base.show(io::IO, mime::MIME"text/plain", sim::Simulation)
+    println(io, "Simulation of $(typeof(sim.model))")
+end

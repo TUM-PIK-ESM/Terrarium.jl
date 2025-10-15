@@ -1,7 +1,7 @@
 """
     $SIGNATURES
 
-Concatenates one or more tuples together.
+Concatenate one or more tuples together.
 """
 tuplejoin() = tuple()
 tuplejoin(x) = x
@@ -11,7 +11,7 @@ tuplejoin(x, y, z...) = (x..., tuplejoin(y, z...)...)
 """
     $SIGNATURES
     
-Filters out duplicates from the given tuple. Note that this method is not type stable or allocation-free!
+Filter out duplicates from the given tuple. Note that this method is not type stable or allocation-free!
 """
 merge_duplicates(values::Tuple) = Tuple(unique(values))
 
@@ -39,6 +39,14 @@ merge_recursive(_, val) = val # select second value to match behavior of merge
 """
     $SIGNATURES
 
+Convert `dt`s of type `Period` to a numeric value in seconds. Return `dt` if already a number.
+"""
+convert_dt(dt::Number) = dt
+convert_dt(dt::Period) = Second(dt).value
+
+"""
+    $SIGNATURES
+
 Evaluates `x / (y + eps(NF))` if and only if `y != zero(y)`; returns `Inf` otherwise.
 """
 safediv(x::NF, y::NF) where {NF} = ifelse(iszero(y), Inf, x / (y + eps(NF)))
@@ -46,7 +54,7 @@ safediv(x::NF, y::NF) where {NF} = ifelse(iszero(y), Inf, x / (y + eps(NF)))
 """
     $SIGNATURES
 
-Returns a function `f(z)` that linearly interpolates between the given `knots`.
+Return a function `f(z)` that linearly interpolates between the given `knots`.
 """
 function piecewise_linear(knots::Pair{<:LengthQuantity}...; extrapolation=Interpolations.Flat())
     # extract coordinates and strip units

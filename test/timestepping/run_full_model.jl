@@ -3,7 +3,7 @@ import Terrarium.RingGrids
 import Dates: Hour
 
 @testset "run!" begin
-    grid = GlobalRingGrid(CPU(), Float64, ExponentialSpacing(N=50), RingGrids.FullHEALPixGrid(16, RingGrids.Architectures.CPU()))
+    grid = ColumnRingGrid(CPU(), Float64, ExponentialSpacing(N=50), RingGrids.FullHEALPixGrid(16, RingGrids.Architectures.CPU()))
     model = SoilModel(; grid)
     sim = initialize(model)
 
