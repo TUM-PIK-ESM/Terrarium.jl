@@ -294,7 +294,7 @@ input(name::Symbol, dims::VarDims; units=NoUnits, desc="") = InputVariable(name,
 Creates an `AuxiliaryVariable` for the tendency of a prognostic variable with the given name, dimensions, and physical units.
 This constructor is primarily used internally by other constructors and does not usually need to be called by implementations of `variables`.
 """
-tendency(progname::Symbol, progdims::VarDims, progunits::Units) = AuxiliaryVariable(progname, progdims, progunits/u"s", "")
+tendency(progname::Symbol, progdims::VarDims, progunits::Units) = AuxiliaryVariable(progname, progdims, progunits/u"s", RealLine(), "Tendency for $progname")
 function tendency(closure::AbstractClosureRelation, dims::VarDims)
     # get the auxiliary closure variable
     var = getvar(closure)
