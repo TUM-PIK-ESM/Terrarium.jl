@@ -9,19 +9,6 @@ Represents the simplest case of immobile soil water.
 struct NoFlow <: AbstractSoilWaterFluxOperator end
 
 """
-    RichardsEq{NF} <: AbstractSoilWaterFluxOperator
-
-Operator for soil hydrology corresponding to the Richardson-Richards equation for variably saturated
-flow in porous media.
-"""
-@kwdef struct RichardsEq{NF} <: AbstractSoilWaterFluxOperator
-    "Closure relation for mapping between water potential (hydraulic head) and saturation"
-    saturation_closure = PressureSaturationRelation()
-end
-
-get_closure(op::RichardsEq) = op.saturation_closure
-
-"""
     $TYPEDEF
 
 Properties:
@@ -30,19 +17,19 @@ $TYPEDFIELDS
 struct SoilHydrology{
     NF,
     Operator<:AbstractSoilWaterFluxOperator,
-    SoilHydraulicProperties<:AbstractSoilHydraulics{NF}
+    SoilHydraulics<:AbstractSoilHydraulics{NF}
 } <: AbstractSoilHydrology{NF}
     "Soil water flux operator"
     operator::Operator
 
     "Soil hydraulic properties parameterization"
-    hydraulic_properties::SoilHydraulicProperties
+    hydraulic_properties::SoilHydraulics
 end
 
 SoilHydrology(
-    ::Type{NF};
-    operator::AbstractSoilWaterFluxOperator = NoFlow(),
-    hydraulic_properties::AbstractSoilHydraulics{NF} = SoilHydraulicsSURFEX(NF),
+    ::Type{NF},
+    operator::AbstractSoilWaterFluxOperator = NoFlow();
+    hydraulic_properties::AbstractSoilHydraulics = SoilHydraulicsSURFEX(NF),
 ) where {NF} = SoilHydrology(operator, hydraulic_properties)
 
 """
@@ -72,4 +59,4 @@ variables(::SoilHydrology{NF,NoFlow}) where {NF} = (
 
 @inline compute_auxiliary!(state, model, hydrology::SoilHydrology) = nothing
 
-@inline compute_tendencies!(state, model, strat::SoilHydrology{NF,NoFlow}) where {NF} = nothing
+@inline compute_tendencies!(state, model, strat::SoilHydrology{NF, NoFlow}) where {NF} = nothing

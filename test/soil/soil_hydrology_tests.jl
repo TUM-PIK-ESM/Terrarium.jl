@@ -1,7 +1,9 @@
 using Terrarium
 using Test
 
-@testset "Hydraulic properties (prescribed)" begin
+import Terrarium: hydraulic_conductivity
+
+@testset "Hydraulic properties (constant)" begin
     # For prescribed hyraulic properties, just check that the returned values
     # match what was set.
     hydraulic_props = ConstantHydraulics(
@@ -51,4 +53,52 @@ end
         fc = field_capacity(hydraulic_props, SoilTexture(; sand, silt, clay))
         @test 0 < fc < 1
     end
+end
+
+@testset "Unsaturated hydraulic conductivity (linear)" begin
+    hydraulics = ConstantHydraulics(cond_unsat=UnsatKLinear())
+
+    # saturated case
+    soil = SoilComposition()
+    K = hydraulic_conductivity(hydraulics, soil)
+    @test K ≈ hydraulics.cond_sat
+
+    # unsaturated
+    soil = SoilComposition(saturation=0.5);
+    K = hydraulic_conductivity(hydraulics, soil)
+    @test 0 < K < hydraulics.cond_sat
+
+    # dry
+    soil = SoilComposition(saturation=0.0);
+    K = hydraulic_conductivity(hydraulics, soil)
+    @test iszero(K)
+
+    # frozen
+    soil = SoilComposition(liquid=0.0);
+    K = hydraulic_conductivity(hydraulics, soil)
+    @test iszero(K)
+end
+
+@testset "Unsaturated hydraulic conductivity (Van Genuchten)" begin
+    hydraulics = ConstantHydraulics(cond_unsat=UnsatKVanGenuchten())
+
+    # saturated case
+    soil = SoilComposition()
+    K = hydraulic_conductivity(hydraulics, soil)
+    @test K ≈ hydraulics.cond_sat
+
+    # unsaturated
+    soil = SoilComposition(saturation=0.5);
+    K = hydraulic_conductivity(hydraulics, soil)
+    @test 0 < K < hydraulics.cond_sat
+
+    # dry
+    soil = SoilComposition(saturation=0.0);
+    K = hydraulic_conductivity(hydraulics, soil)
+    @test iszero(K)
+
+    # frozen
+    soil = SoilComposition(liquid=0.0);
+    K = hydraulic_conductivity(hydraulics, soil)
+    @test iszero(K)
 end
