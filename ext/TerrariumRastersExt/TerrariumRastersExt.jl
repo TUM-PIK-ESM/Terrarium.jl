@@ -10,6 +10,12 @@ using Rasters
 
 import Oceananigans.Architectures: on_architecture
 
+"""
+    $TYPEDEF
+
+Input source that reads data from one or mroe (possibly time-varying) `Raster`. This type should generally not be
+constructed directly but rather via the `InputSource` constructor interface.
+"""
 struct RasterInputSource{NF, VD, TT, IM<:AbstractVector{Int}, RS<:Tuple{Vararg{AbstractRaster{NF}}}, names} <: InputSource{NF}
     "Variable dimensions"
     dims::VD
