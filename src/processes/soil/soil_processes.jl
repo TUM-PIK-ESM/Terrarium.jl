@@ -3,7 +3,7 @@ include("abstract_types.jl")
 export SoilTexture
 include("biogeochem/soil_texture.jl")
 
-export SoilComposition
+export SoilComposition, volumetric_fractions
 include("biogeochem/soil_composition.jl")
 
 export HomogeneousSoil
