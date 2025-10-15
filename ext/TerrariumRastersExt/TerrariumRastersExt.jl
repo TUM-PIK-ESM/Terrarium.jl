@@ -4,6 +4,7 @@ using Terrarium
 using Terrarium: XY, XYZ # variable dims
 
 using Dates
+using DocStringExtensions
 using Interpolations
 using Oceananigans
 using Rasters
