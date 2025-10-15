@@ -15,22 +15,20 @@ heatmap(land_sea_frac_field)
 
 # Set up grids
 land_mask = land_sea_frac_field .> 0.5 # select only grid points with > 50% land
-grid = ColumnRingGrid(GPU(), ExponentialSpacing(N=30), land_mask)
+grid = ColumnRingGrid(GPU(), Float64, ExponentialSpacing(N=30), land_mask.grid, land_mask)
+lon, lat = RingGrids.get_londlatds(grid.rings)
 
 # Initial conditions
 initializer = FieldInitializers(
     # steady-ish state initial condition for temperature
-    temperature = (x,z) -> -1 - 0.02*z,
+    temperature = (x, z) -> -0.02*z,
     # fully saturated soil
     pore_water_ice_saturation = 1.0,
 )
-# Periodic surface temperature with daily and annual cycle
-T_ub = PrescribedValue(:temperature, (x, t) -> 10*sin(2π*t/(24*3600.0)) + 20*sin(2π*t/(24*3600.0*365.0)))
+# Periodic surface temperature with annual cycle
+T_ub = PrescribedValue(:temperature, (x, t) -> 30*sin(2π*t/(24*3600*365)))
 boundary_conditions = SoilBoundaryConditions(grid, top=T_ub)
-model = SoilModel(grid; initializer)
+model = SoilModel(grid; initializer, boundary_conditions)
 sim = initialize(model)
 @time timestep!(sim)
-@time run!(sim, period=Day(10), dt=120.0)
-
-# plot heatmap of soil temperature at the surface
-heatmap(RingGrids.Field(interior(sim.state.temperature, :, :, 30), grid))
+@time run!(sim, period=Day(30));
