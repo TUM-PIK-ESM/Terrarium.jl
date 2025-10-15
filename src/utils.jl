@@ -70,6 +70,11 @@ function piecewise_linear(knots::Pair{<:LengthQuantity}...; extrapolation=Interp
     return Interpolations.extrapolate(interp, extrapolation)
 end
 
+function adapt(::Type{NF}, obj) where {NF<:Number}
+    vals = map(NF, flatten(obj, flattenable, Number))
+    return reconstruct(obj, vals, flattenable, Number)
+end
+
 # fastmap and fastiterate
 
 # Note that fastmap and fastiterate are borrowed (with self permission!) from CryoGrid.jl:
