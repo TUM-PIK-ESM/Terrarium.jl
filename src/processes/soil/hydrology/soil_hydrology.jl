@@ -37,7 +37,7 @@ $TYPEDFIELDS
 struct SoilHydrology{
     NF,
     Operator<:AbstractSoilWaterFlowOperator,
-    RetentionCurve<:SWRC,
+    RetentionCurve<:Union{Nothing, SWRC},
     SoilHydraulicProperties<:AbstractSoilHydraulicProperties{NF}
 } <: AbstractSoilHydrology{NF}
     "Soil water flow scheme"
@@ -54,8 +54,8 @@ SoilHydrology(
     ::Type{NF};
     operator::AbstractSoilWaterFlowOperator = NoFlow(),
     hydraulic_properties::AbstractSoilHydraulicProperties{NF} = SURFEXHydraulics(NF),
-    freezecurve::FreezeCurve = default_swrc(flow, hydraulic_properties)
-) where {NF} = SoilHydrology(operator, hydraulic_properties, freezecurve)
+    swrc::Union{Nothing, SWRC} = default_swrc(operator, hydraulic_properties)
+) where {NF} = SoilHydrology(operator, hydraulic_properties, swrc)
 
 """
     default_swrc(::AbstractSoilWaterFlowOperator, ::AbstractSoilHydraulicProperties)
@@ -86,7 +86,7 @@ end
 # Immobile soil water (NoFlow)
 
 variables(::SoilHydrology{NF,NoFlow}) where {NF} = (
-    auxiliary(:saturation_water_ice, XYZ(), bounds=0..1, desc="Saturation level of water and ice in the pore space"),
+    auxiliary(:saturation_water_ice, XYZ(), domain=UnitInterval(), desc="Saturation level of water and ice in the pore space"),
 )
 
 @inline compute_auxiliary!(state, model, hydrology::SoilHydrology) = nothing

@@ -20,3 +20,6 @@ include("energy/soil_thermal_properties.jl")
 
 export SoilEnergyBalance
 include("energy/soil_energy.jl")
+
+export TemperatureEnergyClosure
+include("energy/soil_energy_closure.jl")
