@@ -38,7 +38,7 @@ end
 SoilHydrology(
     ::Type{NF},
     operator::AbstractSoilWaterFluxOperator = NoFlow();
-    evapotranspiration::AbstractSoilET = nothing,
+    evapotranspiration::Union{Nothing, AbstractSoilET} = nothing,
     hydraulic_properties::AbstractSoilHydraulics = SoilHydraulicsSURFEX(NF),
 ) where {NF} = SoilHydrology(operator, evapotranspiration, hydraulic_properties)
 
