@@ -60,6 +60,12 @@ variables(energy::SoilEnergyBalance) = (
     auxiliary(:liquid_water_fraction, XYZ(), domain=UnitInterval(), desc="Fraction of unfrozen water in the pore space"),
 )
 
+# evaluate closure (temperature -> energy) on initialize!
+function initialize!(state, model, energy::SoilEnergyBalance)
+    closure!(state, model, state.closures.temperature)
+    return nothing
+end
+
 compute_auxiliary!(state, model, energy::SoilEnergyBalance) = nothing
 
 function compute_tendencies!(state, model, energy::SoilEnergyBalance)

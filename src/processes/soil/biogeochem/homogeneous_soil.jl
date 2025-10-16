@@ -18,6 +18,8 @@ soil_texture(idx, state, strat::HomogeneousSoil) = strat.texture
 variables(strat::HomogeneousSoil) = ()
 
 # do nothing for now
+@inline initialize!(state, model, strat::HomogeneousSoil) = nothing
+
 @inline compute_auxiliary!(state, model, strat::HomogeneousSoil) = nothing
 
 @inline compute_tendencies!(state, model, strat::HomogeneousSoil) = nothing

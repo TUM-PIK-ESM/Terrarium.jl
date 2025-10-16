@@ -70,11 +70,12 @@ end
     # calculate unfrozen water content from temperature
     # N.B. For the free water freeze curve, the mapping from temperature to unfrozen water content
     # within the phase change region is indeterminate since it is assumed that T = 0. As such, we
-    # have to assume here that the liquid water fraction is zero if T <= 0. This method should therefore
-    # only be used for initialization and should **not** be involved in the calculation of tendencies.
+    # have to assume here that the liquid water fraction is zero if T < 0 and one otherwise. This method
+    # should therefore only be used for initialization and should **not** be involved in the calculation
+    # of tendencies.
     liq = state.liquid_water_fraction[i, j, k] = ifelse(
-        T > zero(T),
-        sat,
+        T >= zero(T),
+        one(sat),
         zero(sat),
     )
     soil = soil_composition(idx, state, strat, hydrology, bgc)
