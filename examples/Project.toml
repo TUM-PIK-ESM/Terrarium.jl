@@ -11,3 +11,6 @@ RingGrids = "d1845624-ad4f-453b-8ff4-a8db365bf3a7"
 SpeedyWeather = "9e226e20-d153-4fed-8a5b-493def4f21a9"
 TaylorSeries = "6aa5eb33-94cf-58f4-a9d0-e4b2c4fc25ea"
 Terrarium = "80418d68-07fa-499d-ae2b-c12e531f5cd8"
+
+[sources]
+Terrarium = {path = ".."}
