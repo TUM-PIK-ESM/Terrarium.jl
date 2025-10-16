@@ -203,8 +203,5 @@ end
     # compute total pressure head as sum of ψh + ψm + ψz
     # note that ψh and ψz will cancel out in the saturated zone
     state.pressure_head[i, j, k] = ψh + ψm + ψz
-    if k == 1
-        println("$ψh $ψz")
-    end
     return nothing
 end

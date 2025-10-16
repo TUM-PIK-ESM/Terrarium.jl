@@ -1,6 +1,8 @@
 using Terrarium
 using Test
 
+using FreezeCurves
+
 import Terrarium: hydraulic_conductivity
 
 @testset "Hydraulic properties (constant)" begin
