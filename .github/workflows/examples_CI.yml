@@ -12,7 +12,7 @@ jobs:
     strategy:
       matrix:
         version:
-          - 'release'
+          - '1'
         os:
           - ubuntu-latest
         arch:
