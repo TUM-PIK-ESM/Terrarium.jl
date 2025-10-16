@@ -4,9 +4,14 @@ Base type for implementations of soil water flow dynamics.
 abstract type AbstractSoilWaterFluxOperator <: AbstractOperator end
 
 """
-Represents the simplest case of immobile soil water.
+Represents a hydrology scheme where soil water is immobile.
 """
 struct NoFlow <: AbstractSoilWaterFluxOperator end
+
+"""
+Base type for evapotranspirative fluxes in soil layers.
+"""
+abstract type AbstractSoilET{NF} end
 
 """
     $TYPEDEF
@@ -17,10 +22,14 @@ $TYPEDFIELDS
 struct SoilHydrology{
     NF,
     Operator<:AbstractSoilWaterFluxOperator,
+    SoilET<:Union{Nothing, AbstractSoilET{NF}},
     SoilHydraulics<:AbstractSoilHydraulics{NF}
 } <: AbstractSoilHydrology{NF}
     "Soil water flux operator"
     operator::Operator
+
+    "Soil evapotranspiration scheme"
+    evapotranspiration::SoilET
 
     "Soil hydraulic properties parameterization"
     hydraulic_properties::SoilHydraulics
@@ -29,8 +38,9 @@ end
 SoilHydrology(
     ::Type{NF},
     operator::AbstractSoilWaterFluxOperator = NoFlow();
+    evapotranspiration::AbstractSoilET = nothing,
     hydraulic_properties::AbstractSoilHydraulics = SoilHydraulicsSURFEX(NF),
-) where {NF} = SoilHydrology(operator, hydraulic_properties)
+) where {NF} = SoilHydrology(operator, evapotranspiration, hydraulic_properties)
 
 """
     get_swrc(hydrology::SoilHydrology)
