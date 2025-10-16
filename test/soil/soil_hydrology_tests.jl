@@ -102,3 +102,52 @@ end
     K = hydraulic_conductivity(hydraulics, soil)
     @test iszero(K)
 end
+
+@testset "SoilHydrology: Richardson-Richards' equation" begin
+    grid = ColumnGrid(UniformSpacing(Δz=0.1, N=100))
+    swrc = VanGenuchten(α=2.0, n=2.0)
+    hydraulic_properties = ConstantHydraulics(cond_unsat=UnsatKVanGenuchten(; swrc))
+    hydrology = SoilHydrology(eltype(grid), RichardsEq(); hydraulic_properties)
+
+    # Fully saturated, steady state
+    initializer = FieldInitializers(
+        saturation_water_ice = (x, z) -> 1.0
+    )
+    boundary_conditions = SoilBoundaryConditions(
+        eltype(grid);
+    )
+    model = SoilModel(; grid, hydrology, initializer, boundary_conditions)
+    state = initialize(model)
+    # check that initial water table depth is correctly calculated from initial condition
+    @test all(iszero.(state.state.water_table))
+    # also check that pressure head is zero everywhere
+    @test all(iszero.(state.state.pressure_head))
+    compute_auxiliary!(state.state, model)
+    # check that all hydraulic conductivities are finite and equal to K_sat
+    @test all(isfinite.(state.state.hydraulic_conductivity))
+    @test all(state.state.hydraulic_conductivity .≈ hydraulic_properties.cond_sat)
+    compute_tendencies!(state.state, model)
+    # check that all tendencies are zero
+    @test all(iszero.(state.state.tendencies.saturation_water_ice))
+
+    # Variably saturated with water table
+    initializer = FieldInitializers(
+        saturation_water_ice = (x, z) -> min(1, 0.5 - 0.1*z)
+    )
+    boundary_conditions = SoilBoundaryConditions(
+        eltype(grid);
+    )
+    model = SoilModel(; grid, hydrology, initializer, boundary_conditions)
+    state = initialize(model)
+    # check that initial water table depth is correctly calculated from initial condition
+    @test all(state.state.water_table .≈ -5.0)
+    # also check that pressure head is negative
+    @test all(state.state.pressure_head .< 0)
+    compute_auxiliary!(state.state, model)
+    # check that all hydraulic conductivities are finite and positive
+    @test all(isfinite.(state.state.hydraulic_conductivity))
+    @test all(state.state.hydraulic_conductivity .> 0)
+    compute_tendencies!(state.state, model)
+    # check that all tendencies are finite
+    @test all(isfinite.(state.state.tendencies.saturation_water_ice))
+end
