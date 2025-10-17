@@ -39,7 +39,7 @@ import Adapt: Adapt, adapt, @adapt_structure
 import KernelAbstractions: @kernel, @index
 
 # Freeze curves for soil energy balance
-import FreezeCurves: FreezeCurve, SFCC, SWRC, FreeWater
+import FreezeCurves: FreezeCurves, FreezeCurve, SFCC, SWRC, FreeWater
 
 import RingGrids
 

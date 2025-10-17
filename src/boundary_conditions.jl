@@ -69,7 +69,7 @@ compute_tendencies!(state, model, ::PrescribedBC) = nothing
 
 # compute_tendencies! for flux-valued boundary conditions
 function compute_tendencies!(state, model, ::PrescribedBC{progvar, <:Flux}) where {progvar}
-    tend = getproperty(state, tendencyof(progvar))
+    tend = getproperty(state.tendencies, progvar)
     prog = getproprerty(state, progvar)
     arch = architecture(get_grid(model))
     clock = state.clock

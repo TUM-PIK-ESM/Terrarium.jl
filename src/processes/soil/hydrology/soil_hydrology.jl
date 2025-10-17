@@ -1,32 +1,17 @@
-import FreezeCurves: BrooksCorey, VanGenuchten
-
 """
 Base type for implementations of soil water flow dynamics.
 """
-abstract type AbstractSoilWaterFlowOperator <: AbstractOperator end
+abstract type AbstractSoilWaterFluxOperator <: AbstractOperator end
 
 """
-Represents the simplest case of immobile soil water.
+Represents a hydrology scheme where soil water is immobile.
 """
-struct NoFlow <: AbstractSoilWaterFlowOperator end
+struct NoFlow <: AbstractSoilWaterFluxOperator end
 
 """
-    RichardsEq{NF} <: AbstractSoilWaterFlowOperator
-
-Operator for soil hydrology corresponding to the Richardson-Richards equation for variably saturated
-flow in porous media.
+Base type for evapotranspirative fluxes in soil layers.
 """
-@kwdef struct RichardsEq{NF} <: AbstractSoilWaterFlowOperator
-    "Exponential scaling factor for ice impedance"
-    Ω::NF = 7
-
-    "Closure relation for mapping between water potential (hydraulic head) and saturation"
-    saturation_closure = PressureSaturationRelation()
-end
-
-get_closure(op::RichardsEq) = op.saturation_closure
-
-struct PressureSaturationRelation <: AbstractClosureRelation end
+abstract type AbstractSoilET{NF} end
 
 """
     $TYPEDEF
@@ -36,40 +21,34 @@ $TYPEDFIELDS
 """
 struct SoilHydrology{
     NF,
-    Operator<:AbstractSoilWaterFlowOperator,
-    RetentionCurve<:Union{Nothing, SWRC},
-    SoilHydraulicProperties<:AbstractSoilHydraulicProperties{NF}
+    Operator<:AbstractSoilWaterFluxOperator,
+    SoilET<:Union{Nothing, AbstractSoilET{NF}},
+    SoilHydraulics<:AbstractSoilHydraulics{NF}
 } <: AbstractSoilHydrology{NF}
-    "Soil water flow scheme"
+    "Soil water flux operator"
     operator::Operator
 
+    "Soil evapotranspiration scheme"
+    evapotranspiration::SoilET
+
     "Soil hydraulic properties parameterization"
-    hydraulic_properties::SoilHydraulicProperties
-    
-    "Soil water retention curve(s) from FreezeCurves.jl"
-    swrc::RetentionCurve
+    hydraulic_properties::SoilHydraulics
 end
 
 SoilHydrology(
-    ::Type{NF};
-    operator::AbstractSoilWaterFlowOperator = NoFlow(),
-    hydraulic_properties::AbstractSoilHydraulicProperties{NF} = SURFEXHydraulics(NF),
-    swrc::Union{Nothing, SWRC} = default_swrc(operator, hydraulic_properties)
-) where {NF} = SoilHydrology(operator, hydraulic_properties, swrc)
+    ::Type{NF},
+    operator::AbstractSoilWaterFluxOperator = NoFlow();
+    evapotranspiration::Union{Nothing, AbstractSoilET} = nothing,
+    hydraulic_properties::AbstractSoilHydraulics = SoilHydraulicsSURFEX(NF),
+) where {NF} = SoilHydrology(operator, evapotranspiration, hydraulic_properties)
 
 """
-    default_swrc(::AbstractSoilWaterFlowOperator, ::AbstractSoilHydraulicProperties)
+    get_swrc(hydrology::SoilHydrology)
 
-Return the default soil water retention curve (SWRC) for the given soil hydrology configuration.
-Defaults to `nothing` which represents no use of a pressure-saturation relation.
+Return the soil water retention curve from the `hydraulic_properties` associated with
+the given `SoilHydrology` configuration.
 """
-default_swrc(::AbstractSoilWaterFlowOperator, ::AbstractSoilHydraulicProperties) = nothing
-
-get_hydraulic_properties(hydrology::SoilHydrology) = hydrology.hydraulic_properties
-
-# TODO: This method interface assumes a single water retenction curve for the whole stratigraphy;
-# we should ideally relax this assumption for multi-layer stratigraphies
-get_soil_water_retention_curve(hydrology::SoilHydrology) = hydrology.swrc
+get_swrc(hydrology::SoilHydrology) = hydrology.hydraulic_properties.cond_unsat.swrc
 
 """
     porosity(idx, state, hydrology::SoilHydrology, strat::AbstractStratigraphy, bgc::AbstractSoilBiogeochemistry)
@@ -77,25 +56,47 @@ get_soil_water_retention_curve(hydrology::SoilHydrology) = hydrology.swrc
 Return the porosity of the soil volume at `idx` given the current state, hydrology, stratigraphy, and biogeochemistry configurations.
 """
 @inline function porosity(idx, state, hydrology::SoilHydrology, strat::AbstractStratigraphy, bgc::AbstractSoilBiogeochemistry)
-    props = get_hydraulic_properties(hydrology)
     org = organic_fraction(idx, state, bgc)
     texture = soil_texture(idx, state, strat)
-    return (1 - org)*mineral_porosity(props, texture) + org*organic_porosity(idx, state, bgc)
+    return (1 - org)*mineral_porosity(hydrology.hydraulic_properties, texture) + org*organic_porosity(idx, state, bgc)
 end
 
 # Immobile soil water (NoFlow)
 
-variables(::SoilHydrology{NF,NoFlow}) where {NF} = (
+variables(::SoilHydrology{NF, NoFlow}) where {NF} = (
     auxiliary(:saturation_water_ice, XYZ(), domain=UnitInterval(), desc="Saturation level of water and ice in the pore space"),
+    auxiliary(:water_table, XY(), units=u"m", desc="Elevation of the water table [m]"),
 )
+
+function initialize!(state, model, hydrology::SoilHydrology)
+    # Since water content does not change in the NoFlow scheme, we just compute the water table
+    # once at initialization time
+    grid = get_grid(model)
+    launch!(grid, :xy, compute_water_table!, state, grid, hydrology)
+end
 
 @inline compute_auxiliary!(state, model, hydrology::SoilHydrology) = nothing
 
-@inline compute_tendencies!(state, model, strat::SoilHydrology{NF,NoFlow}) where {NF} = nothing
+@inline compute_tendencies!(state, model, hydrology::SoilHydrology{NF, NoFlow}) where {NF} = nothing
 
-# TODO: Richardson-Richards equation diffusion/advection
+"""
+    compute_water_table!(
+        state,
+        grid,
+        ::SoilHydrology{NF}
+    ) where {NF}
 
-variables(hydrology::SoilHydrology{NF,<:RichardsEq}) where {NF} = (
-    prognosic(:matric_potential, XYZ()),
-    auxiliary(:saturation_water_ice, XYZ(), domain=UnitInterval(), desc="Saturation level of water and ice in the pore space"),
-)
+Kernel for diagnosing the water table at each grid point given the current soil saturation state.
+"""
+@kernel function compute_water_table!(
+    state,
+    grid,
+    ::SoilHydrology{NF}
+) where {NF}
+    i, j = @index(Global, NTuple)
+    sat = state.saturation_water_ice
+    # get z coordinates of grid cell faces
+    zs = znodes(get_field_grid(grid), Center(), Center(), Face())
+    # scan z axis starting from the bottom (index 1) to find first non-saturated grid cell
+    state.water_table[i, j, 1] = findfirst_z((i, j), <(one(NF)), zs, sat)
+end
