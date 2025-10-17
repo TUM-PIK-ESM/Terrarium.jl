@@ -11,7 +11,7 @@ initializer = FieldInitializers(
 )
 # temperature boundary condition
 boundary_conditions = SoilBoundaryConditions(
-    grid,
+    eltype(grid),
     # Set a constant temperature of 1°C at the upper boundary
     top = (temperature = ValueBoundaryCondition(1.0),)
 )

@@ -33,7 +33,7 @@ initializer = FieldInitializers(
 )
 # Periodic surface temperature with annual cycle
 T_ub = PrescribedValue(:temperature, (x, t) -> 30*sin(2π*t/(24*3600*365)))
-boundary_conditions = SoilBoundaryConditions(grid, top=T_ub)
+boundary_conditions = SoilBoundaryConditions(eltype(grid), top=T_ub)
 model = SoilModel(grid; initializer, boundary_conditions)
 state = initialize(model, forcings)
 # advance one timestep with Δt = 15 minutes

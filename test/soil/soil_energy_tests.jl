@@ -38,7 +38,7 @@ end
     )
     # periodic upper boundary
     upperbc(z, t) = T₀ + A*sin(2π*t/P)
-    boundary_conditions = SoilBoundaryConditions(grid, top=(temperature=ValueBoundaryCondition(upperbc),))
+    boundary_conditions = SoilBoundaryConditions(eltype(grid), top=(temperature=ValueBoundaryCondition(upperbc),))
     # set carbon content to zero so the soil has only a mineral constituent
     biogeochem = ConstantSoilCarbonDenisty(ρ_soc=0.0)
     # set porosity to zero to remove influence of pore space;
@@ -46,11 +46,12 @@ end
     hydraulic_properties = PrescribedHydraulics(porosity=0.0)
     # set thermal properties
     thermal_properties = SoilThermalProperties(
+        Float64;
         cond=SoilThermalConductivities(mineral=k),
         heatcap=SoilHeatCapacities(mineral=c),
     )
-    hydrology = SoilHydrology(; hydraulic_properties)
-    energy = SoilEnergyBalance(; thermal_properties)
+    hydrology = SoilHydrology(eltype(grid); hydraulic_properties)
+    energy = SoilEnergyBalance(eltype(grid); thermal_properties)
     model = SoilModel(; grid, energy, hydrology, biogeochem, initializer, boundary_conditions)
     sim = initialize(model)
     # TODO: Rewrite this part once we have a proper output handling system
@@ -81,13 +82,13 @@ end
     # temperature initial condition
     initializer = FieldInitializers(temperature=T₀)
     # constant upper boundary temperature set to T₁
-    boundary_conditions = SoilBoundaryConditions(grid, top=(temperature=ValueBoundaryCondition(T₁),))
+    boundary_conditions = SoilBoundaryConditions(eltype(grid), top=(temperature=ValueBoundaryCondition(T₁),))
     # set carbon content to zero so the soil has only a mineral constituent
     biogeochem = ConstantSoilCarbonDenisty(ρ_soc=0.0)
     # set porosity to zero to remove influence of pore space;
     # this is just a hack to configure the model to simulate heat conduction in a fully solid medium
     hydraulic_properties = PrescribedHydraulics(porosity=0.0)
-    hydrology = SoilHydrology(; hydraulic_properties)
+    hydrology = SoilHydrology(eltype(grid); hydraulic_properties)
     model = SoilModel(; grid, hydrology, biogeochem, initializer, boundary_conditions)
     sim = initialize(model)
     # TODO: Rewrite this part once we have a proper output handling system
@@ -122,7 +123,7 @@ end
 end
 
 @testset "Thermal properties" begin
-    thermal_props = SoilThermalProperties()
+    thermal_props = SoilThermalProperties(Float64)
     
     # check that all necessary properties are defined
     @test all(map(∈(propertynames(thermal_props.cond)), (:water, :ice, :air, :mineral, :organic)))
