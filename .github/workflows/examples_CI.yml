@@ -12,7 +12,7 @@ jobs:
     strategy:
       matrix:
         version:
-          - '1'
+          - '1' # test always on the latest released version 
         os:
           - ubuntu-latest
         arch:
@@ -26,10 +26,10 @@ jobs:
       - uses: julia-actions/cache@v2
       - name: Install dependencies
         run: julia --project=examples/ -e 'using Pkg; Pkg.develop(PackageSpec(path=pwd())); Pkg.instantiate()'
-      - name: Run Soil Heat Column 
+      - name: Run Soil Model Heat Column 
         run: julia --project=examples/ examples/soil_heat_column.jl
-      - name: Run Soil Heat Global 
+      - name: Run Soil Model Heat Global 
         run: julia --project=examples/ examples/soil_heat_global.jl
-      - name: Run Soil Heat Globale ERA5 
+      - name: Run Soil Model Heat Global ERA5 
         run: julia --project=examples/ examples/soil_heat_global_era5.jl
         
