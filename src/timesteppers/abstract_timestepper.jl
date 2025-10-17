@@ -44,8 +44,8 @@ initialize(::AbstractTimeStepper, prognostic_fields, closure_fields, tendencies)
 Evaluate an explicit update `u += ∂u∂t*Δt` for all prognostic fields and their corresponding
 tendencies. By default, this is implemented as a simple Euler update `u += dudt*Δt` which can
 serve as a building block for more complex, multi-stage timesteppers. Where necessary,
-additional dispatches of `explicit_step_kernel!` can be defined for specialized
-time-stepping schemes.
+additional dispatches of `explicit_step_kernel!(field, tendency, ::AbstractLandGrid, ::TimeStepper, Δt)`
+can be defined to implement more specialized time-stepping schemes.
 """
 function explicit_step!(state, grid::AbstractLandGrid, timestepper::AbstractTimeStepper, Δt)
     fastiterate(keys(state.prognostic)) do name
@@ -65,31 +65,21 @@ function explicit_step!(state, grid::AbstractLandGrid, timestepper::AbstractTime
     return nothing
 end
 
+"""
+Accumulate `tendency*Δt` in the given prognostic `field`. This method can be overridden by specialized
+timestepping schemes as needed.
+"""
 function explicit_step!(
-    progfield::AbstractField{LX, LY, LZ},
+    field::AbstractField{LX, LY, LZ},
     tendency::AbstractField{LX, LY, LZ},
-    grid::AbstractLandGrid,
-    timestepper::AbstractTimeStepper,
+    ::AbstractLandGrid{NF},
+    ::AbstractTimeStepper{NF},
     Δt,
     args...
-) where {LX, LY, LZ}
-    launch!(
-        grid,
-        workspec(LX(), LY(), LZ()),
-        explicit_step_kernel!,
-        progfield,
-        tendency,
-        timestepper,
-        Δt,
-        args...
-    )
-end
-
-@kernel function explicit_step_kernel!(field, tendency, ::AbstractTimeStepper, Δt)
-    i, j, k = @index(Global, NTuple)
-    u = field
-    ∂u∂t = tendency
-    @inbounds let Δt = convert(eltype(tendency), Δt);
-        u[i, j, k] += ∂u∂t[i, j, k] * Δt
+) where {LX, LY, LZ, NF}
+    let u = field,
+        ∂u∂t = tendency,
+        Δt = convert(NF, Δt);
+        set!(u, u + ∂u∂t*Δt)
     end
 end
