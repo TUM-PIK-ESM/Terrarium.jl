@@ -47,7 +47,6 @@ end
     # set thermal properties
     thermal_properties = SoilThermalProperties(
         eltype(grid);
-        Float64;
         cond=SoilThermalConductivities(mineral=k),
         heatcap=SoilHeatCapacities(mineral=c),
     )
