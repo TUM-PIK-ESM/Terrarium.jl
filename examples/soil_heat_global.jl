@@ -1,7 +1,9 @@
 using Terrarium
 
 using CUDA
+using Dates
 using Rasters, NCDatasets
+using Statistics
 
 using CairoMakie, GeoMakie
 
@@ -30,8 +32,18 @@ initializer = FieldInitializers(
 )
 # Periodic surface temperature with annual cycle
 T_ub = PrescribedValue(:temperature, (x, t) -> 30*sin(2π*t/(24*3600*365)))
-boundary_conditions = SoilBoundaryConditions(grid, top=T_ub)
+boundary_conditions = SoilBoundaryConditions(eltype(grid), top=T_ub)
 model = SoilModel(grid; initializer, boundary_conditions)
-sim = initialize(model)
-@time timestep!(sim)
-@time run!(sim, period=Day(30));
+state = initialize(model)
+# advance one timestep with Δt = 15 minutes
+@time timestep!(state, 900.0)
+# run multiple timesteps over a given time period
+@time run!(state, period=Day(1), Δt=900.0)
+
+using Oceananigans.OutputWriters: JLD2Writer, AveragedTimeInterval
+using Oceananigans.Utils: days
+
+# set up and run an Oceananigans Simulation
+sim = Simulation(state; Δt=900.0, stop_iteration=100)
+# sim.output_writers[:temperature] = JLD2Writer(state, get_fields(state, :temperature); filename="output/soil_model_temperature.jld2", schedule=AveragedTimeInterval(1days))
+run!(sim)

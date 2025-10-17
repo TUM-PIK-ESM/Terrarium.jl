@@ -13,18 +13,18 @@ It is worth noting that tendencies are also treated internally as auxiliary vari
 however, they are assigned their own category here since they need to be handled separately
 by the timestepping scheme.
 """
-@kwdef struct StateVariables{
+struct StateVariables{
     prognames, tendnames, auxnames, inputnames, nsnames, closurenames,
     ProgFields, TendFields, AuxFields, InputFields, Namespaces, Closures,
-    ClockType,
+    ClockType
 } <: AbstractStateVariables
-    prognostic::NamedTuple{prognames, ProgFields} = (;)
-    tendencies::NamedTuple{tendnames, TendFields} = (;)
-    auxiliary::NamedTuple{auxnames, AuxFields} = (;)
-    inputs::NamedTuple{inputnames, InputFields} = (;)
-    namespaces::NamedTuple{nsnames, Namespaces} = (;)
-    closures::NamedTuple{closurenames, Closures} = (;)
-    clock::ClockType = Clock()
+    prognostic::NamedTuple{prognames, ProgFields}
+    tendencies::NamedTuple{tendnames, TendFields}
+    auxiliary::NamedTuple{auxnames, AuxFields}
+    inputs::NamedTuple{inputnames, InputFields}
+    namespaces::NamedTuple{nsnames, Namespaces}
+    closures::NamedTuple{closurenames, Closures}
+    clock::ClockType
 end
 
 @adapt_structure StateVariables
@@ -58,6 +58,8 @@ function StateVariables(
     namespaces = map(ns -> StateVariables(getproperty(model, varname(ns)), clock, inputs), namespace_vars)
     # get named tuple mapping prognostic variabels to their respective closure relations, if defined
     closures = map(var -> var.closure, filter(hasclosure, prognostic_vars))
+    # get closure fields
+    closure_fields = map(closure -> auxiliary_fields[varname(getvar(closure))], values(closures))
     # construct and return StateVariables
     return StateVariables(
         prognostic_fields,
@@ -89,8 +91,6 @@ function Base.getproperty(
     # forward getproperty calls to variable groups
     if name ∈ prognames
         return getproperty(getfield(vars, :prognostic), name)
-    elseif name ∈ tendnames
-        return getproperty(getfield(vars, :tendencies), name)
     elseif name ∈ auxnames
         return getproperty(getfield(vars, :auxiliary), name)
     elseif name ∈ inputnames
@@ -102,36 +102,11 @@ function Base.getproperty(
     end
 end
 
-function fill_halo_regions!(state::StateVariables)
-    # fill_halo_regions! for all prognostic variables
-    fastiterate(state.prognostic) do var
-        fill_halo_regions!(var, state.clock, state)
-    end
-    # fill_halo_regions! for all auxiliary variables
-    fastiterate(state.auxiliary) do var
-        fill_halo_regions!(var, state.clock, state)
-    end
-    # recurse over namespaces
-    fastiterate(state.namespaces) do ns
-        fill_halo_regions!(ns)
-    end
-end
-
-function reset_tendencies!(state::StateVariables)
-    # reset all tendency fields
-    for var in state.tendencies
-        set!(var, zero(eltype(var)))
-    end
-    # recurse over namespaces
-    for ns in state.namespaces
-        reset_tendencies!(ns)
-    end
-end
-
 # helper function e.g. for usage with Enzyme 
-function Base.fill!(state::StateVariables{prognames, tendnames, auxnames, namespaces, closures}, 
+function Base.fill!(
+    state::StateVariables{prognames, tendnames, auxnames, namespaces, closures}, 
     value
-    ) where {prognames, tendnames, auxnames, namespaces, closures}
+) where {prognames, tendnames, auxnames, namespaces, closures}
     
     for progname in prognames
         fill!(getproperty(state, progname), value)
@@ -143,4 +118,59 @@ function Base.fill!(state::StateVariables{prognames, tendnames, auxnames, namesp
         fill!(getproperty(state, auxname), value)
     end
     return nothing 
-end 
+end
+
+function fill_halo_regions!(state::StateVariables)
+    # fill_halo_regions! for all prognostic variables
+    fastiterate(state.prognostic) do field
+        fill_halo_regions!(field, state.clock, state)
+    end
+    # fill_halo_regions! for all auxiliary variables
+    fastiterate(state.auxiliary) do field
+        fill_halo_regions!(field, state.clock, state)
+    end
+    # recurse over namespaces
+    fastiterate(state.namespaces) do ns
+        fill_halo_regions!(ns)
+    end
+end
+
+function reset_tendencies!(state::StateVariables)
+    # reset all tendency fields
+    fastiterate(state.tendencies) do field
+        set!(field, zero(eltype(field)))
+    end
+    # recurse over namespaces
+    fastiterate(state.namespaces) do ns
+        reset_tendencies!(ns)
+    end
+end
+
+"""
+    get_fields(state::StateVariables, queries::Union{Symbol, Pair}...)
+
+Retrieves fields with names given in `queries` and returns them in a `NamedTuple`. Each argument
+in `queries` can either be a `Symbol` corresponding to a field/variable defined in the namespace
+of `state` or a `Pair{Symbol, Tuple}` where the key is the child namespace and the value is a
+tuple of queries from that namespace.
+
+```julia
+# initialize model
+state = initialize(model)
+# get the temperature and pore_water_ice_saturation fields
+fields = get_fields(state, :temperature, :pore_water_ice_saturation)
+# extract temperature as well as variables from a namespace
+nested_fields = get_fields(state, :temperature, :namespace => (:subvar1, :subvar2))
+```
+"""
+function get_fields(state::StateVariables, queries::Union{Symbol, Pair}...)
+    fields = map(queries) do query
+        if isa(query, Symbol)
+            query => getproperty(state, query)
+        else isa(query, Pair)
+            key, value = query
+            key => get_fields(getproperty(state, key), value...)
+        end
+    end
+    return (; fields...)
+end

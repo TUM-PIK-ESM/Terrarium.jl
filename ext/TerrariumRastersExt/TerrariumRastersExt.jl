@@ -43,7 +43,7 @@ function Terrarium.InputSource(grid::ColumnRingGrid{NF}, rasters::AbstractRaster
     idxmap = on_architecture(architecture(grid), findall(Array(grid.mask)))
     # infer the VarDims and subsequently the Field location from the data dimensions
     vardims = Terrarium.inferdims(first(rasters))
-    named_rasters = map(data -> data.name => on_architecture(architecture(grid), data), rasters)
+    named_rasters = map(data -> data.name => data, rasters)
     # infer reference times
     reftimes = filter(!isnothing, map(data -> default_reftime(data, reftime), rasters))
     reftime = isempty(reftimes) ? nothing : first(reftimes)
@@ -87,19 +87,20 @@ function update_from_raster!(
     arch = architecture(idxmap)
     indexes = searchsorted(timedim.val, t)
     left, right = last(indexes), first(indexes)
-    if right > left && right <= length(timedim)
+    @inbounds if left >= 1 && right <= length(timedim)
         # Linear interpolation between points
         x1 = on_architecture(arch, raster[Ti(left)])[idxmap]
         x2 = on_architecture(arch, raster[Ti(right)])[idxmap]
         t1 = timedim[left]
         t2 = timedim[right]
-        dt = Terrarium.convert_dt(t2 - t1)
+        Δt = Terrarium.convert_dt(t2 - t1)
         ϵ = Terrarium.convert_dt(t - t1)
-        set!(field, x1 + ϵ*(x2 - x1) / dt)
+        x_interp = Δt > 0 ? x1 + ϵ*(x2 - x1) / Δt : x2
+        set!(field, x_interp)
     else
         # Note: this implicitly results in flat extrapolation beyond the bounds of the time axis;
         # We may want to make this configurable in the future.
-        set!(field, on_architecture(arch, raster[Ti(right)])[idxmap])
+        set!(field, on_architecture(arch, raster[Ti(min(right, length(timedim)))])[idxmap])
     end
 end
 

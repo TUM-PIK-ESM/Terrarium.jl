@@ -8,7 +8,7 @@ import DataStructures: OrderedDict
 
 import Dates: Dates, TimeType, Period, Year, Month, Day, Second
 
-import Flatten
+import Flatten: flatten, flattenable, reconstruct
 
 import Interpolations
 
@@ -21,7 +21,8 @@ import Oceananigans.Grids as OceananigansGrids
 import Oceananigans.Grids: Periodic, Flat, Bounded
 import Oceananigans.Operators: ∂zᵃᵃᶜ, ∂zᵃᵃᶠ, ℑzᵃᵃᶠ, Δzᵃᵃᶜ
 import Oceananigans.OutputReaders: FieldTimeSeries
-import Oceananigans.TimeSteppers: Clock, tick_time!, reset!
+import Oceananigans.Simulations: Simulation, run!, timestepper
+import Oceananigans.TimeSteppers: Clock, update_state!, time_step!, tick!, reset!
 import Oceananigans.Units: Time
 import Oceananigans.Utils: launch!
 # Boundary conditions
@@ -36,7 +37,7 @@ import Adapt: Adapt, adapt, @adapt_structure
 import KernelAbstractions: @kernel, @index
 
 # Freeze curves for soil energy balance
-import FreezeCurves
+import FreezeCurves: FreezeCurve, FreeWater
 
 import RingGrids
 
@@ -51,9 +52,9 @@ const LengthQuantity{NF, U} = Quantity{NF, 𝐋, U} where {NF, U<:Units}
 const BCType = AbstractBoundaryConditionClassification
 
 # Re-export selected types and methods from Oceananigans
-export Field, FieldTimeSeries, CPU, GPU, Clock, Center, Face
+export Simulation, Field, FieldTimeSeries, CPU, GPU, Clock, Center, Face
 export Value, Flux, Gradient, ValueBoundaryCondition, GradientBoundaryCondition, FluxBoundaryCondition, NoFluxBoundaryCondition
-export set!, interior, architecture, on_architecture, xnodes, ynodes, znodes, location
+export run!, time_step!, set!, interior, architecture, on_architecture, xnodes, ynodes, znodes, location
 
 # Re-export common Dates types
 export Year, Month, Day, Second
@@ -82,7 +83,7 @@ export update_inputs!, get_input_fields, get_input_field
 include("inputs/inputs.jl")
 
 # timestepping
-export timestep!, get_dt, is_adaptive
+export timestep!, default_dt, is_adaptive
 include("timesteppers/abstract_timestepper.jl")
 
 # model interface
@@ -90,7 +91,7 @@ export get_grid, get_time_stepping, get_boundary_conditions, variables, compute_
 include("abstract_model.jl")
 
 # state variables
-export StateVariables
+export StateVariables, get_fields
 include("state_variables.jl")
 
 # default initializers
@@ -110,8 +111,8 @@ include("processes/processes.jl")
 # concrete model implementations
 include("models/models.jl")
 
-# simulation types
-export Simulation, initialize, run!, current_time
-include("simulation.jl")
+# model simulation types and methods
+export ModelState, initialize, current_time, iteration
+include("model_state.jl")
 
 end # module Terrarium

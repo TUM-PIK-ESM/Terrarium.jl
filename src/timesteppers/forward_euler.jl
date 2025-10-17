@@ -1,22 +1,34 @@
 """
+    $TYPEDEF
+
 Simple forward Euler time stepping scheme.
 """
 @kwdef struct ForwardEuler{NF} <: AbstractTimeStepper{NF}
-    "Fixed timestep size in seconds"
-    dt::NF = 300.0
+    "Initial timestep size in seconds"
+    Δt::NF = 300.0
 end
 
-struct ForwardEulerCache{NF} <: AbstractTimeStepperCache{NF} end
+"""
+    ForwardEuler(::Type{NF}; kwargs...)
 
-get_dt(euler::ForwardEuler) = euler.dt
+Create a `ForwardEuler` timestepper with the given numeric format `NF`.
+"""
+ForwardEuler(::Type{NF}; kwargs...) where {NF} = ForwardEuler{NF}(; kwargs...)
+
+default_dt(euler::ForwardEuler) = euler.Δt
 
 is_adaptive(euler::ForwardEuler) = false
 
-@inline step(::ForwardEuler, progvar, tendency, dt) = progvar + dt*tendency
-
-initialize(::AbstractModel{NF}, ::ForwardEuler) where {NF} = ForwardEulerCache{NF}()
-
-# function timestep!(state, model::AbstractModel, euler::ForwardEuler, dt=get_dt(euler))
-#     # TODO: implement timestep! generically
-#     error("not implemented")
-# end
+function timestep!(state, model::AbstractModel, timestepper::ForwardEuler, Δt = default_dt(timestepper))
+    compute_auxiliary!(state, model)
+    compute_tendencies!(state, model)
+    # Euler step
+    explicit_step!(state, get_grid(model), timestepper, Δt)
+    # Apply inverse closure relations
+    for closure in state.closures
+        invclosure!(state, model, closure)
+    end
+    # Update clock
+    tick!(state.clock, Δt)
+    return nothing
+end

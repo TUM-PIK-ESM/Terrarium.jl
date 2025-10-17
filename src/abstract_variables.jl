@@ -53,7 +53,7 @@ are temperature-enthalpy and saturation-pressure relations.
 abstract type AbstractClosureRelation end
 
 """
-    getvar(::AbstractClosureRelation, dims::VarDims)
+    getvar(::AbstractClosureRelation)
 
 Returns an `AuxiliaryVariable` corresponding to the closure variable defined by the given closure relation.
 """
@@ -193,12 +193,12 @@ struct Variables{ProgVars, TendVars, AuxVars, InputVars, Namespaces}
         # get tendencies from prognostic variables
         tendency_vars = map(var -> var.tendency, prognostic_vars)
         # create closure variables and add to auxiliary variables
-        closure_vars = map(var -> getvar(var.closure, vardims(var)), filter(hasclosure, prognostic_vars))
+        closure_vars = map(var -> getvar(var.closure), filter(hasclosure, prognostic_vars))
         auxiliary_ext = tuplejoin(auxiliary_vars, closure_vars)
         # drop inputs with matching prognostic or auxiliary variables
         input_vars = filter(var -> var ∉ prognostic_vars && var ∉ auxiliary_vars, input_vars)
         # check for duplicates
-        check_duplicates(prognostic_vars..., tendency_vars..., auxiliary_vars..., input_vars..., namespaces...)
+        check_duplicates(prognostic_vars..., auxiliary_vars..., input_vars..., namespaces...)
         return new{typeof(prognostic_vars), typeof(tendency_vars), typeof(auxiliary_ext), typeof(input_vars), typeof(namespaces)}(
             prognostic_vars,
             tendency_vars,
@@ -281,15 +281,13 @@ input(name::Symbol, dims::VarDims; units=NoUnits, desc="") = InputVariable(name,
 Creates an `AuxiliaryVariable` for the tendency of a prognostic variable with the given name, dimensions, and physical units.
 This constructor is primarily used internally by other constructors and does not usually need to be called by implementations of `variables`.
 """
-tendency(progname::Symbol, progdims::VarDims, progunits::Units) = AuxiliaryVariable(tendencyof(progname), progdims, progunits/u"s", "")
+tendency(progname::Symbol, progdims::VarDims, progunits::Units) = AuxiliaryVariable(progname, progdims, progunits/u"s", "")
 function tendency(closure::AbstractClosureRelation, dims::VarDims)
     # get the auxiliary closure variable
-    var = getvar(closure, dims)
+    var = getvar(closure)
     # create a tendency variable based on its name and units
     return tendency(varname(var), dims, varunits(var))
 end
-
-tendencyof(progname::Symbol) = Symbol(progname, :_, :tendency)
 
 """
     $SIGNATURES

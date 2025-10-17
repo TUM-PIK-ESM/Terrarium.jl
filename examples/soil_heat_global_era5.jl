@@ -37,7 +37,7 @@ initializer = FieldInitializers(
     pore_water_ice_saturation = 1.0,
 )
 T_ub = PrescribedValue(:temperature, Input(:Tair, units=u"°C"))
-boundary_conditions = SoilBoundaryConditions(grid, top=T_ub)
+boundary_conditions = SoilBoundaryConditions(eltype(grid), top=T_ub)
 model = SoilModel(grid; initializer, boundary_conditions)
 sim = initialize(model, forcings)
 @time timestep!(sim)

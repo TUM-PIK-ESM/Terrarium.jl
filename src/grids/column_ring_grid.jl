@@ -7,10 +7,11 @@ The resulting
 """
 struct ColumnRingGrid{
     NF,
+    Arch,
     RingGrid<:RingGrids.AbstractGrid,
     MaskField<:RingGrids.AbstractField{Bool},
     RectGrid<:OceananigansGrids.RectilinearGrid,
-} <: AbstractLandGrid{NF}
+} <: AbstractLandGrid{NF, Arch}
     "RingGrid specfying the lateral spatial discretization of the globe"
     rings::RingGrid
 
@@ -26,7 +27,8 @@ struct ColumnRingGrid{
         grid::OceananigansGrids.RectilinearGrid
     )
         assert_field_matches_grid(mask, rings)
-        new{eltype(grid), typeof(rings), typeof(mask), typeof(grid)}(rings, mask, grid)
+        arch = architecture(grid)
+        new{eltype(grid), typeof(arch), typeof(rings), typeof(mask), typeof(grid)}(rings, mask, grid)
     end
 
     """
@@ -50,12 +52,12 @@ struct ColumnRingGrid{
         # using the z-axis here probably results in inefficient memory access patterns
         # since most or all land computations will be along this axis
         z_thick = get_spacing(vert)
-        z_coords = vcat(-reverse(cumsum(z_thick)), zero(eltype(z_thick)))
+        z_coords = convert.(NF, vcat(-reverse(cumsum(z_thick)), zero(eltype(z_thick))))
         grid = OceananigansGrids.RectilinearGrid(arch, NF, size=(Nh, Nz), x=(1, Nh), z=z_coords, topology=(Periodic, Flat, Bounded))
         # adapt ring grid and mask
         rings = on_architecture(arch, rings)
         mask = on_architecture(arch, mask)
-        return new{NF, typeof(rings), typeof(mask), typeof(grid)}(rings, mask, grid)
+        return new{NF, typeof(arch), typeof(rings), typeof(mask), typeof(grid)}(rings, mask, grid)
     end
 
     ColumnRingGrid(

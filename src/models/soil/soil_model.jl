@@ -17,33 +17,33 @@ $(TYPEDFIELDS)
     BoundaryConditions<:AbstractBoundaryConditions,
     Initializer<:AbstractInitializer,
     TimeStepper<:AbstractTimeStepper,
-} <: AbstractSoilModel{NF}
+} <: AbstractSoilModel{NF, GridType, TimeStepper}
     "Spatial grid type"
     grid::GridType
 
     "Stratigraphy of the soil"
-    strat::Stratigraphy = HomogeneousSoil()
+    strat::Stratigraphy = HomogeneousSoil(eltype(grid))
 
     "Soil energy balance"
-    energy::SoilEnergy = SoilEnergyBalance()
+    energy::SoilEnergy = SoilEnergyBalance(eltype(grid))
 
     "Soil hydrology/water balance"
-    hydrology::SoilHydrology = SoilHydrology()
+    hydrology::SoilHydrology = SoilHydrology(eltype(grid))
 
     "Soil biogeochemistry"
-    biogeochem::Biogeochemistry = ConstantSoilCarbonDenisty()
+    biogeochem::Biogeochemistry = ConstantSoilCarbonDenisty(eltype(grid))
 
     "Physical constants"
-    constants::Constants = PhysicalConstants{eltype(grid)}()
+    constants::Constants = PhysicalConstants(eltype(grid))
 
     "Boundary conditions"
-    boundary_conditions::BoundaryConditions = SoilBoundaryConditions(grid)
+    boundary_conditions::BoundaryConditions = SoilBoundaryConditions(eltype(grid))
 
     "State variable initializer"
     initializer::Initializer = SoilInitializer()
 
     "Timestepping scheme"
-    time_stepping::TimeStepper = ForwardEuler()
+    time_stepping::TimeStepper = ForwardEuler(eltype(grid))
 end
 
 # SoilModel getter methods
@@ -90,44 +90,6 @@ function compute_tendencies!(state, model::SoilModel)
     compute_tendencies!(state, model, model.energy)
     compute_tendencies!(state, model, model.biogeochem)
     return nothing
-end
-
-function timestep!(state, model::SoilModel, euler::ForwardEuler, dt=get_dt(timestepper))
-    compute_auxiliary!(state, model)
-    compute_tendencies!(state, model)
-    launch!(
-        model.grid,
-        :xyz,
-        timestep_kernel!,
-        state,
-        euler,
-        model.energy,
-        model.hydrology,
-        model.strat,
-        model.biogeochem,
-        model.constants,
-        dt
-    )
-    return nothing
-end
-
-@kernel function timestep_kernel!(
-    state,
-    euler::ForwardEuler,
-    energy::AbstractSoilEnergyBalance,
-    hydrology::AbstractSoilHydrology,
-    strat::AbstractStratigraphy,
-    bgc::AbstractSoilBiogeochemistry,
-    constants::PhysicalConstants,
-    dt
-)
-    idx = @index(Global, NTuple)
-    i, j, k = idx
-    # timestep for internal energy
-    state.internal_energy[i, j, k] = step(euler, state.internal_energy[i, j, k], state.internal_energy_tendency[i, j, k], dt)
-    # apply inverse closure relation to update temperature
-    fc = get_freezecurve(hydrology)
-    energy_to_temperature!(idx, state, fc, energy, hydrology, strat, bgc, constants)
 end
 
 # Initialization

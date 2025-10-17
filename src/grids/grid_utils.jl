@@ -1,8 +1,16 @@
 # Convenience dispatch for Oceananigans.launch!
-function launch!(grid::AbstractLandGrid, workdims::Symbol, args...; kwargs...)
+function launch!(grid::AbstractLandGrid, workspec::Symbol, args...; kwargs...)
     _grid = get_field_grid(grid)
-    launch!(_grid.architecture, _grid, workdims, args...; kwargs...)
+    launch!(_grid.architecture, _grid, workspec, args...; kwargs...)
 end
+
+"""
+Returns the appropriate workspec for the given `AbstractField` or based on the given
+field locations.
+"""
+workspec(::AbstractField{LX, LY, LZ}) where {LX, LY, LZ} = workspec(LX(), LY(), LZ())
+workspec(::Center, ::Center, ::Nothing) = :xy
+workspec(::Center, ::Center, ::Center) = :xyz
 
 # Helper functions for checking if a `RingGrids` or `Oceananigans` `Field` matches the given grid
 field_matches_grid(field, grid) = field.grid == grid

@@ -3,15 +3,15 @@ module StateVariablesTests
 using Terrarium
 using Test
 
-import Terrarium: VarDims, XY, XYZ, prognostic, auxiliary, input, namespace
+import Terrarium: AbstractLandGrid, VarDims, XY, XYZ, prognostic, auxiliary, input, namespace
 
 DEFAULT_NF = Float32
 
-@kwdef struct SubModel{NF} <: Terrarium.AbstractModel{NF}
-    grid
+@kwdef struct SubModel{NF, Grid<:AbstractLandGrid{NF}, TS} <: Terrarium.AbstractModel{NF, Grid, TS}
+    grid::Grid
     initializer = DefaultInitializer()
     boundary_conditions = DefaultBoundaryConditions()
-    time_stepping::Terrarium.AbstractTimeStepper{NF} = Terrarium.ForwardEuler{DEFAULT_NF}()
+    time_stepping::TS = Terrarium.ForwardEuler{DEFAULT_NF}()
 end
 
 Terrarium.variables(model::SubModel) = (
@@ -21,17 +21,17 @@ Terrarium.variables(model::SubModel) = (
     input(:forcing, XY()),
 )
 
-@kwdef struct TestModel{NF} <: Terrarium.AbstractModel{NF}
-    grid
+@kwdef struct TestModel{NF, Grid<:AbstractLandGrid{NF}, TS} <: Terrarium.AbstractModel{NF, Grid, TS}
+    grid::Grid
     submodel = SubModel(; grid)
     initializer = DefaultInitializer()
     boundary_conditions = DefaultBoundaryConditions()
-    time_stepping::Terrarium.AbstractTimeStepper{NF} = Terrarium.ForwardEuler{DEFAULT_NF}()
+    time_stepping::TS = Terrarium.ForwardEuler{DEFAULT_NF}()
 end
 
 struct TestClosure <: Terrarium.AbstractClosureRelation end
 
-Terrarium.getvar(::TestClosure, dims::VarDims) = auxiliary(:closurevar, dims)
+Terrarium.getvar(::TestClosure) = auxiliary(:closurevar, XYZ())
 
 Terrarium.variables(model::TestModel) = (
     prognostic(:progvar3D, XYZ()),
@@ -45,19 +45,19 @@ Terrarium.variables(model::TestModel) = (
 
 @testset "State variable initialization" begin
 
-    grid = ColumnGrid(ExponentialSpacing(N=10))
-    model = TestModel{DEFAULT_NF}(; grid)
+    grid = ColumnGrid(CPU(), DEFAULT_NF, ExponentialSpacing(N=10))
+    model = TestModel(; grid)
     sim = initialize(model)
     # Check that all prognostic variables are defined correctly
     @test hasproperty(sim.state, :progvar3D) && isa(sim.state.prognostic.progvar3D, Field{Center,Center,Center})
     @test hasproperty(sim.state, :progvar2D) && isa(sim.state.prognostic.progvar2D, Field{Center,Center,Nothing})
     @test hasproperty(sim.state, :cprogvar3D) && isa(sim.state.prognostic.cprogvar3D, Field{Center,Center,Center})
     # Check that all tendencies are defined correctly
-    @test hasproperty(sim.state, :progvar3D_tendency) && isa(sim.state.progvar3D_tendency, Field{Center,Center,Center})
-    @test hasproperty(sim.state, :progvar2D_tendency) && isa(sim.state.progvar2D, Field{Center,Center,Nothing})
+    @test hasproperty(sim.state.tendencies, :progvar3D) && isa(sim.state.tendencies.progvar3D, Field{Center,Center,Center})
+    @test hasproperty(sim.state.tendencies, :progvar2D) && isa(sim.state.tendencies.progvar2D, Field{Center,Center,Nothing})
     # Check that tendency for prognostic variable with closure relation is defined only on the clousre variable
-    @test hasproperty(sim.state, :closurevar_tendency) && isa(sim.state.progvar2D, Field{Center,Center,Nothing})
-    @test !hasproperty(sim.state, :cprogvar3D_tendency)
+    @test hasproperty(sim.state.tendencies, :closurevar) && isa(sim.state.progvar2D, Field{Center,Center,Nothing})
+    @test !hasproperty(sim.state.tendencies, :cprogvar3D)
     # Check that all auxiliary variables are defined correctly
     @test hasproperty(sim.state, :auxvar3D) && isa(sim.state.auxvar3D, Field{Center,Center,Center})
     @test hasproperty(sim.state, :auxvar2D) && isa(sim.state.auxvar2D, Field{Center,Center,Nothing})

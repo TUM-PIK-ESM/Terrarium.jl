@@ -10,21 +10,28 @@ end
 Properties:
 $TYPEDFIELDS
 """
-@kwdef struct SoilHydrology{
+struct SoilHydrology{
     NF,
     SoilWaterFluxes<:AbstractSoilWaterFluxes,
     SoilHydraulicProperties<:AbstractSoilHydraulicProperties{NF},
-    FC<:FreezeCurves.FreezeCurve
+    FC<:FreezeCurve
 } <: AbstractSoilHydrology{NF}
     "Soil water flux scheme"
-    fluxes::SoilWaterFluxes = NoFlow()
+    fluxes::SoilWaterFluxes
 
     "Soil hydraulic properties parameterization"
-    hydraulic_properties::SoilHydraulicProperties = SURFEXHydraulics()
+    hydraulic_properties::SoilHydraulicProperties
     
     "Soil freezing and water retention curve(s) from FreezeCurves.jl"
-    freezecurve::FC = FreezeCurves.FreeWater()
+    freezecurve::FC
 end
+
+SoilHydrology(
+    ::Type{NF};
+    fluxes::AbstractSoilWaterFluxes = NoFlow(),
+    hydraulic_properties::AbstractSoilHydraulicProperties{NF} = SURFEXHydraulics(NF),
+    freezecurve::FreezeCurve = FreeWater()
+) where {NF} = SoilHydrology(fluxes, hydraulic_properties, freezecurve)
 
 get_hydraulic_properties(hydrology::SoilHydrology) = hydrology.hydraulic_properties
 

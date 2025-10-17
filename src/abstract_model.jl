@@ -5,7 +5,7 @@
 
 Base type for all models.
 """
-abstract type AbstractModel{NF} end
+abstract type AbstractModel{NF, Grid<:AbstractLandGrid{NF}, TS<:AbstractTimeStepper} end
 
 """
     variables(model::AbstractModel)
@@ -36,6 +36,7 @@ function compute_auxiliary! end
     compute_tendencies!(state, model::AbstractModel)
 
 Computes tendencies for all prognostic state variables for `model` stored in the given `state`.
+This method should be called after `compute_auxiliary!`.
 """
 function compute_tendencies! end
 
@@ -72,9 +73,9 @@ Returns the initializer associated with this `model`.
 get_initializer(model::AbstractModel) = model.initializer
 
 """
-Convenience dispatch for `timestep!` that forwards to `timestep!(state, model, get_time_stepping(model), dt)`.
+Convenience dispatch for `timestep!` that forwards to `timestep!(state, model, get_time_stepping(model), Δt)`.
 """
-timestep!(state, model::AbstractModel, dt) = timestep!(state, model, get_time_stepping(model), dt)
+timestep!(state, model::AbstractModel, Δt) = timestep!(state, model, get_time_stepping(model), Δt)
 
 # TODO: define general method interfaces (as needed) for all model types
 
@@ -83,49 +84,49 @@ timestep!(state, model::AbstractModel, dt) = timestep!(state, model, get_time_st
     
 Base type for ground (e.g. soil and rock) models.
 """
-abstract type AbstractGroundModel{NF} <: AbstractModel{NF} end
+abstract type AbstractGroundModel{NF, GR, TS} <: AbstractModel{NF, GR, TS} end
 
 """
     $TYPEDEF
 
 Base type for soil ground models.
 """
-abstract type AbstractSoilModel{NF} <: AbstractGroundModel{NF} end
+abstract type AbstractSoilModel{NF, GR, TS} <: AbstractGroundModel{NF, GR, TS} end
 
 """
     $TYPEDEF
 
 Base type for snow models.
 """
-abstract type AbstractSnowModel{NF} <: AbstractModel{NF} end
+abstract type AbstractSnowModel{NF, GR, TS} <: AbstractModel{NF, GR, TS} end
 
 """
     $TYPEDEF
 
 Base type for vegetation/carbon models.
 """
-abstract type AbstractVegetationModel{NF} <: AbstractModel{NF} end
+abstract type AbstractVegetationModel{NF, GR, TS} <: AbstractModel{NF, GR, TS} end
 
 """
     $TYPEDEF
 
 Base type for surface energy balance models.
 """
-abstract type AbstractEnergyBalanceModel{NF} <: AbstractModel{NF} end
+abstract type AbstractEnergyBalanceModel{NF, GR, TS} <: AbstractModel{NF, GR, TS} end
 
 """
     $TYPEDEF
 
 Base type for surface hydrology models.
 """
-abstract type AbstractHydrologyModel{NF} <: AbstractModel{NF} end
+abstract type AbstractHydrologyModel{NF, GR, TS} <: AbstractModel{NF, GR, TS} end
 
 """
     AbstractLandModel <: AbstractModel
 
 Base type for full land models which couple together multiple component models.
 """
-abstract type AbstractLandModel{NF} <: AbstractModel{NF} end
+abstract type AbstractLandModel{NF, GR, TS} <: AbstractModel{NF, GR, TS} end
 
 """
 Convenience constructor for all `AbstractLandModel` types that allows the `grid` to be passed

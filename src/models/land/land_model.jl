@@ -10,7 +10,7 @@ struct LandModel{
     BoundaryConditions<:AbstractBoundaryConditions,
     Initializer<:AbstractInitializer,
     TimeStepper<:AbstractTimeStepper,
-} <: AbstractLandModel{NF}
+} <: AbstractLandModel{NF, GridType, TimeStepper}
     "Spatial grid"
     grid::GridType
 
