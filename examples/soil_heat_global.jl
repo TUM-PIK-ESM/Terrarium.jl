@@ -24,7 +24,6 @@ grid = ColumnRingGrid(arch, Float64, ExponentialSpacing(N=30), land_mask.grid, l
 lon, lat = RingGrids.get_londlatds(grid.rings)
 
 # Initial conditions
-Tsurf_initial = Tsurf_avg[findall(land_mask)]
 initializer = FieldInitializers(
     # steady-ish state initial condition for temperature
     temperature = (x, z) -> -0.02*z,
@@ -35,7 +34,7 @@ initializer = FieldInitializers(
 T_ub = PrescribedValue(:temperature, (x, t) -> 30*sin(2π*t/(24*3600*365)))
 boundary_conditions = SoilBoundaryConditions(eltype(grid), top=T_ub)
 model = SoilModel(grid; initializer, boundary_conditions)
-state = initialize(model, forcings)
+state = initialize(model)
 # advance one timestep with Δt = 15 minutes
 @time timestep!(state, 900.0)
 # run multiple timesteps over a given time period
