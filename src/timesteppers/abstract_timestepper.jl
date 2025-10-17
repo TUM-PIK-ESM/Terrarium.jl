@@ -72,14 +72,28 @@ timestepping schemes as needed.
 function explicit_step!(
     field::AbstractField{LX, LY, LZ},
     tendency::AbstractField{LX, LY, LZ},
-    ::AbstractLandGrid{NF},
-    ::AbstractTimeStepper{NF},
+    grid::AbstractLandGrid,
+    timestepper::AbstractTimeStepper,
     Δt,
     args...
-) where {LX, LY, LZ, NF}
-    let u = field,
-        ∂u∂t = tendency,
-        Δt = convert(NF, Δt);
-        set!(u, u + ∂u∂t*Δt)
+) where {LX, LY, LZ}
+    launch!(
+        grid,
+        workspec(LX(), LY(), LZ()),
+        explicit_step_kernel!,
+        field,
+        tendency,
+        timestepper,
+        Δt,
+        args...
+    )
+end
+
+@kernel function explicit_step_kernel!(field, tendency, ::AbstractTimeStepper, Δt)
+    i, j, k = @index(Global, NTuple)
+    u = field
+    ∂u∂t = tendency
+    @inbounds let Δt = convert(eltype(tendency), Δt);
+        u[i, j, k] += ∂u∂t[i, j, k] * Δt
     end
 end

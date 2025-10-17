@@ -4,8 +4,8 @@
 Simple forward Euler time stepping scheme.
 """
 @kwdef struct ForwardEuler{NF} <: AbstractTimeStepper{NF}
-    "Default timestep size in seconds"
-    Δt::NF = 300.0
+    "Initial timestep size in seconds"
+    default_Δt::NF = 300.0
 end
 
 """
@@ -15,7 +15,7 @@ Create a `ForwardEuler` timestepper with the given numeric format `NF`.
 """
 ForwardEuler(::Type{NF}; kwargs...) where {NF} = ForwardEuler{NF}(; kwargs...)
 
-default_dt(euler::ForwardEuler) = euler.Δt
+default_dt(euler::ForwardEuler) = euler.default_Δt
 
 is_adaptive(euler::ForwardEuler) = false
 
