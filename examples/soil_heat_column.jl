@@ -20,7 +20,7 @@ state = initialize(model)
 # test one timestep
 @time timestep!(state)
 # run simulation forward for a set period of time
-run!(sim, period=Day(10))
+run!(state, period=Day(10))
 
 T = interior(state.state.temperature)[1,1,:]
 f = interior(state.state.liquid_water_fraction)[1,1,:]
