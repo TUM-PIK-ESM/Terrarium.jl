@@ -23,7 +23,7 @@ A collection of general physical constants that do not (usually) need to be vari
     g::NF = 9.80665
 
     "Reference temperature (0°C in Kelvin)"
-    T0::NF = 273.15
+    Tref::NF = 273.15
 
     "Stefan-Boltzmann constant in J/(s*m^2*K^4)"
     σ::NF = 5.6704e-8
@@ -42,3 +42,18 @@ A collection of general physical constants that do not (usually) need to be vari
 end
 
 PhysicalConstants(::Type{NF}; kwargs...) where {NF} = PhysicalConstants{NF}(; kwargs...)
+
+"""
+    celsius_to_kelvin(c::PhysicalConstants, T)
+
+Convert the given temperature in °C to Kelvin based on the constant `Tref`.
+"""
+celsius_to_kelvin(c::PhysicalConstants, T) = T + c.Tref
+
+"""
+    stefan_boltzmann(c::PhysicalConstants, T, ϵ)
+
+Stefan-Boltzmann law ``M = \\epsilon \\sigma T^4`` where T is the surface temperature in Kelvin
+and ϵ is the emissivity.
+"""
+@inline stefan_boltzmann(c::PhysicalConstants, T, ϵ) = ϵ * c.σ * T^4
