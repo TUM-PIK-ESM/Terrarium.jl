@@ -5,7 +5,7 @@ struct LandModel{
     GroundModel<:AbstractGroundModel,
     SnowModel<:AbstractSnowModel,
     VegetationModel<:AbstractVegetationModel,
-    EnergyBalanceModel<:AbstractEnergyBalanceModel,
+    SurfaceEnergyBalanceModel<:AbstractSurfaceEnergyBalanceModel,
     HydrologyModel<:AbstractHydrologyModel,
     BoundaryConditions<:AbstractBoundaryConditions,
     Initializer<:AbstractInitializer,
@@ -24,7 +24,7 @@ struct LandModel{
     vegetation::VegetationModel
 
     "Surface energy balance"
-    energy::EnergyBalanceModel
+    energy::SurfaceEnergyBalanceModel
     
     "Surface hydrology model"
     hydrology::HydrologyModel
