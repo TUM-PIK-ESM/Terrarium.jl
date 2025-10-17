@@ -1,100 +1,3 @@
-abstract type AbstractHeatOperator end
-struct ExplicitHeatConduction <: AbstractHeatOperator end
-
-"""
-    $TYPEDEF
-
-Standard implementation of the soil energy balance accounting for freezing and thawing of pore water/ice.
-
-Properties:
-$TYPEDFIELDS
-"""
-struct SoilEnergyBalance{
-    NF,
-    HeatOperator<:AbstractHeatOperator,
-    ThermalProps<:SoilThermalProperties{NF},
-} <: AbstractSoilEnergyBalance{NF}
-    "Heat transport operator"
-    operator::HeatOperator
-
-    "Soil thermal properties"
-    thermal_properties::ThermalProps
-end
-
-SoilEnergyBalance(
-    ::Type{NF};
-    operator::AbstractHeatOperator = ExplicitHeatConduction(),
-    thermal_properties::SoilThermalProperties{NF} = SoilThermalProperties(NF)
-
-) where {NF} = SoilEnergyBalance(operator, thermal_properties)
-
-variables(::SoilEnergyBalance) = (
-    prognostic(:temperature, XYZ(), TemperatureEnergyClosure()),
-    auxiliary(:pore_water_ice_saturation, XYZ()),
-    auxiliary(:liquid_water_fraction, XYZ()),
-)
-
-compute_auxiliary!(state, model, energy::SoilEnergyBalance) = nothing
-
-function compute_tendencies!(state, model, energy::SoilEnergyBalance)
-    grid = get_grid(model)
-    hydrology = get_soil_hydrology(model)
-    strat = get_stratigraphy(model)
-    bgc = get_biogeochemistry(model)
-    launch!(grid, :xyz, compute_energy_tendency!, state, grid, energy, hydrology, strat, bgc)
-    return nothing
-end
-
-@kernel function compute_energy_tendency!(
-    state,
-    grid,
-    energy::SoilEnergyBalance,
-    hydrology::AbstractSoilHydrology,
-    strat::AbstractStratigraphy,
-    bgc::AbstractSoilBiogeochemistry,
-)
-    idx = @index(Global, NTuple)
-    state.tendencies.internal_energy[idx...] += energy_tendency(idx, state, grid, energy, hydrology, strat, bgc)
-end
-
-@inline function energy_tendency(
-    idx, state, grid,
-    energy::SoilEnergyBalance,
-    hydrology::AbstractSoilHydrology,
-    strat::AbstractStratigraphy,
-    bgc::AbstractSoilBiogeochemistry,
-)
-    i, j, k = idx
-    # operators require the underlying Oceananigans grid
-    field_grid = get_field_grid(grid)
-
-    # Interior heat fluxes
-    dUdt = -∂zᵃᵃᶜ(i, j, k, field_grid, diffusive_heat_flux, state, energy, hydrology, strat, bgc)
-    return dUdt
-end
-
-@inline function thermalconductivity(
-    i, j, k, grid, state,
-    energy::SoilEnergyBalance,
-    hydrology::AbstractSoilHydrology,
-    strat::AbstractStratigraphy,
-    bgc::AbstractSoilBiogeochemistry,
-)
-    fracs = soil_volumetric_fractions((i, j, k), state, strat, hydrology, bgc)
-    return thermalconductivity(energy.thermal_properties, fracs)
-end
-
-# Diffusive heat flux term passed to ∂z operator
-@inline function diffusive_heat_flux(i, j, k, grid, state, args...)
-    # Get temperature field
-    T = state.temperature
-    # Compute and interpolate conductivity to grid cell faces
-    κ = ℑzᵃᵃᶠ(i, j, k, grid, thermalconductivity, state, args...)
-    # Fourier's law: q = -κ ∂T/∂z
-    q = -κ * ∂zᵃᵃᶠ(i, j, k, grid, T)
-    return q
-end
-
 """
     TemperatureEnergyClosure
 
@@ -147,7 +50,7 @@ end
     constants::PhysicalConstants,
 )
     idx = @index(Global, NTuple)
-    fc = get_freezecurve(hydrology)
+    fc = freezecurve(energy, hydrology)
     temperature_to_energy!(idx, state, fc, energy, hydrology, strat, bgc, constants)
 end
 
@@ -163,7 +66,7 @@ end
     T = state.temperature[i, j, k] # assumed given
     L = constants.ρw*constants.Lsl
     por = porosity(idx, state, hydrology, strat, bgc)
-    sat = state.pore_water_ice_saturation[i, j, k]
+    sat = state.saturation_water_ice[i, j, k]
     # calculate unfrozen water content from temperature
     # N.B. For the free water freeze curve, the mapping from temperature to unfrozen water content
     # within the phase change region is indeterminate since it is assumed that T = 0. As such, we
@@ -190,7 +93,7 @@ end
     constants::PhysicalConstants,
 )
     idx = @index(Global, NTuple)
-    fc = get_freezecurve(hydrology)
+    fc = freezecurve(energy, hydrology)
     energy_to_temperature!(idx, state, fc, energy, hydrology, strat, bgc, constants)
 end
 
@@ -206,7 +109,7 @@ end
     U = state.internal_energy[i, j, k] # assumed given
     L = constants.ρw*constants.Lsl
     por = porosity(idx, state, hydrology, strat, bgc)
-    sat = state.pore_water_ice_saturation[i, j, k]
+    sat = state.saturation_water_ice[i, j, k]
     Lθ = L*sat*por
     # calculate unfrozen water content
     state.liquid_water_fraction[i, j, k] = liquid_water_fraction(fc, U, Lθ, sat)

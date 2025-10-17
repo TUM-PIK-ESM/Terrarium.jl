@@ -87,7 +87,7 @@ end
 function checkdims(; named_fields...)
     @assert length(named_fields) >= 1 "at least one input field must be provided"
     # infer dimensions of all provided fields
-    field_dims = map(inferdims, values(named_fields))
+    field_dims = map(vardims, values(named_fields))
     @assert length(field_dims) == 1 || foldl(==, field_dims) "all fields must have matching dimensions"
     return first(field_dims)
 end

@@ -3,7 +3,7 @@ abstract type AbstractSoilHydraulicProperties{NF} end
 """
     PrescribedHydraulics{NF} <: AbstractSoilHydraulicProperties
 
-Represents a simple case where soil hydraulic properties are directly prescribed to constant values.
+Represents a simple case where soil hydraulic properties are given as constant values.
 This is mostly provided just for testing, although it may be useful in certain cases where direct
 measurements of hydraulic properites are available.
 

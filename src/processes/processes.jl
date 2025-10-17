@@ -14,28 +14,7 @@ include("prescribed_atmosphere.jl")
 
 # Soil
 
-include("soil/abstract_types.jl")
-
-export SoilTexture
-include("soil/soil_texture.jl")
-
-export SoilThermalConductivities, SoilHeatCapacities, SoilThermalProperties, InverseQuadratic
-include("soil/soil_thermal_properties.jl")
-
-export PrescribedHydraulics, SURFEXHydraulics, saturated_hydraulic_conductivity, mineral_porosity, mineral_field_capacity, mineral_wilting_point
-include("soil/soil_hydraulic_properties.jl")
-
-export HomogeneousSoil
-include("soil/soil_stratigraphy.jl")
-
-export SoilHydrology, ImmobileSoilWater, SoilHydraulicProperties
-include("soil/soil_hydrology.jl")
-
-export SoilEnergyBalance
-include("soil/soil_energy.jl")
-
-export ConstantSoilCarbonDenisty
-include("soil/soil_biogeochemistry.jl")
+include("soil/soil_processes.jl")
 
 # Vegetation
 
