@@ -26,8 +26,10 @@ jobs:
       - uses: julia-actions/cache@v2
       - name: Install dependencies
         run: julia --project=examples/ -e 'using Pkg; Pkg.develop(PackageSpec(path=pwd())); Pkg.instantiate()'
-      - name: Run examples
-        run: julia --project=examples/ -e 'using Pkg; Pkg.activate("."); 
-                                              include("soil_heat_column.jl");
-                                              include("soil_heat_global.jl");
-                                              include("soil_heat_era5.jl")'
+      - name: Run Soil Heat Column 
+        run: julia --project=examples/ -e 'using Pkg; Pkg.activate("examples"); include("examples/soil_heat_column.jl");
+      - name: Run Soil Heat Global 
+        run: julia --project=examples/ -e 'using Pkg; Pkg.activate("examples"); include("examples/soil_heat_global.jl");
+      - name: Run Soil Heat Globale ERA5 
+        run: julia --project=examples/ -e 'using Pkg; Pkg.activate("examples"); include("examples/soil_heat_era5.jl");                                       
+        
