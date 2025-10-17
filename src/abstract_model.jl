@@ -77,57 +77,6 @@ Convenience dispatch for `timestep!` that forwards to `timestep!(state, model, g
 """
 timestep!(state, model::AbstractModel, Δt) = timestep!(state, model, get_time_stepping(model), Δt)
 
-# TODO: define general method interfaces (as needed) for all model types
-
-"""
-    $TYPEDEF
-    
-Base type for ground (e.g. soil and rock) models.
-"""
-abstract type AbstractGroundModel{NF, GR, TS} <: AbstractModel{NF, GR, TS} end
-
-"""
-    $TYPEDEF
-
-Base type for soil ground models.
-"""
-abstract type AbstractSoilModel{NF, GR, TS} <: AbstractGroundModel{NF, GR, TS} end
-
-"""
-    $TYPEDEF
-
-Base type for snow models.
-"""
-abstract type AbstractSnowModel{NF, GR, TS} <: AbstractModel{NF, GR, TS} end
-
-"""
-    $TYPEDEF
-
-Base type for vegetation/carbon models.
-"""
-abstract type AbstractVegetationModel{NF, GR, TS} <: AbstractModel{NF, GR, TS} end
-
-"""
-    $TYPEDEF
-
-Base type for surface energy balance models.
-"""
-abstract type AbstractEnergyBalanceModel{NF, GR, TS} <: AbstractModel{NF, GR, TS} end
-
-"""
-    $TYPEDEF
-
-Base type for surface hydrology models.
-"""
-abstract type AbstractHydrologyModel{NF, GR, TS} <: AbstractModel{NF, GR, TS} end
-
-"""
-    AbstractLandModel <: AbstractModel
-
-Base type for full land models which couple together multiple component models.
-"""
-abstract type AbstractLandModel{NF, GR, TS} <: AbstractModel{NF, GR, TS} end
-
 """
 Convenience constructor for all `AbstractLandModel` types that allows the `grid` to be passed
 as the first positional argument.
