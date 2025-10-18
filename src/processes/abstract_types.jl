@@ -14,14 +14,62 @@ variables(op::AbstractOperator) = ()
 # Interface for processes
 
 """
-    AbstractProcess{NF}
+    AbstractProcess
 
 Base type for all processes which define physics or parameterizations but are not standalone models.
 """
-abstract type AbstractProcess{NF} end
+abstract type AbstractProcess end
 
 variables(process::AbstractProcess) = ()
 
 compute_auxiliary!(state, model, ::AbstractProcess) = nothing
 
 compute_tendencies!(state, model, ::AbstractProcess) = nothing
+
+
+# Soil process types
+# TODO: Think more about these process types and what methods they should have.
+
+abstract type AbstractStratigraphy{NF} <: AbstractProcess end
+
+abstract type AbstractSoilEnergyBalance{NF} <: AbstractProcess end
+
+abstract type AbstractSoilHydrology{NF} <: AbstractProcess end
+
+abstract type AbstractSoilBiogeochemistry{NF} <: AbstractProcess end
+
+# Vegetation process types
+
+abstract type AbstractPhotosynthesis end
+
+abstract type AbstractStomatalConductance end
+
+abstract type AbstractAutotrophicRespiration end
+
+abstract type AbstractVegetationDynamics end
+
+abstract type AbstractPhenology end
+
+abstract type AbstractVegetationCarbonDynamics end
+
+# Surface energy balance types
+
+"""
+Base type for surface albedo and emissivity process implementations.
+"""
+abstract type AbstractAlbedo{NF} <: AbstractProcess end
+
+"""
+Base type for radiation budget schemes.
+"""
+abstract type AbstractRadiativeFluxes <: AbstractProcess end
+
+"""
+Base type for turbulent (latent and sensible) heat fluxes at the surface.
+"""
+abstract type AbstractTurbulentFluxes <: AbstractProcess end
+
+"""
+Base type for skin temperature and ground heat flux schemes.
+"""
+abstract type AbstractSkinTemperature <: AbstractProcess end
