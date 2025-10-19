@@ -22,6 +22,8 @@ abstract type AbstractProcess end
 
 variables(process::AbstractProcess) = ()
 
+initialize!(state, model, process::AbstractProcess) = compute_auxiliary!(state, model, process)
+
 compute_auxiliary!(state, model, ::AbstractProcess) = nothing
 
 compute_tendencies!(state, model, ::AbstractProcess) = nothing
@@ -57,7 +59,21 @@ abstract type AbstractVegetationCarbonDynamics end
 """
 Base type for surface albedo and emissivity process implementations.
 """
-abstract type AbstractAlbedo{NF} <: AbstractProcess end
+abstract type AbstractAlbedo <: AbstractProcess end
+
+"""
+    alebdo(idx, state, ::AbstractAlbedo)
+
+Return the current albedo at the given `idx`.
+"""
+function albedo end
+
+"""
+    emissivity(idx, state, ::AbstractAlbedo)
+AbstractAlbedo
+Return the current emissivity at the given `idx`.
+"""
+function emissivity end
 
 """
 Base type for radiation budget schemes.
@@ -65,11 +81,39 @@ Base type for radiation budget schemes.
 abstract type AbstractRadiativeFluxes <: AbstractProcess end
 
 """
+    net_radiation(idx, state, ::AbstractRadiativeFluxes)
+
+Return the current net radiation at the given `idx`.
+"""
+function net_radiation end
+
+"""
 Base type for turbulent (latent and sensible) heat fluxes at the surface.
 """
 abstract type AbstractTurbulentFluxes <: AbstractProcess end
 
 """
+    sensible_heat_flux(idx, state, ::AbstractRadiativeFluxes)
+
+Return the current sensible heat flux at the given `idx`.
+"""
+function sensible_heat_flux end
+
+"""
+    latent_heat_flux(idx, state, ::AbstractRadiativeFluxes)
+
+Return the current latent heat flux at the given `idx`.
+"""
+function latent_heat_flux end
+
+"""
 Base type for skin temperature and ground heat flux schemes.
 """
 abstract type AbstractSkinTemperature <: AbstractProcess end
+
+"""
+    skin_temperature(idx, state, ::AbstractRadiativeFluxes)
+
+Return the current skin temperature at the given `idx`.
+"""
+function skin_temperature end
