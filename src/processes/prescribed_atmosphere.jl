@@ -1,6 +1,12 @@
-abstract type AbstractSolarRadiation end
-
 abstract type AbstractPrecipitation end
+
+abstract type AbstractIncomingRadiation end
+
+abstract type AbstractAtmosphere{
+    PR<:AbstractPrecipitation,
+    IR<:AbstractIncomingRadiation
+} <: AbstractBoundaryConditions
+end
 
 """
 Generic type representing the concentration of a particular tracer gas in the atmosphere.
@@ -16,9 +22,10 @@ variables(::TracerGas{name}) where {name} = (
 )
 
 """
-Creates a `TracerGas` for ambient CO2 with a prescribed concentration `conc`.
+Creates a `TracerGas` for ambient CO2 with concentration prescribed by an input variable with
+the given name.
 """
-AmbientCO2() = TracerGas(:CO2)
+AmbientCO2(name=:CO2) = TracerGas(name)
 
 """
 Creates a `NamedTuple` from the given tracer gas types.
@@ -26,30 +33,46 @@ Creates a `NamedTuple` from the given tracer gas types.
 TracerGases(tracers::TracerGas...) = (; map(tracer -> nameof(tracer) => tracer, tracers)...)
 
 """
+    $TYPEDEF
+
+Represents prescribed atmospheric conditions given by the following input variables:
+    - Air temperature
+    - Humidity
+    - Atmospheric pressure
+    - Windspeed
+    - Precipitation
+    - Solar radiation
+    - Zero or more tracer gases (defaults to CO2 only)
+
+Precpitation and solar radiation are specified according to specialized subtypes which dictate
+the form of the input data; for precipitation, this defaults to `TwoPhasePrecipitation`, i.e.
+rain- and snowfall given as separate inputs, while for solar radiation, the default is
+`LongShortWaveRadiation` which partitions downwelling radiation into the common short- and long
+wave lengths representing solar and thermal (infrared) radiation.
 """
 @kwdef struct PrescribedAtmosphere{
     NF,
-    tracervars,
+    tracernames,
     AirTemp,
     Humidity,
     Pressure,
     Windspeed,
     Precip<:AbstractPrecipitation,
-    SolarRad<:AbstractSolarRadiation,
-    Tracers<:NamedTuple{tracervars,<:Tuple{Vararg{TracerGas}}},
+    IncomingRad<:AbstractIncomingRadiation,
+    Tracers<:NamedTuple{tracernames,<:Tuple{Vararg{TracerGas}}},
     Grid<:AbstractLandGrid{NF},
-} <: AbstractBoundaryConditions
+} <: AbstractAtmosphere{Precip, IncomingRad}
     "Spatial grid"
     grid::Grid
 
     "Surface-relative altitude in meters at which the atmospheric forcings are assumed to be applied"
     altitude::NF = 2*one(eltype(grid)) # Default to 2 m
 
-    "Precipitation scheme"
+    "Precipitation inputs"
     precip::Precip = TwoPhasePrecipitation()
 
-    "Downwelling solar radiation scheme"
-    solar::SolarRad = TwoBandSolarRadiation()
+    "Downwelling radiation inputs"
+    radiation::IncomingRad = LongShortWaveRadiation()
 
     "Atmospheric tracer gases"
     tracers::Tracers = TracerGases(AmbientCO2())
@@ -61,8 +84,8 @@ variables(atm::PrescribedAtmosphere) = (
     input(:pressure, XY(), units=u"Pa", desc="Atmospheric pressure at the surface in Pa"),
     input(:windspeed, XY(), units=u"m/s", desc="Wind speed in m/s"),
     variables(atm.precip)...,
-    variables(atm.solar)...,
-    # splat all tracer variables into tuple
+    variables(atm.radiation)...,
+    # splat all tracer variables into one tuple
     tuplejoin(map(variables, atm.tracers)...)...,
 )
 
@@ -73,9 +96,9 @@ variables(::TwoPhasePrecipitation) = (
     input(:snowfall, XY(), units=u"m/s", desc="Frozen precipitation (snowfall) rate"),
 )
 
-struct TwoBandSolarRadiation <: AbstractSolarRadiation end
+struct LongShortWaveRadiation <: AbstractSolarRadiation end
 
-variables(::TwoBandSolarRadiation) = (
-    input(:SwIn, XY(), units=u"W/m^2", desc="Incoming (downwelling) shortwave radiation"),
-    input(:LwIn, XY(), units=u"W/m^2", desc="Incoming (downwelling) longwave radiation"),
+variables(::LongShortWaveRadiation) = (
+    input(:SwIn, XY(), units=u"W/m^2", desc="Incoming (downwelling) shortwave solar radiation"),
+    input(:LwIn, XY(), units=u"W/m^2", desc="Incoming (downwelling) longwave thermal radiation"),
 )

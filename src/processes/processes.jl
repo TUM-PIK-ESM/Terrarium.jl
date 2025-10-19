@@ -10,7 +10,7 @@ include("physics_utils.jl")
 
 # Atmosphere
 
-export PrescribedAtmosphere, TwoPhasePrecipitation, TwoBandSolarRadiation
+export PrescribedAtmosphere, TwoPhasePrecipitation, LongShortWaveRadiation
 export TracerGas, TracerGases, AmbientCO2
 include("prescribed_atmosphere.jl")
 
