@@ -28,7 +28,6 @@ compute_auxiliary!(state, model, ::AbstractProcess) = nothing
 
 compute_tendencies!(state, model, ::AbstractProcess) = nothing
 
-
 # Soil process types
 # TODO: Think more about these process types and what methods they should have.
 
@@ -93,14 +92,14 @@ Base type for turbulent (latent and sensible) heat fluxes at the surface.
 abstract type AbstractTurbulentFluxes <: AbstractProcess end
 
 """
-    sensible_heat_flux(idx, state, ::AbstractRadiativeFluxes)
+    sensible_heat_flux(idx, state, ::AbstractTurbulentFluxes)
 
 Return the current sensible heat flux at the given `idx`.
 """
 function sensible_heat_flux end
 
 """
-    latent_heat_flux(idx, state, ::AbstractRadiativeFluxes)
+    latent_heat_flux(idx, state, ::AbstractTurbulentFluxes)
 
 Return the current latent heat flux at the given `idx`.
 """
@@ -112,8 +111,23 @@ Base type for skin temperature and ground heat flux schemes.
 abstract type AbstractSkinTemperature <: AbstractProcess end
 
 """
-    skin_temperature(idx, state, ::AbstractRadiativeFluxes)
+    skin_temperature(idx, state, ::AbstractSkinTemperature)
 
 Return the current skin temperature at the given `idx`.
 """
 function skin_temperature end
+
+# Atmosphere
+
+abstract type AbstractHumidity end
+
+abstract type AbstractPrecipitation end
+
+abstract type AbstractIncomingRadiation end
+
+abstract type AbstractAtmosphere{
+    PR<:AbstractPrecipitation,
+    IR<:AbstractIncomingRadiation,
+    HM<:AbstractHumidity
+} <: AbstractBoundaryConditions
+end
