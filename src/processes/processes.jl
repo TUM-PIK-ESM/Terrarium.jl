@@ -10,8 +10,7 @@ include("physics_utils.jl")
 
 # Atmosphere
 
-export PrescribedAtmosphere, TwoPhasePrecipitation, LongShortWaveRadiation
-export TracerGas, TracerGases, AmbientCO2
+export PrescribedAtmosphere, TwoPhasePrecipitation, LongShortWaveRadiation, TracerGas, TracerGases, AmbientCO2
 include("prescribed_atmosphere.jl")
 
 # Soil
@@ -64,3 +63,10 @@ include("vegetation/stomatal_conductance.jl")
 
 export PALADYNAutotrophicRespiration
 include("vegetation/autotrophic_respiration.jl")
+
+# Surface Energy Balance
+
+include("surface_energy/albedo.jl")
+include("surface_energy/radiative_fluxes.jl")
+include("surface_energy/skin_temperature.jl")
+include("surface_energy/turbulent_fluxes.jl")
