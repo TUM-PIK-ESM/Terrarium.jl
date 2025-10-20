@@ -2,6 +2,8 @@ module Terrarium
 
 using DocStringExtensions
 
+import Base: @propagate_inbounds
+
 import ConstructionBase: getproperties, setproperties
 
 import DataStructures: OrderedDict
