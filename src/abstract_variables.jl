@@ -185,7 +185,7 @@ hasclosure(var::PrognosticVariable) = !isnothing(var.closure)
     $TYPEDEF
 
 Represents a new variable namespace, typically from a subcomponent of the model.
-It is (currently) assumed that tha name of the namespace corresponds to a property
+It is (currently) assumed that the name of the namespace corresponds to a property
 defined on the model type.
 """
 struct Namespace{Vars}
