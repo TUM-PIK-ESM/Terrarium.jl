@@ -11,7 +11,7 @@ A collection of general physical constants that do not (usually) need to be vari
     ρi::NF = 916.2
 
     "Density of air at standard pressure and 0°C in kg/m^3"
-    ρₐ::NF = 1.293u"kg/m^3"
+    ρₐ::NF = 1.293
 
     "Specific heat capacity of dry air at standard pressure and 0°C in J/(m^3*K)"
     cₐ::NF = 1005.7
