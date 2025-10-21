@@ -35,7 +35,7 @@ struct SoilEnergyBalance{
     thermal_properties::ThermalProps
 
     "Freeze curve type constructor"
-    freezecurve::Type{FC}
+    freezecurve::Val{FC}
 end
 
 SoilEnergyBalance(
@@ -43,7 +43,7 @@ SoilEnergyBalance(
     operator::AbstractHeatOperator = ExplicitTwoPhaseHeatConduction(),
     thermal_properties::SoilThermalProperties{NF} = SoilThermalProperties(NF),
     fctype::Type{<:FreezeCurve} = FreeWater
-) where {NF} = SoilEnergyBalance(operator, thermal_properties, fctype)
+) where {NF} = SoilEnergyBalance(operator, thermal_properties, Val{fctype}())
 
 freezecurve(
     ::SoilEnergyBalance{NF, OP, FreeWater},

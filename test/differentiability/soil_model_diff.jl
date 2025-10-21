@@ -25,6 +25,8 @@ function dostep!(state, model, timestepper, Δt)
     timestep!(state, model, timestepper, Δt)
     return mean(interior(state.temperature))
     # TODO: Figure out why this is segfaulting in Enzyme
+    # Answer: Average operator is not type inferrable, see:
+    # https://github.com/CliMA/Oceananigans.jl/issues/4869
     # Tavg = Field(Average(state.temperature, dims=(1, 2, 3)))
     # return Tavg[1,1,1]
 end
