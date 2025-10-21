@@ -25,10 +25,10 @@ lon, lat = RingGrids.get_londlatds(grid.rings)
 
 # Initial conditions
 initializer = FieldInitializers(
-    # steady-ish state initial condition for temperature
-    temperature = (x, z) -> -0.02*z,
+    # steady-ish state initial condition for soil temperature
+    temperature = (x,z) -> 0.02*z,
     # fully saturated soil
-    pore_water_ice_saturation = 1.0,
+    saturation_water_ice = 1.0,
 )
 # Periodic surface temperature with annual cycle
 T_ub = PrescribedValue(:temperature, (x, t) -> 30*sin(2π*t/(24*3600*365)))

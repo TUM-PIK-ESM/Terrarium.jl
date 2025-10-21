@@ -123,6 +123,6 @@ end
     idx = @index(Global, NTuple)
     # TODO: need a more comprehensive initialization scheme for all soil model components
     # Note that this assumes temperature has already been iniitialized!
-    fc = get_freezecurve(hydrology)
+    fc = freezecurve(energy, hydrology)
     temperature_to_energy!(idx, state, fc, energy, hydrology, strat, bgc, constants)
 end

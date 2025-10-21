@@ -7,36 +7,36 @@ abstract type VarDims end
 
 Indicator type for variables that should be assigned a 3D field on their associated grid.
 """
-struct XYZ <: VarDims end
+@kwdef struct XYZ{LX, LY, LZ} <: VarDims
+    x::LX = Center()
+    y::LY = Center()
+    z::LZ = Center()
+end
+
+# Dispatch for Oceananigans `location` method
+location(dims::XYZ) = (dims.x, dims.y, dims.z)
 
 """
     XY <: VarDims
 
 Indicator type for variables that should be assigned a 2D (lateral only) field on their associated grid.
 """
-struct XY <: VarDims end
+@kwdef struct XY{LX, LY} <: VarDims
+    x::LX = Center()
+    y::LY = Center()
+end
+
+location(dims::XY) = (dims.x, dims.y, nothing)
 
 # TODO: do we need to support state variables not defined on a grid?
 
 """
     $SIGNATURES
 
-Retrieves the Oceananigans field "location" for the given variable dimensions.
-The location refers to the where the variable is defined on a staggered finite volume grid:
-Center refers to the grid cell centroid, Face to the boundary, and Nothing to a quantity that has no dimensionality
-in that direction. Currently, we assume all variables to be defined on grid cell centers, but this could be relaxed
-later if necessary by modifying or extending `VarDims`.
+Infer the appropriate `VarDims` from the given `Field`.
 """
-inferloc(::XY) = (Center(), Center(), nothing)
-inferloc(::XYZ) = (Center(), Center(), Center())
-
-"""
-    $SIGNATURES
-
-Complement of [inferloc](@ref) that infers the appropriate `VarDims` from the given `Field`.
-"""
-inferdims(::AbstractField{Center,Center,Nothing}) = XY()
-inferdims(::AbstractField{Center,Center,Center}) = XYZ()
+vardims(::AbstractField{LX, LY, Nothing}) where {LX, LY} = XY(LX(), LY())
+vardims(::AbstractField{LX, LY, LZ}) where {LX, LY, LZ} = XYZ(LX(), LY(), LZ())
 
 """
     $TYPEDEF
@@ -55,7 +55,7 @@ abstract type AbstractClosureRelation end
 """
     getvar(::AbstractClosureRelation)
 
-Returns an `AuxiliaryVariable` corresponding to the closure variable defined by the given closure relation.
+Return an `AuxiliaryVariable` corresponding to the closure variable defined by the given closure relation.
 """
 function getvar end
 
@@ -69,7 +69,7 @@ abstract type AbstractVariable{VD<:VarDims} end
 """
     $SIGNATURES
 
-Retrieves the name of the given variable or closure. For closure relations, `varname`
+Retrieve the name of the given variable or closure. For closure relations, `varname`
 should return the name of the variable returned by the closure relation.
 """
 varname(var::AbstractVariable) = var.name
@@ -78,14 +78,14 @@ varname(namespace::Pair{Symbol}) = first(namespace)
 """
     $SIGNATURES
 
-Retrieves the grid dimensions on which this variable is defined.
+Retrieve the grid dimensions on which this variable is defined.
 """
 vardims(var::AbstractVariable) = var.dims
 
 """
     $SIGNATURES
 
-Retrieves the physical units for the given variable.
+Retrieve the physical units for the given variable.
 """
 varunits(var::AbstractVariable) = var.units
 
@@ -109,7 +109,7 @@ end
 Represents an auxiliary (sometimes called "diagnostic") variable with the given `name`
 and `dims` on the spatial grid.
 """
-struct AuxiliaryVariable{VD<:VarDims, UT<:Units} <: AbstractVariable{VD}
+struct AuxiliaryVariable{VD<:VarDims, DT<:AbstractInterval, UT<:Units} <: AbstractVariable{VD}
     "Name of the auxiliary variable"
     name::Symbol
 
@@ -118,6 +118,9 @@ struct AuxiliaryVariable{VD<:VarDims, UT<:Units} <: AbstractVariable{VD}
 
     "Physical untis associated with this state variable"
     units::UT
+
+    "Interval domain on which scalar fields of this variable are defined"
+    domain::DT
 
     "Human-readable description of this state variable"
     desc::String
@@ -151,6 +154,7 @@ struct PrognosticVariable{
     VD<:VarDims,
     UT<:Units,
     TV<:Union{Nothing, AuxiliaryVariable},
+    DT<:AbstractInterval,
     CL<:Union{Nothing, AbstractClosureRelation}
 } <: AbstractVariable{VD}
     "Name of the prognostic variable"
@@ -168,14 +172,37 @@ struct PrognosticVariable{
     "Physical untis associated with this state variable"
     units::UT
 
+    "Interval domain on which scalar fields of this variable are defined"
+    domain::DT
+
     "Human-readable description of this state variable"
     desc::String
 end
 
 hasclosure(var::PrognosticVariable) = !isnothing(var.closure)
 
+"""
+    $TYPEDEF
+
+Represents a new variable namespace, typically from a subcomponent of the model.
+It is (currently) assumed that the name of the namespace corresponds to a property
+defined on the model type.
+"""
+struct Namespace{Vars}
+    name::Symbol
+    vars::Vars
+end
+
+varname(ns::Namespace) = ns.name
+
 # Variable container
 
+"""
+    $TYPEDEF
+
+Container for abstract state variable definitions. Automatically sorts and merges all variables
+and namespaces passed into the constructor.
+"""
 struct Variables{ProgVars, TendVars, AuxVars, InputVars, Namespaces}
     prognostic::ProgVars
     tendencies::TendVars
@@ -183,7 +210,7 @@ struct Variables{ProgVars, TendVars, AuxVars, InputVars, Namespaces}
     inputs::InputVars
     namespaces::Namespaces
 
-    function Variables(vars...)
+    function Variables(vars::Union{AbstractVariable, Namespace}...)
         # partition variables into prognostic, auxiliary, input, and namespace groups;
         # duplicates within each group are automatically merged
         prognostic_vars = merge_duplicates(filter(var -> isa(var, PrognosticVariable), vars))
@@ -219,37 +246,22 @@ function check_duplicates(vars...)
     end
 end
 
-# Namespaces
-
-"""
-    $TYPEDEF
-
-Represents a new variable namespace, typically from a subcomponent of the model.
-It is (currently) assumed that tha name of the namespace corresponds to a property
-defined on the model type.
-"""
-struct Namespace{Vars}
-    name::Symbol
-    vars::Vars
-end
-
-varname(ns::Namespace) = ns.name
-
 """
     $SIGNATURES
 
-Convenience constructor method for `PrognosticVariable`.
+Convenience constructors for `PrognosticVariable`.
 """
-prognostic(name::Symbol, dims::VarDims; units=NoUnits, desc="") =
+prognostic(name::Symbol, dims::VarDims, closure::Nothing=nothing; units=NoUnits, domain=RealLine(), desc="") =
     PrognosticVariable(
         name,
         dims,
-        nothing,
+        closure,
         tendency(name, dims, units),
         units,
+        domain,
         desc
     )
-prognostic(name::Symbol, dims::VarDims, closure::AbstractClosureRelation; units=NoUnits, desc="") =
+prognostic(name::Symbol, dims::VarDims, closure::AbstractClosureRelation; units=NoUnits, domain=RealLine(), desc="") =
     PrognosticVariable(
         name,
         dims,
@@ -258,6 +270,7 @@ prognostic(name::Symbol, dims::VarDims, closure::AbstractClosureRelation; units=
         # tendency variable
         tendency(closure, dims),
         units,
+        domain,
         desc
     )
 
@@ -266,7 +279,7 @@ prognostic(name::Symbol, dims::VarDims, closure::AbstractClosureRelation; units=
 
 Convenience constructor method for `AuxiliaryVariable`.
 """
-auxiliary(name::Symbol, dims::VarDims; units=NoUnits, desc="") = AuxiliaryVariable(name, dims, units, desc)
+auxiliary(name::Symbol, dims::VarDims; units=NoUnits, domain=RealLine(), desc="") = AuxiliaryVariable(name, dims, units, domain, desc)
 
 """
     $SIGNATURES
@@ -281,7 +294,7 @@ input(name::Symbol, dims::VarDims; units=NoUnits, desc="") = InputVariable(name,
 Creates an `AuxiliaryVariable` for the tendency of a prognostic variable with the given name, dimensions, and physical units.
 This constructor is primarily used internally by other constructors and does not usually need to be called by implementations of `variables`.
 """
-tendency(progname::Symbol, progdims::VarDims, progunits::Units) = AuxiliaryVariable(progname, progdims, progunits/u"s", "")
+tendency(progname::Symbol, progdims::VarDims, progunits::Units) = AuxiliaryVariable(progname, progdims, progunits/u"s", RealLine(), "Tendency for $progname")
 function tendency(closure::AbstractClosureRelation, dims::VarDims)
     # get the auxiliary closure variable
     var = getvar(closure)

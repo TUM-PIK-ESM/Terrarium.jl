@@ -54,7 +54,7 @@ can be any function, value, array, or `Field` that would be a valid input `x` to
 Optionally, `FieldInitializers` can wrap another 
 
 ```@example
-FieldInitializers(temperature=(x,z) -> sin(2π*z), pore_water_ice_saturation=0)
+FieldInitializers(temperature=(x,z) -> sin(2π*z), saturation_water_ice=0)
 ```
 """
 FieldInitializers(init::AbstractInitializer=DefaultInitializer(); vars...) = FieldInitializers(init, (; vars...))

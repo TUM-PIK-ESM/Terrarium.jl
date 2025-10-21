@@ -34,7 +34,7 @@ initializer = FieldInitializers(
     # steady-ish state initial condition for temperature
     temperature = (x,z) -> Tsurf_0[Int(round(x))+1] - 0.02*z,
     # dry soil
-    pore_water_ice_saturation = 1.0,
+    saturation_water_ice = 1.0,
 )
 T_ub = PrescribedValue(:temperature, Input(:Tair, units=u"°C"))
 boundary_conditions = SoilBoundaryConditions(eltype(grid), top=T_ub)

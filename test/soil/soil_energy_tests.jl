@@ -31,7 +31,7 @@ end
     T_sol = heat_conduction_linear_periodic_ub(T₀, A, P, α)
 
     # model setup
-    grid = ColumnGrid(ExponentialSpacing(Δz_min=0.05, Δz_max=100.0, N=100))
+    grid = ColumnGrid(CPU(), Float64, ExponentialSpacing(Δz_min=0.05, Δz_max=100.0, N=100))
     # temperature initial condition
     initializer = FieldInitializers(
         temperature = (x,z) -> T_sol(-z, 0.0)
@@ -46,7 +46,7 @@ end
     hydraulic_properties = PrescribedHydraulics(porosity=0.0)
     # set thermal properties
     thermal_properties = SoilThermalProperties(
-        Float64;
+        eltype(grid);
         cond=SoilThermalConductivities(mineral=k),
         heatcap=SoilHeatCapacities(mineral=c),
     )
@@ -78,7 +78,7 @@ end
     T₀ = 1.0
     T₁ = 2.0
     # model setup
-    grid = ColumnGrid(ExponentialSpacing(Δz_min=0.01, Δz_max=100.0, N=100))
+    grid = ColumnGrid(CPU(), Float64, ExponentialSpacing(Δz_min=0.01, Δz_max=100.0, N=100))
     # temperature initial condition
     initializer = FieldInitializers(temperature=T₀)
     # constant upper boundary temperature set to T₁
