@@ -89,11 +89,30 @@ function explicit_step!(
     )
 end
 
-@kernel function explicit_step_kernel!(field, tendency, ::AbstractTimeStepper, Δt)
+@kernel function explicit_step_kernel!(
+    field::AbstractField{LX, LY, LZ},
+    tendency::AbstractField{LX, LY, LZ},
+    ::AbstractTimeStepper,
+    Δt
+) where {LX, LY, LZ}
     i, j, k = @index(Global, NTuple)
     u = field
     ∂u∂t = tendency
     @inbounds let Δt = convert(eltype(tendency), Δt);
         u[i, j, k] += ∂u∂t[i, j, k] * Δt
+    end
+end
+
+@kernel function explicit_step_kernel!(
+    field::AbstractField{LX, LY, Nothing},
+    tendency::AbstractField{LX, LY, Nothing},
+    ::AbstractTimeStepper,
+    Δt
+) where {LX, LY}
+    i, j = @index(Global, NTuple)
+    u = field
+    ∂u∂t = tendency
+    @inbounds let Δt = convert(eltype(tendency), Δt);
+        u[i, j, 1] += ∂u∂t[i, j] * Δt
     end
 end
