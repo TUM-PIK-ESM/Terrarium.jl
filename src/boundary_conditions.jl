@@ -90,7 +90,7 @@ PrescribedGradient(progvar::Symbol, value; kwargs...) = PrescribedBC(progvar, Gr
 Implementation of `Oceananigans.BoundaryConditions.getbc` for `Input{name}` placeholders that retrieves the input `Field` from
 `state.inputs` and returns the value at the given index.
 """
-@inline function getbc(::Input{name, units, XY}, i::Integer, j::Integer, grid::OceananigansGrids.AbstractGrid, clock, state) where {name, units}
+@inline function getbc(::Input{name, units, <:XY}, i::Integer, j::Integer, grid::OceananigansGrids.AbstractGrid, clock, state) where {name, units}
     input_field = getproperty(state.inputs, name)
     return @inbounds input_field[i, j]
 end
