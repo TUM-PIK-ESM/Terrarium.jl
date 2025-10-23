@@ -120,6 +120,9 @@ function Base.fill!(
     return nothing 
 end
 
+"""
+Invoke `fill_halo_regions!` for all fields in `state`.
+"""
 function fill_halo_regions!(state::StateVariables)
     # fill_halo_regions! for all prognostic variables
     fastiterate(state.prognostic) do field
@@ -135,6 +138,9 @@ function fill_halo_regions!(state::StateVariables)
     end
 end
 
+"""
+Reset all tendencies in `state` to zero.
+"""
 function reset_tendencies!(state::StateVariables)
     # reset all tendency fields
     fastiterate(state.tendencies) do field
@@ -143,6 +149,16 @@ function reset_tendencies!(state::StateVariables)
     # recurse over namespaces
     fastiterate(state.namespaces) do ns
         reset_tendencies!(ns)
+    end
+end
+
+"""
+Call `invclosure!` (i.e. inverse mapping from closure to prognostic variables) on
+all closure relations defined in `state`.
+"""
+function invclosure!(state::StateVariables, model::AbstractModel)
+    for closure in state.closures
+        invclosure!(state, model, closure)
     end
 end
 
