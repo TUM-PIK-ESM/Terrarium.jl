@@ -11,12 +11,12 @@ struct NoFlow <: AbstractVerticalFlow end
 """
 Base type for soil/subsurface runoff schemes.
 """
-abstract type AbstractSoilRunoff <: AbstractProcess end
+abstract type AbstractSoilRunoff end
 
 """
 Base type for evapotranspirative forcing terms in soil layers.
 """
-abstract type AbstractSoilET <: AbstractProcess end
+abstract type AbstractSoilET end
 
 """
     $TYPEDEF
