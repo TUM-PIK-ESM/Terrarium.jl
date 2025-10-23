@@ -68,9 +68,9 @@ compute_auxiliary!(state, model, ::PrescribedBC) = nothing
 compute_tendencies!(state, model, ::PrescribedBC) = nothing
 
 # compute_tendencies! for flux-valued boundary conditions
-function compute_tendencies!(state, model, ::PrescribedBC{progvar, <:Flux}) where {progvar}
+function compute_tendencies!(state, model, ::PrescribedBC{progvar, BC}) where {progvar, BC<:BoundaryCondition{Flux}}
     tend = getproperty(state.tendencies, progvar)
-    prog = getproprerty(state, progvar)
+    prog = getproperty(state, progvar)
     arch = architecture(get_grid(model))
     clock = state.clock
     compute_z_bcs!(tend, prog, arch, clock, state)
@@ -140,4 +140,9 @@ variables(bcs::ColumnBoundaryConditions) = tuplejoin(variables(bcs.top), variabl
 function compute_auxiliary!(state, model, bcs::ColumnBoundaryConditions)
     compute_auxiliary!(state, model, bcs.top)
     compute_auxiliary!(state, model, bcs.bottom)
+end
+
+function compute_tendencies!(state, model, bcs::ColumnBoundaryConditions)
+    compute_tendencies!(state, model, bcs.top)
+    compute_tendencies!(state, model, bcs.bottom)
 end

@@ -32,7 +32,7 @@ import Oceananigans.BoundaryConditions: FieldBoundaryConditions, BoundaryConditi
                                         ValueBoundaryCondition, FluxBoundaryCondition, GradientBoundaryCondition, NoFluxBoundaryCondition,
                                         ContinuousBoundaryFunction, DiscreteBoundaryFunction,
                                         AbstractBoundaryConditionClassification, Value, Flux, Gradient, # BC type classifications
-                                        fill_halo_regions!, regularize_field_boundary_conditions, getbc
+                                        fill_halo_regions!, regularize_field_boundary_conditions, getbc, compute_z_bcs!
 
 # Adapt and KernelAbstractions for GPU parallelization
 import Adapt: Adapt, adapt, @adapt_structure
