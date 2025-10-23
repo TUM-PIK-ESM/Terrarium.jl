@@ -25,11 +25,11 @@ Return `true` if the given time stepper is adaptive, false otherwise.
 function is_adaptive end
 
 """
-    timestep!(state, model::AbstractModel, timestepper::AbstractTimeStepper, Δt)
+    do_timestep!(state, model::AbstractModel, timestepper::AbstractTimeStepper, Δt)
 
-Advance the model state by one time step, or by `Δt` units of time.
+Advance prognostic variabels by one step based on the current state, or by `Δt` units of time.
 """
-function timestep! end
+function do_timestep! end
 
 """
     initialize(::AbstractTimeStepper, prognostic_fields, closure_fields, tendencies) where {NF}
