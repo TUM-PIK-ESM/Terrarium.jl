@@ -22,13 +22,15 @@ is_adaptive(euler::ForwardEuler) = false
 function timestep!(state, model::AbstractModel, timestepper::ForwardEuler, Δt = default_dt(timestepper))
     compute_auxiliary!(state, model)
     compute_tendencies!(state, model)
+    do_timestep!(state, model, timestepper, Δt)
+    return nothing
+end
+
+function do_timestep!(state, model::AbstractModel, timestepper::ForwardEuler, Δt)
     # Euler step
     explicit_step!(state, get_grid(model), timestepper, Δt)
     # Apply inverse closure relations
-    for closure in state.closures
-        invclosure!(state, model, closure)
-    end
+    invclosure!(state, model)
     # Update clock
     tick!(state.clock, Δt)
-    return nothing
 end
