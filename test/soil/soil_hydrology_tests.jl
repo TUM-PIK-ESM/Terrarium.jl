@@ -131,6 +131,9 @@ end
     compute_tendencies!(state.state, model)
     # check that all tendencies are zero
     @test all(iszero.(state.state.tendencies.saturation_water_ice))
+    # check timestep!
+    timestep!(state)
+    @test all(state.state.saturation_water_ice .≈ 1)
 
     # Variably saturated with water table
     initializer = FieldInitializers(
@@ -152,4 +155,7 @@ end
     compute_tendencies!(state.state, model)
     # check that all tendencies are finite
     @test all(isfinite.(state.state.tendencies.saturation_water_ice))
+    # check timestep!
+    timestep!(state)
+    @test all(isfinite.(state.state.saturation_water_ice))
 end
