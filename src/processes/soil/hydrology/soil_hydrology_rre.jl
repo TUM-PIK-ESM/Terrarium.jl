@@ -1,20 +1,21 @@
 """
-    RichardsEq{PS} <: AbstractSoilWaterFluxOperator
+    RichardsEq{PS} <: AbstractVerticalFlow
 
 Operator for soil hydrology corresponding to the Richardson-Richards equation for variably saturated
 flow in porous media.
 """
-@kwdef struct RichardsEq{PS} <: AbstractSoilWaterFluxOperator
+@kwdef struct RichardsEq{PS} <: AbstractVerticalFlow
     "Closure relation for mapping between water potential (hydraulic head) and saturation"
     saturation_closure::PS = PressureSaturationClosure()
 end
 
 get_closure(op::RichardsEq) = op.saturation_closure
 
-variables(hydrology::SoilHydrology{NF, <:RichardsEq}) where {NF} = (
-    prognostic(:pressure_head, XYZ(), get_closure(hydrology.operator)),
-    auxiliary(:hydraulic_conductivity, XYZ(), units=u"m/s", desc="Hydraulic conductivity of soil volumes [m/s]"),
-    auxiliary(:water_table, XY(), units=u"m", desc="Elevation of the water table [m]"),
+variables(rre::RichardsEq) = (
+    prognostic(:pressure_head, XYZ(), get_closure(rre)),
+    prognostic(:surface_excess_water, XY(), units=u"m", desc="Excess water at the soil surface in m³/m²"),
+    auxiliary(:water_table, XY(), units=u"m", desc="Elevation of the water table in meters"),
+    auxiliary(:hydraulic_conductivity, XYZ(), units=u"m/s", desc="Hydraulic conductivity of soil volumes in m/s")
 )
 
 function initialize!(state, model, ::SoilHydrology{NF, <:RichardsEq}) where {NF}
@@ -30,6 +31,93 @@ function compute_auxiliary!(state, model, hydrology::SoilHydrology{NF, <:Richard
     return nothing
 end
 
+function compute_tendencies!(state, model, hydrology::SoilHydrology{NF, <:RichardsEq}) where {NF}
+    grid = get_grid(model)
+    strat = get_stratigraphy(model)
+    bgc = get_biogeochemistry(model)
+    launch!(grid, :xyz, compute_saturation_tendency!, state, grid, hydrology, strat, bgc)
+    return nothing
+end
+
+# Kernels
+
+# TODO: This is a dirty hack and basically the physical equivalent of money laundering.
+# We should ideally use an implicit timestepping scheme to avoid this.
+"""
+    adjust_saturation_profile!(
+        state,
+        grid,
+        ::SoilHydrology{NF}
+    )
+
+Kernel for adjusting saturation profiles to account for oversaturation due to numerical error.
+This implementation scans over the saturation profiles at each lateral grid cell and redistributes
+excess water upward layer-by-layer until reaching the topmost layer, where any remaining excess
+water is added to the `surface_excess_water` pool.
+"""
+@kernel function adjust_saturation_profile!(
+    state,
+    grid,
+    ::SoilHydrology{NF}
+) where {NF}
+    i, j = @index(Global, NTuple)
+    sat = state.saturation_water_ice
+    field_grid = get_field_grid(grid)
+    # get z coordinates of layer centers
+    zs = znodes(field_grid, Center(), Center(), Center())
+    N = field_grid.Nz
+    @inbounds for k in 1:N-1
+        # TODO: This function might perform badly on GPU....
+        # Can we optimize it somehow?
+        if sat[i, j, k] > one(NF)
+            # calculate excess saturation
+            excess_sat = sat[i, j, k] - one(NF)
+            # subtract excess water and add to layer above
+            sat[i, j, k] -= excess_sat
+            sat[i, j, k+1] += excess_sat
+        end
+    end
+    @inbounds if sat[i, j, N] > one(NF)
+        # If the uppermost (surface) layer is oversaturated, add to excess water pool
+        excess_sat = sat[i, j, k] - one(NF)
+        sat[i, j, k] -= excess_sat
+        state.surface_excess_water[i, j, 1] += excess_sat*Δzᵃᵃᶜ(i, j, N, grid)
+    end
+end
+
+"""
+    compute_water_table!(
+        state,
+        grid,
+        ::SoilHydrology{NF}
+    ) where {NF}
+
+Kernel for diagnosing the water table at each grid point given the current soil saturation state.
+"""
+@kernel function compute_water_table!(
+    state,
+    grid,
+    ::SoilHydrology{NF}
+) where {NF}
+    i, j = @index(Global, NTuple)
+    sat = state.saturation_water_ice
+    # get z coordinates of grid cell faces
+    zs = znodes(get_field_grid(grid), Center(), Center(), Face())
+    # scan z axis starting from the bottom (index 1) to find first non-saturated grid cell
+    state.water_table[i, j, 1] = findfirst_z((i, j), <(one(NF)), zs, sat)
+end
+
+"""
+    compute_hydraulic_conductivity!(
+        state,
+        grid,
+        hydrology::SoilHydrology,
+        strat::AbstractStratigraphy,
+        bgc::AbstractSoilBiogeochemistry,
+    )
+
+Kernel for computing the hydraulic conductivity in all grid cells and soil layers.
+"""
 @kernel function compute_hydraulic_conductivity!(
     state,
     grid,
@@ -51,24 +139,30 @@ end
     end
 end
 
-function compute_tendencies!(state, model, hydrology::SoilHydrology{NF, <:RichardsEq}) where {NF}
-    grid = get_grid(model)
-    strat = get_stratigraphy(model)
-    bgc = get_biogeochemistry(model)
-    launch!(grid, :xyz, compute_saturation_tendency!, state, grid, hydrology, strat, bgc)
-    return nothing
-end
+"""
+    compute_saturation_tendency!(
+        state,
+        grid,
+        hydrology::SoilHydrology,
+        strat::AbstractStratigraphy,
+        bgc::AbstractSoilBiogeochemistry,
+    )
 
+Kernel for computing the tendency of the prognostic `saturation_water_ice` variable in all grid cells and soil layers.
+"""
 @kernel function compute_saturation_tendency!(
     state,
     grid,
     hydrology::SoilHydrology,
     strat::AbstractStratigraphy,
-    bgc::AbstractSoilBiogeochemistry,
+    bgc::AbstractSoilBiogeochemistry
 )
     i, j, k = @index(Global, NTuple)
-    state.tendencies.saturation_water_ice[i, j, k] += saturation_tendency((i, j, k), grid, state, hydrology, strat, bgc)
+    idx = (i, j, k)
+    state.tendencies.saturation_water_ice[i, j, k] += saturation_tendency(idx, grid, state, hydrology, strat, bgc)
 end
+
+# Kernel functions
 
 @inline function saturation_tendency(
     idx, grid, state,
@@ -126,8 +220,10 @@ function closure!(state, model::AbstractSoilModel, ::PressureSaturationClosure)
     bgc = get_biogeochemistry(model)
     # determine saturation from pressure
     launch!(grid, :xyz, pressure_to_saturation!, state, hydrology, strat, bgc)
-    # diagnose water table elevation
-    launch!(grid, :xyz, compute_water_table!, state, grid, hydrology)
+    # apply saturation correction
+    launch!(grid, :xy, adjust_saturation_profile!, state, grid, hydrology)
+    # update water table
+    launch!(grid, :xy, compute_water_table!, state, grid, hydrology)
     return nothing
 end
 
@@ -136,8 +232,10 @@ function invclosure!(state, model::AbstractSoilModel, ::PressureSaturationClosur
     hydrology = get_soil_hydrology(model)
     strat = get_stratigraphy(model)
     bgc = get_biogeochemistry(model)
-    # diagnose water table elevation from current saturation state
-    launch!(grid, :xyz, compute_water_table!, state, grid, hydrology)
+    # apply saturation correction
+    launch!(grid, :xy, adjust_saturation_profile!, state, grid, hydrology)
+    # update water table
+    launch!(grid, :xy, compute_water_table!, state, grid, hydrology)
     # determine pressure head from saturation
     launch!(grid, :xyz, saturation_to_pressure!, state, hydrology, strat, bgc)
     return nothing
@@ -186,9 +284,6 @@ end
 ) where {NF}
     i, j, k = idx
     sat = state.saturation_water_ice[i, j, k] # assumed given
-    # TODO: To avoid invalid saturation values, we will just clip it to the
-    # valid range here for now... but this of course results in mass balance violations.
-    # sat = state.saturation_water_ice[i, j, k] = clamp(sat, zero(sat), one(sat))
     # get inverse of SWRC
     inv_swrc = inv(get_swrc(hydrology))
     por = porosity(idx, state, hydrology, strat, bgc)

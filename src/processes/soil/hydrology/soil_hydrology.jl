@@ -1,17 +1,22 @@
 """
 Base type for implementations of soil water flow dynamics.
 """
-abstract type AbstractSoilWaterFluxOperator <: AbstractOperator end
+abstract type AbstractVerticalFlow <: AbstractOperator end
 
 """
 Represents a hydrology scheme where soil water is immobile.
 """
-struct NoFlow <: AbstractSoilWaterFluxOperator end
+struct NoFlow <: AbstractVerticalFlow end
 
 """
-Base type for evapotranspirative fluxes in soil layers.
+Base type for soil/subsurface runoff schemes.
 """
-abstract type AbstractSoilET{NF} end
+abstract type AbstractSoilRunoff <: AbstractProcess end
+
+"""
+Base type for evapotranspirative forcing terms in soil layers.
+"""
+abstract type AbstractSoilET <: AbstractProcess end
 
 """
     $TYPEDEF
@@ -21,12 +26,16 @@ $TYPEDFIELDS
 """
 struct SoilHydrology{
     NF,
-    Operator<:AbstractSoilWaterFluxOperator,
-    SoilET<:Union{Nothing, AbstractSoilET{NF}},
+    VerticalFlow<:AbstractVerticalFlow,
+    Runoff<:AbstractSoilRunoff,
+    SoilET<:Union{Nothing, AbstractSoilET},
     SoilHydraulics<:AbstractSoilHydraulics{NF}
 } <: AbstractSoilHydrology{NF}
-    "Soil water flux operator"
-    operator::Operator
+    "Soil water vertical flow operator"
+    vertflow::VerticalFlow
+
+    "Soil subsurface runoff scheme"
+    runoff::Runoff
 
     "Soil evapotranspiration scheme"
     evapotranspiration::SoilET
@@ -37,10 +46,11 @@ end
 
 SoilHydrology(
     ::Type{NF},
-    operator::AbstractSoilWaterFluxOperator = NoFlow();
-    evapotranspiration::Union{Nothing, AbstractSoilET} = nothing,
+    vertflow::AbstractVerticalFlow = NoFlow();
+    runoff::AbstractSoilRunoff = SoilSurfaceRunoff(),
+    evapotranspiration::AbstractSoilET = nothing,
     hydraulic_properties::AbstractSoilHydraulics = SoilHydraulicsSURFEX(NF),
-) where {NF} = SoilHydrology(operator, evapotranspiration, hydraulic_properties)
+) where {NF} = SoilHydrology(vertflow, runoff, evapotranspiration, hydraulic_properties)
 
 """
     get_swrc(hydrology::SoilHydrology)
@@ -49,6 +59,15 @@ Return the soil water retention curve from the `hydraulic_properties` associated
 the given `SoilHydrology` configuration.
 """
 get_swrc(hydrology::SoilHydrology) = hydrology.hydraulic_properties.cond_unsat.swrc
+
+"""
+State variables for `SoilHydrology` processes.
+"""
+variables(hydrology::SoilHydrology{NF}) where {NF} = (
+    variables(hydrology.vertflow)...,
+    variables(hydrology.runoff)...,
+    variables(hydrology.evapotranspiration)...,
+)
 
 """
     porosity(idx, state, hydrology::SoilHydrology, strat::AbstractStratigraphy, bgc::AbstractSoilBiogeochemistry)
@@ -63,9 +82,8 @@ end
 
 # Immobile soil water (NoFlow)
 
-variables(::SoilHydrology{NF, NoFlow}) where {NF} = (
+variables(::NoFlow) = (
     auxiliary(:saturation_water_ice, XYZ(), domain=UnitInterval(), desc="Saturation level of water and ice in the pore space"),
-    auxiliary(:water_table, XY(), units=u"m", desc="Elevation of the water table [m]"),
 )
 
 function initialize!(state, model, hydrology::SoilHydrology)
@@ -75,28 +93,27 @@ function initialize!(state, model, hydrology::SoilHydrology)
     launch!(grid, :xy, compute_water_table!, state, grid, hydrology)
 end
 
-@inline compute_auxiliary!(state, model, hydrology::SoilHydrology) = nothing
+@inline compute_auxiliary!(state, model, hydrology::SoilHydrology{NF, NoFlow}) where {NF} = nothing
 
 @inline compute_tendencies!(state, model, hydrology::SoilHydrology{NF, NoFlow}) where {NF} = nothing
 
-"""
-    compute_water_table!(
-        state,
-        grid,
-        ::SoilHydrology{NF}
-    ) where {NF}
+# Runoff
 
-Kernel for diagnosing the water table at each grid point given the current soil saturation state.
 """
-@kernel function compute_water_table!(
-    state,
-    grid,
-    ::SoilHydrology{NF}
-) where {NF}
-    i, j = @index(Global, NTuple)
-    sat = state.saturation_water_ice
-    # get z coordinates of grid cell faces
-    zs = znodes(get_field_grid(grid), Center(), Center(), Face())
-    # scan z axis starting from the bottom (index 1) to find first non-saturated grid cell
-    state.water_table[i, j, 1] = findfirst_z((i, j), <(one(NF)), zs, sat)
+    $TYPEDEF
+
+Generic scheme for respresenting soil/subsurface runoff as a composition of three components:
+excess infiltration, interflow, and drainage.
+
+Not yet implemented.
+"""
+@kwdef struct SoilRunoff{SR, IF, DR} <: AbstractSoilRunoff
+    "Excess infiltration runoff scheme"
+    excess_infiltration::SR = nothing
+    
+    "Subsurface interflow runoff"
+    interflow::IF = nothing
+
+    "Groundwater drainage runoff"
+    drainage::DR = nothing
 end
