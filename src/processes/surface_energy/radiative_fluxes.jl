@@ -4,6 +4,16 @@ simply returns the current value of the `RadNet` field.
 """
 @inline net_radiation(idx, state, ::AbstractRadiativeFluxes) = state.RadNet[idx...]
 
+"""
+    $TYPEDEF
+
+Represents the simplest scheme for the radiative budget where outgoing shortwave and longwave
+radiation are given as input variables. Net radiation is diagnosed by summing all radiative fluxes:
+
+```math
+R_{\\text{net}} = S_{\\uparrow} - S_{\\downarrow} + L_{\\uparrow} - L_{\\downarrow}
+```
+"""
 struct PrescribedRadiativeFluxes <: AbstractRadiativeFluxes end
 
 variables(::PrescribedRadiativeFluxes) = (
@@ -18,6 +28,12 @@ function compute_auxiliary!(state, model, rad::PrescribedRadiativeFluxes)
     launch!(grid, compute_net_radiation!, state, rad, atmos)
 end
 
+"""
+    $TYPEDEF
+
+Computes outgoing shortwave and longwave radiation according to separately specified
+schemes for the albedo, skin temperature, and atmospheric inputs.
+"""
 struct DiagnosedRadiativeFluxes <: AbstractRadiativeFluxes end
 
 variables(::DiagnosedRadiativeFluxes) = (
@@ -29,8 +45,10 @@ variables(::DiagnosedRadiativeFluxes) = (
 function compute_auxiliary!(state, model, rad::DiagnosedRadiativeFluxes)
     grid = get_grid(model)
     atmos = get_atmosphere(model)
+    skinT = get_skin_temperature(model)
+    albedo = get_albedo(model)
     constants = get_constants(model)
-    launch!(grid, compute_radiative_fluxes!, state, rad, atmos, constants)
+    launch!(grid, compute_radiative_fluxes!, state, grid, rad, atmos, skinT, albedo, constants)
 end
 
 # Kernels
