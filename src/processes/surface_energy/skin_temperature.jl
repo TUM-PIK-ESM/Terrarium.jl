@@ -33,6 +33,8 @@ heat flux from sublimation and evapotranspiration, and ``G`` is the ground heat 
     κₛ::NF = 2.0
 end
 
+PrognosticSkinTemperature(::Type{NF}; kwargs...) where {NF} = PrognosticSkinTemperature{NF}(; kwargs...)
+
 variables(::PrognosticSkinTemperature) = (
     prognostic(:skin_temperature, XY(), units=u"°C", desc="Longwave emission temperature of the land surface in °C"),
     auxiliary(:ground_heat_flux, XY(), units=u"W/m^2", desc="Ground heat flux"),
@@ -55,21 +57,13 @@ variables(::PrognosticSkinTemperature) = (
     state.ground_heat_flux[i, j] = -R_net - H_s - H_l
 end
 
-# Kernel functions
-
-@inline skin_thermal_conductivity(idx, state, skinT::PrognosticSkinTemperature) = skinT.κₛ
-
-@inline @inbounds skin_temperature(idx, state, ::AbstractSkinTemperature) = state.skin_temperature[idx]
-
-@inline @inbounds ground_heat_flux(idx, state, ::AbstractSkinTemperature) = state.ground_heat_flux[idx]
-
 """
-    implicit_skin_temperature(idx, state, grid, skinT::PrognosticSkinTemperature)
+    update_skin_temperature!(idx, state, grid, skinT::PrognosticSkinTemperature)
 
 Diagnose the skin temperature implied by the current `ground_heat_flux` and `ground_temperature`.
 """
-@inline function implicit_skin_temperature(idx, state, grid, skinT::PrognosticSkinTemperature)
-    i, j = idx
+@kernel function update_skin_temperature!(state, grid, skinT::PrognosticSkinTemperature)
+    i, j = @index(Global, NTuple)
     # get thickness of topmost soil/ground grid cell
     field_grid = get_field_grid(grid)
     Δz₁ = Δzᵃᵃᶜ(i, j, field_grid.Nz, field_grid)
@@ -79,6 +73,13 @@ Diagnose the skin temperature implied by the current `ground_heat_flux` and `gro
     Tₛ = state.ground_temperature[i, j]
     # compute new skin temperature T₀ by setting G equal to the half-cell heat flux
     κₛ = skin_thermal_conductivity(idx, state, skinT)
-    T₀ = Tₛ - G * Δz₁ / (2*κₛ)
-    return T₀
+    state.skin_temperature[i, j, 1] = Tₛ - G * Δz₁ / (2*κₛ)
 end
+
+# Kernel functions
+
+@inline skin_thermal_conductivity(idx, state, skinT::PrognosticSkinTemperature) = skinT.κₛ
+
+@inline @inbounds skin_temperature(idx, state, ::AbstractSkinTemperature) = state.skin_temperature[idx]
+
+@inline @inbounds ground_heat_flux(idx, state, ::AbstractSkinTemperature) = state.ground_heat_flux[idx]
