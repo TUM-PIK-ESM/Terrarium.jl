@@ -131,7 +131,7 @@ end
 
 Represents an input (e.g. forcing) variable with the given `name` and `dims` on the spatial grid.
 """
-struct InputVariable{VD<:VarDims, UT<:Units} <: AbstractVariable{VD}
+struct InputVariable{VD<:VarDims, DT<:AbstractInterval, UT<:Units} <: AbstractVariable{VD}
     "Name of the auxiliary variable"
     name::Symbol
 
@@ -140,6 +140,9 @@ struct InputVariable{VD<:VarDims, UT<:Units} <: AbstractVariable{VD}
 
     "Physical untis associated with this state variable"
     units::UT
+
+    "Interval domain on which scalar fields of this variable are defined"
+    domain::DT
 
     "Human-readable description of this state variable"
     desc::String
@@ -286,7 +289,7 @@ auxiliary(name::Symbol, dims::VarDims; units=NoUnits, domain=RealLine(), desc=""
 
 Convenience constructor method for `InputVariable`.
 """
-input(name::Symbol, dims::VarDims; units=NoUnits, desc="") = InputVariable(name, dims, units, desc)
+input(name::Symbol, dims::VarDims; units=NoUnits, domain=RealLine(), desc="") = InputVariable(name, dims, units, domain, desc)
 
 """
     $SIGNATURES
@@ -294,7 +297,7 @@ input(name::Symbol, dims::VarDims; units=NoUnits, desc="") = InputVariable(name,
 Creates an `AuxiliaryVariable` for the tendency of a prognostic variable with the given name, dimensions, and physical units.
 This constructor is primarily used internally by other constructors and does not usually need to be called by implementations of `variables`.
 """
-tendency(progname::Symbol, progdims::VarDims, progunits::Units) = AuxiliaryVariable(progname, progdims, progunits/u"s", RealLine(), "Tendency for $progname")
+tendency(progname::Symbol, progdims::VarDims, progunits::Units) = AuxiliaryVariable(progname, progdims, upreferred(progunits)/u"s", RealLine(), "Tendency for $progname")
 function tendency(closure::AbstractClosureRelation, dims::VarDims)
     # get the auxiliary closure variable
     var = closurevar(closure)
