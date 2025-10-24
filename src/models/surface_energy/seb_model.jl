@@ -22,7 +22,7 @@
     turbulent_fluxes::TurbulentFluxes = DiagnosedTurbulentFluxes(eltype(grid))
 
     "Scheme for determining skin temperature and ground heat flux"
-    skin_temperature::SkinTemperature = PrognosticSkinTemperature()
+    skin_temperature::SkinTemperature = ImplicitSkinTemperature()
 
     "Atmospheric inputs"
     atmosphere::Atmosphere = PrescribedAtmosphere(grid)
@@ -78,13 +78,14 @@ default_dt(stepper::ImplicitSEB) = default_dt(stepper.explicit)
 
 function timestep!(
     state,
-    model::SurfaceEnergyBalanceModel{NF, GR, AL, RF, TF, <:PrognosticSkinTemperature},
+    model::SurfaceEnergyBalanceModel{NF, GR, AL, RF, TF, <:ImplicitSkinTemperature},
     stepper::ImplicitSEB,
     dt
 ) where {NF, GR, AL, RF, TF}
+    set!(state.skin_temperature)
     compute_auxiliary!(state, model)
     compute_tendencies!(state, model)
-    # update skin temperature with custom implicit rule
+    # update skin temperature according to fixed point rule
     update_skin_temperature!(state, model, model.skin_temperature)
     # update any other tendencies with nested explicit solver
     do_timestep!(state, model, stepper.explicit, dt)

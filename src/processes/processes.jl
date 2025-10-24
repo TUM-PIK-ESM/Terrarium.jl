@@ -72,7 +72,7 @@ include("surface_energy/albedo.jl")
 export PrescribedRadiativeFluxes, DiagnosedRadiativeFluxes
 include("surface_energy/radiative_fluxes.jl")
 
-export PrescribedSkinTemperature, PrognosticSkinTemperature
+export PrescribedSkinTemperature, ImplicitSkinTemperature
 include("surface_energy/skin_temperature.jl")
 
 export PrescribedTurbulentFluxes, DiagnosedTurbulentFluxes
