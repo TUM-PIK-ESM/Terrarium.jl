@@ -2,6 +2,7 @@ using Terrarium
 using Test
 
 using FreezeCurves
+using Oceananigans
 
 import Terrarium: hydraulic_conductivity
 
@@ -144,18 +145,29 @@ end
     )
     model = SoilModel(; grid, hydrology, initializer, boundary_conditions)
     state = initialize(model)
+    water_table = state.state.water_table
+    hydraulic_cond = state.state.hydraulic_conductivity
+    saturation = state.state.saturation_water_ice
     # check that initial water table depth is correctly calculated from initial condition
-    @test all(state.state.water_table .≈ -5.0)
+    @test all(water_table .≈ -5.0)
     # also check that pressure head is negative
     @test all(state.state.pressure_head .< 0)
     compute_auxiliary!(state.state, model)
     # check that all hydraulic conductivities are finite and positive
-    @test all(isfinite.(state.state.hydraulic_conductivity))
-    @test all(state.state.hydraulic_conductivity .> 0)
+    @test all(isfinite.(hydraulic_cond))
+    @test all(hydraulic_cond .> 0)
     compute_tendencies!(state.state, model)
     # check that all tendencies are finite
     @test all(isfinite.(state.state.tendencies.saturation_water_ice))
-    # check timestep!
+    # do timestep! and compute total water mass
+    ∫sat₀ = Field(Integral(saturation, dims=3))
+    compute!(∫sat₀)
     timestep!(state)
-    @test all(isfinite.(state.state.saturation_water_ice))
+    ∫sat₁ = Field(Integral(saturation, dims=3))
+    compute!(∫sat₁)
+    # check saturation levels are all finite and valid
+    @test all(isfinite.(saturation))
+    @test all(0 .<= saturation .<= 1)
+    # check mass conservation
+    @test ∫sat₀[1,1,1] ≈ ∫sat₁[1,1,1]
 end

@@ -48,7 +48,7 @@ SoilHydrology(
     ::Type{NF},
     vertflow::AbstractVerticalFlow = NoFlow();
     runoff::AbstractSoilRunoff = SoilRunoff(),
-    evapotranspiration::AbstractSoilET = nothing,
+    evapotranspiration::Union{Nothing, AbstractSoilET} = nothing,
     hydraulic_properties::AbstractSoilHydraulics = SoilHydraulicsSURFEX(NF),
 ) where {NF} = SoilHydrology(vertflow, runoff, evapotranspiration, hydraulic_properties)
 
@@ -86,12 +86,7 @@ variables(::NoFlow) = (
     auxiliary(:saturation_water_ice, XYZ(), domain=UnitInterval(), desc="Saturation level of water and ice in the pore space"),
 )
 
-function initialize!(state, model, hydrology::SoilHydrology)
-    # Since water content does not change in the NoFlow scheme, we just compute the water table
-    # once at initialization time
-    grid = get_grid(model)
-    launch!(grid, :xy, compute_water_table!, state, grid, hydrology)
-end
+@inline initialize!(state, model, hydrology::SoilHydrology) = nothing
 
 @inline compute_auxiliary!(state, model, hydrology::SoilHydrology{NF, NoFlow}) where {NF} = nothing
 
