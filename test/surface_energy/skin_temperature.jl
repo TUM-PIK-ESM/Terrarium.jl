@@ -4,21 +4,22 @@ using Test
 @testset "Prescribed skin temperature" begin
     grid = ColumnGrid(CPU(), Float64, ExponentialSpacing(N=10))
     skin_temperature = PrescribedSkinTemperature()
-    model = SurfaceEnergyBalanceModel(grid; skin_temperature)
+    surface_energy_balance = SurfaceEnergyBalance(Float64; skin_temperature)
+    model = SurfaceEnergyModel(grid; surface_energy_balance)
     model_state = initialize(model)
     state = model_state.state
     @test hasproperty(state.inputs, :skin_temperature)
     set!(state.skin_temperature, 1.0)
-    compute_auxiliary!(state, model, model.radiative_fluxes)
-    compute_auxiliary!(state, model, model.turbulent_fluxes)
-    compute_auxiliary!(state, model, skin_temperature)
+    compute_auxiliary!(state, model, surface_energy_balance)
     @test all(state.skin_temperature .≈ 1.0)
 end
 
 @testset "Diagnosed skin temperature" begin
     grid = ColumnGrid(CPU(), Float64, ExponentialSpacing(N=10))
+    clock = Clock(time=0.0)
     skin_temperature = ImplicitSkinTemperature()
-    model = SurfaceEnergyBalanceModel(grid; skin_temperature)
+    surface_energy_balance = SurfaceEnergyBalance(Float64; skin_temperature)
+    model = SurfaceEnergyModel(grid; surface_energy_balance)
     model_state = initialize(model)
     state = model_state.state
     @test !hasproperty(state.inputs, :skin_temperature)
@@ -30,15 +31,13 @@ end
     set!(state.air_temperature, 2.0)
     set!(state.skin_temperature, 1.0) # initial guess matching soil temperature
     set!(state.ground_temperature, 1.0)
-    compute_auxiliary!(state, model)
-    Terrarium.update_skin_temperature!(state, model, skin_temperature)
-    @test all(state.skin_temperature .> 1) && all(state.skin_temperature .< 2)
-    # check that skin temperature converges
+    compute_auxiliary!(state, model, surface_energy_balance)
+    @test all(state.skin_temperature - 1.96 .< 0.01)
+    # check that skin temperature converges for a large number of iterations
     Tskin_old = deepcopy(state.skin_temperature)
     resid = nothing
     for i in 1:100
-        compute_auxiliary!(state, model)
-        Terrarium.update_skin_temperature!(state, model, skin_temperature)
+        compute_auxiliary!(state, model, surface_energy_balance)
         resid = maximum(abs.(state.skin_temperature - Tskin_old))
         Tskin_old = deepcopy(state.skin_temperature)
     end

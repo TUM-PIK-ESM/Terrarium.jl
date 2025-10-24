@@ -117,6 +117,11 @@ Return the current skin temperature at the given `idx`.
 """
 function skin_temperature end
 
+"""
+Base type for surface energy balance schemes.
+"""
+abstract type AbstractSurfaceEnergyBalance <: AbstractProcess end
+
 # Atmosphere
 
 abstract type AbstractHumidity end
