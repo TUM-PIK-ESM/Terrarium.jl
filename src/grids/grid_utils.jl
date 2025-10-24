@@ -1,7 +1,12 @@
-# Convenience dispatch for Oceananigans.launch!
-function launch!(grid::AbstractLandGrid, workspec::Symbol, args...; kwargs...)
-    _grid = get_field_grid(grid)
-    launch!(_grid.architecture, _grid, workspec, args...; kwargs...)
+# Convenience dispatches for Oceananigans.launch!
+function launch!(grid::AbstractLandGrid, workspec::Symbol, kernel::Function, args...; kwargs...)
+    fgrid = get_field_grid(grid)
+    launch!(fgrid.architecture, fgrid, workspec, kernel, args...; kwargs...)
+end
+
+function launch!(state, grid::AbstractLandGrid, workspec::Symbol, kernel::Function, args...; kwargs...)
+    fgrid = get_field_grid(grid)
+    launch!(fgrid.architecture, fgrid, workspec, kernel, state, grid, args...; kwargs...)
 end
 
 """
