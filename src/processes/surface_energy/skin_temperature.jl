@@ -13,28 +13,28 @@ variables(::PrescribedSkinTemperature) = (
 """
     $TYPEDEF
 
-Represents prognostic skin temperature evolved according to:
-
+Scheme for an implicit skin temperature ``T_0`` satisfying:
 ```math
-c Δz \\frac{\\partial T_s}{\\partial t} = R_{\\text{net}} + H_s + H_l + G
+R_{\\text{net}}(T_0) = H_s(T_0) + H_l(T_0) + G(T_0, T_1)
 ```
 where ``R_{\\text{net}}`` is the net radiation budget, ``H_s`` is the sensible heat flux, ``H_l`` is the latent
-heat flux from sublimation and evapotranspiration, and ``G`` is the ground heat flux.
+heat flux from sublimation and evapotranspiration, ``G`` is the ground heat flux, and ``T_1`` is the ground
+temperature, or temperature of the uppermost subsurface (soil or snow) layer.
 """
-@kwdef struct PrognosticSkinTemperature{NF} <: AbstractSkinTemperature
+@kwdef struct ImplicitSkinTemperature{NF} <: AbstractSkinTemperature
     "Effective thermal conductivity at the surface [W m⁻¹ K⁻¹]"
     κₛ::NF = 2.0
 end
 
-PrognosticSkinTemperature(::Type{NF}; kwargs...) where {NF} = PrognosticSkinTemperature{NF}(; kwargs...)
+ImplicitSkinTemperature(::Type{NF}; kwargs...) where {NF} = ImplicitSkinTemperature{NF}(; kwargs...)
 
-variables(::PrognosticSkinTemperature) = (
+variables(::ImplicitSkinTemperature) = (
     prognostic(:skin_temperature, XY(), units=u"°C", desc="Longwave emission temperature of the land surface in °C"),
     auxiliary(:ground_heat_flux, XY(), units=u"W/m^2", desc="Ground heat flux"),
     input(:ground_temperature, XY(), units=u"°C", desc="Temperature of the uppermost ground or soil grid cell in °C")
 )
 
-function update_skin_temperature!(state, model::AbstractSurfaceEnergyBalanceModel, skinT::PrognosticSkinTemperature)
+function update_skin_temperature!(state, model::AbstractSurfaceEnergyBalanceModel, skinT::ImplicitSkinTemperature)
     grid = get_grid(model)
     launch!(grid, :xy, update_skin_temperature_kernel!, state, grid, skinT)   
 end
@@ -70,7 +70,7 @@ end
 
 Diagnose the skin temperature implied by the current `ground_heat_flux` and `ground_temperature`.
 """
-@kernel function update_skin_temperature_kernel!(state, grid, skinT::PrognosticSkinTemperature)
+@kernel function update_skin_temperature_kernel!(state, grid, skinT::ImplicitSkinTemperature)
     i, j = @index(Global, NTuple)
     idx = (i, j)
     # get thickness of topmost soil/ground grid cell
@@ -87,7 +87,7 @@ end
 
 # Kernel functions
 
-@inline skin_thermal_conductivity(idx, state, skinT::PrognosticSkinTemperature) = skinT.κₛ
+@inline skin_thermal_conductivity(idx, state, skinT::ImplicitSkinTemperature) = skinT.κₛ
 
 @inline @inbounds skin_temperature(idx, state, ::AbstractSkinTemperature) = state.skin_temperature[idx]
 
