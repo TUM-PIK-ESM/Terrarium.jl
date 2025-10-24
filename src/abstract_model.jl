@@ -5,7 +5,7 @@
 
 Base type for all models.
 """
-abstract type AbstractModel{NF, Grid<:AbstractLandGrid{NF}, TS<:AbstractTimeStepper} end
+abstract type AbstractModel{NF, Grid<:AbstractLandGrid{NF}} end
 
 """
     variables(model::AbstractModel)
@@ -84,49 +84,49 @@ timestep!(state, model::AbstractModel, Δt) = timestep!(state, model, get_time_s
     
 Base type for ground (e.g. soil and rock) models.
 """
-abstract type AbstractGroundModel{NF, GR, TS} <: AbstractModel{NF, GR, TS} end
+abstract type AbstractGroundModel{NF, GR} <: AbstractModel{NF, GR} end
 
 """
     $TYPEDEF
 
 Base type for soil ground models.
 """
-abstract type AbstractSoilModel{NF, GR, TS} <: AbstractGroundModel{NF, GR, TS} end
+abstract type AbstractSoilModel{NF, GR} <: AbstractGroundModel{NF, GR} end
 
 """
     $TYPEDEF
 
 Base type for snow models.
 """
-abstract type AbstractSnowModel{NF, GR, TS} <: AbstractModel{NF, GR, TS} end
+abstract type AbstractSnowModel{NF, GR} <: AbstractModel{NF, GR} end
 
 """
     $TYPEDEF
 
 Base type for vegetation/carbon models.
 """
-abstract type AbstractVegetationModel{NF, GR, TS} <: AbstractModel{NF, GR, TS} end
+abstract type AbstractVegetationModel{NF, GR} <: AbstractModel{NF, GR} end
 
 """
     $TYPEDEF
 
 Base type for surface energy balance models.
 """
-abstract type AbstractEnergyBalanceModel{NF, GR, TS} <: AbstractModel{NF, GR, TS} end
+abstract type AbstractEnergyBalanceModel{NF, GR} <: AbstractModel{NF, GR} end
 
 """
     $TYPEDEF
 
 Base type for surface hydrology models.
 """
-abstract type AbstractHydrologyModel{NF, GR, TS} <: AbstractModel{NF, GR, TS} end
+abstract type AbstractHydrologyModel{NF, GR} <: AbstractModel{NF, GR} end
 
 """
     AbstractLandModel <: AbstractModel
 
 Base type for full land models which couple together multiple component models.
 """
-abstract type AbstractLandModel{NF, GR, TS} <: AbstractModel{NF, GR, TS} end
+abstract type AbstractLandModel{NF, GR} <: AbstractModel{NF, GR} end
 
 """
 Convenience constructor for all `AbstractLandModel` types that allows the `grid` to be passed

@@ -20,8 +20,7 @@ $TYPEDFIELDS
     Constants<:PhysicalConstants{NF},
     BoundaryConditions<:AbstractBoundaryConditions,
     Initializer<:AbstractInitializer,
-    TimeStepper<:AbstractTimeStepper,
-} <: AbstractVegetationModel{NF, GridType, TimeStepper}
+} <: AbstractVegetationModel{NF, GridType}
     "Spatial grid type"
     grid::GridType
 
@@ -51,9 +50,6 @@ $TYPEDFIELDS
 
     "State variable initializer"
     initializer::Initializer = DefaultInitializer()
-
-    "Timestepping scheme"
-    time_stepping::TimeStepper = ForwardEuler()
 end
 
 # VegetationModel getter methods
