@@ -47,7 +47,7 @@ end
 SoilHydrology(
     ::Type{NF},
     vertflow::AbstractVerticalFlow = NoFlow();
-    runoff::AbstractSoilRunoff = SoilSurfaceRunoff(),
+    runoff::AbstractSoilRunoff = SoilRunoff(),
     evapotranspiration::AbstractSoilET = nothing,
     hydraulic_properties::AbstractSoilHydraulics = SoilHydraulicsSURFEX(NF),
 ) where {NF} = SoilHydrology(vertflow, runoff, evapotranspiration, hydraulic_properties)
