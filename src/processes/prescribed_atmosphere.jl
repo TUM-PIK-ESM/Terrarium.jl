@@ -68,8 +68,10 @@ wave lengths representing solar and thermal (infrared) radiation.
     tracers::Tracers = TracerGases(AmbientCO2())
 end
 
+PrescribedAtmosphere(grid::AbstractLandGrid; kwargs...) = PrescribedAtmosphere(; grid, kwargs...)
+
 variables(atmos::PrescribedAtmosphere) = (
-    input(:T_air, XY(), units=u"°C", desc="Near-surface air temperature in °C"),
+    input(:air_temperature, XY(), units=u"°C", desc="Near-surface air temperature in °C"),
     input(:air_pressure, XY(), units=u"Pa", desc="Atmospheric pressure at the surface in Pa"),
     input(:windspeed, XY(), units=u"m/s", desc="Wind speed in m/s"),
     variables(atmos.humidity)...,
@@ -78,6 +80,10 @@ variables(atmos::PrescribedAtmosphere) = (
     # splat all tracer variables into one tuple
     tuplejoin(map(variables, atmos.tracers)...)...,
 )
+
+@inline compute_auxiliary!(state, model, atmos::PrescribedAtmosphere) = nothing
+
+@inline compute_tendencies!(state, model, atmos::PrescribedAtmosphere) = nothing
 
 """
     air_temperature(idx, state, ::PrescribedAtmosphere)
@@ -111,7 +117,7 @@ variables(::SpecificHumidity) = (
 
 Retrieve or compute the specific_humidity at the current time step.
 """
-@inline specific_humidity(idx, state, ::PrescribedAtmosphere{PR, IR, <:SpecificHumidity}) where {PR, IR} = state.specific_humidity[idx]
+@inline specific_humidity(idx, state, ::AbstractAtmosphere{PR, IR, <:SpecificHumidity}) where {PR, IR} = state.specific_humidity[idx]
 
 
 struct TwoPhasePrecipitation <: AbstractPrecipitation end
@@ -122,19 +128,18 @@ variables(::TwoPhasePrecipitation) = (
 )
 
 """
-    rainfall(idx, state, ::PrescribedAtmosphere{<:TwoPhasePrecipitation})
+    rainfall(idx, state, ::AbstractAtmosphere{<:TwoPhasePrecipitation})
 
 Retrieve or compute the liquid precipitation (rainfall) at the current time step.
 """
-@inline rainfall(idx, state, ::PrescribedAtmosphere{<:TwoPhasePrecipitation}) = state.rainfall[idx]
+@inline rainfall(idx, state, ::AbstractAtmosphere{<:TwoPhasePrecipitation}) = state.rainfall[idx]
 
 """
-    snowfall(idx, state, ::PrescribedAtmosphere{<:TwoPhasePrecipitation})
+    snowfall(idx, state, ::AbstractAtmosphere{<:TwoPhasePrecipitation})
 
 Retrieve or compute the frozen precipitation (snowfall) at the current time step.
 """
-@inline snowfall(idx, state, ::PrescribedAtmosphere{<:TwoPhasePrecipitation}) = state.snowfall[idx]
-
+@inline snowfall(idx, state, ::AbstractAtmosphere{<:TwoPhasePrecipitation}) = state.snowfall[idx]
 
 struct LongShortWaveRadiation <: AbstractIncomingRadiation end
 
@@ -144,15 +149,15 @@ variables(::LongShortWaveRadiation) = (
 )
 
 """
-    shortwave_in(idx, state, ::PrescribedAtmosphere{PR, <:LongShortWaveRadiation})
+    shortwave_in(idx, state, ::AbstractAtmosphere{PR, <:LongShortWaveRadiation})
 
 Retrieve or compute the frozen precipitation (snowfall) at the current time step.
 """
-shortwave_in(idx, state, ::PrescribedAtmosphere{PR, <:LongShortWaveRadiation}) where {PR} = state.SwIn[idx...]
+shortwave_in(idx, state, ::AbstractAtmosphere{PR, <:LongShortWaveRadiation}) where {PR} = state.SwIn[idx...]
 
 """
-    longwave_in(idx, state, ::PrescribedAtmosphere{PR, <:LongShortWaveRadiation})
+    longwave_in(idx, state, ::AbstractAtmosphere{PR, <:LongShortWaveRadiation})
 
 Retrieve or compute the frozen precipitation (snowfall) at the current time step.
 """
-longwave_in(idx, state, ::PrescribedAtmosphere{PR, <:LongShortWaveRadiation}) where {PR} = state.LwIn[idx...]
+longwave_in(idx, state, ::AbstractAtmosphere{PR, <:LongShortWaveRadiation}) where {PR} = state.LwIn[idx...]

@@ -1,7 +1,7 @@
 """
     $TYPEDEF
 
-Represents skin temperature prescribed by an input variable.
+Simple scheme for prescribed skin temperatures from input variables.
 """
 struct PrescribedSkinTemperature <: AbstractSkinTemperature end
 
@@ -9,13 +9,6 @@ variables(::PrescribedSkinTemperature) = (
     auxiliary(:ground_heat_flux, XY(), units=u"W/m^2", desc="Ground heat flux"),
     input(:skin_temperature, XY(), units=u"°C", desc="Longwave emission temperature of the land surface in °C"),
 )
-
-function compute_auxiiliary!(state, model, skinT::AbstractSkinTemperature)
-    grid = get_grid(model)
-    rad = get_radiative_fluxes(model)
-    tur = get_turbulent_fluxes(model)
-    launch!(grid, compute_ground_heat_flux!, state, grid, skinT, rad, tur)
-end
 
 """
     $TYPEDEF
@@ -41,29 +34,45 @@ variables(::PrognosticSkinTemperature) = (
     input(:ground_temperature, XY(), units=u"°C", desc="Temperature of the uppermost ground or soil grid cell in °C")
 )
 
-# Kernels
-
-@kernel function compute_ground_heat_flux!(
-    state, grid,
-    ::PrognosticSkinTemperature,
-    rad::AbstractRadiativeFluxes,
-    tur::AbstractTurbulentFluxes,
-)
-    # compute flux terms
-    R_net = net_radiation(idx, state, rad)
-    H_s = sensible_heat_flux(idx, state, tur)
-    H_l = latent_heat_flux(idx, state, tur)
-    # compute ground heat flux as residual of R_net and turbulent fluxes
-    state.ground_heat_flux[i, j] = -R_net - H_s - H_l
+function update_skin_temperature!(state, model::AbstractSurfaceEnergyBalanceModel, skinT::PrognosticSkinTemperature)
+    grid = get_grid(model)
+    launch!(grid, :xy, update_skin_temperature_kernel!, state, grid, skinT)   
 end
 
 """
-    update_skin_temperature!(idx, state, grid, skinT::PrognosticSkinTemperature)
+Default `compute_auxiliary!` for all skin temperature implementation that computes the ground heat flux from the
+current radiative, sensible, and latent fluxes.
+"""
+function compute_auxiliary!(state, model::AbstractSurfaceEnergyBalanceModel, skinT::AbstractSkinTemperature)
+    grid = get_grid(model)
+    launch!(grid, :xy, compute_ground_heat_flux!, state, grid, skinT)
+end
+
+# Kernels
+
+"""
+    compute_ground_heat_flux!(state, grid, ::AbstractSkinTemperature)
+
+Diagnose the ground heat flux as the residual of the net radiation budget and turbulent fluxes.
+"""
+@kernel function compute_ground_heat_flux!(state, grid, ::AbstractSkinTemperature)
+    i, j = @index(Global, NTuple)
+    # compute flux terms
+    R_net = state.RadNet[i, j]
+    H_s = state.sensible_heat_flux[i, j]
+    H_l = state.latent_heat_flux[i, j]
+    # compute ground heat flux as residual of R_net and turbulent fluxes
+    state.ground_heat_flux[i, j, 1] = R_net - H_s - H_l
+end
+
+"""
+    update_skin_temperature_kernel!(state, grid, skinT::PrognosticSkinTemperature)
 
 Diagnose the skin temperature implied by the current `ground_heat_flux` and `ground_temperature`.
 """
-@kernel function update_skin_temperature!(state, grid, skinT::PrognosticSkinTemperature)
+@kernel function update_skin_temperature_kernel!(state, grid, skinT::PrognosticSkinTemperature)
     i, j = @index(Global, NTuple)
+    idx = (i, j)
     # get thickness of topmost soil/ground grid cell
     field_grid = get_field_grid(grid)
     Δz₁ = Δzᵃᵃᶜ(i, j, field_grid.Nz, field_grid)

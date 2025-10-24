@@ -66,7 +66,14 @@ include("vegetation/autotrophic_respiration.jl")
 
 # Surface Energy Balance
 
+export PrescribedAlbedo, ConstantAlbedo
 include("surface_energy/albedo.jl")
+
+export PrescribedRadiativeFluxes, DiagnosedRadiativeFluxes
 include("surface_energy/radiative_fluxes.jl")
+
+export PrescribedSkinTemperature, PrognosticSkinTemperature
 include("surface_energy/skin_temperature.jl")
+
+export PrescribedTurbulentFluxes, DiagnosedTurbulentFluxes
 include("surface_energy/turbulent_fluxes.jl")
