@@ -111,6 +111,13 @@ abstract type AbstractGroundModel{NF, GR, TS} <: AbstractModel{NF, GR, TS} end
 """
     $TYPEDEF
 
+Base type for land-atmosphere energy exchange models.
+"""
+abstract type AbstractSurfaceEnergyModel{NF, GR, TS} <: AbstractModel{NF, GR, TS} end
+
+"""
+    $TYPEDEF
+
 Base type for soil ground models.
 """
 abstract type AbstractSoilModel{NF, GR, TS} <: AbstractGroundModel{NF, GR, TS} end
@@ -128,13 +135,6 @@ abstract type AbstractSnowModel{NF, GR, TS} <: AbstractModel{NF, GR, TS} end
 Base type for vegetation/carbon models.
 """
 abstract type AbstractVegetationModel{NF, GR, TS} <: AbstractModel{NF, GR, TS} end
-
-"""
-    $TYPEDEF
-
-Base type for surface energy balance models.
-"""
-abstract type AbstractSurfaceEnergyBalanceModel{NF, GR, TS} <: AbstractModel{NF, GR, TS} end
 
 """
     $TYPEDEF
