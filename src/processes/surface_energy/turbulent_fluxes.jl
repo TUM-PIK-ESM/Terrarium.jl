@@ -51,24 +51,23 @@ variables(tur::DiagnosedTurbulentFluxes) = (
     variables(tur.soil_moisture_limiting_factor)...,
 )
 
-function compute_auxiliary!(state, model::AbstractSurfaceEnergyBalanceModel, tur::DiagnosedTurbulentFluxes)
-    grid = get_grid(model)
+function compute_auxiliary!(state, model, tur::DiagnosedTurbulentFluxes)
+    (; grid, surface_energy_balance, atmosphere, constants) = model
     launch!(
+        state,
         grid,
         :xy,
         compute_turbulent_fluxes!,
-        state,
-        grid,
         tur,
-        model.skin_temperature,
-        model.atmosphere,
-        model.constants
+        surface_energy_balance.skin_temperature,
+        atmosphere,
+        constants,
     )
 end
 
 @kernel function compute_turbulent_fluxes!(
     state,
-    grid,
+    ::AbstractLandGrid,
     tur::DiagnosedTurbulentFluxes,
     skinT::AbstractSkinTemperature,
     atmos::AbstractAtmosphere,

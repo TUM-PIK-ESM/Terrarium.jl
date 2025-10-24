@@ -77,3 +77,6 @@ include("surface_energy/skin_temperature.jl")
 
 export PrescribedTurbulentFluxes, DiagnosedTurbulentFluxes
 include("surface_energy/turbulent_fluxes.jl")
+
+export SurfaceEnergyBalance
+include("surface_energy/surface_energy_balance.jl")

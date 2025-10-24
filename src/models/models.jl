@@ -15,8 +15,8 @@ include("vegetation/vegetation_model.jl")
 
 # Surface energy
 
-export SurfaceEnergyBalanceModel
-include("surface_energy/seb_model.jl")
+export SurfaceEnergyModel
+include("surface/surface_energy_model.jl")
 
 # Coupled Land
 

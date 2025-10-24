@@ -29,6 +29,8 @@ $TYPEDFIELDS
     emissivity::NF = 0.97
 end
 
+ConstantAlbedo(::Type{NF}; kwargs...) where {NF} = ConstantAlbedo{NF}(; kwargs...)
+
 @inline albedo(idx, state, albedo::ConstantAlbedo) = albedo.albedo
 
 @inline emissivity(idx, state, albedo::ConstantAlbedo) = albedo.emissivity

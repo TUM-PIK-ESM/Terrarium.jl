@@ -34,28 +34,30 @@ variables(::ImplicitSkinTemperature) = (
     input(:ground_temperature, XY(), units=u"°C", desc="Temperature of the uppermost ground or soil grid cell in °C")
 )
 
-function update_skin_temperature!(state, model::AbstractSurfaceEnergyBalanceModel, skinT::ImplicitSkinTemperature)
-    grid = get_grid(model)
-    launch!(grid, :xy, update_skin_temperature_kernel!, state, grid, skinT)   
-end
-
 """
 Default `compute_auxiliary!` for all skin temperature implementation that computes the ground heat flux from the
 current radiative, sensible, and latent fluxes.
 """
-function compute_auxiliary!(state, model::AbstractSurfaceEnergyBalanceModel, skinT::AbstractSkinTemperature)
-    grid = get_grid(model)
-    launch!(grid, :xy, compute_ground_heat_flux!, state, grid, skinT)
+function compute_auxiliary!(state, model, skinT::AbstractSkinTemperature)
+    compute_ground_heat_flux!(state, model, skinT)
+end
+
+function compute_ground_heat_flux!(state, model, skinT::AbstractSkinTemperature)
+    launch!(state, model.grid, :xy, compute_ground_heat_flux_kernel!, skinT)
+end
+
+function update_skin_temperature!(state, model, skinT::AbstractSkinTemperature)
+    launch!(state, model.grid, :xy, update_skin_temperature_kernel!, skinT)
 end
 
 # Kernels
 
 """
-    compute_ground_heat_flux!(state, grid, ::AbstractSkinTemperature)
+    compute_ground_heat_flux_kernel!(state, grid, ::AbstractSkinTemperature)
 
 Diagnose the ground heat flux as the residual of the net radiation budget and turbulent fluxes.
 """
-@kernel function compute_ground_heat_flux!(state, grid, ::AbstractSkinTemperature)
+@kernel function compute_ground_heat_flux_kernel!(state, grid, ::AbstractSkinTemperature)
     i, j = @index(Global, NTuple)
     # compute flux terms
     R_net = state.RadNet[i, j]

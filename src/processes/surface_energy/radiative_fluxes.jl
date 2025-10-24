@@ -22,8 +22,9 @@ variables(::PrescribedRadiativeFluxes) = (
     auxiliary(:RadNet, XY(), units=u"W/m^2", desc="Net radiation budget"),
 )
 
-function compute_auxiliary!(state, model::AbstractSurfaceEnergyBalanceModel, rad::PrescribedRadiativeFluxes)
-    launch!(model.grid, :xy, compute_net_radiation!, state, rad, model.atmosphere)
+function compute_auxiliary!(state, model, rad::PrescribedRadiativeFluxes)
+    (; grid, atmosphere) = model
+    launch!(state, grid, :xy, compute_net_radiation!, rad, atmosphere)
 end
 
 """
@@ -40,26 +41,26 @@ variables(::DiagnosedRadiativeFluxes) = (
     auxiliary(:RadNet, XY(), units=u"W/m^2", desc="Net radiation budget"),
 )
 
-function compute_auxiliary!(state, model::AbstractSurfaceEnergyBalanceModel, rad::DiagnosedRadiativeFluxes)
-    grid = get_grid(model)
+function compute_auxiliary!(state, model, rad::DiagnosedRadiativeFluxes)
+    (; grid, surface_energy_balance, atmosphere, constants) = model
     launch!(
+        state,
         grid,
         :xy,
         compute_radiative_fluxes!,
-        state,
-        grid,
         rad,
-        model.atmosphere,
-        model.skin_temperature,
-        model.albedo,
-        model.constants
+        atmosphere,
+        surface_energy_balance.skin_temperature,
+        surface_energy_balance.albedo,
+        constants
     )
 end
 
 # Kernels
 
 @kernel function compute_radiative_fluxes!(
-    state, grid,
+    state,
+    ::AbstractLandGrid,
     rad::AbstractRadiativeFluxes,
     atmos::AbstractAtmosphere,
     skinT::AbstractSkinTemperature,
@@ -84,7 +85,7 @@ end
     state.RadNet[i, j, 1] = net_radiation(rad, SwIn, SwOut, LwIn, LwOut)
 end
 
-@kernel function compute_net_radiation!(state, rad::AbstractRadiativeFluxes, atmos::AbstractAtmosphere)
+@kernel function compute_net_radiation!(state, ::AbstractLandGrid, rad::AbstractRadiativeFluxes, atmos::AbstractAtmosphere)
     i, j = @index(Global, NTuple)
     idx = (i, j)
     # get inputs

@@ -40,35 +40,40 @@ rain- and snowfall given as separate inputs, while for solar radiation, the defa
 `LongShortWaveRadiation` which partitions downwelling radiation into the common short- and long
 wave lengths representing solar and thermal (infrared) radiation.
 """
-@kwdef struct PrescribedAtmosphere{
+struct PrescribedAtmosphere{
     NF,
     tracernames,
     Humid<:AbstractHumidity,
     Precip<:AbstractPrecipitation,
     IncomingRad<:AbstractIncomingRadiation,
-    Tracers<:NamedTuple{tracernames,<:Tuple{Vararg{TracerGas}}},
-    Grid<:AbstractLandGrid{NF},
+    Tracers<:NamedTuple{tracernames,<:Tuple{Vararg{TracerGas}}}
 } <: AbstractAtmosphere{Precip, IncomingRad, Humid}
-    "Spatial grid"
-    grid::Grid
-
     "Surface-relative altitude in meters at which the atmospheric forcings are assumed to be applied"
-    altitude::NF = 2*one(eltype(grid)) # Default to 2 m
+    altitude::NF
 
     "Specific or relative humidity"
-    humidity::Humid = SpecificHumidity()
+    humidity::Humid
 
     "Precipitation inputs"
-    precip::Precip = TwoPhasePrecipitation()
+    precip::Precip
 
     "Downwelling radiation inputs"
-    radiation::IncomingRad = LongShortWaveRadiation()
+    radiation::IncomingRad
 
     "Atmospheric tracer gases"
-    tracers::Tracers = TracerGases(AmbientCO2())
+    tracers::Tracers
 end
 
-PrescribedAtmosphere(grid::AbstractLandGrid; kwargs...) = PrescribedAtmosphere(; grid, kwargs...)
+function PrescribedAtmosphere(
+    ::Type{NF};
+    altitude::NF = 10.0, # Default to 10 m
+    humidity::AbstractHumidity = SpecificHumidity(),
+    precip::AbstractPrecipitation = TwoPhasePrecipitation(),
+    radiation::AbstractIncomingRadiation = LongShortWaveRadiation(),
+    tracers::NamedTuple = TracerGases(AmbientCO2()),
+) where {NF}
+    return PrescribedAtmosphere(altitude, humidity, precip, radiation, tracers)
+end
 
 variables(atmos::PrescribedAtmosphere) = (
     input(:air_temperature, XY(), units=u"°C", desc="Near-surface air temperature in °C"),
