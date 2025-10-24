@@ -28,8 +28,8 @@ on_architecture(::CPU, obj::RingGridOrField) = RingGrids.Architectures.on_archit
 
 # A bit of type piracy to allow `Field`s to be indexed with tuples
 # TODO: Consider proposing this as a change in Oceananigans
-@inline @propagate_inbounds Base.getindex(field::AbstractField, idx::NTuple{2, Integer}) = field[idx...]
-@inline @propagate_inbounds Base.getindex(field::AbstractField, idx::NTuple{3, Integer}) = field[idx...]
+@inline @propagate_inbounds Base.getindex(field::Field, idx::NTuple{2, Integer}) = field[idx...]
+@inline @propagate_inbounds Base.getindex(field::Field, idx::NTuple{3, Integer}) = field[idx...]
 
 # Field construction
 
