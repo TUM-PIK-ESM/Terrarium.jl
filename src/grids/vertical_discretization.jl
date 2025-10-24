@@ -15,14 +15,14 @@ Return a `Vector` of vertical layer thicknesses according to the given discretiz
 get_spacing(spacing::AbstractVerticalSpacing) = spacing.(1:get_npoints(spacing))
 
 Base.@kwdef struct UniformSpacing{NF} <: AbstractVerticalSpacing{NF}
-    Δz::NF = 0.5
-    N::Int = 50
+    Δz::NF = 0.1
+    N::Int = 100
 end
 
 (spacing::UniformSpacing)(i::Int) = spacing.Δz
 
 Base.@kwdef struct ExponentialSpacing{NF,ST<:Union{Nothing,Integer}} <: AbstractVerticalSpacing{NF}
-    Δz_min::NF = 0.1
+    Δz_min::NF = 0.05
     Δz_max::NF = 100.0
     sig::ST = 3
     N::Int = 50
