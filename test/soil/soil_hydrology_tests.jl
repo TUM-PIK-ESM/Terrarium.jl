@@ -4,7 +4,7 @@ using Test
 using FreezeCurves
 using Oceananigans
 
-import Terrarium: hydraulic_conductivity
+import Terrarium: SurfaceEvaporation, hydraulic_conductivity
 
 @testset "Hydraulic properties (constant)" begin
     # For prescribed hyraulic properties, just check that the returned values
@@ -116,10 +116,7 @@ end
     initializer = FieldInitializers(
         saturation_water_ice = (x, z) -> 1.0
     )
-    boundary_conditions = SoilBoundaryConditions(
-        eltype(grid);
-    )
-    model = SoilModel(; grid, hydrology, initializer, boundary_conditions)
+    model = SoilModel(; grid, hydrology, initializer)
     state = initialize(model)
     # check that initial water table depth is correctly calculated from initial condition
     @test all(iszero.(state.state.water_table))
@@ -140,10 +137,7 @@ end
     initializer = FieldInitializers(
         saturation_water_ice = (x, z) -> min(1, 0.5 - 0.1*z)
     )
-    boundary_conditions = SoilBoundaryConditions(
-        eltype(grid);
-    )
-    model = SoilModel(; grid, hydrology, initializer, boundary_conditions)
+    model = SoilModel(; grid, hydrology, initializer)
     state = initialize(model)
     water_table = state.state.water_table
     hydraulic_cond = state.state.hydraulic_conductivity
@@ -170,4 +164,37 @@ end
     @test all(0 .<= saturation .<= 1)
     # check mass conservation
     @test ∫sat₀[1,1,1] ≈ ∫sat₁[1,1,1]
+end
+
+@testset "Soil ET" begin
+    Nz = 10
+    grid = ColumnGrid(UniformSpacing(Δz=0.1, N=Nz))
+    swrc = VanGenuchten(α=2.0, n=2.0)
+    hydraulic_properties = ConstantHydraulics(cond_unsat=UnsatKVanGenuchten(; swrc))
+    evapotranspiration = SurfaceEvaporation()
+    hydrology = SoilHydrology(eltype(grid), RichardsEq(); hydraulic_properties, evapotranspiration)
+    # Variably saturated with water table
+    initializer = FieldInitializers(
+        temperature = 10.0, # positive soil temperature
+        saturation_water_ice = 1.0 # fully saturated
+    )
+    model = SoilModel(; grid, hydrology, initializer)
+    state = initialize(model)
+    # check that forcing_ET is zero when no latent heat flux is supplied
+    @test iszero(Terrarium.forcing_ET(1, 1, Nz, grid.grid, state.state, evapotranspiration, model.constants))
+    # negative latent heat flux → condensation
+    set!(state.state.latent_heat_flux, -100.0)
+    ET_flux = Terrarium.forcing_ET(1, 1, Nz, grid.grid, state.state, evapotranspiration, model.constants)
+    @test ET_flux > 0
+    # positive latent heat flux → evaporation
+    set!(state.state.latent_heat_flux, 100.0)
+    ET_flux = Terrarium.forcing_ET(1, 1, Nz, grid.grid, state.state, evapotranspiration, model.constants)
+    @test ET_flux < 0
+    # check tendency calculation
+    dθdt = Terrarium.volumetric_water_content_tendency((1, 1, Nz), grid, state.state, hydrology, model.constants)
+    @test dθdt == ET_flux
+    # take one timestep and check that water was evaporated
+    dt = 60.0
+    timestep!(state, dt)
+    @test state.state.saturation_water_ice[1, 1, Nz] .≈ 1 + ET_flux*dt / hydraulic_properties.porosity
 end

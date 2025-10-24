@@ -35,7 +35,8 @@ function compute_tendencies!(state, model, hydrology::SoilHydrology{NF, <:Richar
     grid = get_grid(model)
     strat = get_stratigraphy(model)
     bgc = get_biogeochemistry(model)
-    launch!(grid, :xyz, compute_saturation_tendency!, state, grid, hydrology, strat, bgc)
+    constants = get_constants(model)
+    launch!(grid, :xyz, compute_saturation_tendency!, state, grid, hydrology, strat, bgc, constants)
     return nothing
 end
 
@@ -155,41 +156,47 @@ Kernel for computing the tendency of the prognostic `saturation_water_ice` varia
     grid,
     hydrology::SoilHydrology,
     strat::AbstractStratigraphy,
-    bgc::AbstractSoilBiogeochemistry
+    bgc::AbstractSoilBiogeochemistry,
+    constants::PhysicalConstants
 )
     i, j, k = @index(Global, NTuple)
     idx = (i, j, k)
-    state.tendencies.saturation_water_ice[i, j, k] += saturation_tendency(idx, grid, state, hydrology, strat, bgc)
+    # Get porosity
+    por = porosity(idx, state, hydrology, strat, bgc)
+    # Compute volumetic water content tendency
+    ∂θ∂t = volumetric_water_content_tendency(idx, grid, state, hydrology, constants)
+    # Rescale by porosity to get saturation tendency
+    state.tendencies.saturation_water_ice[i, j, k] +=  ∂θ∂t / por
 end
 
 # Kernel functions
 
-@inline function saturation_tendency(
+@inline function volumetric_water_content_tendency(
     idx, grid, state,
     hydrology::SoilHydrology{NF, <:RichardsEq},
-    strat::AbstractStratigraphy,
-    bgc::AbstractSoilBiogeochemistry
+    constants::PhysicalConstants
 ) where {NF}
     i, j, k = idx
     # Operators require the underlying Oceananigans grid
     field_grid = get_field_grid(grid)
 
     # Compute divergence of water fluxes
-    # ∂θ∂t = ∇⋅K(θ)(∇ψ + 1) = ∇⋅K(θ)∇ψ
-    ∂θ∂t = ∂zᵃᵃᶜ(i, j, k, field_grid, darcy_flux, state)
+    # ∂θ∂t = ∇⋅K(θ)∇Ψ where Ψ = ψₘ + ψₕ + ψz + forcing (sources and sinks such as ET losses)
+    ∂θ∂t = (
+        - ∂zᵃᵃᶜ(i, j, k, field_grid, darcy_flux, state.pressure_head, state.hydraulic_conductivity)
+        + forcing_ET(i, j, k, field_grid, state, hydrology.evapotranspiration, constants)
+    )
 
-    # Get porosity
-    por = porosity(idx, state, hydrology, strat, bgc)
-
-    # Rescale volumetric flux to saturation flux
-    return -∂θ∂t / por
+    return ∂θ∂t
 end
 
-@inline function darcy_flux(i, j, k, grid, state)
-    # Get pressure head
-    ψ = state.pressure_head
-    # Get hydraulic conductivity
-    K = state.hydraulic_conductivity
+"""
+    $SIGNATURES
+
+Kernel function for computing the Darcy flux over layer faces from the pressure head `ψ` and hydraulic
+conductivity `K`.
+"""
+@inline function darcy_flux(i, j, k, grid, ψ, K)
     # Darcy's law: q = -K ∂ψ/∂z
     # TODO: also account for effect of temperature on matric potential
     ∇ψ = ∂zᵃᵃᶠ(i, j, k, grid, ψ)

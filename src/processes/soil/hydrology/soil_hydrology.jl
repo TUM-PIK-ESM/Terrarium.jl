@@ -14,9 +14,11 @@ Base type for soil/subsurface runoff schemes.
 abstract type AbstractSoilRunoff end
 
 """
-Base type for evapotranspirative forcing terms in soil layers.
+Base type for soil/subsurface evapotranspiration forcing terms.
 """
 abstract type AbstractSoilET end
+
+struct NoSoilET <: AbstractSoilET end
 
 """
     $TYPEDEF
@@ -28,8 +30,8 @@ struct SoilHydrology{
     NF,
     VerticalFlow<:AbstractVerticalFlow,
     Runoff<:AbstractSoilRunoff,
-    SoilET<:Union{Nothing, AbstractSoilET},
-    SoilHydraulics<:AbstractSoilHydraulics{NF}
+    SoilET<:AbstractSoilET,
+    SoilHydraulics<:AbstractSoilHydraulics{NF},
 } <: AbstractSoilHydrology{NF}
     "Soil water vertical flow operator"
     vertflow::VerticalFlow
@@ -37,20 +39,22 @@ struct SoilHydrology{
     "Soil subsurface runoff scheme"
     runoff::Runoff
 
-    "Soil evapotranspiration scheme"
+    "Scheme for distributing ET fluxes in the root zone"
     evapotranspiration::SoilET
 
     "Soil hydraulic properties parameterization"
     hydraulic_properties::SoilHydraulics
 end
 
-SoilHydrology(
+function SoilHydrology(
     ::Type{NF},
     vertflow::AbstractVerticalFlow = NoFlow();
     runoff::AbstractSoilRunoff = SoilRunoff(),
-    evapotranspiration::Union{Nothing, AbstractSoilET} = nothing,
+    evapotranspiration::AbstractSoilET = NoSoilET(),
     hydraulic_properties::AbstractSoilHydraulics = SoilHydraulicsSURFEX(NF),
-) where {NF} = SoilHydrology(vertflow, runoff, evapotranspiration, hydraulic_properties)
+) where {NF}
+    return SoilHydrology(vertflow, runoff, evapotranspiration, hydraulic_properties)
+end
 
 """
     get_swrc(hydrology::SoilHydrology)
@@ -112,3 +116,31 @@ Not yet implemented.
     "Groundwater drainage runoff"
     drainage::DR = nothing
 end
+
+# Evapotranspiration
+
+"""
+    SurfaceEvaporation <: AbstractSoilET
+
+Evapotranspiration scheme for bare soils that allocates the full latent heat flux to evaporation
+from the topmost soil layer.
+"""
+struct SurfaceEvaporation <: AbstractSoilET end
+
+variables(::SurfaceEvaporation) = (
+    input(:latent_heat_flux, XY(), units=u"W/m^2", desc="Latent heat flux at the surface [W m⁻²]"),
+)
+
+@inline function forcing_ET(i, j, k, grid, state, ::SurfaceEvaporation, constants::PhysicalConstants)
+    let Hₗ = state.latent_heat_flux[i, j],
+        L = constants.Lsg, # specific latent heat of vaporization
+        ρw = constants.ρw, # density of water
+        Δz = Δzᵃᵃᶜ(i, j, k, grid);
+        q_E = Hₗ / (L * ρw) # ET water flux in m s⁻¹
+        ∂θ∂t = -q_E / Δz # rescale by layer thickness to get water content flux
+        return ∂θ∂t * (k == grid.Nz) # only nonzero at the surface
+    end
+end
+
+# Default to zero if evapotranspiration is disabled
+@inline forcing_ET(i, j, k, grid, state, ::NoSoilET, args...) = zero(eltype(grid))
