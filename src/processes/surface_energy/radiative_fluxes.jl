@@ -22,10 +22,8 @@ variables(::PrescribedRadiativeFluxes) = (
     auxiliary(:RadNet, XY(), units=u"W/m^2", desc="Net radiation budget"),
 )
 
-function compute_auxiliary!(state, model, rad::PrescribedRadiativeFluxes)
-    grid = get_grid(model)
-    atmos = get_atmosphere(model)
-    launch!(grid, compute_net_radiation!, state, rad, atmos)
+function compute_auxiliary!(state, model::AbstractSurfaceEnergyBalanceModel, rad::PrescribedRadiativeFluxes)
+    launch!(model.grid, :xy, compute_net_radiation!, state, rad, model.atmosphere)
 end
 
 """
@@ -42,13 +40,20 @@ variables(::DiagnosedRadiativeFluxes) = (
     auxiliary(:RadNet, XY(), units=u"W/m^2", desc="Net radiation budget"),
 )
 
-function compute_auxiliary!(state, model, rad::DiagnosedRadiativeFluxes)
+function compute_auxiliary!(state, model::AbstractSurfaceEnergyBalanceModel, rad::DiagnosedRadiativeFluxes)
     grid = get_grid(model)
-    atmos = get_atmosphere(model)
-    skinT = get_skin_temperature(model)
-    albedo = get_albedo(model)
-    constants = get_constants(model)
-    launch!(grid, compute_radiative_fluxes!, state, grid, rad, atmos, skinT, albedo, constants)
+    launch!(
+        grid,
+        :xy,
+        compute_radiative_fluxes!,
+        state,
+        grid,
+        rad,
+        model.atmosphere,
+        model.skin_temperature,
+        model.albedo,
+        model.constants
+    )
 end
 
 # Kernels
@@ -58,8 +63,8 @@ end
     rad::AbstractRadiativeFluxes,
     atmos::AbstractAtmosphere,
     skinT::AbstractSkinTemperature,
-    albedo::AbstractAlbedo,
-    constants::PhysicalConstants
+    albd::AbstractAlbedo,
+    consts::PhysicalConstants
 )
     i, j = @index(Global, NTuple)
     idx = (i, j)
@@ -70,17 +75,18 @@ end
     SwIn = shortwave_in(idx, state, atmos)
     LwIn = longwave_in(idx, state, atmos)
     Tsurf = skin_temperature(idx, state, skinT)
-    α = albedo(idx, state, albedo)
-    ϵ = emissivity(idx, state, albedo)
+    α = albedo(idx, state, albd)
+    ϵ = emissivity(idx, state, albd)
 
     # compute outputs
     state.SwOut[i, j, 1] = SwOut = shortwave_out(rad, SwIn, α)
-    state.LwOut[i, j, 1] = LwOut = longwave_out(rad, constants, LwIn, Tsurf, ϵ)
+    state.LwOut[i, j, 1] = LwOut = longwave_out(rad, consts, LwIn, Tsurf, ϵ)
     state.RadNet[i, j, 1] = net_radiation(rad, SwIn, SwOut, LwIn, LwOut)
 end
 
 @kernel function compute_net_radiation!(state, rad::AbstractRadiativeFluxes, atmos::AbstractAtmosphere)
     i, j = @index(Global, NTuple)
+    idx = (i, j)
     # get inputs
     SwOut = state.SwOut[i, j]
     LwOut = state.LwOut[i, j]
