@@ -12,7 +12,7 @@ struct ModelState{
     Arch<:AbstractArchitecture,
     Grid<:AbstractLandGrid{NF, Arch},
     TimeStepper<:AbstractTimeStepper{NF},
-    Model<:AbstractModel{NF, Grid, TimeStepper},
+    Model<:AbstractModel{NF, Grid},
     StateVars<:AbstractStateVariables,
     Inputs<:InputProvider
 } <: Oceananigans.AbstractModel{TimeStepper, Arch}
@@ -30,6 +30,9 @@ struct ModelState{
 
     "Collection of all state variables defined on the simulation `model`."
     state::StateVars
+
+    "Time stepper"
+    timestepper::TimeStepper
 end
 
 # Oceananigans.AbstractModel interface
@@ -42,7 +45,7 @@ iteration(state::ModelState) = state.clock.iteration
 
 architecture(state::ModelState) = architecture(get_grid(state.model))
 
-timestepper(state::ModelState) = get_time_stepping(state.model)
+timestepper(state::ModelState) = get_time_stepping(state.timestepper)
 
 function update_state!(state::ModelState; compute_tendencies = true)
     reset_tendencies!(state.state)
@@ -125,9 +128,9 @@ Creates and initializes a `ModelState` for the given `model` with the given `clo
 This method allocates all necessary `Field`s for the state variables and calls `initialize!(::ModelState)`.
 Note that this method is **not type stable** and should not be called in an Enzyme `autodiff` call.
 """
-function initialize(model::AbstractModel{NF}, inputs::InputProvider; clock::Clock=Clock(time=zero(NF))) where {NF}
+function initialize(model::AbstractModel{NF}, inputs::InputProvider; clock::Clock=Clock(time=zero(NF)), timestepper::Type=ForwardEuler) where {NF}
     statevars = StateVariables(model, clock, inputs.fields)
-    state = ModelState(clock, get_grid(model), model, inputs, statevars)
+    state = ModelState(clock, get_grid(model), model, inputs, statevars, timestepper(statevars))
     initialize!(state)
     return state
 end

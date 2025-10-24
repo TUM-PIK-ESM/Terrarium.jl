@@ -72,6 +72,9 @@ function StateVariables(
     )
 end
 
+# TODO: just take the first prognostic variable for the eltype, bad idea?
+Base.eltype(vars::StateVariables) = eltype(vars.prognostic[1])
+
 Base.propertynames(
     vars::StateVariables{prognames, tendnames, auxnames, inputnames, nsnames, closures}
 ) where {prognames, tendnames, auxnames, inputnames, nsnames, closures} = (

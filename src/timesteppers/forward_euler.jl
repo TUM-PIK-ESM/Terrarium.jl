@@ -9,11 +9,11 @@ Simple forward Euler time stepping scheme.
 end
 
 """
-    ForwardEuler(::Type{NF}; kwargs...)
+    ForwardEuler(state::StateVariables; kwargs...)
 
 Create a `ForwardEuler` timestepper with the given numeric format `NF`.
 """
-ForwardEuler(::Type{NF}; kwargs...) where {NF} = ForwardEuler{NF}(; kwargs...)
+ForwardEuler(state::StateVariables; kwargs...) = ForwardEuler{eltype(state)}(; kwargs...)
 
 default_dt(euler::ForwardEuler) = euler.Δt
 
