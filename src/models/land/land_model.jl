@@ -5,7 +5,6 @@ struct LandModel{
     GroundModel<:AbstractGroundModel,
     SnowModel<:AbstractSnowModel,
     VegetationModel<:AbstractVegetationModel,
-    EnergyBalanceModel<:AbstractEnergyBalanceModel,
     HydrologyModel<:AbstractHydrologyModel,
     BoundaryConditions<:AbstractBoundaryConditions,
     Initializer<:AbstractInitializer,
@@ -22,9 +21,6 @@ struct LandModel{
 
     "Vegetation dynamics"
     vegetation::VegetationModel
-
-    "Surface energy balance"
-    energy::EnergyBalanceModel
     
     "Surface hydrology model"
     hydrology::HydrologyModel
