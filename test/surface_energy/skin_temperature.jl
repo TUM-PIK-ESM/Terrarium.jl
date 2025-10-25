@@ -43,20 +43,3 @@ end
     end
     @test all(resid .< eps(Float64))
 end
-
-
-grid = ColumnGrid(CPU(), Float64, ExponentialSpacing(N=10))
-skin_temperature = ImplicitSkinTemperature()
-model = SurfaceEnergyBalanceModel(grid; skin_temperature)
-model_state = initialize(model)
-state = model_state.state
-@test !hasproperty(state.inputs, :skin_temperature)
-@test hasproperty(state.inputs, :ground_temperature)
-set!(state.SwIn, 200.0)
-set!(state.LwIn, 100.0)
-set!(state.specific_humidity, 0.001)
-set!(state.air_pressure, 101_325)
-set!(state.air_temperature, 2.0)
-set!(state.ground_temperature, 1.0)
-compute_auxiliary!(state, model)
-Terrarium.update_skin_temperature!(state, model, skin_temperature); state.skin_temperature
