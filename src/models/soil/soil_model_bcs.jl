@@ -26,20 +26,20 @@ function get_field_boundary_conditions(bcs::SoilBC, grid::AbstractLandGrid)
 end
 
 """
-Alias for `PrescribedFlux` with name `Q_g` representing the net ground heat flux at the soil surface.
+Alias for `PrescribedFlux` with name `ground_heat_flux` representing the net ground heat flux at the soil surface.
 """
-GroundHeatFlux(init) = PrescribedFlux(:U, Input(:Q_g, init, units=u"W/m^2"))
+GroundHeatFlux(init=nothing) = PrescribedFlux(:internal_energy, Input(:ground_heat_flux, init, units=u"W/m^2"))
 
 """
 Alias for `PrescribedFlux` with name `Q_geo` representing the geothermal heat flux at the bottom
 boundary of the soil column.
 """
-GeothermalHeatFlux(init) = PrescribedFlux(:U, Input(:Q_geo, init, units=u"W/m^2"))
+GeothermalHeatFlux(init=nothing) = PrescribedFlux(:internal_energy, Input(:geothermal_heat_flux, init, units=u"W/m^2"))
 
 """
-Alias for `PrescribedFlux` with name `Q_inf` representing liquid water infiltration at the soil surface.
+Alias for `PrescribedFlux` with name `infiltration` representing liquid water infiltration at the soil surface.
 """
-InfiltrationFlux(init) = PrescribedFlux(:saturation_water_ice, Input(:Q_inf, init, units=u"m/s"))
+InfiltrationFlux(init=nothing) = PrescribedFlux(:saturation_water_ice, Input(:infiltration, init, units=u"m/s"))
 
 """
 Alias for `NoFlux` representing a zero-flux boundary condition for water flow (prognostic variable `saturation_water_ice`).
@@ -50,7 +50,7 @@ ImpermeableBoundary() = NoFlux(:saturation_water_ice)
 Alias for `PrescribedGradient` representing a Neumann-type zero pressure gradient at the bottom of the soil
 column, thereby allowing free drainage of water.
 """
-FreeDrainage(::Type{NF}) where {NF} = PrescribedGradient(:water_potential, zero(NF))
+FreeDrainage(::Type{NF}) where {NF} = PrescribedGradient(:pressure_head, zero(NF))
 
 """
 Alias for `ColumnBoundaryConditions` with defaults suitable for `SoilModel`s.
