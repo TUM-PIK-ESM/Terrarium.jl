@@ -346,7 +346,7 @@ end
     # Get inputs
     T_air = state.T_air[i, j] 
     pres = state.pressure[i, j] 
-    swdown = state.SwIn[i, j] 
+    swdown = state.surface_shortwave_down[i, j] 
     co2 = state.CO2[i, j]  
     LAI = state.LAI[i, j]
     λc = state.λc[i, j]

@@ -24,8 +24,8 @@ end
     state = model_state.state
     @test !hasproperty(state.inputs, :skin_temperature)
     @test hasproperty(state.inputs, :ground_temperature)
-    set!(state.SwIn, 200.0)
-    set!(state.LwIn, 100.0)
+    set!(state.surface_shortwave_down, 200.0)
+    set!(state.surface_longwave_down, 100.0)
     set!(state.specific_humidity, 0.001)
     set!(state.air_pressure, 101_325)
     set!(state.air_temperature, 2.0)

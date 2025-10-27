@@ -149,20 +149,20 @@ Retrieve or compute the frozen precipitation (snowfall) at the current time step
 struct LongShortWaveRadiation <: AbstractIncomingRadiation end
 
 variables(::LongShortWaveRadiation) = (
-    input(:SwIn, XY(), units=u"W/m^2", desc="Incoming (downwelling) shortwave solar radiation"),
-    input(:LwIn, XY(), units=u"W/m^2", desc="Incoming (downwelling) longwave thermal radiation"),
+    input(:surface_shortwave_down, XY(), units=u"W/m^2", desc="Incoming (downwelling) shortwave solar radiation"),
+    input(:surface_longwave_down, XY(), units=u"W/m^2", desc="Incoming (downwelling) longwave thermal radiation"),
 )
 
 """
     shortwave_in(idx, state, ::AbstractAtmosphere{PR, <:LongShortWaveRadiation})
 
-Retrieve or compute the frozen precipitation (snowfall) at the current time step.
+Retrieve or compute the incoming/downwelling shortwave radiation at the current time step.
 """
-shortwave_in(idx, state, ::AbstractAtmosphere{PR, <:LongShortWaveRadiation}) where {PR} = state.SwIn[idx...]
+shortwave_in(idx, state, ::AbstractAtmosphere{PR, <:LongShortWaveRadiation}) where {PR} = state.surface_shortwave_down[idx...]
 
 """
     longwave_in(idx, state, ::AbstractAtmosphere{PR, <:LongShortWaveRadiation})
 
-Retrieve or compute the frozen precipitation (snowfall) at the current time step.
+Retrieve or compute the incoming/downwelling longwave radiation at the current time step.
 """
-longwave_in(idx, state, ::AbstractAtmosphere{PR, <:LongShortWaveRadiation}) where {PR} = state.LwIn[idx...]
+longwave_in(idx, state, ::AbstractAtmosphere{PR, <:LongShortWaveRadiation}) where {PR} = state.surface_longwave_down[idx...]
