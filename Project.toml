@@ -22,5 +22,8 @@ Unitful = "1986cc42-f94f-5a68-af5c-568840ba703d"
 [weakdeps]
 Rasters = "a3a2b9e3-a471-40c9-b274-f788e487c689"
 
+[compat]
+SpeedyWeatherInternals = "0.1.2"
+
 [extensions]
 TerrariumRastersExt = "Rasters"
