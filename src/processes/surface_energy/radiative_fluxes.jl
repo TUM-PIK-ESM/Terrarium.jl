@@ -18,7 +18,7 @@ struct PrescribedRadiativeFluxes <: AbstractRadiativeFluxes end
 
 variables(::PrescribedRadiativeFluxes) = (
     input(:surface_shortwave_up, XY(), units=u"W/m^2", desc="Outoing (upwelling) shortwave radiation"),
-    input(:surface_longwave_out, XY(), units=u"W/m^2", desc="Outoing (upwelling) longwave radiation"),
+    input(:surface_longwave_up, XY(), units=u"W/m^2", desc="Outoing (upwelling) longwave radiation"),
     auxiliary(:net_incoming_radiation, XY(), units=u"W/m^2", desc="Net radiation budget"),
 )
 
@@ -37,7 +37,7 @@ struct DiagnosedRadiativeFluxes <: AbstractRadiativeFluxes end
 
 variables(::DiagnosedRadiativeFluxes) = (
     auxiliary(:surface_shortwave_up, XY(), units=u"W/m^2", desc="Outoing (upwelling) shortwave radiation"),
-    auxiliary(:surface_longwave_out, XY(), units=u"W/m^2", desc="Outoing (upwelling) longwave radiation"),
+    auxiliary(:surface_longwave_up, XY(), units=u"W/m^2", desc="Outoing (upwelling) longwave radiation"),
     auxiliary(:net_incoming_radiation, XY(), units=u"W/m^2", desc="Net radiation budget"),
 )
 
@@ -72,7 +72,7 @@ end
 
     # get inputs
     surface_shortwave_up = state.surface_shortwave_up[i, j]
-    surface_longwave_out = state.surface_longwave_out[i, j]
+    surface_longwave_up = state.surface_longwave_up[i, j]
     surface_shortwave_down = shortwave_in(idx, state, atmos)
     surface_longwave_down = longwave_in(idx, state, atmos)
     Tsurf = skin_temperature(idx, state, skinT)
@@ -81,8 +81,8 @@ end
 
     # compute outputs
     state.surface_shortwave_up[i, j, 1] = surface_shortwave_up = shortwave_out(rad, surface_shortwave_down, α)
-    state.surface_longwave_out[i, j, 1] = surface_longwave_out = longwave_out(rad, consts, surface_longwave_down, Tsurf, ϵ)
-    state.net_incoming_radiation[i, j, 1] = net_incoming_radiation(rad, surface_shortwave_down, surface_shortwave_up, surface_longwave_down, surface_longwave_out)
+    state.surface_longwave_up[i, j, 1] = surface_longwave_up = longwave_out(rad, consts, surface_longwave_down, Tsurf, ϵ)
+    state.net_incoming_radiation[i, j, 1] = net_incoming_radiation(rad, surface_shortwave_down, surface_shortwave_up, surface_longwave_down, surface_longwave_up)
 end
 
 @kernel function compute_net_radiation!(state, ::AbstractLandGrid, rad::AbstractRadiativeFluxes, atmos::AbstractAtmosphere)
@@ -90,24 +90,24 @@ end
     idx = (i, j)
     # get inputs
     surface_shortwave_up = state.surface_shortwave_up[i, j]
-    surface_longwave_out = state.surface_longwave_out[i, j]
+    surface_longwave_up = state.surface_longwave_up[i, j]
     surface_shortwave_down = shortwave_in(idx, state, atmos)
     surface_longwave_down = longwave_in(idx, state, atmos)
     
     # compute net radiation
-    state.net_incoming_radiation[i, j, 1] = net_incoming_radiation(rad, surface_shortwave_down, surface_shortwave_up, surface_longwave_down, surface_longwave_out)
+    state.net_incoming_radiation[i, j, 1] = net_incoming_radiation(rad, surface_shortwave_down, surface_shortwave_up, surface_longwave_down, surface_longwave_up)
 end
 
 # Kernel functions
 
 """
-    net_incoming_radiation(::AbstractRadiativeFluxes, surface_shortwave_down, surface_shortwave_up, surface_longwave_down, surface_longwave_out)
+    net_incoming_radiation(::AbstractRadiativeFluxes, surface_shortwave_down, surface_shortwave_up, surface_longwave_down, surface_longwave_up)
 
 Compute the net radiation budget given incoming and outgoing shortwave and longwave radiation.
 """
-@inline function net_incoming_radiation(::AbstractRadiativeFluxes, surface_shortwave_down, surface_shortwave_up, surface_longwave_down, surface_longwave_out)
+@inline function net_incoming_radiation(::AbstractRadiativeFluxes, surface_shortwave_down, surface_shortwave_up, surface_longwave_down, surface_longwave_up)
     # Sum up radiation fluxes; note that by convention fluxes are positive upward
-    net_incoming_radiation = surface_shortwave_up - surface_shortwave_down + surface_longwave_out - surface_longwave_down
+    net_incoming_radiation = surface_shortwave_up - surface_shortwave_down + surface_longwave_up - surface_longwave_down
     return net_incoming_radiation
 end
 
@@ -129,6 +129,6 @@ Compute outgoing longwave radiation from incoming `surface_longwave_down`, surfa
 @inline function longwave_out(::DiagnosedRadiativeFluxes, constants::PhysicalConstants, surface_longwave_down, Ts, ϵ)
     T = celsius_to_kelvin(constants, Ts)
     # outgoing LW radiation is the sum of the radiant emittance and the residual incoming radiation
-    surface_longwave_out = stefan_boltzmann(constants, T, ϵ) + (1 - ϵ) * surface_longwave_down
-    return surface_longwave_out
+    surface_longwave_up = stefan_boltzmann(constants, T, ϵ) + (1 - ϵ) * surface_longwave_down
+    return surface_longwave_up
 end
