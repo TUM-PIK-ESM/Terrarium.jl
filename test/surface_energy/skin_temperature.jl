@@ -5,7 +5,7 @@ using Test
     grid = ColumnGrid(CPU(), Float64, ExponentialSpacing(N=10))
     skin_temperature = PrescribedSkinTemperature()
     surface_energy_balance = SurfaceEnergyBalance(Float64; skin_temperature)
-    model = SurfaceEnergyModel(grid; surface_energy_balance)
+    model = SurfaceEnergyModel(grid, surface_energy_balance)
     model_state = initialize(model)
     state = model_state.state
     @test hasproperty(state.inputs, :skin_temperature)
@@ -19,7 +19,7 @@ end
     clock = Clock(time=0.0)
     skin_temperature = ImplicitSkinTemperature()
     surface_energy_balance = SurfaceEnergyBalance(Float64; skin_temperature)
-    model = SurfaceEnergyModel(grid; surface_energy_balance)
+    model = SurfaceEnergyModel(grid, surface_energy_balance)
     model_state = initialize(model)
     state = model_state.state
     @test !hasproperty(state.inputs, :skin_temperature)

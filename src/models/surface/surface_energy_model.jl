@@ -26,9 +26,9 @@ struct SurfaceEnergyModel{
 end
 
 function SurfaceEnergyModel(
-    grid::AbstractLandGrid{NF};
+    grid::AbstractLandGrid{NF},
+    surface_energy_balance::AbstractSurfaceEnergyBalance = SurfaceEnergyBalance(NF);
     atmosphere::AbstractAtmosphere = PrescribedAtmosphere(NF),
-    surface_energy_balance::AbstractSurfaceEnergyBalance = SurfaceEnergyBalance(NF),
     constants::PhysicalConstants = PhysicalConstants(NF),
     initializer::AbstractInitializer = DefaultInitializer(),
     time_stepping::AbstractTimeStepper = ForwardEuler(NF)
