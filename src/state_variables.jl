@@ -72,6 +72,9 @@ function StateVariables(
     )
 end
 
+# TODO: just take the first prognostic variable for the eltype, bad idea?
+Base.eltype(vars::StateVariables) = eltype(vars.prognostic[1])
+
 Base.propertynames(
     vars::StateVariables{prognames, tendnames, auxnames, inputnames, nsnames, closures}
 ) where {prognames, tendnames, auxnames, inputnames, nsnames, closures} = (
@@ -118,6 +121,31 @@ function Base.fill!(
         fill!(getproperty(state, auxname), value)
     end
     return nothing 
+end
+
+function Base.copyto!(
+    state::StateVariables{prognames, tendnames, auxnames, inputnames, nsnames, closurenames}, 
+    other::StateVariables{prognames, tendnames, auxnames, inputnames, nsnames, closurenames}
+) where {prognames, tendnames, auxnames, inputnames, nsnames, closurenames}
+    
+    for progname in prognames
+        copyto!(getproperty(state, progname), getproperty(other, progname))
+    end
+    for tendname in tendnames
+        copyto!(getproperty(state, tendname), getproperty(other, tendname))
+    end
+    for auxname in auxnames
+        copyto!(getproperty(state, auxname), getproperty(other, auxname))
+    end
+    for inputname in inputnames
+        copyto!(getproperty(state.inputs, inputname), getproperty(other.inputs, inputname))
+    end
+    for nsname in nsnames
+        copyto!(getproperty(state.namespaces, nsname), getproperty(other.namespaces, nsname))
+    end
+    # currently clock isn't copied, not defined, and not our type
+    #copyto!(state.clock, other.clock)
+    return nothing
 end
 
 function fill_halo_regions!(state::StateVariables)

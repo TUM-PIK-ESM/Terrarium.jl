@@ -16,8 +16,7 @@ $(TYPEDFIELDS)
     Constants<:PhysicalConstants{NF},
     BoundaryConditions<:AbstractBoundaryConditions,
     Initializer<:AbstractInitializer,
-    TimeStepper<:AbstractTimeStepper,
-} <: AbstractSoilModel{NF, GridType, TimeStepper}
+} <: AbstractSoilModel{NF, GridType}
     "Spatial grid type"
     grid::GridType
 
@@ -41,9 +40,6 @@ $(TYPEDFIELDS)
 
     "State variable initializer"
     initializer::Initializer = SoilInitializer()
-
-    "Timestepping scheme"
-    time_stepping::TimeStepper = ForwardEuler(eltype(grid))
 end
 
 # SoilModel getter methods

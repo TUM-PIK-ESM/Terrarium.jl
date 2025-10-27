@@ -106,6 +106,8 @@ include("boundary_conditions.jl")
 # timestepper implementations
 export ForwardEuler
 include("timesteppers/forward_euler.jl")
+export Heun
+include("timesteppers/heun.jl")
 
 # physical processes
 include("processes/processes.jl")

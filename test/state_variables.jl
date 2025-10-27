@@ -7,11 +7,10 @@ import Terrarium: AbstractLandGrid, VarDims, XY, XYZ, prognostic, auxiliary, inp
 
 DEFAULT_NF = Float32
 
-@kwdef struct SubModel{NF, Grid<:AbstractLandGrid{NF}, TS} <: Terrarium.AbstractModel{NF, Grid, TS}
+@kwdef struct SubModel{NF, Grid<:AbstractLandGrid{NF}} <: Terrarium.AbstractModel{NF, Grid}
     grid::Grid
     initializer = DefaultInitializer()
     boundary_conditions = DefaultBoundaryConditions()
-    time_stepping::TS = Terrarium.ForwardEuler{DEFAULT_NF}()
 end
 
 Terrarium.variables(model::SubModel) = (
@@ -21,12 +20,11 @@ Terrarium.variables(model::SubModel) = (
     input(:forcing, XY()),
 )
 
-@kwdef struct TestModel{NF, Grid<:AbstractLandGrid{NF}, TS} <: Terrarium.AbstractModel{NF, Grid, TS}
+@kwdef struct TestModel{NF, Grid<:AbstractLandGrid{NF}} <: Terrarium.AbstractModel{NF, Grid}
     grid::Grid
     submodel = SubModel(; grid)
     initializer = DefaultInitializer()
     boundary_conditions = DefaultBoundaryConditions()
-    time_stepping::TS = Terrarium.ForwardEuler{DEFAULT_NF}()
 end
 
 struct TestClosure <: Terrarium.AbstractClosureRelation end
