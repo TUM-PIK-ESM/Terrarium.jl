@@ -31,7 +31,7 @@ function dostep!(state, model, timestepper, Δt)
     # return Tavg[1,1,1]
 end
 
-dostep!(state, model, modelstate.time_stepping, 1.0)
+dostep!(state, model, modelstate.timestepper, 1.0)
 
 @testset "Soil model: timestep!" begin
     @time Enzyme.autodiff(set_runtime_activity(Reverse), dostep!, Active, Duplicated(state, dstate), Const(model), Const(modelstate.time_stepping), Const(modelstate.time_stepping.Δt))
