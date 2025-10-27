@@ -60,7 +60,7 @@ Diagnose the ground heat flux as the residual of the net radiation budget and tu
 @kernel function compute_ground_heat_flux_kernel!(state, grid, ::AbstractSkinTemperature)
     i, j = @index(Global, NTuple)
     # compute flux terms
-    R_net = state.RadNet[i, j]
+    R_net = state.net_incoming_radiation[i, j]
     H_s = state.sensible_heat_flux[i, j]
     H_l = state.latent_heat_flux[i, j]
     # compute ground heat flux as residual of R_net and turbulent fluxes

@@ -80,11 +80,11 @@ Base type for radiation budget schemes.
 abstract type AbstractRadiativeFluxes <: AbstractProcess end
 
 """
-    net_radiation(idx, state, ::AbstractRadiativeFluxes)
+    net_incoming_radiation(idx, state, ::AbstractRadiativeFluxes)
 
 Return the current net radiation at the given `idx`.
 """
-function net_radiation end
+function net_incoming_radiation end
 
 """
 Base type for turbulent (latent and sensible) heat fluxes at the surface.
