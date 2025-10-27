@@ -4,7 +4,8 @@ using Test
 @testset "Prescribed turbulent fluxes" begin
     grid = ColumnGrid(CPU(), Float64, ExponentialSpacing(N=10))
     turbulent_fluxes = PrescribedTurbulentFluxes()
-    model = SurfaceEnergyModel(grid; turbulent_fluxes)
+    surface_energy_balance = SurfaceEnergyBalance(Float64; turbulent_fluxes)
+    model = SurfaceEnergyModel(grid, surface_energy_balance)
     model_state = initialize(model)
     state = model_state.state
     @test hasproperty(state.inputs, :sensible_heat_flux)
@@ -18,7 +19,8 @@ end
 @testset "Diagnosed turbulent fluxes" begin
     grid = ColumnGrid(CPU(), Float64, ExponentialSpacing(N=10))
     turbulent_fluxes = DiagnosedTurbulentFluxes(Float64)
-    model = SurfaceEnergyModel(grid; turbulent_fluxes)
+    surface_energy_balance = SurfaceEnergyBalance(Float64; turbulent_fluxes)
+    model = SurfaceEnergyModel(grid, surface_energy_balance)
     model_state = initialize(model)
     state = model_state.state
     @test !hasproperty(state.inputs, :sensible_heat_flux)

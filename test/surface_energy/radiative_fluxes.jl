@@ -5,7 +5,7 @@ using Test
     grid = ColumnGrid(CPU(), Float64, ExponentialSpacing(N=10))
     radiative_fluxes = PrescribedRadiativeFluxes()
     surface_energy_balance = SurfaceEnergyBalance(Float64; radiative_fluxes)
-    model = SurfaceEnergyModel(grid; surface_energy_balance)
+    model = SurfaceEnergyModel(grid, surface_energy_balance)
     model_state = initialize(model)
     state = model_state.state
     @test hasproperty(state.inputs, :surface_shortwave_up)
@@ -23,7 +23,7 @@ end
     radiative_fluxes = DiagnosedRadiativeFluxes()
     albedo = ConstantAlbedo(albedo=0.5, emissivity=0.9)
     surface_energy_balance = SurfaceEnergyBalance(Float64; radiative_fluxes, albedo)
-    model = SurfaceEnergyModel(grid; surface_energy_balance)
+    model = SurfaceEnergyModel(grid, surface_energy_balance)
     model_state = initialize(model)
     state = model_state.state
     @test !hasproperty(state.inputs, :surface_shortwave_up)
