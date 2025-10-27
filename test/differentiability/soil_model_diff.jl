@@ -34,7 +34,7 @@ end
 dostep!(state, model, modelstate.timestepper, 1.0)
 
 @testset "Soil model: timestep!" begin
-    @time Enzyme.autodiff(set_runtime_activity(Reverse), dostep!, Active, Duplicated(state, dstate), Const(model), Const(modelstate.time_stepping), Const(modelstate.time_stepping.Δt))
+    @time Enzyme.autodiff(set_runtime_activity(Reverse), dostep!, Active, Duplicated(state, dstate), Const(model), Const(modelstate.timestepper), Const(modelstate.timestepper.Δt))
     @test all(isfinite.(dstate.temperature))
 end
 
