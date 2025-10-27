@@ -52,13 +52,6 @@ Return the spatial grid associated with this `model`.
 get_grid(model::AbstractModel) = model.grid
 
 """
-    get_time_stepping(model::AbstractModel)::AbstractTimeStepper
-
-Returns the time stepping scheme associated with this `model`.
-"""
-get_time_stepping(model::AbstractModel) = model.time_stepping
-
-"""
     get_boundary_conditions(model::AbstractModel)::AbstractBoundaryConditions
 
 Returns the boundary conditions associated with this `model`.
@@ -71,11 +64,6 @@ get_boundary_conditions(model::AbstractModel) = model.boundary_conditions
 Returns the initializer associated with this `model`.
 """
 get_initializer(model::AbstractModel) = model.initializer
-
-"""
-Convenience dispatch for `timestep!` that forwards to `timestep!(state, model, get_time_stepping(model), Δt)`.
-"""
-timestep!(state, model::AbstractModel, Δt) = timestep!(state, model, get_time_stepping(model), Δt)
 
 # TODO: define general method interfaces (as needed) for all model types
 
