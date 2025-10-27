@@ -123,6 +123,31 @@ function Base.fill!(
     return nothing 
 end
 
+function Base.copyto!(
+    state::StateVariables{prognames, tendnames, auxnames, inputnames, nsnames, closurenames}, 
+    other::StateVariables{prognames, tendnames, auxnames, inputnames, nsnames, closurenames}
+) where {prognames, tendnames, auxnames, inputnames, nsnames, closurenames}
+    
+    for progname in prognames
+        copyto!(getproperty(state, progname), getproperty(other, progname))
+    end
+    for tendname in tendnames
+        copyto!(getproperty(state, tendname), getproperty(other, tendname))
+    end
+    for auxname in auxnames
+        copyto!(getproperty(state, auxname), getproperty(other, auxname))
+    end
+    for inputname in inputnames
+        copyto!(getproperty(state.inputs, inputname), getproperty(other.inputs, inputname))
+    end
+    for nsname in nsnames
+        copyto!(getproperty(state.namespaces, nsname), getproperty(other.namespaces, nsname))
+    end
+    # currently clock isn't copied, not defined, and not our type
+    #copyto!(state.clock, other.clock)
+    return nothing
+end
+
 function fill_halo_regions!(state::StateVariables)
     # fill_halo_regions! for all prognostic variables
     fastiterate(state.prognostic) do field

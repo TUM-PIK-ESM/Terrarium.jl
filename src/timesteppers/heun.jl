@@ -12,7 +12,7 @@ Simple forward 2nd order Heun / improved Euler time stepping scheme.
 end
 
 """
-    Heun(state::StateVariables; kwargs...)
+    Heun(state::StateVariables, Δt=300)
 
 Create a `Heun` timestepper for the given state variables.
 """
@@ -34,18 +34,18 @@ function timestep!(state, model::AbstractModel, timestepper::Heun, Δt = default
     
     # trial step 
     compute_auxiliary!(state, model) 
-    compute_tendency!(state, model) 
+    compute_tendencies!(state, model) 
 
-    copy!(cache, state)
+    copyto!(cache, state)
 
     # improved step 
-    explicit_step(cache, model, timestepper, Δt) # for 2nd order Euler you don't do a step in the middle   
+    explicit_step!(cache, get_grid(model), timestepper, Δt)  
     compute_auxiliary!(cache, model) 
-    compute_tendency!(cache, model) 
+    compute_tendencies!(cache, model) 
 
-    # improved Euler step call that steps `state` forward but averages `state.tendencies` 
+    # final improved Euler step call that steps `state` forward but averages `state.tendencies` 
     average_tendencies!(state, cache)
-    explicit_step(state, model, timestepper, Δt) 
+    explicit_step!(state, get_grid(model), timestepper, Δt) 
     
     # Apply inverse closure relations
     for closure in state.closures

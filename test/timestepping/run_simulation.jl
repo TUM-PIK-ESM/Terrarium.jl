@@ -29,8 +29,8 @@ end
 
 @testset "run! SoilModel w/ Heun" begin
     grid = ColumnRingGrid(CPU(), Float64, ExponentialSpacing(N=50), RingGrids.FullHEALPixGrid(16))
-    model = SoilModel(; grid, time_stepping=Heun())
-    state = initialize(model)
+    model = SoilModel(; grid)
+    state = initialize(model, timestepper=Heun)
 
     run!(state; steps=2)
     @test all(isfinite.(state.state.temperature))
