@@ -79,7 +79,7 @@ end
 
 function PrescribedAtmosphere(
     ::Type{NF};
-    altitude::NF = 10.0, # Default to 10 m
+    altitude::NF = NF(10), # Default to 10 m
     humidity::AbstractHumidity = SpecificHumidity(),
     precip::AbstractPrecipitation = TwoPhasePrecipitation(),
     radiation::AbstractIncomingRadiation = LongShortWaveRadiation(),
