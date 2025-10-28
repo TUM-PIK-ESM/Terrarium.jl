@@ -14,6 +14,7 @@ is invoked recursively on the entry matching the name of `var`, if it exists. Ot
 returned.
 """
 get_field_boundary_conditions(::AbstractBoundaryConditions, grid::AbstractLandGrid) = (;)
+get_field_boundary_conditions(::Nothing, grid::AbstractLandGrid) = (;)
 get_field_boundary_conditions(bc::BoundaryCondition, ::AbstractLandGrid) = bc
 get_field_boundary_conditions(bcs::FieldBCs, ::AbstractLandGrid) = bcs
 
@@ -82,17 +83,17 @@ end
 
 # Convenience aliases for PrescribedBC
 NoFlux(progvar::Symbol) = PrescribedBC(progvar, NoFluxBoundaryCondition())
-PrescribedFlux(progvar::Symbol, value; kwargs...) = PrescribedBC(progvar, FluxBoundaryCondition(value; kwargs...))
-PrescribedValue(progvar::Symbol, value; kwargs...) = PrescribedBC(progvar, ValueBoundaryCondition(value; kwargs...))
-PrescribedGradient(progvar::Symbol, value; kwargs...) = PrescribedBC(progvar, GradientBoundaryCondition(value; kwargs...))
+PrescribedFlux(progvar::Symbol, condition; kwargs...) = PrescribedBC(progvar, FluxBoundaryCondition(condition; kwargs...))
+PrescribedValue(progvar::Symbol, condition; kwargs...) = PrescribedBC(progvar, ValueBoundaryCondition(condition; kwargs...))
+PrescribedGradient(progvar::Symbol, condition; kwargs...) = PrescribedBC(progvar, GradientBoundaryCondition(condition; kwargs...))
 
 """
 Implementation of `Oceananigans.BoundaryConditions.getbc` for `Input{name}` placeholders that retrieves the input `Field` from
-`state.inputs` and returns the value at the given index.
+`state` and returns the value at the given index.
 """
 @inline function getbc(::Input{name, units, <:XY}, i::Integer, j::Integer, grid::OceananigansGrids.AbstractGrid, clock, state) where {name, units}
-    input_field = getproperty(state.inputs, name)
-    return @inbounds input_field[i, j]
+    field = getproperty(state, name)
+    return @inbounds field[i, j]
 end
 
 """

@@ -28,6 +28,10 @@ compute_auxiliary!(state, model, ::AbstractProcess) = nothing
 
 compute_tendencies!(state, model, ::AbstractProcess) = nothing
 
+# also allow dispatch on nothing
+compute_auxiliary!(state, model, ::Nothing) = nothing
+compute_tendencies!(state, model, ::Nothing) = nothing
+
 # Soil process types
 # TODO: Think more about these process types and what methods they should have.
 
