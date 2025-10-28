@@ -11,5 +11,5 @@ using Oceananigans: Field
     atm = PrescribedAtmosphere(; grid, precip, solar, T_air, humidity, pressure, windspeed, tracers)
     @test haskey(atm.tracers, :CO2)
     atm_varnames = map(Terrarium.varname, variables(atm))
-    @test all(map(∈(atm_varnames), (:T_air, :humidity, :pressure, :windspeed, :rainfall, :snowfall, :SwIn, :LwIn, :CO2)))
+    @test all(map(∈(atm_varnames), (:T_air, :humidity, :pressure, :windspeed, :rainfall, :snowfall, :surface_shortwave_down, :surface_longwave_down, :CO2)))
 end

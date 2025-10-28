@@ -77,6 +77,28 @@ Convenience dispatch for `timestep!` that forwards to `timestep!(state, model, g
 """
 timestep!(state, model::AbstractModel, Δt) = timestep!(state, model, get_time_stepping(model), Δt)
 
+"""
+Convenience constructor for all `AbstractLandModel` types that allows the `grid` to be passed
+as the first positional argument.
+"""
+(::Type{Model})(grid::AbstractLandGrid; kwargs...) where {Model<:AbstractModel} = Model(; grid, kwargs...)
+
+function Adapt.adapt_structure(to, model::AbstractModel)
+    return setproperties(model, map(prop -> Adapt.adapt(to, prop), getproperties(model)))
+end
+
+function Base.show(io::IO, mime::MIME"text/plain", model::AbstractModel{NF}) where {NF}
+    println(io, "$(nameof(typeof(model))){$NF} with $(nameof(typeof(get_grid(model)))) on $(architecture(get_grid(model)))")
+    for name in propertynames(model)
+        print(io, "  $name:  ")
+        # Indent property value by two spaces
+        show(IOContext(io, :indent => 2), mime, getproperty(model, name))
+        println(io)
+    end
+end
+
+# Abstract subtypes
+
 # TODO: define general method interfaces (as needed) for all model types
 
 """
@@ -85,6 +107,13 @@ timestep!(state, model::AbstractModel, Δt) = timestep!(state, model, get_time_s
 Base type for ground (e.g. soil and rock) models.
 """
 abstract type AbstractGroundModel{NF, GR, TS} <: AbstractModel{NF, GR, TS} end
+
+"""
+    $TYPEDEF
+
+Base type for land-atmosphere energy exchange models.
+"""
+abstract type AbstractSurfaceEnergyModel{NF, GR, TS} <: AbstractModel{NF, GR, TS} end
 
 """
     $TYPEDEF
@@ -110,13 +139,6 @@ abstract type AbstractVegetationModel{NF, GR, TS} <: AbstractModel{NF, GR, TS} e
 """
     $TYPEDEF
 
-Base type for surface energy balance models.
-"""
-abstract type AbstractEnergyBalanceModel{NF, GR, TS} <: AbstractModel{NF, GR, TS} end
-
-"""
-    $TYPEDEF
-
 Base type for surface hydrology models.
 """
 abstract type AbstractHydrologyModel{NF, GR, TS} <: AbstractModel{NF, GR, TS} end
@@ -127,23 +149,3 @@ abstract type AbstractHydrologyModel{NF, GR, TS} <: AbstractModel{NF, GR, TS} en
 Base type for full land models which couple together multiple component models.
 """
 abstract type AbstractLandModel{NF, GR, TS} <: AbstractModel{NF, GR, TS} end
-
-"""
-Convenience constructor for all `AbstractLandModel` types that allows the `grid` to be passed
-as the first positional argument.
-"""
-(::Type{Model})(grid::AbstractLandGrid; kwargs...) where {Model<:AbstractModel} = Model(; grid, kwargs...)
-
-function Adapt.adapt_structure(to, model::AbstractModel)
-    return setproperties(model, map(prop -> Adapt.adapt(to, prop), getproperties(model)))
-end
-
-function Base.show(io::IO, mime::MIME"text/plain", model::AbstractModel{NF}) where {NF}
-    println(io, "$(nameof(typeof(model))){$NF} with $(nameof(typeof(get_grid(model)))) on $(architecture(get_grid(model)))")
-    for name in propertynames(model)
-        print(io, "  $name:  ")
-        # Indent property value by two spaces
-        show(IOContext(io, :indent => 2), mime, getproperty(model, name))
-        println(io)
-    end
-end

@@ -1,7 +1,12 @@
-# Convenience dispatch for Oceananigans.launch!
-function launch!(grid::AbstractLandGrid, workspec::Symbol, args...; kwargs...)
-    _grid = get_field_grid(grid)
-    launch!(_grid.architecture, _grid, workspec, args...; kwargs...)
+# Convenience dispatches for Oceananigans.launch!
+function launch!(grid::AbstractLandGrid, workspec::Symbol, kernel::Function, args...; kwargs...)
+    fgrid = get_field_grid(grid)
+    launch!(fgrid.architecture, fgrid, workspec, kernel, args...; kwargs...)
+end
+
+function launch!(state, grid::AbstractLandGrid, workspec::Symbol, kernel::Function, args...; kwargs...)
+    fgrid = get_field_grid(grid)
+    launch!(fgrid.architecture, fgrid, workspec, kernel, state, grid, args...; kwargs...)
 end
 
 """
@@ -23,6 +28,13 @@ const RingGridOrField = Union{RingGrids.AbstractGrid, RingGrids.AbstractField}
 
 on_architecture(::GPU, obj::RingGridOrField) = RingGrids.Architectures.on_architecture(RingGrids.Architectures.GPU(), obj)
 on_architecture(::CPU, obj::RingGridOrField) = RingGrids.Architectures.on_architecture(RingGrids.Architectures.CPU(), obj)
+
+# Field utilities
+
+# A bit of type piracy to allow `Field`s to be indexed with tuples
+# TODO: Consider proposing this as a change in Oceananigans
+@inline @propagate_inbounds Base.getindex(field::Field, idx::NTuple{2, Integer}) = field[idx...]
+@inline @propagate_inbounds Base.getindex(field::Field, idx::NTuple{3, Integer}) = field[idx...]
 
 # Field construction
 
@@ -58,6 +70,15 @@ function Field(
     return field
 end
 
+"""
+    FieldTimeSeries(
+        grid::AbstractLandGrid,
+        dims::VarDims,
+        times=eltype(grid)[]
+    )
+
+Construct a `FieldTimeSeries` on the given land `grid` with the given `dims` and `times`.
+"""
 function FieldTimeSeries(
     grid::AbstractLandGrid,
     dims::VarDims,

@@ -1,7 +1,3 @@
-abstract type AbstractSolarRadiation end
-
-abstract type AbstractPrecipitation end
-
 """
 Generic type representing the concentration of a particular tracer gas in the atmosphere.
 """
@@ -16,9 +12,10 @@ variables(::TracerGas{name}) where {name} = (
 )
 
 """
-Creates a `TracerGas` for ambient CO2 with a prescribed concentration `conc`.
+Creates a `TracerGas` for ambient CO2 with concentration prescribed by an input variable with
+the given name.
 """
-AmbientCO2() = TracerGas(:CO2)
+AmbientCO2(name=:CO2) = TracerGas(name)
 
 """
 Creates a `NamedTuple` from the given tracer gas types.
@@ -26,45 +23,107 @@ Creates a `NamedTuple` from the given tracer gas types.
 TracerGases(tracers::TracerGas...) = (; map(tracer -> nameof(tracer) => tracer, tracers)...)
 
 """
+    $TYPEDEF
+
+Represents prescribed atmospheric conditions given by the following input variables:
+    - Air temperature
+    - Humidity
+    - Atmospheric pressure
+    - Windspeed
+    - Precipitation
+    - Solar radiation
+    - Zero or more tracer gases (defaults to CO2 only)
+
+Precpitation and solar radiation are specified according to specialized subtypes which dictate
+the form of the input data; for precipitation, this defaults to `TwoPhasePrecipitation`, i.e.
+rain- and snowfall given as separate inputs, while for solar radiation, the default is
+`LongShortWaveRadiation` which partitions downwelling radiation into the common short- and long
+wave lengths representing solar and thermal (infrared) radiation.
 """
-@kwdef struct PrescribedAtmosphere{
+struct PrescribedAtmosphere{
     NF,
-    tracervars,
-    AirTemp,
-    Humidity,
-    Pressure,
-    Windspeed,
+    tracernames,
+    Humid<:AbstractHumidity,
     Precip<:AbstractPrecipitation,
-    SolarRad<:AbstractSolarRadiation,
-    Tracers<:NamedTuple{tracervars,<:Tuple{Vararg{TracerGas}}},
-    Grid<:AbstractLandGrid{NF},
-} <: AbstractBoundaryConditions
-    "Spatial grid"
-    grid::Grid
-
+    IncomingRad<:AbstractIncomingRadiation,
+    Tracers<:NamedTuple{tracernames,<:Tuple{Vararg{TracerGas}}}
+} <: AbstractAtmosphere{Precip, IncomingRad, Humid}
     "Surface-relative altitude in meters at which the atmospheric forcings are assumed to be applied"
-    altitude::NF = 2*one(eltype(grid)) # Default to 2 m
+    altitude::NF
 
-    "Precipitation scheme"
-    precip::Precip = TwoPhasePrecipitation()
+    "Specific or relative humidity"
+    humidity::Humid
 
-    "Downwelling solar radiation scheme"
-    solar::SolarRad = TwoBandSolarRadiation()
+    "Precipitation inputs"
+    precip::Precip
+
+    "Downwelling radiation inputs"
+    radiation::IncomingRad
 
     "Atmospheric tracer gases"
-    tracers::Tracers = TracerGases(AmbientCO2())
+    tracers::Tracers
 end
 
-variables(atm::PrescribedAtmosphere) = (
-    input(:T_air, XY(), units=u"°C", desc="Near-surface air temperature in °C"),
-    input(:humidity, XY(), units=u"kg/kg", desc="Near-surface specific humidity in kg/kg"),
-    input(:pressure, XY(), units=u"Pa", desc="Atmospheric pressure at the surface in Pa"),
+function PrescribedAtmosphere(
+    ::Type{NF};
+    altitude::NF = 10.0, # Default to 10 m
+    humidity::AbstractHumidity = SpecificHumidity(),
+    precip::AbstractPrecipitation = TwoPhasePrecipitation(),
+    radiation::AbstractIncomingRadiation = LongShortWaveRadiation(),
+    tracers::NamedTuple = TracerGases(AmbientCO2()),
+) where {NF}
+    return PrescribedAtmosphere(altitude, humidity, precip, radiation, tracers)
+end
+
+variables(atmos::PrescribedAtmosphere) = (
+    input(:air_temperature, XY(), units=u"°C", desc="Near-surface air temperature in °C"),
+    input(:air_pressure, XY(), units=u"Pa", desc="Atmospheric pressure at the surface in Pa"),
     input(:windspeed, XY(), units=u"m/s", desc="Wind speed in m/s"),
-    variables(atm.precip)...,
-    variables(atm.solar)...,
-    # splat all tracer variables into tuple
-    tuplejoin(map(variables, atm.tracers)...)...,
+    variables(atmos.humidity)...,
+    variables(atmos.precip)...,
+    variables(atmos.radiation)...,
+    # splat all tracer variables into one tuple
+    tuplejoin(map(variables, atmos.tracers)...)...,
 )
+
+@inline compute_auxiliary!(state, model, atmos::PrescribedAtmosphere) = nothing
+
+@inline compute_tendencies!(state, model, atmos::PrescribedAtmosphere) = nothing
+
+"""
+    air_temperature(idx, state, ::PrescribedAtmosphere)
+
+Retrieve or compute the air temperature at the current time step.
+"""
+@inline air_temperature(idx, state, ::PrescribedAtmosphere) = state.air_temperature[idx]
+
+"""
+    air_pressure(idx, state, ::PrescribedAtmosphere)
+
+Retrieve or compute the air pressure at the current time step.
+"""
+@inline air_pressure(idx, state, ::PrescribedAtmosphere) = state.air_pressure[idx]
+
+"""
+    windspeed(idx, state, ::PrescribedAtmosphere)
+
+Retrieve or compute the windspeed at the current time step.
+"""
+@inline windspeed(idx, state, ::PrescribedAtmosphere) = state.windspeed[idx]
+
+struct SpecificHumidity <: AbstractHumidity end
+
+variables(::SpecificHumidity) = (
+    input(:specific_humidity, XY(), units=u"kg/kg", desc="Near-surface specific humidity in kg/kg"),
+)
+
+"""
+    specific_humidity(idx, state, ::PrescribedAtmosphere{PR, IR, <:SpecificHumidity})
+
+Retrieve or compute the specific_humidity at the current time step.
+"""
+@inline specific_humidity(idx, state, ::AbstractAtmosphere{PR, IR, <:SpecificHumidity}) where {PR, IR} = state.specific_humidity[idx]
+
 
 struct TwoPhasePrecipitation <: AbstractPrecipitation end
 
@@ -73,9 +132,37 @@ variables(::TwoPhasePrecipitation) = (
     input(:snowfall, XY(), units=u"m/s", desc="Frozen precipitation (snowfall) rate"),
 )
 
-struct TwoBandSolarRadiation <: AbstractSolarRadiation end
+"""
+    rainfall(idx, state, ::AbstractAtmosphere{<:TwoPhasePrecipitation})
 
-variables(::TwoBandSolarRadiation) = (
-    input(:SwIn, XY(), units=u"W/m^2", desc="Incoming (downwelling) shortwave radiation"),
-    input(:LwIn, XY(), units=u"W/m^2", desc="Incoming (downwelling) longwave radiation"),
+Retrieve or compute the liquid precipitation (rainfall) at the current time step.
+"""
+@inline rainfall(idx, state, ::AbstractAtmosphere{<:TwoPhasePrecipitation}) = state.rainfall[idx]
+
+"""
+    snowfall(idx, state, ::AbstractAtmosphere{<:TwoPhasePrecipitation})
+
+Retrieve or compute the frozen precipitation (snowfall) at the current time step.
+"""
+@inline snowfall(idx, state, ::AbstractAtmosphere{<:TwoPhasePrecipitation}) = state.snowfall[idx]
+
+struct LongShortWaveRadiation <: AbstractIncomingRadiation end
+
+variables(::LongShortWaveRadiation) = (
+    input(:surface_shortwave_down, XY(), units=u"W/m^2", desc="Incoming (downwelling) shortwave solar radiation"),
+    input(:surface_longwave_down, XY(), units=u"W/m^2", desc="Incoming (downwelling) longwave thermal radiation"),
 )
+
+"""
+    shortwave_in(idx, state, ::AbstractAtmosphere{PR, <:LongShortWaveRadiation})
+
+Retrieve or compute the incoming/downwelling shortwave radiation at the current time step.
+"""
+shortwave_in(idx, state, ::AbstractAtmosphere{PR, <:LongShortWaveRadiation}) where {PR} = state.surface_shortwave_down[idx...]
+
+"""
+    longwave_in(idx, state, ::AbstractAtmosphere{PR, <:LongShortWaveRadiation})
+
+Retrieve or compute the incoming/downwelling longwave radiation at the current time step.
+"""
+longwave_in(idx, state, ::AbstractAtmosphere{PR, <:LongShortWaveRadiation}) where {PR} = state.surface_longwave_down[idx...]
