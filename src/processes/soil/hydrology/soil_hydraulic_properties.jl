@@ -67,7 +67,7 @@ $TYPEDFIELDS
 """
 @kwdef struct ConstantHydraulics{NF, UnsatK} <: AbstractSoilHydraulics{NF, UnsatK}
     "Unsaturated hydraulic conductivity formulation; defaults to `cond_sat`"
-    cond_unsat::UnsatK = UnsatKLinear()
+    cond_unsat::UnsatK
 
     "Hydraulic conductivity at saturation [m/s]"
     cond_sat::NF = 1e-5
@@ -102,7 +102,7 @@ $TYPEDFIELDS
 """
 @kwdef struct SoilHydraulicsSURFEX{NF, UnsatK} <: AbstractSoilHydraulics{NF, UnsatK}
     "Unsaturated hydraulic conductivity formulation; defaults to `cond_sat`"
-    cond_unsat::UnsatK = UnsatKLinear()
+    cond_unsat::UnsatK
 
     "Hydraulic conductivity at saturation [m/s]"
     cond_sat::NF = 1e-5
@@ -192,7 +192,7 @@ struct UnsatKVanGenuchten{NF, RetentionCurve<:FreezeCurves.VanGenuchten} <: Abst
     swrc::RetentionCurve
 end
 
-UnsatKVanGenuchten(::Type{NF}; impedance::NF = 7, swrc=FreezeCurves.VanGenuchten()) where {NF} = UnsatKVanGenuchten(NF(impedance), adapt(NF, ustrip(swrc)))
+UnsatKVanGenuchten(::Type{NF}; impedance::NF = NF(7), swrc=FreezeCurves.VanGenuchten()) where {NF} = UnsatKVanGenuchten(NF(impedance), adapt(NF, ustrip(swrc)))
 
 function hydraulic_conductivity(
     hydraulics::AbstractSoilHydraulics{NF, <:UnsatKVanGenuchten},

@@ -43,7 +43,7 @@ end
     biogeochem = ConstantSoilCarbonDenisty(ρ_soc=0.0)
     # set porosity to zero to remove influence of pore space;
     # this is just a hack to configure the model to simulate heat conduction in a fully solid medium
-    hydraulic_properties = ConstantHydraulics(porosity=0.0)
+    hydraulic_properties = ConstantHydraulics(Float64, porosity=0.0)
     # set thermal properties
     thermal_properties = SoilThermalProperties(
         eltype(grid);
@@ -87,7 +87,7 @@ end
     biogeochem = ConstantSoilCarbonDenisty(ρ_soc=0.0)
     # set porosity to zero to remove influence of pore space;
     # this is just a hack to configure the model to simulate heat conduction in a fully solid medium
-    hydraulic_properties = ConstantHydraulics(porosity=0.0)
+    hydraulic_properties = ConstantHydraulics(Float64; porosity=0.0)
     hydrology = SoilHydrology(eltype(grid); hydraulic_properties)
     model = SoilModel(; grid, hydrology, biogeochem, initializer, boundary_conditions)
     sim = initialize(model)

@@ -10,6 +10,7 @@ import Terrarium: SurfaceEvaporation, hydraulic_conductivity
     # For prescribed hyraulic properties, just check that the returned values
     # match what was set.
     hydraulic_props = ConstantHydraulics(
+        Float64;
         cond_sat = 1e-6,
         porosity = 0.3,
         field_capacity = 0.1,
@@ -24,7 +25,7 @@ end
 @testset "Hydraulic properties (SURFEX)" begin
     # mineral porosity
     # TODO: should the hydraulic properties struct constructors also enforce parameter bounds?
-    hydraulic_props = SoilHydraulicsSURFEX()
+    hydraulic_props = SoilHydraulicsSURFEX(Float64)
     por0 = mineral_porosity(hydraulic_props, SoilTexture(sand=0.0, silt=0.7, clay=0.3))
     @test por0 ≈ hydraulic_props.porosity
     for sand in 0.1:0.1:1.0
@@ -59,7 +60,7 @@ end
 end
 
 @testset "Unsaturated hydraulic conductivity (linear)" begin
-    hydraulics = ConstantHydraulics(cond_unsat=UnsatKLinear())
+    hydraulics = ConstantHydraulics(Float64; cond_unsat=UnsatKLinear(Float32))
 
     # saturated case
     soil = SoilComposition()
@@ -83,7 +84,7 @@ end
 end
 
 @testset "Unsaturated hydraulic conductivity (Van Genuchten)" begin
-    hydraulics = ConstantHydraulics(cond_unsat=UnsatKVanGenuchten())
+    hydraulics = ConstantHydraulics(Float64; cond_unsat=UnsatKVanGenuchten(Float64))
 
     # saturated case
     soil = SoilComposition()
@@ -109,7 +110,7 @@ end
 @testset "SoilHydrology: Richardson-Richards' equation" begin
     grid = ColumnGrid(UniformSpacing(Δz=0.1, N=100))
     swrc = VanGenuchten(α=2.0, n=2.0)
-    hydraulic_properties = ConstantHydraulics(cond_unsat=UnsatKVanGenuchten(; swrc))
+    hydraulic_properties = ConstantHydraulics(Float64; cond_unsat=UnsatKVanGenuchten(Float64; swrc))
     hydrology = SoilHydrology(eltype(grid), RichardsEq(); hydraulic_properties)
 
     # Fully saturated, steady state
@@ -170,7 +171,7 @@ end
     Nz = 10
     grid = ColumnGrid(UniformSpacing(Δz=0.1, N=Nz))
     swrc = VanGenuchten(α=2.0, n=2.0)
-    hydraulic_properties = ConstantHydraulics(cond_unsat=UnsatKVanGenuchten(; swrc))
+    hydraulic_properties = ConstantHydraulics(Float64; cond_unsat=UnsatKVanGenuchten(Float64; swrc))
     evapotranspiration = SurfaceEvaporation()
     hydrology = SoilHydrology(eltype(grid), RichardsEq(); hydraulic_properties, evapotranspiration)
     # Variably saturated with water table
