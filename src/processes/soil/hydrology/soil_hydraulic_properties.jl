@@ -82,7 +82,7 @@ $TYPEDFIELDS
     wilting_point::NF = 0.05
 end
 
-ConstantHydraulics(::Type{NF}; cond_unsat=UnsatKLinear(), kwargs...) where {NF} = ConstantHydraulics{NF, typeof(cond_unsat)}(; cond_unsat, kwargs...)
+ConstantHydraulics(::Type{NF}; cond_unsat=UnsatKLinear(NF), kwargs...) where {NF} = ConstantHydraulics{NF, typeof(cond_unsat)}(; cond_unsat, kwargs...)
 
 @inline saturated_hydraulic_conductivity(hydraulics::ConstantHydraulics, args...) = hydraulics.cond_sat
 
@@ -123,7 +123,7 @@ $TYPEDFIELDS
     field_capacity_exp::NF = 0.35
 end
 
-SoilHydraulicsSURFEX(::Type{NF}; cond_unsat=UnsatKLinear(), kwargs...) where {NF} = SoilHydraulicsSURFEX{NF, typeof(cond_unsat)}(; cond_unsat, kwargs...)
+SoilHydraulicsSURFEX(::Type{NF}; cond_unsat=UnsatKLinear(NF), kwargs...) where {NF} = SoilHydraulicsSURFEX{NF, typeof(cond_unsat)}(; cond_unsat, kwargs...)
 
 # TODO: this is not quite correct, SURFEX uses a hydraulic conductivity function that decreases exponentially with depth
 @inline saturated_hydraulic_conductivity(hydraulics::SoilHydraulicsSURFEX, args...) = hydraulics.cond_sat
@@ -156,12 +156,12 @@ end
 Simple formulation of hydraulic conductivity as a linear function of the liquid water saturated fraction,
 i.e. `soil.water / (soil.water + soil.ice + soil.air)`.
 """
-@kwdef struct UnsatKLinear{RetentionCurve<:SWRC} <: AbstractUnsatK
+struct UnsatKLinear{RetentionCurve<:SWRC} <: AbstractUnsatK
     "Soil water retention curve"
-    swrc::RetentionCurve = FreezeCurves.BrooksCorey()
-
-    UnsatKLinear(swrc::SWRC) = new{typeof(ustrip(swrc))}(ustrip(swrc)) # ensure that units are removed
+    swrc::RetentionCurve
 end
+
+UnsatKLinear(::Type{NF}; swrc=FreezeCurves.BrooksCorey()) where {NF} = UnsatKLinear(adapt(NF, ustrip(swrc)))
 
 function hydraulic_conductivity(
     hydraulics::AbstractSoilHydraulics{NF, <:UnsatKLinear},
@@ -184,15 +184,15 @@ volumetric fractions, assumed to include those of water, ice, and air.
 
 See van Genuchten (1980) and Westermann et al. (2023).
 """
-@kwdef struct UnsatKVanGenuchten{NF, RetentionCurve<:FreezeCurves.VanGenuchten} <: AbstractUnsatK
+struct UnsatKVanGenuchten{NF, RetentionCurve<:FreezeCurves.VanGenuchten} <: AbstractUnsatK
     "Exponential scaling factor for ice impedance"
-    Ω::NF = 7
+    impedance::NF
 
     "Van Genuchten soil water retention curve"
-    swrc::RetentionCurve = FreezeCurves.VanGenuchten()
-
-    UnsatKVanGenuchten(Ω::NF, swrc::SWRC) where {NF} = new{NF, typeof(ustrip(swrc))}(Ω, ustrip(swrc)) # ensure that units are removed
+    swrc::RetentionCurve
 end
+
+UnsatKVanGenuchten(::Type{NF}; impedance::NF = 7, swrc=FreezeCurves.VanGenuchten()) where {NF} = UnsatKVanGenuchten(NF(impedance), adapt(NF, ustrip(swrc)))
 
 function hydraulic_conductivity(
     hydraulics::AbstractSoilHydraulics{NF, <:UnsatKVanGenuchten},
@@ -204,7 +204,7 @@ function hydraulic_conductivity(
         θwi = fracs.water + fracs.ice, # total water + ice content
         θsat = porosity(soil), # porosity
         f = liquid_fraction(soil),
-        Ω = hydraulics.cond_unsat.Ω, # scaling parameter for ice impedance
+        Ω = hydraulics.cond_unsat.impedance, # scaling parameter for ice impedance
         I_ice = 10^(-Ω*(1 - f)), # ice impedance factor
         K_sat = saturated_hydraulic_conductivity(hydraulics, soil.texture);
         # We use `complex` types here to permit illegal state values which may occur when using adaptive time steppers.
