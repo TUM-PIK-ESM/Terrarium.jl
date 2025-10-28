@@ -79,8 +79,8 @@ function explicit_step!(
 ) where {LX, LY, LZ}
     launch!(
         grid,
-        workspec(LX(), LY(), LZ()),
-        explicit_step_kernel!,
+        :xyz,
+        explicit_step_kernel_3D!,
         field,
         tendency,
         timestepper,
@@ -89,12 +89,32 @@ function explicit_step!(
     )
 end
 
-@kernel function explicit_step_kernel!(
-    field::AbstractField{LX, LY, LZ},
-    tendency::AbstractField{LX, LY, LZ},
+function explicit_step!(
+    field::AbstractField{LX, LY, Nothing},
+    tendency::AbstractField{LX, LY, Nothing},
+    grid::AbstractLandGrid,
+    timestepper::AbstractTimeStepper,
+    Δt,
+    args...
+) where {LX, LY}
+    launch!(
+        grid,
+        :xy,
+        explicit_step_kernel_2D!,
+        field,
+        tendency,
+        timestepper,
+        Δt,
+        args...
+    )
+end
+
+@kernel function explicit_step_kernel_3D!(
+    field,
+    tendency,
     ::AbstractTimeStepper,
     Δt
-) where {LX, LY, LZ}
+)
     i, j, k = @index(Global, NTuple)
     u = field
     ∂u∂t = tendency
@@ -103,12 +123,12 @@ end
     end
 end
 
-@kernel function explicit_step_kernel!(
-    field::AbstractField{LX, LY, Nothing},
-    tendency::AbstractField{LX, LY, Nothing},
+@kernel function explicit_step_kernel_2D!(
+    field,
+    tendency,
     ::AbstractTimeStepper,
     Δt
-) where {LX, LY}
+)
     i, j = @index(Global, NTuple)
     u = field
     ∂u∂t = tendency

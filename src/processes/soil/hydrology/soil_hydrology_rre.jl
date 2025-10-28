@@ -244,7 +244,8 @@ function invclosure!(state, model::AbstractSoilModel, ::PressureSaturationClosur
     # update water table
     launch!(grid, :xy, compute_water_table!, state, grid, hydrology)
     # determine pressure head from saturation
-    launch!(grid, :xyz, saturation_to_pressure!, state, hydrology, strat, bgc)
+    z_coords = znodes(state.saturation_water_ice)
+    launch!(grid, :xyz, saturation_to_pressure!, state, hydrology, strat, bgc, z_coords)
     return nothing
 end
 
@@ -278,9 +279,10 @@ end
     hydrology::SoilHydrology{NF, <:RichardsEq},
     strat::AbstractStratigraphy,
     bgc::AbstractSoilBiogeochemistry,
+    z_coords
 ) where {NF}
     idx = @index(Global, NTuple)
-    saturation_to_pressure!(idx, state, hydrology, strat, bgc)
+    saturation_to_pressure!(idx, state, hydrology, strat, bgc, z_coords)
 end
 
 @inline function saturation_to_pressure!(
@@ -288,6 +290,7 @@ end
     hydrology::SoilHydrology{NF, <:RichardsEq},
     strat::AbstractStratigraphy,
     bgc::AbstractSoilBiogeochemistry,
+    z_coords
 ) where {NF}
     i, j, k = idx
     sat = state.saturation_water_ice[i, j, k] # assumed given
@@ -297,11 +300,10 @@ end
     # compute matric pressure head
     ψm = inv_swrc(sat*por; θsat=por)
     # compute elevation pressure head
-    zs = znodes(state.saturation_water_ice)
-    ψz = zs[k]
+    ψz = z_coords[k]
     # compute hydrostatic pressure head assuming impermeable lower boundary
     z₀ = state.water_table[i, j, 1]
-    ψh = max(0, z₀ - zs[k])
+    ψh = max(0, z₀ - z_coords[k])
     # compute total pressure head as sum of ψh + ψm + ψz
     # note that ψh and ψz will cancel out in the saturated zone
     state.pressure_head[i, j, k] = ψh + ψm + ψz
