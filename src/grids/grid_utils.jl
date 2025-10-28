@@ -15,7 +15,7 @@ workspec(::Center, ::Center, ::Center) = :xyz
 # Helper functions for checking if a `RingGrids` or `Oceananigans` `Field` matches the given grid
 field_matches_grid(field, grid) = field.grid == grid
 
-function assert_field_matches_grid(field, grid)
+function assert_field_matches_grid(field::Union{RingGrids.AbstractField, AbstractField}, grid)
     @assert field_matches_grid(field, grid) "Field grid $(typeof(field.grid)) does not match $(typeof(grid))"
 end
 

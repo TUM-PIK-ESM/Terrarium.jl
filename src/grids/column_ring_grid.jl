@@ -9,26 +9,25 @@ struct ColumnRingGrid{
     NF,
     Arch,
     RingGrid<:RingGrids.AbstractGrid,
-    MaskField<:RingGrids.AbstractField{Bool},
     RectGrid<:OceananigansGrids.RectilinearGrid,
+    Mask<:Union{AbstractArray, RingGrids.AbstractField}
 } <: AbstractLandGrid{NF, Arch}
     "RingGrid specfying the lateral spatial discretization of the globe"
     rings::RingGrid
 
-    "`RingGrids.Field` representing a boolean-valued mask over `rings`"
-    mask::MaskField
+    "`RingGrids.Field` (or GPU-adapted array) representing a boolean-valued mask over `rings`"
+    mask::Mask
 
     "Underlying `Oceananigans` `RectilinearGrid` type on which `Field`s are defined"
     grid::RectGrid
 
     function ColumnRingGrid(
         rings::RingGrids.AbstractGrid,
-        mask::RingGrids.AbstractField{Bool},
+        mask::AbstractArray,
         grid::OceananigansGrids.RectilinearGrid
     )
-        assert_field_matches_grid(mask, rings)
         arch = architecture(grid)
-        new{eltype(grid), typeof(arch), typeof(rings), typeof(mask), typeof(grid)}(rings, mask, grid)
+        new{eltype(grid), typeof(arch), typeof(rings), typeof(grid), typeof(mask)}(rings, mask, grid)
     end
 
     """
@@ -57,7 +56,7 @@ struct ColumnRingGrid{
         # adapt ring grid and mask
         rings = on_architecture(arch, rings)
         mask = on_architecture(arch, mask)
-        return new{NF, typeof(arch), typeof(rings), typeof(mask), typeof(grid)}(rings, mask, grid)
+        return new{NF, typeof(arch), typeof(rings), typeof(grid), typeof(mask)}(rings, mask, grid)
     end
 
     ColumnRingGrid(
