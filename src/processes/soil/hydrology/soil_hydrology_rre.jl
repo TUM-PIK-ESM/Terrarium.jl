@@ -80,9 +80,9 @@ water is added to the `surface_excess_water` pool.
     end
     @inbounds if sat[i, j, N] > one(NF)
         # If the uppermost (surface) layer is oversaturated, add to excess water pool
-        excess_sat = sat[i, j, k] - one(NF)
-        sat[i, j, k] -= excess_sat
-        state.surface_excess_water[i, j, 1] += excess_sat*Δzᵃᵃᶜ(i, j, N, grid)
+        excess_sat = sat[i, j, N] - one(NF)
+        sat[i, j, N] -= excess_sat
+        state.surface_excess_water[i, j, 1] += excess_sat*Δzᵃᵃᶜ(i, j, N, field_grid)
     end
 end
 
