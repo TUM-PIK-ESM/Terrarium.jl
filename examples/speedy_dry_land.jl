@@ -125,30 +125,21 @@ model = SoilModel(grid, initializer=soil_initializer, boundary_conditions=soil_b
 land_state = initialize(model)
 land = TerrariumDryLand(land_state)
 
-# First set up and run a decoupled Speedy model for spinup
-land_sea_mask = Speedy.RockyPlanetMask(land.spectral_grid)
-primitive_dry_spinup = Speedy.PrimitiveDryModel(land.spectral_grid; land_sea_mask)
-sim_spinup = Speedy.initialize!(primitive_dry_spinup)
-Speedy.run!(sim_spinup, period=Day(5))
-
-# Then run coupled model
+# Set up coupled model
 # surface_heat_flux = Speedy.SurfaceHeatFlux(land=Speedy.PrescribedLandHeatFlux())
 output = Speedy.NetCDFOutput(land.spectral_grid, Speedy.PrimitiveDryModel, path="outputs/")
 primitive_dry_coupled = Speedy.PrimitiveDryModel(land.spectral_grid; land, land_sea_mask, output)
 # add soil temperature as output variable for Speedy simulation
 Speedy.add!(primitive_dry_coupled.output, Speedy.SoilTemperatureOutput())
 # initialize coupled simulation
-sim_coupled = Speedy.Simulation(sim_spinup.prognostic_variables, sim_spinup.diagnostic_variables, primitive_dry_coupled)
+sim_coupled = Speedy.initialize!(primitive_dry_coupled)
 # Speedy.timestep!(sim)
 # spin up
-Speedy.run!(sim_coupled, period=Day(30), output=true)
+Speedy.run!(sim_coupled, period=Day(2), output=true)
+# run for a few more days
+Speedy.run!(sim_coupled, period=Day(3), output=true)
 heatmap(sim.diagnostic_variables.grid.temp_grid[:,8])
 heatmap(sim.diagnostic_variables)
-
-spectral_grid2 = Speedy.SpectralGrid(trunc=31)
-primitive_dry = Speedy.PrimitiveDryModel(spectral_grid2)
-sim2 = Speedy.initialize!(primitive_dry)
-Speedy.run!(sim2)
 
 # animate surface layer air temperature
 Speedy.animate(sim, variable="temp", coastlines=false, level=spectral_grid.nlayers, output_file="plots/speedy_terrarium_dry_air_temperature.mp4")
@@ -160,6 +151,13 @@ Speedy.animate(sim, variable="st", coastlines=false, level=1, output_file="plots
 
 heatmap(sim.diagnostic_variables.grid.temp_grid[:,end])
 heatmap(sim.prognostic_variables.land.soil_temperature[:,end])
+
+# Speedy standalone
+
+spectral_grid2 = Speedy.SpectralGrid(trunc=31)
+primitive_dry = Speedy.PrimitiveDryModel(spectral_grid2)
+sim2 = Speedy.initialize!(primitive_dry)
+Speedy.run!(sim2)
 
 using BenchmarkTools
 
