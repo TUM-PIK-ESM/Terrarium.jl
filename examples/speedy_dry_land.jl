@@ -21,7 +21,7 @@ struct TerrariumDryLand{NF, TM<:ModelState{NF}} <: Speedy.AbstractDryLand
     model::TM
 
     function TerrariumDryLand(model::ModelState{NF, Arch, Grid}; spectral_grid_kwargs...) where {NF, Arch, Grid<:ColumnRingGrid}
-        spectral_grid = Speedy.SpectralGrid(model.grid.rings; NF, nlayers_soil=2, spectral_grid_kwargs...)
+        spectral_grid = Speedy.SpectralGrid(model.grid.rings; NF, nlayers_soil=1, spectral_grid_kwargs...)
         return new{eltype(model), typeof(model)}(spectral_grid, model)
     end
 end
@@ -55,8 +55,8 @@ function Speedy.timestep!(
     H = diagn.physics.sensible_heat_flux
     # update Terrarium input fields
     inputs = land.model.state.inputs
-    # set!(inputs.air_temperature, Tair) # first set directly to avoid allocating new fields
-    # set!(inputs.air_temperature, inputs.air_temperature - 273.15) # then convert to celsius
+    set!(inputs.air_temperature, Tair) # first set directly to avoid allocating new fields
+    set!(inputs.air_temperature, inputs.air_temperature - 273.15) # then convert to celsius
     # set!(inputs.air_pressure, pres) # similar with pressure
     # set!(inputs.air_pressure, exp(inputs.air_pressure)) # take exp to get pressure in Pa
     # set!(inputs.surface_shortwave_down, SwIn)
@@ -73,8 +73,8 @@ function Speedy.timestep!(
     # Soil surface temperature coupling:
     Tsoil = land.model.state.temperature
     Nx, Nz = Tsoil.grid.Nx, Tsoil.grid.Nz
-    Tsurf = @view Tsoil[1:Nx, 1, Nz-1:Nz]
-    progn.land.soil_temperature .= reshape(Tsurf, :, 2) .+ NF(273.15)
+    Tsurf = @view Tsoil[1:Nx, 1, Nz:Nz]
+    progn.land.soil_temperature .= Tsurf .+ NF(273.15)
     return nothing
 end
 
@@ -126,6 +126,7 @@ land_state = initialize(model)
 land = TerrariumDryLand(land_state)
 
 # Set up coupled model
+land_sea_mask = Speedy.RockyPlanetMask(land.spectral_grid)
 # surface_heat_flux = Speedy.SurfaceHeatFlux(land=Speedy.PrescribedLandHeatFlux())
 output = Speedy.NetCDFOutput(land.spectral_grid, Speedy.PrimitiveDryModel, path="outputs/")
 primitive_dry_coupled = Speedy.PrimitiveDryModel(land.spectral_grid; land, land_sea_mask, output)
@@ -137,9 +138,15 @@ sim_coupled = Speedy.initialize!(primitive_dry_coupled)
 # spin up
 Speedy.run!(sim_coupled, period=Day(2), output=true)
 # run for a few more days
-Speedy.run!(sim_coupled, period=Day(3), output=true)
-heatmap(sim.diagnostic_variables.grid.temp_grid[:,8])
-heatmap(sim.diagnostic_variables)
+Speedy.run!(sim_coupled, period=Day(5), output=true)
+
+with_theme(fontsize=18) do
+    Tair_fig = heatmap(sim_coupled.diagnostic_variables.grid.temp_grid[:,8] .- 273.15, title="", size=(800,400))
+    Tsoil_fig = heatmap(RingGrids.Field(interior(land_state.state.temperature)[:,1,end-4], grid), title="", size=(800,400))
+    save("plots/speedy_primitive_dry_coupled_tair_R48.png", Tair_fig, px_per_unit=1)
+    save("plots/speedy_primitive_dry_coupled_tsoil_R48.png", Tsoil_fig, px_per_unit=1)
+    Tair_fig
+end
 
 # animate surface layer air temperature
 Speedy.animate(sim, variable="temp", coastlines=false, level=spectral_grid.nlayers, output_file="plots/speedy_terrarium_dry_air_temperature.mp4")
