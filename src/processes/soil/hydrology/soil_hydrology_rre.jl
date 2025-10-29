@@ -64,8 +64,6 @@ water is added to the `surface_excess_water` pool.
     i, j = @index(Global, NTuple)
     sat = state.saturation_water_ice
     field_grid = get_field_grid(grid)
-    # get z coordinates of layer centers
-    zs = znodes(field_grid, Center(), Center(), Center())
     N = field_grid.Nz
     @inbounds for k in 1:N-1
         # TODO: This function might perform badly on GPU....
@@ -98,14 +96,13 @@ Kernel for diagnosing the water table at each grid point given the current soil 
 @kernel function compute_water_table!(
     state,
     grid,
-    ::SoilHydrology{NF}
+    ::SoilHydrology{NF},
+    z_coords
 ) where {NF}
     i, j = @index(Global, NTuple)
     sat = state.saturation_water_ice
-    # get z coordinates of grid cell faces
-    zs = znodes(get_field_grid(grid), Center(), Center(), Face())
     # scan z axis starting from the bottom (index 1) to find first non-saturated grid cell
-    state.water_table[i, j, 1] = findfirst_z((i, j), <(one(NF)), zs, sat)
+    state.water_table[i, j, 1] = findfirst_z((i, j), <(one(NF)), z_coords, sat)
 end
 
 """
@@ -186,7 +183,6 @@ end
         - ∂zᵃᵃᶜ(i, j, k, field_grid, darcy_flux, state.pressure_head, state.hydraulic_conductivity)
         + forcing_ET(i, j, k, field_grid, state, hydrology.evapotranspiration, constants)
     )
-
     return ∂θ∂t
 end
 
@@ -225,8 +221,9 @@ function closure!(state, model::AbstractSoilModel, ::PressureSaturationClosure)
     hydrology = get_soil_hydrology(model)
     strat = get_stratigraphy(model)
     bgc = get_biogeochemistry(model)
+    z_coords = znodes(state.saturation_water_ice)
     # determine saturation from pressure
-    launch!(grid, :xyz, pressure_to_saturation!, state, hydrology, strat, bgc)
+    launch!(grid, :xyz, pressure_to_saturation!, state, hydrology, strat, bgc, z_coords)
     # apply saturation correction
     launch!(grid, :xy, adjust_saturation_profile!, state, grid, hydrology)
     # update water table
@@ -239,12 +236,12 @@ function invclosure!(state, model::AbstractSoilModel, ::PressureSaturationClosur
     hydrology = get_soil_hydrology(model)
     strat = get_stratigraphy(model)
     bgc = get_biogeochemistry(model)
+    z_coords = znodes(state.saturation_water_ice)
     # apply saturation correction
     launch!(grid, :xy, adjust_saturation_profile!, state, grid, hydrology)
     # update water table
-    launch!(grid, :xy, compute_water_table!, state, grid, hydrology)
+    launch!(grid, :xy, compute_water_table!, state, grid, hydrology, z_coords)
     # determine pressure head from saturation
-    z_coords = znodes(state.saturation_water_ice)
     launch!(grid, :xyz, saturation_to_pressure!, state, hydrology, strat, bgc, z_coords)
     return nothing
 end
@@ -254,9 +251,10 @@ end
     hydrology::SoilHydrology{NF, <:RichardsEq},
     strat::AbstractStratigraphy,
     bgc::AbstractSoilBiogeochemistry,
+    z_coords
 ) where {NF}
     idx = @index(Global, NTuple)
-    pressure_to_saturation!(idx, state, hydrology, strat, bgc)
+    pressure_to_saturation!(idx, state, hydrology, strat, bgc, z_coords)
 end
 
 @inline function pressure_to_saturation!(
@@ -264,12 +262,20 @@ end
     hydrology::SoilHydrology{NF, <:RichardsEq},
     strat::AbstractStratigraphy,
     bgc::AbstractSoilBiogeochemistry,
+    z_coords
 ) where {NF}
     i, j, k = idx
     ψ = state.pressure_head[i, j, k] # assumed given
+    # compute elevation pressure head
+    ψz = z_coords[k]
+    # compute hydrostatic pressure head assuming impermeable lower boundary
+    z₀ = state.water_table[i, j, 1]
+    ψh = max(0, z₀ - z_coords[k])
+    # remove hydrostatic and elevation components
+    ψm = ψ - ψh - ψz
     swrc = get_swrc(hydrology)
     por = porosity(idx, state, hydrology, strat, bgc)
-    vol_water_ice_content = swrc(ψ; θsat=por)
+    vol_water_ice_content = swrc(ψm; θsat=por)
     state.saturation_water_ice[i, j, k] = vol_water_ice_content / por
     return nothing
 end
