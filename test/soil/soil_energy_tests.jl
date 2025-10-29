@@ -40,7 +40,7 @@ end
     upperbc(z, t) = T₀ + A*sin(2π*t/P)
     boundary_conditions = SoilBoundaryConditions(eltype(grid), top=(temperature=ValueBoundaryCondition(upperbc),))
     # set carbon content to zero so the soil has only a mineral constituent
-    biogeochem = ConstantSoilCarbonDenisty(ρ_soc=0.0)
+    biogeochem = ConstantSoilCarbonDensity(ρ_soc=0.0)
     # set porosity to zero to remove influence of pore space;
     # this is just a hack to configure the model to simulate heat conduction in a fully solid medium
     hydraulic_properties = ConstantHydraulics(Float64, porosity=0.0)
@@ -84,7 +84,7 @@ end
     # constant upper boundary temperature set to T₁
     boundary_conditions = SoilBoundaryConditions(eltype(grid), top=(temperature=ValueBoundaryCondition(T₁),))
     # set carbon content to zero so the soil has only a mineral constituent
-    biogeochem = ConstantSoilCarbonDenisty(ρ_soc=0.0)
+    biogeochem = ConstantSoilCarbonDensity(ρ_soc=0.0)
     # set porosity to zero to remove influence of pore space;
     # this is just a hack to configure the model to simulate heat conduction in a fully solid medium
     hydraulic_properties = ConstantHydraulics(Float64; porosity=0.0)

@@ -9,7 +9,7 @@ include("biogeochem/soil_composition.jl")
 export HomogeneousSoil
 include("biogeochem/homogeneous_soil.jl")
 
-export ConstantSoilCarbonDenisty
+export ConstantSoilCarbonDensity
 include("biogeochem/constant_soil_carbon.jl")
 
 export ConstantHydraulics, SoilHydraulicsSURFEX, UnsatKLinear, UnsatKVanGenuchten

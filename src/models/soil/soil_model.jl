@@ -31,7 +31,7 @@ $(TYPEDFIELDS)
     hydrology::SoilHydrology = SoilHydrology(eltype(grid))
 
     "Soil biogeochemistry"
-    biogeochem::Biogeochemistry = ConstantSoilCarbonDenisty(eltype(grid))
+    biogeochem::Biogeochemistry = ConstantSoilCarbonDensity(eltype(grid))
 
     "Physical constants"
     constants::Constants = PhysicalConstants(eltype(grid))
