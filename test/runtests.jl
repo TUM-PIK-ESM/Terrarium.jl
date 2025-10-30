@@ -6,7 +6,9 @@ MAIN_TESTS = !FLAG_ENZYME_TESTS ? true : false
 
 if FLAG_ENZYME_TESTS
     @testset "Enzyme" begin
-        include("differentiability/soil_model_diff.jl")
+        include("differentiability/soil_energy_diff.jl")
+        include("differentiability/soil_hydrology_diff.jl")
+        include("differentiability/vegetation_model_diff.jl")
     end
 end
 
