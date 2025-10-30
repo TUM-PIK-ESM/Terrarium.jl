@@ -81,7 +81,7 @@ end
     @test all(isfinite.(dstate.temperature))
 end
 
-@testset "Soil hydrology: compute_auxiliary! RRE" begin
+@testset "Soil hydrology: compute_tendencies! RRE" begin
     hydraulic_properties = SoilHydraulicsSURFEX(Float64)
     model = build_soil_energy_hydrology_model(CPU(), Float64; hydraulic_properties)
     model_state = initialize(model)
