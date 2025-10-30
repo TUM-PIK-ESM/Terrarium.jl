@@ -3,7 +3,6 @@
 
 Represents a global (spherical) grid of independent, vertical columns where the
 spatial discretization in the horizontal direction is defined by a `RingGrids.AbstractGrid`.
-The resulting 
 """
 struct ColumnRingGrid{
     NF,
@@ -98,7 +97,7 @@ get_field_grid(grid::ColumnRingGrid) = grid.grid
 """
     $SIGNATURES
 
-Converts the given Oceananigans `Field` to a `RingGrids.Field` with a ring grid matching that of 
+Converts the given Oceananigans `Field` to a `RingGrids.Field` with a ring grid matching that of the given `ColumnRingGrid`.
 """
 RingGrids.Field(field::Field{LX,LY,Nothing}, grid::ColumnRingGrid; fill_value=NaN) where {LX,LY} = RingGrids.Field(architecture(field), interior(field), grid; fill_value)
 RingGrids.Field(field::AbstractArray, grid::ColumnRingGrid; fill_value=NaN) = RingGrids.Field(architecture(grid), field, grid; fill_value)

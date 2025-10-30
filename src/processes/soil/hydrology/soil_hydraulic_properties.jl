@@ -53,7 +53,7 @@ Compute the empirical field capacity of the soil.
 """
 function field_capacity end
 
-# Hydraulic parameterizations
+# Hydraulics parameterizations
 
 """
     ConstantHydraulics{NF} <: AbstractSoilHydraulics
