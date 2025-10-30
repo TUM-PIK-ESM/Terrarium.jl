@@ -88,21 +88,23 @@ end
     compute_water_table!(
         state,
         grid,
-        ::SoilHydrology{NF}
+        ::SoilHydrology{NF},
+        z_faces
     ) where {NF}
 
-Kernel for diagnosing the water table at each grid point given the current soil saturation state.
+Kernel for diagnosing the water table at each grid point given the current soil saturation state. The argument
+`z_faces` should be the z-coordinates of the grid on the layer faces.
 """
 @kernel function compute_water_table!(
     state,
     grid,
     ::SoilHydrology{NF},
-    z_coords
+    z_faces
 ) where {NF}
     i, j = @index(Global, NTuple)
     sat = state.saturation_water_ice
     # scan z axis starting from the bottom (index 1) to find first non-saturated grid cell
-    state.water_table[i, j, 1] = findfirst_z((i, j), <(one(NF)), z_coords, sat)
+    state.water_table[i, j, 1] = findfirst_z((i, j), <(one(NF)), z_faces, sat)
 end
 
 """
@@ -236,13 +238,14 @@ function invclosure!(state, model::AbstractSoilModel, ::PressureSaturationClosur
     hydrology = get_soil_hydrology(model)
     strat = get_stratigraphy(model)
     bgc = get_biogeochemistry(model)
-    z_coords = znodes(state.saturation_water_ice)
+    z_faces = znodes(get_field_grid(grid), Center(), Center(), Face())
+    z_centers = znodes(get_field_grid(grid), Center(), Center(), Center())
     # apply saturation correction
     launch!(grid, :xy, adjust_saturation_profile!, state, grid, hydrology)
     # update water table
-    launch!(grid, :xy, compute_water_table!, state, grid, hydrology, z_coords)
+    launch!(grid, :xy, compute_water_table!, state, grid, hydrology, z_faces)
     # determine pressure head from saturation
-    launch!(grid, :xyz, saturation_to_pressure!, state, hydrology, strat, bgc, z_coords)
+    launch!(grid, :xyz, saturation_to_pressure!, state, hydrology, strat, bgc, z_centers)
     return nothing
 end
 
