@@ -15,7 +15,7 @@ variables(rre::RichardsEq) = (
     prognostic(:pressure_head, XYZ(), get_closure(rre)),
     prognostic(:surface_excess_water, XY(), units=u"m", desc="Excess water at the soil surface in m³/m²"),
     auxiliary(:water_table, XY(), units=u"m", desc="Elevation of the water table in meters"),
-    auxiliary(:hydraulic_conductivity, XYZ(), units=u"m/s", desc="Hydraulic conductivity of soil volumes in m/s")
+    auxiliary(:hydraulic_conductivity, XYZ(z=Face()), units=u"m/s", desc="Hydraulic conductivity of soil volumes in m/s")
 )
 
 function initialize!(state, model, ::SoilHydrology{NF, <:RichardsEq}) where {NF}
@@ -126,16 +126,14 @@ Kernel for computing the hydraulic conductivity in all grid cells and soil layer
     bgc::AbstractSoilBiogeochemistry,
 )
     i, j, k = @index(Global, NTuple)
-    soil = soil_composition((i, j, k), state, strat, hydrology, bgc)
-    state.hydraulic_conductivity[i, j, k] = hydraulic_conductivity(hydrology.hydraulic_properties, soil)
-    # Manually set hydraulic conductivity at the boundaries to the conductivity of the cell centers at the boundaries;
-    # note that this is an assumption that could potentially be relaxed in the future.
-    # TODO: maybe this should be done with boundary conditions?
-    field_grid = get_field_grid(grid) 
-    if k == 1
-        state.hydraulic_conductivity[i, j, 0] = state.hydraulic_conductivity[i, j, 1]
-    elseif k == field_grid.Nz
-        state.hydraulic_conductivity[i, j, field_grid.Nz+1] = state.hydraulic_conductivity[i, j, field_grid.Nz]
+    fgrid = get_field_grid(grid)
+    if k <= 1
+        state.hydraulic_conductivity[i, j, k] = hydraulic_conductivity(i, j, 1, fgrid, state, strat, hydrology, bgc)
+    elseif k >= fgrid.Nz
+        state.hydraulic_conductivity[i, j, k] = hydraulic_conductivity(i, j, fgrid.Nz, fgrid, state, strat, hydrology, bgc)
+        state.hydraulic_conductivity[i, j, k + 1] = state.hydraulic_conductivity[i, j, k]
+    else
+        state.hydraulic_conductivity[i, j, k] = min_zᵃᵃᶠ(i, j, k, fgrid, hydraulic_conductivity, state, strat, hydrology, bgc)
     end
 end
 
@@ -169,6 +167,12 @@ Kernel for computing the tendency of the prognostic `saturation_water_ice` varia
 end
 
 # Kernel functions
+
+@inline function hydraulic_conductivity(i, j, k, grid, state, strat, hydrology, bgc)
+    idx = (i, j, k)
+    soil = soil_composition(idx, state, strat, hydrology, bgc)
+    return hydraulic_conductivity(hydrology.hydraulic_properties, soil)
+end
 
 @inline function volumetric_water_content_tendency(
     idx, grid, state,
