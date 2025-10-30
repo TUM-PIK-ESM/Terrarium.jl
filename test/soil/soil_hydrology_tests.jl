@@ -165,6 +165,13 @@ end
     @test all(0 .<= saturation .<= 1)
     # check mass conservation
     @test ∫sat₀[1,1,1] ≈ ∫sat₁[1,1,1]
+    # run for one simulation hour and check that mass is still conserved
+    run!(state, period=Hour(1), Δt=60.0)
+    ∫sat₂ = Field(Integral(saturation, dims=3))
+    compute!(∫sat₂)
+    @test all(isfinite.(saturation))
+    @test all(0 .<= saturation .<= 1)
+    @test ∫sat₀[1,1,1] ≈ ∫sat₁[1,1,1] ≈ ∫sat₂[1,1,1]
 end
 
 @testset "Soil ET" begin

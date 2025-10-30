@@ -6,7 +6,7 @@ import ConstructionBase: getproperties, setproperties
 
 import DataStructures: OrderedDict
 
-import Dates: Dates, TimeType, Period, Year, Month, Day, Second
+import Dates: Dates, TimeType, Period, Year, Month, Day, Hour, Minute, Second
 
 import DomainSets: RealLine, HalfLine, PositiveRealLine, UnitInterval, AbstractInterval
 
@@ -59,7 +59,7 @@ export Value, Flux, Gradient, ValueBoundaryCondition, GradientBoundaryCondition,
 export run!, time_step!, set!, interior, architecture, on_architecture, xnodes, ynodes, znodes, location
 
 # Re-export common Dates types
-export Year, Month, Day, Second
+export Year, Month, Day, Hour, Minute, Second
 
 # Re-export unit types
 export @u_str, uconvert, ustrip
