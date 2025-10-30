@@ -3,7 +3,6 @@ using Test
 
 using Enzyme, FiniteDifferences
 using FreezeCurves
-using Oceananigans: Average, Field
 using Statistics
 
 function build_soil_energy_model(arch, ::Type{NF}) where {NF}
@@ -16,20 +15,6 @@ function build_soil_energy_model(arch, ::Type{NF}) where {NF}
         saturation_water_ice = 1.0,
     )
     model = SoilModel(; grid, initializer)
-    return model
-end
-
-function build_soil_energy_hydrology_model(arch, ::Type{NF}, flow=RichardsEq(); hydrology_kwargs...) where {NF}
-    grid = ColumnGrid(arch, Float64, ExponentialSpacing(N=10))
-    # initial conditions
-    initializer = FieldInitializers(
-        # steady-ish state initial condition for temperature
-        temperature = (x,z) -> 1.0,
-        # saturated soil
-        saturation_water_ice = (x,z) -> min(0.5 - 0.1*z, 1.0),
-    )
-    hydrology = SoilHydrology(eltype(grid), flow; hydrology_kwargs...)
-    model = SoilModel(; grid, initializer, hydrology)
     return model
 end
 
