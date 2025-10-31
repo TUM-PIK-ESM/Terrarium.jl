@@ -40,10 +40,10 @@ end
     upperbc(z, t) = T₀ + A*sin(2π*t/P)
     boundary_conditions = SoilBoundaryConditions(eltype(grid), top=(temperature=ValueBoundaryCondition(upperbc),))
     # set carbon content to zero so the soil has only a mineral constituent
-    biogeochem = ConstantSoilCarbonDenisty(ρ_soc=0.0)
+    biogeochem = ConstantSoilCarbonDensity(ρ_soc=0.0)
     # set porosity to zero to remove influence of pore space;
     # this is just a hack to configure the model to simulate heat conduction in a fully solid medium
-    hydraulic_properties = PrescribedHydraulics(porosity=0.0)
+    hydraulic_properties = ConstantHydraulics(Float64, porosity=0.0)
     # set thermal properties
     thermal_properties = SoilThermalProperties(
         eltype(grid);
@@ -84,10 +84,10 @@ end
     # constant upper boundary temperature set to T₁
     boundary_conditions = SoilBoundaryConditions(eltype(grid), top=(temperature=ValueBoundaryCondition(T₁),))
     # set carbon content to zero so the soil has only a mineral constituent
-    biogeochem = ConstantSoilCarbonDenisty(ρ_soc=0.0)
+    biogeochem = ConstantSoilCarbonDensity(ρ_soc=0.0)
     # set porosity to zero to remove influence of pore space;
     # this is just a hack to configure the model to simulate heat conduction in a fully solid medium
-    hydraulic_properties = PrescribedHydraulics(porosity=0.0)
+    hydraulic_properties = ConstantHydraulics(Float64; porosity=0.0)
     hydrology = SoilHydrology(eltype(grid); hydraulic_properties)
     model = SoilModel(; grid, hydrology, biogeochem, initializer, boundary_conditions)
     sim = initialize(model)
@@ -134,9 +134,9 @@ end
     @test all(>(0), getproperties(thermal_props.heatcap))
     
     # sanity checks for bulk thermal properties
-    @test Terrarium.thermalconductivity(thermal_props, (water=1.0, ice=0.0, air=0.0, mineral=0.0, organic=0.0)) ≈ thermal_props.cond.water
-    @test Terrarium.thermalconductivity(thermal_props, (water=0.0, ice=1.0, air=0.0, mineral=0.0, organic=0.0)) ≈ thermal_props.cond.ice
-    @test Terrarium.thermalconductivity(thermal_props, (water=0.0, ice=0.0, air=1.0, mineral=0.0, organic=0.0)) ≈ thermal_props.cond.air
-    @test Terrarium.thermalconductivity(thermal_props, (water=0.0, ice=0.0, air=0.0, mineral=1.0, organic=0.0)) ≈ thermal_props.cond.mineral
-    @test Terrarium.thermalconductivity(thermal_props, (water=0.0, ice=0.0, air=0.0, mineral=0.0, organic=1.0)) ≈ thermal_props.cond.organic
+    @test Terrarium.thermalconductivity(thermal_props, SoilComposition(porosity=1.0, saturation=1.0, liquid=1.0)) ≈ thermal_props.cond.water
+    @test Terrarium.thermalconductivity(thermal_props, SoilComposition(porosity=1.0, saturation=1.0, liquid=0.0)) ≈ thermal_props.cond.ice
+    @test Terrarium.thermalconductivity(thermal_props, SoilComposition(porosity=1.0, saturation=0.0, liquid=0.0)) ≈ thermal_props.cond.air
+    @test Terrarium.thermalconductivity(thermal_props, SoilComposition(porosity=0.0, saturation=0.0, organic=0.0)) ≈ thermal_props.cond.mineral
+    @test Terrarium.thermalconductivity(thermal_props, SoilComposition(porosity=0.0, saturation=0.0, organic=1.0)) ≈ thermal_props.cond.organic
 end

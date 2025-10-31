@@ -31,7 +31,7 @@ $(TYPEDFIELDS)
     hydrology::SoilHydrology = SoilHydrology(eltype(grid))
 
     "Soil biogeochemistry"
-    biogeochem::Biogeochemistry = ConstantSoilCarbonDenisty(eltype(grid))
+    biogeochem::Biogeochemistry = ConstantSoilCarbonDensity(eltype(grid))
 
     "Physical constants"
     constants::Constants = PhysicalConstants(eltype(grid))
@@ -95,34 +95,11 @@ end
 # Initialization
 
 function initialize!(state, model::SoilModel)
-    # run model initializer
+    # run model/field initializers
     initialize!(state, model, model.initializer)
-    # launch kernel for generic initailization routine
-    grid = get_grid(model)
-    launch!(
-        grid,
-        :xyz,
-        initialize_kernel!,
-        state,
-        model.energy,
-        model.hydrology,
-        model.strat,
-        model.biogeochem,
-        model.constants
-    )
-end
-
-@kernel function initialize_kernel!(
-    state,
-    energy::AbstractSoilEnergyBalance,
-    hydrology::AbstractSoilHydrology,
-    strat::AbstractStratigraphy,
-    bgc::AbstractSoilBiogeochemistry,
-    constants::PhysicalConstants,
-)
-    idx = @index(Global, NTuple)
-    # TODO: need a more comprehensive initialization scheme for all soil model components
-    # Note that this assumes temperature has already been iniitialized!
-    fc = freezecurve(energy, hydrology)
-    temperature_to_energy!(idx, state, fc, energy, hydrology, strat, bgc, constants)
+    # run process initializers
+    initialize!(state, model, model.strat)
+    initialize!(state, model, model.hydrology)
+    initialize!(state, model, model.energy)
+    initialize!(state, model, model.biogeochem)
 end

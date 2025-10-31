@@ -52,7 +52,7 @@ function explicit_step!(state, grid::AbstractLandGrid, timestepper::AbstractTime
         # update prognostic or closure state variable
         if haskey(state.closures, name)
             closure = state.closures[name]
-            cname = varname(getvar(closure))
+            cname = varname(closurevar(closure))
             explicit_step!(state.auxiliary[cname], state.tendencies[cname], grid, timestepper, Δt)
         else
             explicit_step!(state.prognostic[name], state.tendencies[name], grid, timestepper, Δt)
@@ -79,8 +79,8 @@ function explicit_step!(
 ) where {LX, LY, LZ}
     launch!(
         grid,
-        workspec(LX(), LY(), LZ()),
-        explicit_step_kernel!,
+        :xyz,
+        explicit_step_kernel_3D!,
         field,
         tendency,
         timestepper,
@@ -89,11 +89,50 @@ function explicit_step!(
     )
 end
 
-@kernel function explicit_step_kernel!(field, tendency, ::AbstractTimeStepper, Δt)
+function explicit_step!(
+    field::AbstractField{LX, LY, Nothing},
+    tendency::AbstractField{LX, LY, Nothing},
+    grid::AbstractLandGrid,
+    timestepper::AbstractTimeStepper,
+    Δt,
+    args...
+) where {LX, LY}
+    launch!(
+        grid,
+        :xy,
+        explicit_step_kernel_2D!,
+        field,
+        tendency,
+        timestepper,
+        Δt,
+        args...
+    )
+end
+
+@kernel function explicit_step_kernel_3D!(
+    field,
+    tendency,
+    ::AbstractTimeStepper,
+    Δt
+)
     i, j, k = @index(Global, NTuple)
     u = field
     ∂u∂t = tendency
     @inbounds let Δt = convert(eltype(tendency), Δt);
         u[i, j, k] += ∂u∂t[i, j, k] * Δt
+    end
+end
+
+@kernel function explicit_step_kernel_2D!(
+    field,
+    tendency,
+    ::AbstractTimeStepper,
+    Δt
+)
+    i, j = @index(Global, NTuple)
+    u = field
+    ∂u∂t = tendency
+    @inbounds let Δt = convert(eltype(tendency), Δt);
+        u[i, j, 1] += ∂u∂t[i, j] * Δt
     end
 end

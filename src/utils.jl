@@ -70,6 +70,11 @@ function piecewise_linear(knots::Pair{<:LengthQuantity}...; extrapolation=Interp
     return Interpolations.extrapolate(interp, extrapolation)
 end
 
+function adapt(::Type{NF}, obj) where {NF<:Number}
+    vals = map(NF, flatten(obj, flattenable, Number))
+    return reconstruct(obj, vals, flattenable, Number)
+end
+
 # fastmap and fastiterate
 
 # Note that fastmap and fastiterate are borrowed (with self permission!) from CryoGrid.jl:
@@ -122,3 +127,23 @@ Same as `fastmap` but simply invokes `f!` on each argument set without construct
     return expr
 end
 fastiterate(f!::F, iters::NamedTuple) where {F} = fastiterate(f!, values(iters))
+
+# Kernels
+
+"""
+    findfirst_z(idx, condition_func, z_nodes, field)
+
+2D kernel function that finds the first coordinate in `z_nodes` where `condition_func(field[i, j, k])`.
+This implementation performs a linear scan over the z-axis and thus has time complexity O(N_z).
+"""
+@inline function findfirst_z(idx, condition_func, z_nodes, field)
+    i, j = idx
+    n = length(z_nodes)
+    idx = -1
+    for k in 1:n
+        if idx < 0 && condition_func(field[i, j, k])
+            idx = k
+        end
+    end
+    return idx > 0 ? z_nodes[idx] : z_nodes[n]
+end

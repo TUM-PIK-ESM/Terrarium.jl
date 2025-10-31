@@ -6,7 +6,7 @@ import ConstructionBase: getproperties, setproperties
 
 import DataStructures: OrderedDict
 
-import Dates: Dates, TimeType, Period, Year, Month, Day, Second
+import Dates: Dates, TimeType, Period, Year, Month, Day, Hour, Minute, Second
 
 import DomainSets: RealLine, HalfLine, PositiveRealLine, UnitInterval, AbstractInterval
 
@@ -32,14 +32,14 @@ import Oceananigans.BoundaryConditions: FieldBoundaryConditions, BoundaryConditi
                                         ValueBoundaryCondition, FluxBoundaryCondition, GradientBoundaryCondition, NoFluxBoundaryCondition,
                                         ContinuousBoundaryFunction, DiscreteBoundaryFunction,
                                         AbstractBoundaryConditionClassification, Value, Flux, Gradient, # BC type classifications
-                                        fill_halo_regions!, regularize_field_boundary_conditions, getbc
+                                        fill_halo_regions!, regularize_field_boundary_conditions, getbc, compute_z_bcs!
 
 # Adapt and KernelAbstractions for GPU parallelization
 import Adapt: Adapt, adapt, @adapt_structure
 import KernelAbstractions: @kernel, @index
 
 # Freeze curves for soil energy balance
-import FreezeCurves: FreezeCurve, SFCC, SWRC, FreeWater
+import FreezeCurves: FreezeCurves, FreezeCurve, SFCC, SWRC, FreeWater
 
 import RingGrids
 
@@ -59,7 +59,7 @@ export Value, Flux, Gradient, ValueBoundaryCondition, GradientBoundaryCondition,
 export run!, time_step!, set!, interior, architecture, on_architecture, xnodes, ynodes, znodes, location
 
 # Re-export common Dates types
-export Year, Month, Day, Second
+export Year, Month, Day, Hour, Minute, Second
 
 # Re-export unit types
 export @u_str, uconvert, ustrip

@@ -15,7 +15,7 @@ workspec(::Center, ::Center, ::Center) = :xyz
 # Helper functions for checking if a `RingGrids` or `Oceananigans` `Field` matches the given grid
 field_matches_grid(field, grid) = field.grid == grid
 
-function assert_field_matches_grid(field, grid)
+function assert_field_matches_grid(field::Union{RingGrids.AbstractField, AbstractField}, grid)
     @assert field_matches_grid(field, grid) "Field grid $(typeof(field.grid)) does not match $(typeof(grid))"
 end
 
@@ -66,3 +66,14 @@ function FieldTimeSeries(
     loc = location(dims)
     return FieldTimeSeries(loc, get_field_grid(grid), times)
 end
+
+# Custom operators (consider moving to separate folder/file once there are more?)
+
+"""
+    min_zᵃᵃᶠ(i, j, k, grid, x)
+    min_zᵃᵃᶠ(i, j, k, grid, f, args...)
+
+Computes the field or function at the vertical (z-axis) face by taking the `min` of the two adjacent vertical layers.
+"""
+@inline min_zᵃᵃᶠ(i, j, k, grid, c) = @inbounds min(c[i, j, k], c[i, j, k-1])
+@inline min_zᵃᵃᶠ(i, j, k, grid, f, args...) = @inbounds min(f(i, j, k, grid, args...), f(i, j, k-1, grid, args...))
