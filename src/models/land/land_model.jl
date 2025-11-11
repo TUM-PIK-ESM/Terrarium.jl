@@ -2,6 +2,8 @@
 struct LandModel{
     NF,
     GridType<:AbstractLandGrid,
+    Atmosphere<:AbstractAtmosphere,
+    SEB<:SurfaceEnergyBalance,
     GroundModel<:AbstractGroundModel,
     SnowModel<:AbstractSnowModel,
     VegetationModel<:AbstractVegetationModel,
@@ -12,6 +14,12 @@ struct LandModel{
 } <: AbstractLandModel{NF, GridType, TimeStepper}
     "Spatial grid"
     grid::GridType
+
+    "Atmospheric inputs"
+    atmosphere::Atmosphere
+
+    "Surface energy balance"
+    suface_energy_balance::SurfaceEnergyBalance
 
     "Ground model"
     ground::GroundModel
