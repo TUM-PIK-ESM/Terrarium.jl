@@ -1,6 +1,5 @@
 """
-Default implementation of [net_incoming_radiation](@ref) for all `AbstractRadiativeFluxes` that
-simply returns the current value of the `net_incoming_radiation` field.
+Return the current value of the `net_incoming_radiation` at the given `idx`.
 """
 @inline net_incoming_radiation(idx, state, ::AbstractRadiativeFluxes) = state.net_incoming_radiation[idx...]
 
