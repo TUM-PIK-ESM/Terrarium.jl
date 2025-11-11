@@ -61,7 +61,7 @@ Base type for surface albedo and emissivity process implementations.
 abstract type AbstractAlbedo <: AbstractProcess end
 
 """
-    alebdo(idx, state, ::AbstractAlbedo)
+    albedo(idx, state, ::AbstractAlbedo)
 
 Return the current albedo at the given `idx`.
 """
@@ -69,7 +69,7 @@ function albedo end
 
 """
     emissivity(idx, state, ::AbstractAlbedo)
-AbstractAlbedo
+
 Return the current emissivity at the given `idx`.
 """
 function emissivity end
