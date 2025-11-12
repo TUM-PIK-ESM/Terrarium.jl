@@ -2,7 +2,7 @@
     $TYPEDEF
 
 Represents the state of a "simulation" for a given `model`. `ModelState` consists of a
-`clock`, a `model`, and an initialized `StateVariables` data structure, as well as a `cache`
+`clock`, a `model`, and an initialized `StateVariables` data structure, as well as a `stage`
 for the timestepper and any relevant `inputs` provided by a corresponding `InputProvider`.
 The `ModelState` implements the `Oceananigans.AbstractModel` interface and can thus be
 treated as a "model" in `Oceananigans` `Simulation`s and output reading/writing utilities.

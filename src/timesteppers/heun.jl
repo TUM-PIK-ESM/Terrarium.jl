@@ -3,12 +3,12 @@
 
 Simple forward 2nd order Heun / improved Euler time stepping scheme.
 """
-@kwdef struct Heun{NF,C} <: AbstractTimeStepper{NF}
+@kwdef struct Heun{NF,S} <: AbstractTimeStepper{NF}
     "Initial timestep size in seconds"
     Δt::NF = 300.0
 
-    "Cache for intermediate results"
-    cache::C
+    "Stage (Cache) for intermediate results"
+    stage::S
 end
 
 """
@@ -16,35 +16,35 @@ end
 
 Create a `Heun` timestepper for the given state variables.
 """
-Heun(state::StateVariables; kwargs...) = Heun{eltype(state), typeof(state)}(; cache=deepcopy(state), kwargs...)
+Heun(state::StateVariables; kwargs...) = Heun{eltype(state), typeof(state)}(; stage=deepcopy(state), kwargs...)
 
 default_dt(heun::Heun) = heun.Δt
 
 is_adaptive(heun::Heun) = false
 
-function average_tendencies!(state::StateVariables{prognames, tendnames}, cache::StateVariables{prognames, tendnames}) where {prognames, tendnames}
+function average_tendencies!(state::StateVariables{prognames, tendnames}, stage::StateVariables{prognames, tendnames}) where {prognames, tendnames}
     for tendname in tendnames
-        state.tendencies[tendname] .= (state.tendencies[tendname] + cache.tendencies[tendname]) / 2
+        state.tendencies[tendname] .= (state.tendencies[tendname] + stage.tendencies[tendname]) / 2
     end
 end
 
 function timestep!(state, model::AbstractModel, timestepper::Heun, Δt = default_dt(timestepper))
     
-    cache = timestepper.cache
+    stage = timestepper.stage
     
     # trial step 
     compute_auxiliary!(state, model) 
     compute_tendencies!(state, model) 
 
-    copyto!(cache, state)
+    copyto!(stage, state)
 
     # improved step 
-    explicit_step!(cache, get_grid(model), timestepper, Δt)  
-    compute_auxiliary!(cache, model) 
-    compute_tendencies!(cache, model) 
+    explicit_step!(stage, get_grid(model), timestepper, Δt)  
+    compute_auxiliary!(stage, model) 
+    compute_tendencies!(stage, model) 
 
     # final improved Euler step call that steps `state` forward but averages `state.tendencies` 
-    average_tendencies!(state, cache)
+    average_tendencies!(state, stage)
     explicit_step!(state, get_grid(model), timestepper, Δt) 
     
     # Apply inverse closure relations
