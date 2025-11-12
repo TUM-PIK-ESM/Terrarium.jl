@@ -1,32 +1,24 @@
-import FreezeCurves: BrooksCorey, VanGenuchten
-
 """
 Base type for implementations of soil water flow dynamics.
 """
-abstract type AbstractSoilWaterFlowOperator <: AbstractOperator end
+abstract type AbstractVerticalFlow <: AbstractOperator end
 
 """
-Represents the simplest case of immobile soil water.
+Represents a hydrology scheme where soil water is immobile.
 """
-struct NoFlow <: AbstractSoilWaterFlowOperator end
+struct NoFlow <: AbstractVerticalFlow end
 
 """
-    RichardsEq{NF} <: AbstractSoilWaterFlowOperator
-
-Operator for soil hydrology corresponding to the Richardson-Richards equation for variably saturated
-flow in porous media.
+Base type for soil/subsurface runoff schemes.
 """
-@kwdef struct RichardsEq{NF} <: AbstractSoilWaterFlowOperator
-    "Exponential scaling factor for ice impedance"
-    Ω::NF = 7
+abstract type AbstractSoilRunoff end
 
-    "Closure relation for mapping between water potential (hydraulic head) and saturation"
-    saturation_closure = PressureSaturationRelation()
-end
+"""
+Base type for soil/subsurface evapotranspiration forcing terms.
+"""
+abstract type AbstractSoilET end
 
-get_closure(op::RichardsEq) = op.saturation_closure
-
-struct PressureSaturationRelation <: AbstractClosureRelation end
+struct NoSoilET <: AbstractSoilET end
 
 """
     $TYPEDEF
@@ -36,40 +28,50 @@ $TYPEDFIELDS
 """
 struct SoilHydrology{
     NF,
-    Operator<:AbstractSoilWaterFlowOperator,
-    RetentionCurve<:Union{Nothing, SWRC},
-    SoilHydraulicProperties<:AbstractSoilHydraulicProperties{NF}
+    VerticalFlow<:AbstractVerticalFlow,
+    Runoff<:AbstractSoilRunoff,
+    SoilET<:AbstractSoilET,
+    SoilHydraulics<:AbstractSoilHydraulics{NF},
 } <: AbstractSoilHydrology{NF}
-    "Soil water flow scheme"
-    operator::Operator
+    "Soil water vertical flow operator"
+    vertflow::VerticalFlow
+
+    "Soil subsurface runoff scheme"
+    runoff::Runoff
+
+    "Scheme for distributing ET fluxes in the root zone"
+    evapotranspiration::SoilET
 
     "Soil hydraulic properties parameterization"
-    hydraulic_properties::SoilHydraulicProperties
-    
-    "Soil water retention curve(s) from FreezeCurves.jl"
-    swrc::RetentionCurve
+    hydraulic_properties::SoilHydraulics
 end
 
-SoilHydrology(
-    ::Type{NF};
-    operator::AbstractSoilWaterFlowOperator = NoFlow(),
-    hydraulic_properties::AbstractSoilHydraulicProperties{NF} = SURFEXHydraulics(NF),
-    swrc::Union{Nothing, SWRC} = default_swrc(operator, hydraulic_properties)
-) where {NF} = SoilHydrology(operator, hydraulic_properties, swrc)
+function SoilHydrology(
+    ::Type{NF},
+    vertflow::AbstractVerticalFlow = NoFlow();
+    runoff::AbstractSoilRunoff = SoilRunoff(),
+    evapotranspiration::AbstractSoilET = NoSoilET(),
+    hydraulic_properties::AbstractSoilHydraulics = SoilHydraulicsSURFEX(NF),
+) where {NF}
+    return SoilHydrology(vertflow, runoff, evapotranspiration, hydraulic_properties)
+end
 
 """
-    default_swrc(::AbstractSoilWaterFlowOperator, ::AbstractSoilHydraulicProperties)
+    get_swrc(hydrology::SoilHydrology)
 
-Return the default soil water retention curve (SWRC) for the given soil hydrology configuration.
-Defaults to `nothing` which represents no use of a pressure-saturation relation.
+Return the soil water retention curve from the `hydraulic_properties` associated with
+the given `SoilHydrology` configuration.
 """
-default_swrc(::AbstractSoilWaterFlowOperator, ::AbstractSoilHydraulicProperties) = nothing
+get_swrc(hydrology::SoilHydrology) = hydrology.hydraulic_properties.cond_unsat.swrc
 
-get_hydraulic_properties(hydrology::SoilHydrology) = hydrology.hydraulic_properties
-
-# TODO: This method interface assumes a single water retenction curve for the whole stratigraphy;
-# we should ideally relax this assumption for multi-layer stratigraphies
-get_soil_water_retention_curve(hydrology::SoilHydrology) = hydrology.swrc
+"""
+State variables for `SoilHydrology` processes.
+"""
+variables(hydrology::SoilHydrology{NF}) where {NF} = (
+    variables(hydrology.vertflow)...,
+    variables(hydrology.runoff)...,
+    variables(hydrology.evapotranspiration)...,
+)
 
 """
     porosity(idx, state, hydrology::SoilHydrology, strat::AbstractStratigraphy, bgc::AbstractSoilBiogeochemistry)
@@ -77,25 +79,68 @@ get_soil_water_retention_curve(hydrology::SoilHydrology) = hydrology.swrc
 Return the porosity of the soil volume at `idx` given the current state, hydrology, stratigraphy, and biogeochemistry configurations.
 """
 @inline function porosity(idx, state, hydrology::SoilHydrology, strat::AbstractStratigraphy, bgc::AbstractSoilBiogeochemistry)
-    props = get_hydraulic_properties(hydrology)
     org = organic_fraction(idx, state, bgc)
     texture = soil_texture(idx, state, strat)
-    return (1 - org)*mineral_porosity(props, texture) + org*organic_porosity(idx, state, bgc)
+    return (1 - org)*mineral_porosity(hydrology.hydraulic_properties, texture) + org*organic_porosity(idx, state, bgc)
 end
 
 # Immobile soil water (NoFlow)
 
-variables(::SoilHydrology{NF,NoFlow}) where {NF} = (
+variables(::NoFlow) = (
     auxiliary(:saturation_water_ice, XYZ(), domain=UnitInterval(), desc="Saturation level of water and ice in the pore space"),
 )
 
-@inline compute_auxiliary!(state, model, hydrology::SoilHydrology) = nothing
+@inline initialize!(state, model, hydrology::SoilHydrology) = nothing
 
-@inline compute_tendencies!(state, model, strat::SoilHydrology{NF,NoFlow}) where {NF} = nothing
+@inline compute_auxiliary!(state, model, hydrology::SoilHydrology{NF, NoFlow}) where {NF} = nothing
 
-# TODO: Richardson-Richards equation diffusion/advection
+@inline compute_tendencies!(state, model, hydrology::SoilHydrology{NF, NoFlow}) where {NF} = nothing
 
-variables(hydrology::SoilHydrology{NF,<:RichardsEq}) where {NF} = (
-    prognosic(:matric_potential, XYZ()),
-    auxiliary(:saturation_water_ice, XYZ(), domain=UnitInterval(), desc="Saturation level of water and ice in the pore space"),
+# Runoff
+
+"""
+    $TYPEDEF
+
+Generic scheme for respresenting soil/subsurface runoff as a composition of three components:
+excess infiltration, interflow, and drainage.
+
+Not yet implemented.
+"""
+@kwdef struct SoilRunoff{SR, IF, DR} <: AbstractSoilRunoff
+    "Excess infiltration runoff scheme"
+    excess_infiltration::SR = nothing
+    
+    "Subsurface interflow runoff"
+    interflow::IF = nothing
+
+    "Groundwater drainage runoff"
+    drainage::DR = nothing
+end
+
+# Evapotranspiration
+
+"""
+    SurfaceEvaporation <: AbstractSoilET
+
+Evapotranspiration scheme for bare soils that allocates the full latent heat flux to evaporation
+from the topmost soil layer.
+"""
+struct SurfaceEvaporation <: AbstractSoilET end
+
+variables(::SurfaceEvaporation) = (
+    input(:latent_heat_flux, XY(), units=u"W/m^2", desc="Latent heat flux at the surface [W m⁻²]"),
 )
+
+@inline function forcing_ET(i, j, k, grid, state, ::SurfaceEvaporation, constants::PhysicalConstants)
+    let Hₗ = state.latent_heat_flux[i, j],
+        L = constants.Lsg, # specific latent heat of vaporization
+        ρw = constants.ρw, # density of water
+        Δz = Δzᵃᵃᶜ(i, j, k, grid);
+        q_E = Hₗ / (L * ρw) # ET water flux in m s⁻¹
+        ∂θ∂t = -q_E / Δz # rescale by layer thickness to get water content flux
+        return ∂θ∂t * (k == grid.Nz) # only nonzero at the surface
+    end
+end
+
+# Default to zero if evapotranspiration is disabled
+@inline forcing_ET(i, j, k, grid, state, ::NoSoilET, args...) = zero(eltype(grid))

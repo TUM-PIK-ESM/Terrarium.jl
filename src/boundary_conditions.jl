@@ -68,9 +68,9 @@ compute_auxiliary!(state, model, ::PrescribedBC) = nothing
 compute_tendencies!(state, model, ::PrescribedBC) = nothing
 
 # compute_tendencies! for flux-valued boundary conditions
-function compute_tendencies!(state, model, ::PrescribedBC{progvar, <:Flux}) where {progvar}
-    tend = getproperty(state, tendencyof(progvar))
-    prog = getproprerty(state, progvar)
+function compute_tendencies!(state, model, ::PrescribedBC{progvar, BC}) where {progvar, BC<:BoundaryCondition{Flux}}
+    tend = getproperty(state.tendencies, progvar)
+    prog = getproperty(state, progvar)
     arch = architecture(get_grid(model))
     clock = state.clock
     compute_z_bcs!(tend, prog, arch, clock, state)
@@ -90,7 +90,7 @@ PrescribedGradient(progvar::Symbol, value; kwargs...) = PrescribedBC(progvar, Gr
 Implementation of `Oceananigans.BoundaryConditions.getbc` for `Input{name}` placeholders that retrieves the input `Field` from
 `state.inputs` and returns the value at the given index.
 """
-@inline function getbc(::Input{name, units, XY}, i::Integer, j::Integer, grid::OceananigansGrids.AbstractGrid, clock, state) where {name, units}
+@inline function getbc(::Input{name, units, <:XY}, i::Integer, j::Integer, grid::OceananigansGrids.AbstractGrid, clock, state) where {name, units}
     input_field = getproperty(state.inputs, name)
     return @inbounds input_field[i, j]
 end
@@ -140,4 +140,9 @@ variables(bcs::ColumnBoundaryConditions) = tuplejoin(variables(bcs.top), variabl
 function compute_auxiliary!(state, model, bcs::ColumnBoundaryConditions)
     compute_auxiliary!(state, model, bcs.top)
     compute_auxiliary!(state, model, bcs.bottom)
+end
+
+function compute_tendencies!(state, model, bcs::ColumnBoundaryConditions)
+    compute_tendencies!(state, model, bcs.top)
+    compute_tendencies!(state, model, bcs.bottom)
 end
