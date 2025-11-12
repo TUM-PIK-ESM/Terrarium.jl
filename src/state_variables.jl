@@ -112,13 +112,13 @@ function Base.fill!(
 ) where {prognames, tendnames, auxnames, namespaces, closures}
     
     for progname in prognames
-        fill!(getproperty(state, progname), value)
+        fill!(getproperty(state.prognostic, progname), value)
     end
     for tendname in tendnames
-        fill!(getproperty(state, tendname), value)
+        fill!(getproperty(state.tendencies, tendname), value)
     end
     for auxname in auxnames
-        fill!(getproperty(state, auxname), value)
+        fill!(getproperty(state.auxiliary, auxname), value)
     end
     return nothing 
 end
@@ -129,13 +129,13 @@ function Base.copyto!(
 ) where {prognames, tendnames, auxnames, inputnames, nsnames, closurenames}
     
     for progname in prognames
-        copyto!(getproperty(state, progname), getproperty(other, progname))
+        copyto!(getproperty(state.prognostic, progname), getproperty(other.prognostic, progname))
     end
     for tendname in tendnames
-        copyto!(getproperty(state, tendname), getproperty(other, tendname))
+        copyto!(getproperty(state.tendencies, tendname), getproperty(other.tendencies, tendname))
     end
     for auxname in auxnames
-        copyto!(getproperty(state, auxname), getproperty(other, auxname))
+        copyto!(getproperty(state.auxiliary, auxname), getproperty(other.auxiliary, auxname))
     end
     for inputname in inputnames
         copyto!(getproperty(state.inputs, inputname), getproperty(other.inputs, inputname))
