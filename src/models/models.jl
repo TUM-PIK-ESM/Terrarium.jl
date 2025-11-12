@@ -10,9 +10,6 @@ include("soil/soil_model_bcs.jl")
 
 include("soil/soil_model_init.jl")
 
-export CoupledSoilAtmosphereModel
-include("soil/soil_atmosphere_model.jl")
-
 # Vegetation
 
 export VegetationModel
