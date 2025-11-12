@@ -101,7 +101,7 @@ end
     model_state = initialize(model)
     state = model_state.state
     dstate = make_zero(state)
-    @time Enzyme.autodiff(set_runtime_activity(Reverse), timestep!, Const, Duplicated(state, dstate), Const(model), Const(model.time_stepping))
+    @time Enzyme.autodiff(set_runtime_activity(Reverse), timestep!, Const, Duplicated(state, dstate), Const(model), Const(model_state.timestepper))
     @test all(isfinite.(dstate.temperature))
     @test all(isfinite.(dstate.pressure_head))
 end
