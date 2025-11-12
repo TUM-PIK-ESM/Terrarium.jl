@@ -74,6 +74,6 @@ end
     model_state = initialize(model)
     state = model_state.state
     dstate = make_zero(state)
-    @time Enzyme.autodiff(set_runtime_activity(Reverse), mean_soil_temperature_step!, Active, Duplicated(state, dstate), Const(model), Const(model_state.timestepper), Const(model.time_stepping.Δt))
+    @time Enzyme.autodiff(set_runtime_activity(Reverse), mean_soil_temperature_step!, Active, Duplicated(state, dstate), Const(model), Const(model_state.timestepper), Const(model_state.timestepper.Δt))
     @test all(isfinite.(dstate.temperature))
 end
