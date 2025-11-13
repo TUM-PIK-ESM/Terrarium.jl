@@ -5,6 +5,7 @@ using Enzyme, FiniteDifferences
 using FreezeCurves
 using Statistics
 
+
 function build_soil_energy_model(arch, ::Type{NF}) where {NF}
     grid = ColumnGrid(arch, Float64, ExponentialSpacing(N=10))
     # initial conditions
@@ -73,6 +74,6 @@ end
     model_state = initialize(model)
     state = model_state.state
     dstate = make_zero(state)
-    @time Enzyme.autodiff(set_runtime_activity(Reverse), mean_soil_temperature_step!, Active, Duplicated(state, dstate), Const(model), Const(model.time_stepping), Const(model.time_stepping.Δt))
+    @time Enzyme.autodiff(set_runtime_activity(Reverse), mean_soil_temperature_step!, Active, Duplicated(state, dstate), Const(model), Const(model_state.timestepper), Const(model_state.timestepper.Δt))
     @test all(isfinite.(dstate.temperature))
 end

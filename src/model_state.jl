@@ -2,7 +2,7 @@
     $TYPEDEF
 
 Represents the state of a "simulation" for a given `model`. `ModelState` consists of a
-`clock`, a `model`, and an initialized `StateVariables` data structure, as well as a `cache`
+`clock`, a `model`, and an initialized `StateVariables` data structure, as well as a `stage`
 for the timestepper and any relevant `inputs` provided by a corresponding `InputProvider`.
 The `ModelState` implements the `Oceananigans.AbstractModel` interface and can thus be
 treated as a "model" in `Oceananigans` `Simulation`s and output reading/writing utilities.
@@ -12,7 +12,7 @@ struct ModelState{
     Arch<:AbstractArchitecture,
     Grid<:AbstractLandGrid{NF, Arch},
     TimeStepper<:AbstractTimeStepper{NF},
-    Model<:AbstractModel{NF, Grid, TimeStepper},
+    Model<:AbstractModel{NF, Grid},
     StateVars<:AbstractStateVariables,
     Inputs<:InputProvider
 } <: Oceananigans.AbstractModel{TimeStepper, Arch}
@@ -30,6 +30,9 @@ struct ModelState{
 
     "Collection of all state variables defined on the simulation `model`."
     state::StateVars
+
+    "Time stepper"
+    timestepper::TimeStepper
 end
 
 # Oceananigans.AbstractModel interface
@@ -42,7 +45,7 @@ iteration(state::ModelState) = state.clock.iteration
 
 architecture(state::ModelState) = architecture(get_grid(state.model))
 
-timestepper(state::ModelState) = get_time_stepping(state.model)
+timestepper(state::ModelState) = state.timestepper
 
 function update_state!(state::ModelState; compute_tendencies = true)
     reset_tendencies!(state.state)
@@ -83,11 +86,11 @@ get_fields(state::ModelState, queries...) = get_fields(state.state, queries...)
 
 Advance the model forward by one timestep with optional timestep size `Δt`.
 """
-timestep!(state::ModelState; finalize=true) = timestep!(state, default_dt(get_time_stepping(state.model)); finalize)
+timestep!(state::ModelState; finalize=true) = timestep!(state, default_dt(timestepper(state)); finalize)
 function timestep!(state::ModelState, Δt; finalize=true)
     reset_tendencies!(state.state)
     update_inputs!(state.inputs, state.clock)
-    timestep!(state.state, state.model, convert_dt(Δt))
+    timestep!(state.state, state.model, timestepper(state), convert_dt(Δt))
     if finalize
         compute_auxiliary!(state.state, state.model)
     end
@@ -103,7 +106,7 @@ function run!(
     state::ModelState;
     steps::Union{Int, Nothing} = nothing,
     period::Union{Period, Nothing} = nothing,
-    Δt = default_dt(get_time_stepping(state.model))
+    Δt = default_dt(timestepper(state))
 )
     Δt = convert_dt(Δt)
     steps = get_steps(steps, period, Δt)
@@ -125,17 +128,17 @@ Creates and initializes a `ModelState` for the given `model` with the given `clo
 This method allocates all necessary `Field`s for the state variables and calls `initialize!(::ModelState)`.
 Note that this method is **not type stable** and should not be called in an Enzyme `autodiff` call.
 """
-function initialize(model::AbstractModel{NF}, inputs::InputProvider; clock::Clock=Clock(time=zero(NF))) where {NF}
+function initialize(model::AbstractModel{NF}, inputs::InputProvider; clock::Clock=Clock(time=zero(NF)), timestepper::Type=ForwardEuler) where {NF}
     statevars = StateVariables(model, clock, inputs.fields)
-    state = ModelState(clock, get_grid(model), model, inputs, statevars)
+    state = ModelState(clock, get_grid(model), model, inputs, statevars, timestepper(statevars))
     initialize!(state)
     return state
 end
 
 # Convenience dispatch that constructs an InputProvider from zero or more input sources
-function initialize(model::AbstractModel{NF}, inputs::InputSource...; clock::Clock=Clock(time=zero(NF))) where {NF}
+function initialize(model::AbstractModel{NF}, inputs::InputSource...; kwargs...) where {NF}
     provider = InputProvider(get_grid(model), inputs...)
-    return initialize(model, provider; clock)
+    return initialize(model, provider; kwargs...)
 end
 
 get_steps(steps::Nothing, period::Period, Δt::Real) = div(Second(period).value, Δt)
