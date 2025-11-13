@@ -48,7 +48,7 @@ PhysicalConstants(::Type{NF}; kwargs...) where {NF} = PhysicalConstants{NF}(; kw
 
 Convert the given temperature in °C to Kelvin based on the constant `Tref`.
 """
-celsius_to_kelvin(c::PhysicalConstants, T) = T + c.Tref
+@inline celsius_to_kelvin(c::PhysicalConstants, T) = T + c.Tref
 
 """
     stefan_boltzmann(c::PhysicalConstants, T, ϵ)

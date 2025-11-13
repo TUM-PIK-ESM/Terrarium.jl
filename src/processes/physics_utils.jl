@@ -43,7 +43,7 @@ end
 
 Derives specific humidity from measured relative humidity, air pressure, and soil/air temperatures.
 """
-relative_to_specific_humidity(r_h, pr, Ts, Tair) = 0.622 * (r_h / 100) * saturation_vapor_pressure(Tair, Ts) / pr
+@inline relative_to_specific_humidity(r_h, pr, Ts, Tair) = 0.622 * (r_h / 100) * saturation_vapor_pressure(Tair, Ts) / pr
 
 # saturation vapor pressure
 """
@@ -52,7 +52,7 @@ relative_to_specific_humidity(r_h, pr, Ts, Tair) = 0.622 * (r_h / 100) * saturat
 August-Roche-Magnus equation for saturation vapor pressure at temperature `T` with empirical
 coefficients a₁, a₂, and a₃.
 """
-saturation_vapor_pressure(T, a₁, a₂, a₃) = a₁ * exp(a₂ * T / (T + a₃))
+@inline saturation_vapor_pressure(T, a₁, a₂, a₃) = a₁ * exp(a₂ * T / (T + a₃))
 
 """
     saturation_vapor_pressure(T, Ts=T)
@@ -62,7 +62,7 @@ accounting for both frozen (`Ts < 0°C`) and unfrozen conditions.
 
 Coefficients taken from Alduchov and Eskridge (1997).
 """
-function saturation_vapor_pressure(T::NF, Ts::NF=T) where {NF}
+@inline function saturation_vapor_pressure(T::NF, Ts::NF=T) where {NF}
     if Ts <= zero(Ts)
         saturation_vapor_pressure(T, NF(611.0), NF(22.46), NF(272.62))
     else
