@@ -36,7 +36,7 @@ $(TYPEDFIELDS)
     constants::Constants = PhysicalConstants(eltype(grid))
 
     "Boundary conditions"
-    boundary_conditions::BoundaryConditions = SoilBoundaryConditions(eltype(grid))
+    boundary_conditions::BoundaryConditions = SoilBoundaryConditions(eltype(grid), energy, hydrology)
 
     "State variable initializer"
     initializer::Initializer = SoilInitializer()

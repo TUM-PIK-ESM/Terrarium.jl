@@ -2,16 +2,23 @@
 struct LandModel{
     NF,
     GridType<:AbstractLandGrid,
+    Atmosphere<:AbstractAtmosphere,
+    SEB<:SurfaceEnergyBalance,
     GroundModel<:AbstractGroundModel,
     SnowModel<:AbstractSnowModel,
     VegetationModel<:AbstractVegetationModel,
-    EnergyBalanceModel<:AbstractEnergyBalanceModel,
     HydrologyModel<:AbstractHydrologyModel,
     BoundaryConditions<:AbstractBoundaryConditions,
     Initializer<:AbstractInitializer,
 } <: AbstractLandModel{NF, GridType}
     "Spatial grid"
     grid::GridType
+
+    "Atmospheric inputs"
+    atmosphere::Atmosphere
+
+    "Surface energy balance"
+    suface_energy_balance::SurfaceEnergyBalance
 
     "Ground model"
     ground::GroundModel
@@ -21,9 +28,6 @@ struct LandModel{
 
     "Vegetation dynamics"
     vegetation::VegetationModel
-
-    "Surface energy balance"
-    energy::EnergyBalanceModel
     
     "Surface hydrology model"
     hydrology::HydrologyModel

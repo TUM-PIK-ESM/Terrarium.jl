@@ -22,7 +22,10 @@ default_dt(heun::Heun) = heun.Δt
 
 is_adaptive(heun::Heun) = false
 
-function average_tendencies!(state::StateVariables{prognames, tendnames}, stage::StateVariables{prognames, tendnames}) where {prognames, tendnames}
+function average_tendencies!(
+    state::StateVariables{NF, prognames, tendnames},
+    stage::StateVariables{NF, prognames, tendnames}
+) where {NF, prognames, tendnames}
     for tendname in tendnames
         state.tendencies[tendname] .= (state.tendencies[tendname] + stage.tendencies[tendname]) / 2
     end

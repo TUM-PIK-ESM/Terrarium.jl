@@ -65,6 +65,8 @@ Returns the initializer associated with this `model`.
 """
 get_initializer(model::AbstractModel) = model.initializer
 
+# Abstract subtypes
+
 # TODO: define general method interfaces (as needed) for all model types
 
 """
@@ -73,6 +75,13 @@ get_initializer(model::AbstractModel) = model.initializer
 Base type for ground (e.g. soil and rock) models.
 """
 abstract type AbstractGroundModel{NF, GR} <: AbstractModel{NF, GR} end
+
+"""
+    $TYPEDEF
+
+Base type for land-atmosphere energy exchange models.
+"""
+abstract type AbstractSurfaceEnergyModel{NF, GR} <: AbstractModel{NF, GR} end
 
 """
     $TYPEDEF
@@ -98,13 +107,6 @@ abstract type AbstractVegetationModel{NF, GR} <: AbstractModel{NF, GR} end
 """
     $TYPEDEF
 
-Base type for surface energy balance models.
-"""
-abstract type AbstractEnergyBalanceModel{NF, GR} <: AbstractModel{NF, GR} end
-
-"""
-    $TYPEDEF
-
 Base type for surface hydrology models.
 """
 abstract type AbstractHydrologyModel{NF, GR} <: AbstractModel{NF, GR} end
@@ -123,7 +125,7 @@ as the first positional argument.
 (::Type{Model})(grid::AbstractLandGrid; kwargs...) where {Model<:AbstractModel} = Model(; grid, kwargs...)
 
 function Adapt.adapt_structure(to, model::AbstractModel)
-    return setproperties(model, map(prop -> Adapt.adapt(to, prop), getproperties(model)))
+    return setproperties(model, map(prop -> Adapt.adapt_structure(to, prop), getproperties(model)))
 end
 
 function Base.show(io::IO, mime::MIME"text/plain", model::AbstractModel{NF}) where {NF}
