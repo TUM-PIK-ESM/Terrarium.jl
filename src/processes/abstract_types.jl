@@ -45,17 +45,17 @@ abstract type AbstractSoilBiogeochemistry{NF} <: AbstractProcess end
 
 # Vegetation process types
 
-abstract type AbstractPhotosynthesis end
+abstract type AbstractPhotosynthesis <: AbstractProcess  end
 
-abstract type AbstractStomatalConductance end
+abstract type AbstractStomatalConductance <: AbstractProcess  end
 
-abstract type AbstractAutotrophicRespiration end
+abstract type AbstractAutotrophicRespiration <: AbstractProcess  end
 
-abstract type AbstractVegetationDynamics end
+abstract type AbstractVegetationDynamics <: AbstractProcess  end
 
-abstract type AbstractPhenology end
+abstract type AbstractPhenology <: AbstractProcess  end
 
-abstract type AbstractVegetationCarbonDynamics end
+abstract type AbstractVegetationCarbonDynamics <: AbstractProcess  end
 
 # Surface energy balance types
 
