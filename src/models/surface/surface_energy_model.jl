@@ -4,8 +4,7 @@ struct SurfaceEnergyModel{
     SEB<:AbstractSurfaceEnergyBalance,
     Atmosphere<:AbstractAtmosphere,
     Initializer<:AbstractInitializer,
-    TimeStepper<:AbstractTimeStepper,
-} <: AbstractSurfaceEnergyModel{NF, GridType, TimeStepper}
+} <: AbstractSurfaceEnergyModel{NF, GridType}
     "Spatial grid"
     grid::GridType
 
@@ -20,9 +19,6 @@ struct SurfaceEnergyModel{
 
     "State variable initializer"
     initializer::Initializer
-    
-    "Time stepping scheme"
-    time_stepping::TimeStepper
 end
 
 function SurfaceEnergyModel(
@@ -30,10 +26,9 @@ function SurfaceEnergyModel(
     surface_energy_balance::AbstractSurfaceEnergyBalance = SurfaceEnergyBalance(NF);
     atmosphere::AbstractAtmosphere = PrescribedAtmosphere(NF),
     constants::PhysicalConstants = PhysicalConstants(NF),
-    initializer::AbstractInitializer = DefaultInitializer(),
-    time_stepping::AbstractTimeStepper = ForwardEuler(NF)
+    initializer::AbstractInitializer = DefaultInitializer()
 ) where {NF}
-    return SurfaceEnergyModel(grid, atmosphere, surface_energy_balance, constants, initializer, time_stepping)
+    return SurfaceEnergyModel(grid, atmosphere, surface_energy_balance, constants, initializer)
 end
 
 variables(model::SurfaceEnergyModel) = tuplejoin(variables(model.atmosphere), variables(model.surface_energy_balance))

@@ -5,7 +5,7 @@
 
 Base type for all models.
 """
-abstract type AbstractModel{NF, Grid<:AbstractLandGrid{NF}, TS<:AbstractTimeStepper} end
+abstract type AbstractModel{NF, Grid<:AbstractLandGrid{NF}} end
 
 """
     variables(model::AbstractModel)
@@ -52,13 +52,6 @@ Return the spatial grid associated with this `model`.
 get_grid(model::AbstractModel) = model.grid
 
 """
-    get_time_stepping(model::AbstractModel)::AbstractTimeStepper
-
-Returns the time stepping scheme associated with this `model`.
-"""
-get_time_stepping(model::AbstractModel) = model.time_stepping
-
-"""
     get_boundary_conditions(model::AbstractModel)::AbstractBoundaryConditions
 
 Returns the boundary conditions associated with this `model`.
@@ -72,10 +65,58 @@ Returns the initializer associated with this `model`.
 """
 get_initializer(model::AbstractModel) = model.initializer
 
+# Abstract subtypes
+
+# TODO: define general method interfaces (as needed) for all model types
+
 """
-Convenience dispatch for `timestep!` that forwards to `timestep!(state, model, get_time_stepping(model), Δt)`.
+    $TYPEDEF
+    
+Base type for ground (e.g. soil and rock) models.
 """
-timestep!(state, model::AbstractModel, Δt) = timestep!(state, model, get_time_stepping(model), Δt)
+abstract type AbstractGroundModel{NF, GR} <: AbstractModel{NF, GR} end
+
+"""
+    $TYPEDEF
+
+Base type for land-atmosphere energy exchange models.
+"""
+abstract type AbstractSurfaceEnergyModel{NF, GR} <: AbstractModel{NF, GR} end
+
+"""
+    $TYPEDEF
+
+Base type for soil ground models.
+"""
+abstract type AbstractSoilModel{NF, GR} <: AbstractGroundModel{NF, GR} end
+
+"""
+    $TYPEDEF
+
+Base type for snow models.
+"""
+abstract type AbstractSnowModel{NF, GR} <: AbstractModel{NF, GR} end
+
+"""
+    $TYPEDEF
+
+Base type for vegetation/carbon models.
+"""
+abstract type AbstractVegetationModel{NF, GR} <: AbstractModel{NF, GR} end
+
+"""
+    $TYPEDEF
+
+Base type for surface hydrology models.
+"""
+abstract type AbstractHydrologyModel{NF, GR} <: AbstractModel{NF, GR} end
+
+"""
+    AbstractLandModel <: AbstractModel
+
+Base type for full land models which couple together multiple component models.
+"""
+abstract type AbstractLandModel{NF, GR} <: AbstractModel{NF, GR} end
 
 """
 Convenience constructor for all `AbstractLandModel` types that allows the `grid` to be passed
@@ -96,56 +137,3 @@ function Base.show(io::IO, mime::MIME"text/plain", model::AbstractModel{NF}) whe
         println(io)
     end
 end
-
-# Abstract subtypes
-
-# TODO: define general method interfaces (as needed) for all model types
-
-"""
-    $TYPEDEF
-    
-Base type for ground (e.g. soil and rock) models.
-"""
-abstract type AbstractGroundModel{NF, GR, TS} <: AbstractModel{NF, GR, TS} end
-
-"""
-    $TYPEDEF
-
-Base type for land-atmosphere energy exchange models.
-"""
-abstract type AbstractSurfaceEnergyModel{NF, GR, TS} <: AbstractModel{NF, GR, TS} end
-
-"""
-    $TYPEDEF
-
-Base type for soil ground models.
-"""
-abstract type AbstractSoilModel{NF, GR, TS} <: AbstractGroundModel{NF, GR, TS} end
-
-"""
-    $TYPEDEF
-
-Base type for snow models.
-"""
-abstract type AbstractSnowModel{NF, GR, TS} <: AbstractModel{NF, GR, TS} end
-
-"""
-    $TYPEDEF
-
-Base type for vegetation/carbon models.
-"""
-abstract type AbstractVegetationModel{NF, GR, TS} <: AbstractModel{NF, GR, TS} end
-
-"""
-    $TYPEDEF
-
-Base type for surface hydrology models.
-"""
-abstract type AbstractHydrologyModel{NF, GR, TS} <: AbstractModel{NF, GR, TS} end
-
-"""
-    AbstractLandModel <: AbstractModel
-
-Base type for full land models which couple together multiple component models.
-"""
-abstract type AbstractLandModel{NF, GR, TS} <: AbstractModel{NF, GR, TS} end

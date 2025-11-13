@@ -72,6 +72,9 @@ function StateVariables(
     )
 end
 
+# TODO: just take the first prognostic variable for the eltype, bad idea?
+Base.eltype(vars::StateVariables) = eltype(vars.prognostic[1])
+
 Base.propertynames(
     vars::StateVariables{prognames, tendnames, auxnames, inputnames, nsnames, closures}
 ) where {prognames, tendnames, auxnames, inputnames, nsnames, closures} = (
@@ -109,15 +112,40 @@ function Base.fill!(
 ) where {prognames, tendnames, auxnames, namespaces, closures}
     
     for progname in prognames
-        fill!(getproperty(state, progname), value)
+        fill!(getproperty(state.prognostic, progname), value)
     end
     for tendname in tendnames
-        fill!(getproperty(state, tendname), value)
+        fill!(getproperty(state.tendencies, tendname), value)
     end
     for auxname in auxnames
-        fill!(getproperty(state, auxname), value)
+        fill!(getproperty(state.auxiliary, auxname), value)
     end
     return nothing 
+end
+
+function Base.copyto!(
+    state::StateVariables{prognames, tendnames, auxnames, inputnames, nsnames, closurenames}, 
+    other::StateVariables{prognames, tendnames, auxnames, inputnames, nsnames, closurenames}
+) where {prognames, tendnames, auxnames, inputnames, nsnames, closurenames}
+    
+    for progname in prognames
+        copyto!(getproperty(state.prognostic, progname), getproperty(other.prognostic, progname))
+    end
+    for tendname in tendnames
+        copyto!(getproperty(state.tendencies, tendname), getproperty(other.tendencies, tendname))
+    end
+    for auxname in auxnames
+        copyto!(getproperty(state.auxiliary, auxname), getproperty(other.auxiliary, auxname))
+    end
+    for inputname in inputnames
+        copyto!(getproperty(state.inputs, inputname), getproperty(other.inputs, inputname))
+    end
+    for nsname in nsnames
+        copyto!(getproperty(state.namespaces, nsname), getproperty(other.namespaces, nsname))
+    end
+    # currently clock isn't copied, not defined, and not our type
+    #copyto!(state.clock, other.clock)
+    return nothing
 end
 
 """

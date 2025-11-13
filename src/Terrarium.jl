@@ -91,7 +91,7 @@ export timestep!, default_dt, is_adaptive
 include("timesteppers/abstract_timestepper.jl")
 
 # model interface
-export get_grid, get_time_stepping, get_boundary_conditions, variables, compute_auxiliary!, compute_tendencies!
+export get_grid, timestepper, get_boundary_conditions, variables, compute_auxiliary!, compute_tendencies!
 include("abstract_model.jl")
 
 # state variables
@@ -108,6 +108,8 @@ include("boundary_conditions.jl")
 # timestepper implementations
 export ForwardEuler
 include("timesteppers/forward_euler.jl")
+export Heun
+include("timesteppers/heun.jl")
 
 # physical processes
 include("processes/processes.jl")

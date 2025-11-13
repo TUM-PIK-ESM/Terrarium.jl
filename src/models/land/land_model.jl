@@ -10,8 +10,7 @@ struct LandModel{
     HydrologyModel<:AbstractHydrologyModel,
     BoundaryConditions<:AbstractBoundaryConditions,
     Initializer<:AbstractInitializer,
-    TimeStepper<:AbstractTimeStepper,
-} <: AbstractLandModel{NF, GridType, TimeStepper}
+} <: AbstractLandModel{NF, GridType}
     "Spatial grid"
     grid::GridType
 
@@ -38,9 +37,6 @@ struct LandModel{
 
     "State variable initializer"
     initializer::Initializer
-    
-    "Time stepping scheme"
-    time_stepping::TimeStepper
 end
 
 # TODO
