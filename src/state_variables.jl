@@ -99,7 +99,16 @@ function StateVariables(
 end
 
 function Adapt.adapt_structure(to, vars::StateVariables{NF}) where {NF}
-    return setproperties(vars, map(prop -> Adapt.adapt_structure(to, prop), getproperties(vars)))
+    return StateVariables(
+        NF,
+        Adapt.adapt_structure(to, vars.prognostic),
+        Adapt.adapt_structure(to, vars.tendencies),
+        Adapt.adapt_structure(to, vars.auxiliary),
+        Adapt.adapt_structure(to, vars.inputs),
+        Adapt.adapt_structure(to, vars.namespaces),
+        Adapt.adapt_structure(to, vars.closures),
+        Adapt.adapt_structure(to, vars.clock),
+    )
 end
 
 Base.eltype(::StateVariables{NF}) where {NF} = NF
@@ -108,7 +117,6 @@ Base.propertynames(
     vars::StateVariables{NF, prognames, tendnames, auxnames, inputnames, nsnames, closures}
 ) where {NF, prognames, tendnames, auxnames, inputnames, nsnames, closures} = (
     prognames...,
-    tendnames...,
     auxnames...,
     inputnames...,
     nsnames...,
