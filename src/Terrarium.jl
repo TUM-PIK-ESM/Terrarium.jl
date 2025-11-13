@@ -4,7 +4,7 @@ using DocStringExtensions
 
 import Base: @propagate_inbounds
 
-import ConstructionBase: getproperties, setproperties
+import ConstructionBase: ConstructionBase, getproperties, setproperties
 
 import DataStructures: OrderedDict
 

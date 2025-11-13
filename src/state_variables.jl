@@ -14,6 +14,7 @@ however, they are assigned their own category here since they need to be handled
 by the timestepping scheme.
 """
 struct StateVariables{
+    NF,
     prognames, tendnames, auxnames, inputnames, nsnames, closurenames,
     ProgFields, TendFields, AuxFields, InputFields, Namespaces, Closures,
     ClockType
@@ -25,15 +26,39 @@ struct StateVariables{
     namespaces::NamedTuple{nsnames, Namespaces}
     closures::NamedTuple{closurenames, Closures}
     clock::ClockType
+
+    function StateVariables(
+        ::Type{NF},
+        prognostic::NamedTuple{prognames, ProgFields},
+        tendencies::NamedTuple{tendnames, TendFields},
+        auxiliary::NamedTuple{auxnames, AuxFields},
+        inputs::NamedTuple{inputnames, InputFields},
+        namespaces::NamedTuple{nsnames, Namespaces},
+        closures::NamedTuple{closurenames, Closures},
+        clock::ClockType
+    ) where {NF, prognames, tendnames, auxnames, inputnames, nsnames, closurenames,
+             ProgFields, TendFields, AuxFields, InputFields, Namespaces, Closures, ClockType}
+        return new{NF, prognames, tendnames, auxnames, inputnames, nsnames, closurenames,
+                   ProgFields, TendFields, AuxFields, InputFields, Namespaces, Closures, ClockType}(
+            prognostic,
+            tendencies,
+            auxiliary,
+            inputs,
+            namespaces,
+            closures,
+            clock
+        )
+    end
 end
 
-@adapt_structure StateVariables
+# Allow reconstruction from properties
+ConstructionBase.constructorof(::Type{StateVariables{NF}}) where {NF} = (args...) -> StateVariables(NF, args...)
 
 function StateVariables(
-    model::AbstractModel,
+    model::AbstractModel{NF},
     clock::Clock,
     inputs::InputFields,
-)
+) where {NF}
     # extract abstract variables from model
     vars = Variables(variables(model)...)
     # create named tuples for each variable type
@@ -62,6 +87,7 @@ function StateVariables(
     closure_fields = map(closure -> auxiliary_fields[varname(closurevar(closure))], values(closures))
     # construct and return StateVariables
     return StateVariables(
+        NF,
         prognostic_fields,
         tendency_fields,
         auxiliary_fields,
@@ -72,12 +98,15 @@ function StateVariables(
     )
 end
 
-# TODO: just take the first prognostic variable for the eltype, bad idea?
-Base.eltype(vars::StateVariables) = eltype(vars.prognostic[1])
+function Adapt.adapt_structure(to, vars::StateVariables{NF}) where {NF}
+    return setproperties(vars, map(prop -> Adapt.adapt_structure(to, prop), getproperties(vars)))
+end
+
+Base.eltype(::StateVariables{NF}) where {NF} = NF
 
 Base.propertynames(
-    vars::StateVariables{prognames, tendnames, auxnames, inputnames, nsnames, closures}
-) where {prognames, tendnames, auxnames, inputnames, nsnames, closures} = (
+    vars::StateVariables{NF, prognames, tendnames, auxnames, inputnames, nsnames, closures}
+) where {NF, prognames, tendnames, auxnames, inputnames, nsnames, closures} = (
     prognames...,
     tendnames...,
     auxnames...,
@@ -88,9 +117,9 @@ Base.propertynames(
 )
 
 function Base.getproperty(
-    vars::StateVariables{prognames, tendnames, auxnames, inputnames, nsnames, closures},
+    vars::StateVariables{NF, prognames, tendnames, auxnames, inputnames, nsnames, closures},
     name::Symbol
-) where {prognames, tendnames, auxnames, inputnames, nsnames, closures}
+) where {NF, prognames, tendnames, auxnames, inputnames, nsnames, closures}
     # forward getproperty calls to variable groups
     if name ∈ prognames
         return getproperty(getfield(vars, :prognostic), name)
@@ -107,9 +136,9 @@ end
 
 # helper function e.g. for usage with Enzyme 
 function Base.fill!(
-    state::StateVariables{prognames, tendnames, auxnames, namespaces, closures}, 
+    state::StateVariables{NF, prognames, tendnames, auxnames, namespaces, closures}, 
     value
-) where {prognames, tendnames, auxnames, namespaces, closures}
+) where {NF, prognames, tendnames, auxnames, namespaces, closures}
     
     for progname in prognames
         fill!(getproperty(state.prognostic, progname), value)
@@ -124,9 +153,9 @@ function Base.fill!(
 end
 
 function Base.copyto!(
-    state::StateVariables{prognames, tendnames, auxnames, inputnames, nsnames, closurenames}, 
-    other::StateVariables{prognames, tendnames, auxnames, inputnames, nsnames, closurenames}
-) where {prognames, tendnames, auxnames, inputnames, nsnames, closurenames}
+    state::StateVariables{NF, prognames, tendnames, auxnames, inputnames, nsnames, closurenames}, 
+    other::StateVariables{NF, prognames, tendnames, auxnames, inputnames, nsnames, closurenames}
+) where {NF, prognames, tendnames, auxnames, inputnames, nsnames, closurenames}
     
     for progname in prognames
         copyto!(getproperty(state.prognostic, progname), getproperty(other.prognostic, progname))

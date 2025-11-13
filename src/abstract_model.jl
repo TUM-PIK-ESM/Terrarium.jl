@@ -125,7 +125,7 @@ as the first positional argument.
 (::Type{Model})(grid::AbstractLandGrid; kwargs...) where {Model<:AbstractModel} = Model(; grid, kwargs...)
 
 function Adapt.adapt_structure(to, model::AbstractModel)
-    return setproperties(model, map(prop -> Adapt.adapt(to, prop), getproperties(model)))
+    return setproperties(model, map(prop -> Adapt.adapt_structure(to, prop), getproperties(model)))
 end
 
 function Base.show(io::IO, mime::MIME"text/plain", model::AbstractModel{NF}) where {NF}
