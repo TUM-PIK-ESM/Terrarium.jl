@@ -45,7 +45,7 @@ iteration(state::ModelState) = state.clock.iteration
 
 architecture(state::ModelState) = architecture(get_grid(state.model))
 
-get_time_stepping(state::ModelState) = state.timestepper
+timestepper(state::ModelState) = state.timestepper
 
 function update_state!(state::ModelState; compute_tendencies = true)
     reset_tendencies!(state.state)
@@ -86,11 +86,11 @@ get_fields(state::ModelState, queries...) = get_fields(state.state, queries...)
 
 Advance the model forward by one timestep with optional timestep size `Δt`.
 """
-timestep!(state::ModelState; finalize=true) = timestep!(state, default_dt(get_time_stepping(state)); finalize)
+timestep!(state::ModelState; finalize=true) = timestep!(state, default_dt(timestepper(state)); finalize)
 function timestep!(state::ModelState, Δt; finalize=true)
     reset_tendencies!(state.state)
     update_inputs!(state.inputs, state.clock)
-    timestep!(state.state, state.model, get_time_stepping(state), convert_dt(Δt))
+    timestep!(state.state, state.model, timestepper(state), convert_dt(Δt))
     if finalize
         compute_auxiliary!(state.state, state.model)
     end
@@ -106,7 +106,7 @@ function run!(
     state::ModelState;
     steps::Union{Int, Nothing} = nothing,
     period::Union{Period, Nothing} = nothing,
-    Δt = default_dt(get_time_stepping(state))
+    Δt = default_dt(timestepper(state))
 )
     Δt = convert_dt(Δt)
     steps = get_steps(steps, period, Δt)
