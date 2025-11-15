@@ -32,21 +32,18 @@ function average_tendencies!(
 end
 
 function timestep!(state, model::AbstractModel, timestepper::Heun, Δt = default_dt(timestepper))
-    
+    # Copy current state to stage
     stage = timestepper.stage
-    
-    # trial step 
-    compute_auxiliary!(state, model) 
-    compute_tendencies!(state, model) 
-
     copyto!(stage, state)
 
-    # improved step 
-    explicit_step!(stage, get_grid(model), timestepper, Δt)  
+    # Compute stage
+    # TODO: this is currently incorrect because inputs are not updated
+    explicit_step!(stage, get_grid(model), timestepper, Δt)
+    reset_tendencies!(stage)
     compute_auxiliary!(stage, model) 
     compute_tendencies!(stage, model) 
 
-    # final improved Euler step call that steps `state` forward but averages `state.tendencies` 
+    # Final improved Euler step call that steps `state` forward but averages `state.tendencies`
     average_tendencies!(state, stage)
     explicit_step!(state, get_grid(model), timestepper, Δt) 
     
@@ -54,7 +51,8 @@ function timestep!(state, model::AbstractModel, timestepper::Heun, Δt = default
     for closure in state.closures
         invclosure!(state, model, closure)
     end
-    # Update clock
+
+    # Update clock and return
     tick!(state.clock, Δt)
     return nothing
 end

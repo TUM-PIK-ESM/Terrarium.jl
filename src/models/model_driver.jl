@@ -14,7 +14,7 @@ struct ModelDriver{
     TimeStepper<:AbstractTimeStepper{NF},
     Model<:AbstractModel{NF, Grid},
     StateVars<:AbstractStateVariables,
-    Inputs<:InputProvider
+    InputSources<:Tuple{Vararg{InputSource}},
 } <: Oceananigans.AbstractModel{TimeStepper, Arch}
     "The clock holding all information about the current timestep/iteration of a simulation"
     clock::Clock
@@ -25,8 +25,8 @@ struct ModelDriver{
     "Underlying model evaluated by this driver"
     model::Model
 
-    "Input provider type"
-    inputs::Inputs
+    "Input sources"
+    inputs::InputSources
 
     "Collection of all state variables defined on the simulation `model`"
     state::StateVars
@@ -49,7 +49,7 @@ timestepper(driver::ModelDriver) = driver.timestepper
 
 function update_state!(driver::ModelDriver; compute_tendencies = true)
     reset_tendencies!(driver.state)
-    update_inputs!(driver.inputs, driver.clock)
+    update_inputs!(driver.state, driver.inputs...)
     compute_auxiliary!(driver.state, driver.model)
     if compute_tendencies
         compute_tendencies!(driver.state, driver.model)
@@ -88,9 +88,8 @@ Advance the model forward by one timestep with optional timestep size `Δt`.
 """
 timestep!(driver::ModelDriver; finalize=true) = timestep!(driver, default_dt(timestepper(driver)); finalize)
 function timestep!(driver::ModelDriver, Δt; finalize=true)
-    reset_tendencies!(driver.state)
-    update_inputs!(driver.inputs, driver.clock)
-    timestep!(driver.state, driver.model, timestepper(driver), convert_dt(Δt))
+    update_state!(driver, compute_tendencies=true)
+    timestep!(driver.state, driver.model, driver.timestepper, convert_dt(Δt))
     if finalize
         compute_auxiliary!(driver.state, driver.model)
     end
@@ -117,7 +116,6 @@ function run!(
 
     # Update auxiliary variables for final timestep
     compute_auxiliary!(driver.state, driver.model)
-
     return driver 
 end
 
@@ -128,17 +126,11 @@ Creates and initializes a `ModelDriver` for the given `model` with the given `cl
 This method allocates all necessary `Field`s for the state variables and calls `initialize!(::ModelDriver)`.
 Note that this method is **not type stable** and should not be called in an Enzyme `autodiff` call.
 """
-function initialize(model::AbstractModel{NF}, inputs::InputProvider; clock::Clock=Clock(time=zero(NF)), timestepper::Type=ForwardEuler) where {NF}
-    statevars = StateVariables(model, clock, inputs.fields)
+function initialize(model::AbstractModel{NF}, inputs::InputSource...; clock::Clock=Clock(time=zero(NF)), timestepper::Type=ForwardEuler) where {NF}
+    statevars = StateVariables(model, clock)
     driver = ModelDriver(clock, get_grid(model), model, inputs, statevars, timestepper(statevars))
     initialize!(driver)
     return driver
-end
-
-# Convenience dispatch that constructs an InputProvider from zero or more input sources
-function initialize(model::AbstractModel{NF}, inputs::InputSource...; kwargs...) where {NF}
-    provider = InputProvider(get_grid(model), inputs...)
-    return initialize(model, provider; kwargs...)
 end
 
 get_steps(steps::Nothing, period::Period, Δt::Real) = div(Second(period).value, Δt)

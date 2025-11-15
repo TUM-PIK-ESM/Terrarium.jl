@@ -58,7 +58,7 @@ function Field(
     args...;
     kwargs...
 )
-    # infer the location of the Field on the FVM grid and specify its type
+    # infer the location of the Field on the Oceananigans grid from `dims`
     loc = location(dims)
     FT = Field{map(typeof, loc)...}
     # Specify BCs if defined

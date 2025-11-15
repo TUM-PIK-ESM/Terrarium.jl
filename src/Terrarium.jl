@@ -82,9 +82,9 @@ include("grids/vertical_discretization.jl")
 export ColumnGrid, ColumnRingGrid, get_field_grid
 include("grids/grids.jl")
 
-export InputFields, InputProvider, InputSource
-export update_inputs!, get_input_fields, get_input_field
-include("inputs/inputs.jl")
+export InputSource
+export update_inputs!
+include("inputs/input_sources.jl")
 
 # timestepping
 export timestep!, default_dt, is_adaptive

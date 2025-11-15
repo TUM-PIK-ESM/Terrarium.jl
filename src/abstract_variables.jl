@@ -214,7 +214,8 @@ struct Variables{ProgVars, TendVars, AuxVars, InputVars, Namespaces}
     namespaces::Namespaces
 end
 
-function Variables(vars::Union{AbstractVariable, Namespace}...)
+Variables(vars::Tuple{Vararg{Union{AbstractVariable, Namespace}}}...) = Variables(vars)
+function Variables(vars::Tuple{Vararg{Union{AbstractVariable, Namespace}}})
     # partition variables into prognostic, auxiliary, input, and namespace groups;
     # duplicates within each group are automatically merged
     prognostic_vars = merge_duplicates(filter(var -> isa(var, PrognosticVariable), vars))
@@ -322,4 +323,4 @@ namespace(name::Symbol, vars::Tuple) = Namespace(name, Variables(vars...))
 """
 Alias for `Variables(vars...)`
 """
-variables(vars::Union{AbstractVariable, Namespace}...) = Variables(vars...)
+variables(vars::Union{AbstractVariable, Namespace}...) = Variables(vars)

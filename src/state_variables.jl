@@ -56,8 +56,7 @@ ConstructionBase.constructorof(::Type{StateVariables{NF}}) where {NF} = (args...
 
 function StateVariables(
     model::AbstractModel{NF},
-    clock::Clock,
-    inputs::InputFields,
+    clock::Clock
 ) where {NF}
     # extract abstract variables from model
     vars = Variables(variables(model)...)
@@ -67,14 +66,12 @@ function StateVariables(
     field_bcs = get_field_boundary_conditions(bcs, grid)
     # create fields from abstract variables
     init(var::AbstractVariable) = Field(grid, vardims(var), get(field_bcs, varname(var), nothing))
-    # input variables are retrieved (or allocated) in the external storage provided
-    init(var::InputVariable) = get_input_field(inputs, varname(var), vardims(var))
     prognostic_fields = map(init, vars.prognostic)
     tendency_fields =  map(init, vars.tendencies)
     auxiliary_fields = map(init, vars.auxiliary)
     input_fields = map(init, vars.inputs)
     # recursively initialize state variables for each namespace
-    namespaces = map(ns -> StateVariables(getproperty(model, varname(ns)), clock, inputs), vars.namespaces)
+    namespaces = map(ns -> StateVariables(ns, grid, clock, get(boundary_conditions, varname(var), (;))), vars.namespaces)
     # get named tuple mapping prognostic variabels to their respective closure relations, if defined
     closures = map(var -> var.closure, filter(hasclosure, prognostic_vars))
     # construct and return StateVariables
@@ -192,6 +189,20 @@ function fill_halo_regions!(state::StateVariables)
     # recurse over namespaces
     fastiterate(state.namespaces) do ns
         fill_halo_regions!(ns)
+    end
+end
+
+"""
+Update input variables from the given input `sources`.
+"""
+function update_inputs!(state::StateVariables, sources::InputSource...)
+    for source in sources
+        # update inputs in current namespace
+        update_inputs!(state.inputs, source, state.clock)
+    end
+    # recursively update namespaces
+    for ns in state.namespaces
+        update_inputs!(ns, sources...)
     end
 end
 
