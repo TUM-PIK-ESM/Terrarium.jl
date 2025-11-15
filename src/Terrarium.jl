@@ -84,7 +84,7 @@ include("grids/grids.jl")
 
 export InputSource
 export update_inputs!
-include("inputs/input_sources.jl")
+include("input_output/input_sources.jl")
 
 # timestepping
 export timestep!, default_dt, is_adaptive
