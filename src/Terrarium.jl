@@ -118,7 +118,7 @@ include("processes/processes.jl")
 include("models/models.jl")
 
 # model simulation types and methods
-export ModelState, initialize, current_time, iteration
-include("model_state.jl")
+export ModelDriver, initialize, current_time, iteration
+include("models/model_driver.jl")
 
 end # module Terrarium
