@@ -212,31 +212,37 @@ struct Variables{ProgVars, TendVars, AuxVars, InputVars, Namespaces}
     auxiliary::AuxVars
     inputs::InputVars
     namespaces::Namespaces
+end
 
-    function Variables(vars::Union{AbstractVariable, Namespace}...)
-        # partition variables into prognostic, auxiliary, input, and namespace groups;
-        # duplicates within each group are automatically merged
-        prognostic_vars = merge_duplicates(filter(var -> isa(var, PrognosticVariable), vars))
-        auxiliary_vars = merge_duplicates(filter(var -> isa(var, AuxiliaryVariable), vars))
-        input_vars = merge_duplicates(filter(var -> isa(var, InputVariable), vars))
-        namespaces = merge_duplicates(filter(var -> isa(var, Namespace), vars))
-        # get tendencies from prognostic variables
-        tendency_vars = map(var -> var.tendency, prognostic_vars)
-        # create closure variables and add to auxiliary variables
-        closure_vars = map(var -> closurevar(var.closure), filter(hasclosure, prognostic_vars))
-        auxiliary_ext = tuplejoin(auxiliary_vars, closure_vars)
-        # drop inputs with matching prognostic or auxiliary variables
-        input_vars = filter(var -> var ∉ prognostic_vars && var ∉ auxiliary_vars, input_vars)
-        # check for duplicates
-        check_duplicates(prognostic_vars..., auxiliary_vars..., input_vars..., namespaces...)
-        return new{typeof(prognostic_vars), typeof(tendency_vars), typeof(auxiliary_ext), typeof(input_vars), typeof(namespaces)}(
-            prognostic_vars,
-            tendency_vars,
-            auxiliary_ext,
-            input_vars,
-            namespaces,
-        )
-    end
+function Variables(vars::Union{AbstractVariable, Namespace}...)
+    # partition variables into prognostic, auxiliary, input, and namespace groups;
+    # duplicates within each group are automatically merged
+    prognostic_vars = merge_duplicates(filter(var -> isa(var, PrognosticVariable), vars))
+    auxiliary_vars = merge_duplicates(filter(var -> isa(var, AuxiliaryVariable), vars))
+    input_vars = merge_duplicates(filter(var -> isa(var, InputVariable), vars))
+    namespaces = merge_duplicates(filter(var -> isa(var, Namespace), vars))
+    # get tendencies from prognostic variables
+    tendency_vars = map(var -> var.tendency, prognostic_vars)
+    # create closure variables and add to auxiliary variables
+    closure_vars = map(var -> closurevar(var.closure), filter(hasclosure, prognostic_vars))
+    auxiliary_vars = tuplejoin(auxiliary_vars, closure_vars)
+    # drop inputs with matching prognostic or auxiliary variables
+    input_vars = filter(var -> var ∉ prognostic_vars && var ∉ auxiliary_vars, input_vars)
+    # check for duplicates
+    check_duplicates(prognostic_vars..., auxiliary_vars..., input_vars..., namespaces...)
+    # create named tuples for each variable type
+    prognostic_nt = (; map(var -> varname(var) => var, prognostic_vars)...)
+    tendency_nt = (; map(var -> varname(var) => var, tendency_vars)...)
+    auxiliary_nt = (; map(var -> varname(var) => var, auxiliary_vars)...)
+    input_nt = (; map(var -> varname(var) => var, input_vars)...)
+    namespace_nt = (; map(var -> varname(var) => var, namespaces)...)
+    return Variables(
+        prognostic_nt,
+        tendency_nt,
+        auxiliary_nt,
+        input_nt,
+        namespace_nt,
+    )
 end
 
 function check_duplicates(vars...)
@@ -317,18 +323,3 @@ namespace(name::Symbol, vars::Tuple) = Namespace(name, Variables(vars...))
 Alias for `Variables(vars...)`
 """
 variables(vars::Union{AbstractVariable, Namespace}...) = Variables(vars...)
-
-"""
-Type-stable and GPU-friendly placeholder for input variables in model/process `struct`s, allowing parameters/constants to
-be easily replaced by input `Field`s. `Input` can be provided as the value of a struct field or in an Oceananigans BoundaryCondition type
-and will result in an input variable being allocated with the given name and dimensions during model initialization.
-"""
-struct Input{name, units, VD, IT}
-    dims::VD
-    init::IT
-
-    Input(name::Symbol, init=nothing; units::Units=NoUnits, dims::VarDims=XY()) = new{name, units, typeof(dims), typeof(init)}(dims, init)
-end
-
-# TODO: Figure out how to also include description as string; a natural workaround here would be a state variable registry
-variables(in::Input{name, units}) where {name, units} = (input(name, in.dims; units),)
