@@ -74,7 +74,7 @@ function StateVariables(
     end
     # recursively initialize state variables for each namespace
     namespaces = map(vars.namespaces) do ns
-        StateVariables(ns, grid, clock, get(boundary_conditions, varname(ns), (;)), get(fields, varname(ns), (;)))
+        StateVariables(ns.vars, grid, clock; boundary_conditions=get(boundary_conditions, varname(ns), (;)), fields=get(fields, varname(ns), (;)))
     end
     # get named tuple mapping prognostic variabels to their respective closure relations, if defined
     closures = map(var -> var.closure, filter(hasclosure, vars.prognostic))

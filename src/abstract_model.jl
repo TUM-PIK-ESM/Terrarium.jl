@@ -51,6 +51,13 @@ Return the spatial grid associated with this `model`.
 """
 get_grid(model::AbstractModel) = model.grid
 
+"""
+    get_initializer(model::AbstractModel)::AbstractInitializer
+
+Returns the initializer associated with this `model`.
+"""
+get_initializer(model::AbstractModel) = model.initializer
+
 # Abstract subtypes
 
 # TODO: define general method interfaces (as needed) for all model types

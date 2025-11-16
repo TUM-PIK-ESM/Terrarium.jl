@@ -159,7 +159,8 @@ end
     # do timestep! and compute total water mass
     ∫sat₀ = Field(Integral(saturation, dims=3))
     compute!(∫sat₀)
-    timestep!(state)
+    Δt = 60.0
+    timestep!(driver, Δt)
     ∫sat₁ = Field(Integral(saturation, dims=3))
     compute!(∫sat₁)
     # check saturation levels are all finite and valid
@@ -168,7 +169,7 @@ end
     # check mass conservation
     @test ∫sat₀[1,1,1] ≈ ∫sat₁[1,1,1]
     # run for one simulation hour and check that mass is still conserved
-    run!(state, period=Hour(1), Δt=60.0)
+    run!(driver; period=Hour(1), Δt)
     ∫sat₂ = Field(Integral(saturation, dims=3))
     compute!(∫sat₂)
     @test all(isfinite.(saturation))

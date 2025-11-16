@@ -119,9 +119,9 @@ varunits(pv::AbstractProcessVariable) = varunits(pv.var)
 function Base.show(io::IO, ::MIME"text/plain", var::AbstractVariable)
     units = varunits(var)
     if units != NoUnits
-        println(io, "$(nameof(typeof(var))){$(typeof(vardims(var)))} with units $(string(varunits(var)))")
+        println(io, "$(nameof(typeof(var))) $(varname(var)) with dimensions $(typeof(vardims(var))) and units $(string(varunits(var)))")
     else
-        println(io, "$(nameof(typeof(var))){$(typeof(vardims(var)))}")
+        println(io, "$(nameof(typeof(var))) $(varname(var)) with dimensions $(typeof(vardims(var)))")
     end
 end
 
@@ -209,9 +209,9 @@ struct Namespace{name, Vars}
     Namespace(name::Symbol, vars::Variables) = new{name, typeof(vars)}(vars)
 end
 
-varname(ns::Namespace) = ns.name
+varname(::Namespace{name}) where {name} = name
 
-Variables(vars::Tuple{Vararg{Union{AbstractProcessVariable, Namespace}}}...) = Variables(vars)
+Variables(vars::Union{AbstractProcessVariable, Namespace}...) = Variables(vars)
 function Variables(vars::Tuple{Vararg{Union{AbstractProcessVariable, Namespace}}})
     # partition variables into prognostic, auxiliary, input, and namespace groups;
     # duplicates within each group are automatically merged
@@ -223,7 +223,7 @@ function Variables(vars::Tuple{Vararg{Union{AbstractProcessVariable, Namespace}}
     tendency_vars = map(var -> var.tendency, prognostic_vars)
     # create closure variables and add to auxiliary variables
     closure_vars = map(var -> closurevar(var.closure), filter(hasclosure, prognostic_vars))
-    auxiliary_vars = tuplejoin(auxiliary_vars, closure_vars)
+    auxiliary_vars = merge_duplicates(tuplejoin(auxiliary_vars, closure_vars))
     # drop inputs with matching prognostic or auxiliary variables
     input_vars = filter(var -> var ∉ prognostic_vars && var ∉ auxiliary_vars, input_vars)
     # check for duplicates

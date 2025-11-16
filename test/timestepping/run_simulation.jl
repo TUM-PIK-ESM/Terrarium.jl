@@ -24,7 +24,7 @@ import Oceananigans: time_step!
     sim = Simulation(driver; Δt=900.0, stop_time=3600.0)
     time_step!(sim)
     run!(sim)
-    @test state.clock.time == 3600.0
+    @test driver.clock.time == 3600.0
 end 
 
 @testset "run! SoilModel w/ Heun" begin
@@ -38,6 +38,6 @@ end
     run!(driver; period=Hour(1))
     @test all(isfinite.(driver.state.temperature))
 
-    @test_throws ArgumentError run!(state; steps=2, period=Hour(1))
-    @test_throws ArgumentError run!(state)
+    @test_throws ArgumentError run!(driver; steps=2, period=Hour(1))
+    @test_throws ArgumentError run!(driver)
 end

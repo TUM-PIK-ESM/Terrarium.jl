@@ -217,9 +217,7 @@ end
 
 closurevar(::PressureSaturationClosure) = auxiliary(
     :saturation_water_ice,
-    XYZ();
-    domain=UnitInterval(),
-    desc="Saturation level of water and ice in the pore space",
+    XYZ()
 )
 
 function closure!(state, model::AbstractSoilModel, ::PressureSaturationClosure)

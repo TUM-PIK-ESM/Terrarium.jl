@@ -128,7 +128,7 @@ from the topmost soil layer.
 struct SurfaceEvaporation <: AbstractSoilET end
 
 variables(::SurfaceEvaporation) = (
-    input(:latent_heat_flux, XY(), units=u"W/m^2", desc="Latent heat flux at the surface [W m⁻²]"),
+    input(:latent_heat_flux, XY(), units=u"W/m^2"),
 )
 
 @inline function forcing_ET(i, j, k, grid, state, ::SurfaceEvaporation, constants::PhysicalConstants)
