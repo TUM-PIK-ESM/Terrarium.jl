@@ -117,43 +117,45 @@ end
     initializer = FieldInitializers(
         saturation_water_ice = (x, z) -> 1.0
     )
-    model = SoilModel(; grid, hydrology, initializer)
-    state = initialize(model)
+    model = SoilModel(grid; hydrology, initializer)
+    driver = initialize(model, ForwardEuler)
+    state = driver.state
     # check that initial water table depth is correctly calculated from initial condition
-    @test all(iszero.(state.state.water_table))
+    @test all(iszero.(state.water_table))
     # also check that pressure head is zero everywhere
-    @test all(iszero.(state.state.pressure_head))
-    compute_auxiliary!(state.state, model)
+    @test all(iszero.(state.pressure_head))
+    compute_auxiliary!(state, model)
     # check that all hydraulic conductivities are finite and equal to K_sat
-    @test all(isfinite.(state.state.hydraulic_conductivity))
-    @test all(state.state.hydraulic_conductivity .≈ hydraulic_properties.cond_sat)
-    compute_tendencies!(state.state, model)
+    @test all(isfinite.(state.hydraulic_conductivity))
+    @test all(state.hydraulic_conductivity .≈ hydraulic_properties.cond_sat)
+    compute_tendencies!(state, model)
     # check that all tendencies are zero
-    @test all(iszero.(state.state.tendencies.saturation_water_ice))
+    @test all(iszero.(state.tendencies.saturation_water_ice))
     # check timestep!
-    timestep!(state)
-    @test all(state.state.saturation_water_ice .≈ 1)
+    timestep!(driver)
+    @test all(state.saturation_water_ice .≈ 1)
 
     # Variably saturated with water table
     initializer = FieldInitializers(
         saturation_water_ice = (x, z) -> min(1, 0.5 - 0.1*z)
     )
-    model = SoilModel(; grid, hydrology, initializer)
-    state = initialize(model)
-    water_table = state.state.water_table
-    hydraulic_cond = state.state.hydraulic_conductivity
-    saturation = state.state.saturation_water_ice
+    model = SoilModel(grid; hydrology, initializer)
+    driver = initialize(model, ForwardEuler)
+    state = driver.state
+    water_table = state.water_table
+    hydraulic_cond = state.hydraulic_conductivity
+    saturation = state.saturation_water_ice
     # check that initial water table depth is correctly calculated from initial condition
     @test all(water_table .≈ -5.0)
     # also check that pressure head is negative
-    @test all(state.state.pressure_head .< 0)
-    compute_auxiliary!(state.state, model)
+    @test all(state.pressure_head .< 0)
+    compute_auxiliary!(state, model)
     # check that all hydraulic conductivities are finite and positive
     @test all(isfinite.(hydraulic_cond))
     @test all(hydraulic_cond .> 0)
-    compute_tendencies!(state.state, model)
+    compute_tendencies!(state, model)
     # check that all tendencies are finite
-    @test all(isfinite.(state.state.tendencies.saturation_water_ice))
+    @test all(isfinite.(state.tendencies.saturation_water_ice))
     # do timestep! and compute total water mass
     ∫sat₀ = Field(Integral(saturation, dims=3))
     compute!(∫sat₀)
@@ -186,23 +188,24 @@ end
         temperature = 10.0, # positive soil temperature
         saturation_water_ice = 1.0 # fully saturated
     )
-    model = SoilModel(; grid, hydrology, initializer)
-    state = initialize(model)
+    model = SoilModel(grid; hydrology, initializer)
+    driver = initialize(model, ForwardEuler)
+    state = driver.state
     # check that forcing_ET is zero when no latent heat flux is supplied
-    @test iszero(Terrarium.forcing_ET(1, 1, Nz, grid.grid, state.state, evapotranspiration, model.constants))
+    @test iszero(Terrarium.forcing_ET(1, 1, Nz, grid.grid, state, evapotranspiration, model.constants))
     # negative latent heat flux → condensation
-    set!(state.state.latent_heat_flux, -100.0)
-    ET_flux = Terrarium.forcing_ET(1, 1, Nz, grid.grid, state.state, evapotranspiration, model.constants)
+    set!(state.latent_heat_flux, -100.0)
+    ET_flux = Terrarium.forcing_ET(1, 1, Nz, grid.grid, state, evapotranspiration, model.constants)
     @test ET_flux > 0
     # positive latent heat flux → evaporation
-    set!(state.state.latent_heat_flux, 100.0)
-    ET_flux = Terrarium.forcing_ET(1, 1, Nz, grid.grid, state.state, evapotranspiration, model.constants)
+    set!(state.latent_heat_flux, 100.0)
+    ET_flux = Terrarium.forcing_ET(1, 1, Nz, grid.grid, state, evapotranspiration, model.constants)
     @test ET_flux < 0
     # check tendency calculation
-    dθdt = Terrarium.volumetric_water_content_tendency((1, 1, Nz), grid, state.state, hydrology, model.constants)
+    dθdt = Terrarium.volumetric_water_content_tendency((1, 1, Nz), grid, state, hydrology, model.constants)
     @test dθdt == ET_flux
     # take one timestep and check that water was evaporated
     dt = 60.0
-    timestep!(state, dt)
-    @test state.state.saturation_water_ice[1, 1, Nz] .≈ 1 + ET_flux*dt / hydraulic_properties.porosity
+    timestep!(driver, dt)
+    @test state.saturation_water_ice[1, 1, Nz] .≈ 1 + ET_flux*dt / hydraulic_properties.porosity
 end

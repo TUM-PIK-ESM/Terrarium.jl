@@ -42,7 +42,7 @@ on_architecture(::CPU, obj::RingGridOrField) = RingGrids.Architectures.on_archit
     Field(
         grid::AbstractLandGrid,
         dims::VarDims,
-        boundary_conditions=nothing,
+        boundary_conditions = nothing,
         args...;
         kwargs...
     )

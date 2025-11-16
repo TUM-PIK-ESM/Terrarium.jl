@@ -9,7 +9,6 @@ DEFAULT_NF = Float32
 @kwdef struct TestModel{NF, Grid<:AbstractLandGrid{NF}, TS} <: Terrarium.AbstractModel{NF, Grid, TS}
     grid::Grid
     initializer = DefaultInitializer()
-    boundary_conditions = DefaultBoundaryConditions()
     time_stepping::TS = ForwardEuler{DEFAULT_NF}()
 end
 

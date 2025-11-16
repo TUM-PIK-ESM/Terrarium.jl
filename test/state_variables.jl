@@ -10,7 +10,6 @@ DEFAULT_NF = Float32
 @kwdef struct SubModel{NF, Grid<:AbstractLandGrid{NF}} <: Terrarium.AbstractModel{NF, Grid}
     grid::Grid
     initializer = DefaultInitializer()
-    boundary_conditions = DefaultBoundaryConditions()
 end
 
 Terrarium.variables(model::SubModel) = (
@@ -24,7 +23,6 @@ Terrarium.variables(model::SubModel) = (
     grid::Grid
     submodel = SubModel(; grid)
     initializer = DefaultInitializer()
-    boundary_conditions = DefaultBoundaryConditions()
 end
 
 struct TestClosure <: Terrarium.AbstractClosureRelation end
