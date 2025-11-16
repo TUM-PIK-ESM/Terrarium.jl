@@ -6,8 +6,7 @@ using Test
     turbulent_fluxes = PrescribedTurbulentFluxes()
     surface_energy_balance = SurfaceEnergyBalance(Float64; turbulent_fluxes)
     model = SurfaceEnergyModel(grid, surface_energy_balance)
-    model_state = initialize(model)
-    state = model_state.state
+    state = initialize(model)
     @test hasproperty(state.inputs, :sensible_heat_flux)
     @test hasproperty(state.inputs, :latent_heat_flux)
     set!(state.sensible_heat_flux, 10.0)
@@ -21,8 +20,7 @@ end
     turbulent_fluxes = DiagnosedTurbulentFluxes(Float64)
     surface_energy_balance = SurfaceEnergyBalance(Float64; turbulent_fluxes)
     model = SurfaceEnergyModel(grid, surface_energy_balance)
-    model_state = initialize(model)
-    state = model_state.state
+    state = initialize(model)
     @test !hasproperty(state.inputs, :sensible_heat_flux)
     @test !hasproperty(state.inputs, :latent_heat_flux)
     @test hasproperty(state.auxiliary, :sensible_heat_flux)

@@ -26,8 +26,8 @@ end
     model = build_soil_energy_hydrology_model(CPU(), Float64; hydraulic_properties)
     swrc = Terrarium.get_swrc(model.hydrology) # θ(ψₘ)
     swrc_inv = inv(swrc) # ψₘ(θ)
-    model_state = initialize(model)
-    state = model_state.state
+    driver = initialize(model, ForwardEuler)
+    state = driver.state
     dstate = make_zero(state)
     set!(state.saturation_water_ice, sat)
     set!(dstate.pressure_head, 1.0) # seed pressure head (output)
@@ -72,8 +72,8 @@ end
 @testset "Soil hydrology: compute_auxiliary! RRE" begin
     hydraulic_properties = SoilHydraulicsSURFEX(Float64)
     model = build_soil_energy_hydrology_model(CPU(), Float64; hydraulic_properties)
-    model_state = initialize(model)
-    state = model_state.state
+    driver = initialize(model, ForwardEuler)
+    state = driver.state
     dstate = make_zero(state)
     set!(dstate.hydraulic_conductivity, 1.0) # seed hydraulic cond
     Enzyme.autodiff(set_runtime_activity(Reverse), compute_auxiliary!, Const, Duplicated(state, dstate), Const(model), Const(model.hydrology))
@@ -84,8 +84,8 @@ end
 @testset "Soil hydrology: compute_tendencies! RRE" begin
     hydraulic_properties = SoilHydraulicsSURFEX(Float64)
     model = build_soil_energy_hydrology_model(CPU(), Float64; hydraulic_properties)
-    model_state = initialize(model)
-    state = model_state.state
+    driver = initialize(model, ForwardEuler)
+    state = driver.state
     # first run compute_auxiliary! for the full model (needed to compute hydraulic conductivities)
     compute_auxiliary!(state, model)
     dstate = make_zero(state)
@@ -98,10 +98,10 @@ end
 @testset "Soil energy/hydrology model: timestep!" begin
     hydraulic_properties = ConstantHydraulics(Float64)
     model = build_soil_energy_hydrology_model(CPU(), Float64; hydraulic_properties)
-    model_state = initialize(model)
-    state = model_state.state
+    driver = initialize(model, ForwardEuler)
+    state = driver.state
     dstate = make_zero(state)
-    @time Enzyme.autodiff(set_runtime_activity(Reverse), timestep!, Const, Duplicated(state, dstate), Const(model), Const(model_state.timestepper))
+    @time Enzyme.autodiff(set_runtime_activity(Reverse), timestep!, Const, Duplicated(state, dstate), Const(model), Const(driver.timestepper))
     @test all(isfinite.(dstate.temperature))
     @test all(isfinite.(dstate.pressure_head))
 end

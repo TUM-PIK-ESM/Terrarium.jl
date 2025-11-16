@@ -6,8 +6,7 @@ using Test
     radiative_fluxes = PrescribedRadiativeFluxes()
     surface_energy_balance = SurfaceEnergyBalance(Float64; radiative_fluxes)
     model = SurfaceEnergyModel(grid, surface_energy_balance)
-    model_state = initialize(model)
-    state = model_state.state
+    state = initialize(model)
     @test hasproperty(state.inputs, :surface_shortwave_up)
     @test hasproperty(state.inputs, :surface_longwave_up)
     set!(state.surface_shortwave_down, 100.0)
@@ -24,8 +23,7 @@ end
     albedo = ConstantAlbedo(albedo=0.5, emissivity=0.9)
     surface_energy_balance = SurfaceEnergyBalance(Float64; radiative_fluxes, albedo)
     model = SurfaceEnergyModel(grid, surface_energy_balance)
-    model_state = initialize(model)
-    state = model_state.state
+    state = initialize(model)
     @test !hasproperty(state.inputs, :surface_shortwave_up)
     @test !hasproperty(state.inputs, :surface_longwave_up)
     @test hasproperty(state.auxiliary, :surface_shortwave_up)
