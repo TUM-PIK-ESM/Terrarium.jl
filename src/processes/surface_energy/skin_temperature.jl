@@ -6,8 +6,8 @@ Simple scheme for prescribed skin temperatures from input variables.
 struct PrescribedSkinTemperature <: AbstractSkinTemperature end
 
 variables(::PrescribedSkinTemperature) = (
-    auxiliary(:ground_heat_flux, XY(), units=u"W/m^2"),
-    input(:skin_temperature, XY(), units=u"°C"),
+    auxiliary(:ground_heat_flux, XY(), units=u"W/m^2", desc="Ground heat flux"),
+    input(:skin_temperature, XY(), units=u"°C", desc="Longwave emission temperature of the land surface in °C"),
 )
 
 """
@@ -29,9 +29,9 @@ end
 ImplicitSkinTemperature(::Type{NF}; kwargs...) where {NF} = ImplicitSkinTemperature{NF}(; kwargs...)
 
 variables(::ImplicitSkinTemperature) = (
-    prognostic(:skin_temperature, XY(), units=u"°C"),
-    auxiliary(:ground_heat_flux, XY(), units=u"W/m^2"),
-    input(:ground_temperature, XY(), units=u"°C")
+    prognostic(:skin_temperature, XY(), units=u"°C", desc="Longwave emission temperature of the land surface in °C"),
+    auxiliary(:ground_heat_flux, XY(), units=u"W/m^2", desc="Ground heat flux"),
+    input(:ground_temperature, XY(), units=u"°C", desc="Temperature of the uppermost ground or soil grid cell in °C")
 )
 
 """

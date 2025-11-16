@@ -15,7 +15,8 @@ struct TemperatureEnergyClosure <: AbstractClosureRelation end
 closurevar(::TemperatureEnergyClosure) = auxiliary(
     :internal_energy,
     XYZ();
-    units=u"J/m^3"
+    units=u"J/m^3",
+    desc="Internal energy of the soil volume, including both latent and sensible components"
 )
 
 function closure!(state, model::AbstractSoilModel, ::TemperatureEnergyClosure)

@@ -11,8 +11,8 @@ via input variables.
 struct PrescribedTurbulentFluxes <: AbstractTurbulentFluxes end
 
 variables(::PrescribedTurbulentFluxes) = (
-    input(:sensible_heat_flux, XY(), units=u"W/m^2"),
-    input(:latent_heat_flux, XY(), units=u"W/m^2")
+    input(:sensible_heat_flux, XY(), units=u"W/m^2", desc="Sensible heat flux at the surface [W m⁻²]"),
+    input(:latent_heat_flux, XY(), units=u"W/m^2", desc="Latent heat flux at the surface [W m⁻²]")
 )
 
 sensible_heat_flux(idx, state, ::PrescribedTurbulentFluxes) = state.sensible_heat_flux[idx]

@@ -136,10 +136,17 @@ struct AuxiliaryVariable{
     name,
     VD<:VarDims,
     UT<:Units,
-    Var<:Variable{name, VD, UT}
+    Var<:Variable{name, VD, UT},
+    DT<:AbstractInterval
 } <: AbstractProcessVariable{name, VD}
     "State variable"
     var::Var
+
+    "Variable domain"
+    domain::DT
+
+    "Variable description"
+    desc::String
 end
 
 """
@@ -151,10 +158,17 @@ struct InputVariable{
     name,
     VD<:VarDims,
     UT<:Units,
-    Var<:Variable{name, VD, UT}
+    Var<:Variable{name, VD, UT},
+    DT<:AbstractInterval
 } <: AbstractProcessVariable{name, VD}
     "State variable"
     var::Var
+
+    "Variable domain"
+    domain::DT
+
+    "Variable description"
+    desc::String
 end
 
 """
@@ -168,7 +182,8 @@ struct PrognosticVariable{
     UT<:Units,
     Var<:Variable{name, VD, UT},
     CL<:Union{Nothing, AbstractClosureRelation},
-    TV<:Union{Nothing, AuxiliaryVariable}
+    TV<:Union{Nothing, AuxiliaryVariable},
+    DT<:AbstractInterval
 } <: AbstractProcessVariable{name, VD}
     "State variable"
     var::Var
@@ -178,6 +193,12 @@ struct PrognosticVariable{
 
     "Variable corresponding to the tendency for prognostic variables"
     tendency::TV
+
+    "Variable domain"
+    domain::DT
+
+    "Variable description"
+    desc::String
 end
 
 hasclosure(var::PrognosticVariable) = !isnothing(var.closure)
@@ -265,24 +286,24 @@ var(name::Symbol, dims::VarDims, units::Units = NoUnits) = Variable(name, dims, 
 
 Convenience constructors for `PrognosticVariable`.
 """
-prognostic(name::Symbol, dims::VarDims; units=NoUnits, closure=nothing) = prognostic(var(name, dims, units); closure)
-prognostic(var::Variable; closure=nothing) = PrognosticVariable(var, closure, tendency(varname(var), vardims(var), varunits(var), closure))
+prognostic(name::Symbol, dims::VarDims; units=NoUnits, closure=nothing, domain=RealLine(), desc="") = prognostic(var(name, dims, units); closure), domain, desc
+prognostic(var::Variable; closure=nothing, domain=RealLine(), desc="") = PrognosticVariable(var, closure, tendency(varname(var), vardims(var), varunits(var), closure), domain, desc)
 
 """
     $SIGNATURES
 
 Convenience constructor method for `AuxiliaryVariable`.
 """
-auxiliary(name::Symbol, dims::VarDims; units=NoUnits) = auxiliary(var(name, dims, units))
-auxiliary(var::Variable) = AuxiliaryVariable(var)
+auxiliary(name::Symbol, dims::VarDims; units=NoUnits, domain=RealLine(), desc="") = auxiliary(var(name, dims, units); domain, desc)
+auxiliary(var::Variable; domain=RealLine(), desc="") = AuxiliaryVariable(var, domain, desc)
 
 """
     $SIGNATURES
 
 Convenience constructor method for `InputVariable`.
 """
-input(name::Symbol, dims::VarDims; units=NoUnits) = input(var(name, dims, units))
-input(var::Variable) = InputVariable(var)
+input(name::Symbol, dims::VarDims; units=NoUnits, domain=RealLine(), desc="") = input(var(name, dims, units); domain, desc)
+input(var::Variable; domain=RealLine(), desc="") = InputVariable(var, domain, desc)
 
 """
     $SIGNATURES
