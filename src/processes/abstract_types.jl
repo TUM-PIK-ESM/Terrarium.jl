@@ -7,9 +7,13 @@ abstract type AbstractOperator end
 Returns an `AbstractClosureRelation` for the given differential operator.
 Deefaults to returning `nothing` (i.e. no closure).
 """
-get_closure(op::AbstractOperator)::AbstractClosureRelation = nothing
+get_closure(op::AbstractOperator) = nothing
 
 variables(op::AbstractOperator) = ()
+
+closure!(state, model::AbstractModel, ::Nothing) = nothing
+
+invclosure!(state, model::AbstractModel, ::Nothing) = nothing
 
 # Interface for processes
 

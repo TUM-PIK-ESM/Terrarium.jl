@@ -49,15 +49,8 @@ can be defined to implement more specialized time-stepping schemes.
 """
 function explicit_step!(state, grid::AbstractLandGrid, timestepper::AbstractTimeStepper, Δt)
     fastiterate(keys(state.prognostic)) do name
-        # update prognostic or closure state variable
-        if haskey(state.closures, name)
-            closure = state.closures[name]
-            cname = varname(closurevar(closure))
-            explicit_step!(state.auxiliary[cname], state.tendencies[cname], grid, timestepper, Δt)
-        else
-            explicit_step!(state.prognostic[name], state.tendencies[name], grid, timestepper, Δt)
-        end
-
+        # update prognostic state variable
+        explicit_step!(state.prognostic[name], state.tendencies[name], grid, timestepper, Δt)
     end
     fastiterate(state.namespaces) do ns
         explicit_step!(ns, grid, timestepper, Δt)

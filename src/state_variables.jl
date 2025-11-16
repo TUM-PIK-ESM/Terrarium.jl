@@ -15,8 +15,8 @@ by the timestepping scheme.
 """
 struct StateVariables{
     NF,
-    prognames, tendnames, auxnames, inputnames, nsnames, closurenames,
-    ProgFields, TendFields, AuxFields, InputFields, Namespaces, Closures,
+    prognames, tendnames, auxnames, inputnames, nsnames,
+    ProgFields, TendFields, AuxFields, InputFields, Namespaces,
     ClockType
 } <: AbstractStateVariables
     prognostic::NamedTuple{prognames, ProgFields}
@@ -24,7 +24,6 @@ struct StateVariables{
     auxiliary::NamedTuple{auxnames, AuxFields}
     inputs::NamedTuple{inputnames, InputFields}
     namespaces::NamedTuple{nsnames, Namespaces}
-    closures::NamedTuple{closurenames, Closures}
     clock::ClockType
 
     function StateVariables(
@@ -34,18 +33,16 @@ struct StateVariables{
         auxiliary::NamedTuple{auxnames, AuxFields},
         inputs::NamedTuple{inputnames, InputFields},
         namespaces::NamedTuple{nsnames, Namespaces},
-        closures::NamedTuple{closurenames, Closures},
         clock::ClockType
-    ) where {NF, prognames, tendnames, auxnames, inputnames, nsnames, closurenames,
-             ProgFields, TendFields, AuxFields, InputFields, Namespaces, Closures, ClockType}
-        return new{NF, prognames, tendnames, auxnames, inputnames, nsnames, closurenames,
-                   ProgFields, TendFields, AuxFields, InputFields, Namespaces, Closures, ClockType}(
+    ) where {NF, prognames, tendnames, auxnames, inputnames, nsnames,
+             ProgFields, TendFields, AuxFields, InputFields, Namespaces, ClockType}
+        return new{NF, prognames, tendnames, auxnames, inputnames, nsnames,
+                   ProgFields, TendFields, AuxFields, InputFields, Namespaces, ClockType}(
             prognostic,
             tendencies,
             auxiliary,
             inputs,
             namespaces,
-            closures,
             clock
         )
     end
@@ -76,8 +73,6 @@ function StateVariables(
     namespaces = map(vars.namespaces) do ns
         StateVariables(ns.vars, grid, clock; boundary_conditions=get(boundary_conditions, varname(ns), (;)), fields=get(fields, varname(ns), (;)))
     end
-    # get named tuple mapping prognostic variabels to their respective closure relations, if defined
-    closures = map(var -> var.closure, filter(hasclosure, vars.prognostic))
     # construct and return StateVariables
     return StateVariables(
         NF,
@@ -86,7 +81,6 @@ function StateVariables(
         auxiliary_fields,
         input_fields,
         namespaces,
-        closures,
         clock,
     )
 end
@@ -132,16 +126,6 @@ function reset_tendencies!(state::StateVariables)
     # recurse over namespaces
     fastiterate(state.namespaces) do ns
         reset_tendencies!(ns)
-    end
-end
-
-"""
-Call `invclosure!` (i.e. inverse mapping from closure to prognostic variables) on
-all closure relations defined in `state`.
-"""
-function invclosure!(state::StateVariables, model::AbstractModel)
-    for closure in state.closures
-        invclosure!(state, model, closure)
     end
 end
 
@@ -193,7 +177,6 @@ function Adapt.adapt_structure(to, vars::StateVariables{NF}) where {NF}
         Adapt.adapt_structure(to, vars.auxiliary),
         Adapt.adapt_structure(to, vars.inputs),
         Adapt.adapt_structure(to, vars.namespaces),
-        Adapt.adapt_structure(to, vars.closures),
         Adapt.adapt_structure(to, vars.clock),
     )
 end
@@ -201,20 +184,19 @@ end
 Base.eltype(::StateVariables{NF}) where {NF} = NF
 
 Base.propertynames(
-    vars::StateVariables{NF, prognames, tendnames, auxnames, inputnames, nsnames, closures}
-) where {NF, prognames, tendnames, auxnames, inputnames, nsnames, closures} = (
+    vars::StateVariables{NF, prognames, tendnames, auxnames, inputnames, nsnames}
+) where {NF, prognames, tendnames, auxnames, inputnames, nsnames} = (
     prognames...,
     auxnames...,
     inputnames...,
     nsnames...,
-    closures...,
     fieldnames(typeof(vars))...,
 )
 
 function Base.getproperty(
-    vars::StateVariables{NF, prognames, tendnames, auxnames, inputnames, nsnames, closures},
+    vars::StateVariables{NF, prognames, tendnames, auxnames, inputnames, nsnames},
     name::Symbol
-) where {NF, prognames, tendnames, auxnames, inputnames, nsnames, closures}
+) where {NF, prognames, tendnames, auxnames, inputnames, nsnames}
     # forward getproperty calls to variable groups
     if name ∈ prognames
         return getproperty(getfield(vars, :prognostic), name)
@@ -231,9 +213,9 @@ end
 
 # helper function e.g. for usage with Enzyme 
 function Base.fill!(
-    state::StateVariables{NF, prognames, tendnames, auxnames, namespaces, closures}, 
+    state::StateVariables{NF, prognames, tendnames, auxnames, namespaces}, 
     value
-) where {NF, prognames, tendnames, auxnames, namespaces, closures}
+) where {NF, prognames, tendnames, auxnames, namespaces}
     
     for progname in prognames
         fill!(getproperty(state.prognostic, progname), value)
@@ -248,9 +230,9 @@ function Base.fill!(
 end
 
 function Base.copyto!(
-    state::StateVariables{NF, prognames, tendnames, auxnames, inputnames, nsnames, closurenames}, 
-    other::StateVariables{NF, prognames, tendnames, auxnames, inputnames, nsnames, closurenames}
-) where {NF, prognames, tendnames, auxnames, inputnames, nsnames, closurenames}
+    state::StateVariables{NF, prognames, tendnames, auxnames, inputnames, nsnames}, 
+    other::StateVariables{NF, prognames, tendnames, auxnames, inputnames, nsnames}
+) where {NF, prognames, tendnames, auxnames, inputnames, nsnames}
     
     for progname in prognames
         copyto!(getproperty(state.prognostic, progname), getproperty(other.prognostic, progname))

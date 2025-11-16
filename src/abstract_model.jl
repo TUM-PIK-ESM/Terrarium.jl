@@ -58,6 +58,27 @@ Returns the initializer associated with this `model`.
 """
 get_initializer(model::AbstractModel) = model.initializer
 
+"""
+    get_closures(model::AbstractModel)
+
+Return all closure relations defined for the given `model`.
+"""
+get_closures(model::AbstractModel) = ()
+
+"""
+    closure!(state, model::AbstractModel)
+
+Apply each closure relation defined for the given `model`.
+"""
+closure!(state, model::AbstractModel) = nothing
+
+"""
+    invclosure!(state, model::AbstractModel)
+
+Apply the inverse of each closure relation defined for the given `model`.
+"""
+invclosure!(state, model::AbstractModel) = nothing
+
 # Abstract subtypes
 
 # TODO: define general method interfaces (as needed) for all model types

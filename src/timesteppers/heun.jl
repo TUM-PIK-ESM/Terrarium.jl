@@ -47,10 +47,8 @@ function timestep!(state, model::AbstractModel, timestepper::Heun, Δt = default
     average_tendencies!(state, stage)
     explicit_step!(state, get_grid(model), timestepper, Δt) 
     
-    # Apply inverse closure relations
-    for closure in state.closures
-        invclosure!(state, model, closure)
-    end
+    # Apply closure relations
+    closure!(state, model)
 
     # Update clock and return
     tick!(state.clock, Δt)

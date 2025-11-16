@@ -31,19 +31,19 @@ end
     dstate = make_zero(state)
     set!(state.saturation_water_ice, sat)
     set!(dstate.pressure_head, 1.0) # seed pressure head (output)
-    closure = Terrarium.PressureSaturationClosure()
-    # first check inverse relation saturation -> pressure
-    Enzyme.autodiff(set_runtime_activity(Reverse), Terrarium.invclosure!, Const, Duplicated(state, dstate), Const(model), Const(closure))
+    closure = Terrarium.SaturationPressureClosure()
+    # first check closure relation saturation -> pressure
+    Enzyme.autodiff(set_runtime_activity(Reverse), Terrarium.closure!, Const, Duplicated(state, dstate), Const(model), Const(closure))
     # check that derivatives w.r.t saturation are finite
     @test all(isfinite.(dstate.saturation_water_ice))
     # check that they match analytical derivative (1 / ∂θ∂ψ by inverse function theorem)
     ψm = swrc_inv(sat*por; θsat=por)
     @test all(dstate.saturation_water_ice .≈ por / swrc(FreezeCurves.derivative, ψm; θsat=por))
 
-    # now check pressure -> saturation
+    # now check inverse pressure -> saturation
     dstate = make_zero(state)
     set!(dstate.saturation_water_ice, 1.0) # seed saturation (output)
-    Enzyme.autodiff(set_runtime_activity(Reverse), Terrarium.closure!, Const, Duplicated(state, dstate), Const(model), Const(closure))
+    Enzyme.autodiff(set_runtime_activity(Reverse), Terrarium.invclosure!, Const, Duplicated(state, dstate), Const(model), Const(closure))
     # check that gradients w.r.t saturation are finite
     @test all(isfinite.(dstate.pressure_head))
     # check that saturation is correct

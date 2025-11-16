@@ -6,20 +6,20 @@ flow in porous media.
 """
 @kwdef struct RichardsEq{PS} <: AbstractVerticalFlow
     "Closure relation for mapping between water potential (hydraulic head) and saturation"
-    saturation_closure::PS = PressureSaturationClosure()
+    saturation_closure::PS = SaturationPressureClosure()
 end
 
 get_closure(op::RichardsEq) = op.saturation_closure
 
 variables(rre::RichardsEq) = (
-    prognostic(:pressure_head, XYZ(), closure=get_closure(rre), units=u"m", desc="Total hydraulic pressure head in m water displaced at standard pressure"),
+    prognostic(:saturation_water_ice, XYZ(); closure=get_closure(rre), domain=UnitInterval(), desc="Saturation level of water and ice in the pore space"),
     prognostic(:surface_excess_water, XY(), units=u"m", desc="Excess water at the soil surface in m³/m²"),
     auxiliary(:water_table, XY(), units=u"m", desc="Elevation of the water table in meters"),
     auxiliary(:hydraulic_conductivity, XYZ(z=Face()), units=u"m/s", desc="Hydraulic conductivity of soil volumes in m/s")
 )
 
-function initialize!(state, model, ::SoilHydrology{NF, <:RichardsEq}) where {NF}
-    invclosure!(state, model, state.closures.pressure_head)
+function initialize!(state, model, hydrology::SoilHydrology{NF, <:RichardsEq}) where {NF}
+    closure!(state, model, get_closure(hydrology.vertflow))
     return nothing
 end
 
@@ -213,32 +213,11 @@ end
 
 # Matric potential <--> saturation closure relation
 
-@kwdef struct PressureSaturationClosure <: AbstractClosureRelation end
+@kwdef struct SaturationPressureClosure <: AbstractClosureRelation end
 
-closurevar(::PressureSaturationClosure) = auxiliary(
-    :saturation_water_ice,
-    XYZ();
-    domain=UnitInterval(),
-    desc="Saturation level of water and ice in the pore space",
-)
+closurevar(::SaturationPressureClosure) = auxiliary(:pressure_head, XYZ(), units=u"m", desc="Total hydraulic pressure head in m water displaced at standard pressure")
 
-function closure!(state, model::AbstractSoilModel, ::PressureSaturationClosure)
-    grid = get_grid(model)
-    hydrology = get_soil_hydrology(model)
-    strat = get_stratigraphy(model)
-    bgc = get_biogeochemistry(model)
-    z_faces = znodes(get_field_grid(grid), Center(), Center(), Face())
-    z_centers = znodes(get_field_grid(grid), Center(), Center(), Center())
-    # determine saturation from pressure
-    launch!(grid, :xyz, pressure_to_saturation!, state, hydrology, strat, bgc, z_centers)
-    # apply saturation correction
-    launch!(grid, :xy, adjust_saturation_profile!, state, grid, hydrology)
-    # update water table
-    launch!(grid, :xy, compute_water_table!, state, grid, hydrology, z_faces)
-    return nothing
-end
-
-function invclosure!(state, model::AbstractSoilModel, ::PressureSaturationClosure)
+function closure!(state, model::AbstractSoilModel, ::SaturationPressureClosure)
     grid = get_grid(model)
     hydrology = get_soil_hydrology(model)
     strat = get_stratigraphy(model)
@@ -251,6 +230,22 @@ function invclosure!(state, model::AbstractSoilModel, ::PressureSaturationClosur
     launch!(grid, :xy, compute_water_table!, state, grid, hydrology, z_faces)
     # determine pressure head from saturation
     launch!(grid, :xyz, saturation_to_pressure!, state, hydrology, strat, bgc, z_centers)
+    return nothing
+end
+
+function invclosure!(state, model::AbstractSoilModel, ::SaturationPressureClosure)
+    grid = get_grid(model)
+    hydrology = get_soil_hydrology(model)
+    strat = get_stratigraphy(model)
+    bgc = get_biogeochemistry(model)
+    z_faces = znodes(get_field_grid(grid), Center(), Center(), Face())
+    z_centers = znodes(get_field_grid(grid), Center(), Center(), Center())
+    # determine saturation from pressure
+    launch!(grid, :xyz, pressure_to_saturation!, state, hydrology, strat, bgc, z_centers)
+    # apply saturation correction
+    launch!(grid, :xy, adjust_saturation_profile!, state, grid, hydrology)
+    # update water table
+    launch!(grid, :xy, compute_water_table!, state, grid, hydrology, z_faces)
     return nothing
 end
 

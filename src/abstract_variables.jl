@@ -232,6 +232,7 @@ end
 
 varname(::Namespace{name}) where {name} = name
 
+Variables(obj) = Variables(variables(obj))
 Variables(vars::Union{AbstractProcessVariable, Namespace}...) = Variables(vars)
 function Variables(vars::Tuple{Vararg{Union{AbstractProcessVariable, Namespace}}})
     # partition variables into prognostic, auxiliary, input, and namespace groups;
@@ -286,8 +287,8 @@ var(name::Symbol, dims::VarDims, units::Units = NoUnits) = Variable(name, dims, 
 
 Convenience constructors for `PrognosticVariable`.
 """
-prognostic(name::Symbol, dims::VarDims; units=NoUnits, closure=nothing, domain=RealLine(), desc="") = prognostic(var(name, dims, units); closure), domain, desc
-prognostic(var::Variable; closure=nothing, domain=RealLine(), desc="") = PrognosticVariable(var, closure, tendency(varname(var), vardims(var), varunits(var), closure), domain, desc)
+prognostic(name::Symbol, dims::VarDims; units=NoUnits, closure=nothing, domain=RealLine(), desc="") = prognostic(var(name, dims, units); closure, domain, desc)
+prognostic(var::Variable; closure=nothing, domain=RealLine(), desc="") = PrognosticVariable(var, closure, tendency(var), domain, desc)
 
 """
     $SIGNATURES
@@ -311,16 +312,7 @@ input(var::Variable; domain=RealLine(), desc="") = InputVariable(var, domain, de
 Creates an `AuxiliaryVariable` for the tendency of a prognostic variable with the given name, dimensions, and physical units.
 This constructor is primarily used internally by other constructors and does not usually need to be called by implementations of `variables`.
 """
-function tendency(progname::Symbol, progdims::VarDims, progunits::Units, closure)
-    if isnothing(closure)
-        auxiliary(progname, progdims, units=upreferred(progunits)/u"s")
-    else
-        # auxiliary closure variable
-        var = closurevar(closure)
-        # create a tendency variable based on its name and units
-        return auxiliary(varname(var), vardims(var), units=upreferred(varunits(var))/u"s")
-    end
-end
+tendency(var::Variable) = auxiliary(varname(var), vardims(var), units=upreferred(varunits(var))/u"s")
 
 """
     $SIGNATURES

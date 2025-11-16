@@ -79,6 +79,16 @@ function compute_tendencies!(state, model::SoilModel)
     return nothing
 end
 
+function closure!(state, model::SoilModel)
+    closure!(state, model, get_closure(model.hydrology))
+    closure!(state, model, get_closure(model.energy))
+end
+
+function invclosure!(state, model::SoilModel)
+    invclosure!(state, model, get_closure(model.hydrology))
+    invclosure!(state, model, get_closure(model.energy))
+end
+
 # Initialization
 
 function initialize!(state, model::SoilModel)

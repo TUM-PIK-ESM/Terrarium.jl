@@ -22,8 +22,8 @@ is_adaptive(euler::ForwardEuler) = false
 function timestep!(state, model::AbstractModel, timestepper::ForwardEuler, Δt)
     # Euler step
     explicit_step!(state, get_grid(model), timestepper, Δt)
-    # Apply inverse closure relations
-    invclosure!(state, model)
+    # Apply closure relations
+    closure!(state, model)
     # Update clock
     tick!(state.clock, Δt)
 end
