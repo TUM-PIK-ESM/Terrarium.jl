@@ -149,13 +149,13 @@ get_steps(steps::Int, period::Nothing, Δt::Real) = steps
 get_steps(steps::Nothing, period::Nothing, Δt::Real) = throw(ArgumentError("either `steps` or `period` must be specified"))
 get_steps(steps::Int, period::Period, Δt::Real) = throw(ArgumentError("both `steps` and `period` cannot be specified"))
 
-function Base.show(io::IO, mime::MIME"text/plain", driver::ModelDriver)
+function Base.show(io::IO, driver::ModelDriver)
     modelstr = summary(driver.model)
     statestr = summary(driver.state)
     tsstr = summary(driver.timestepper)
     println(io, "Driver of $modelstr")
     println(io, "├── Current time: $(current_time(driver))")
     println(io, "├── Timestepper: $tsstr")
-    println(io, "├── State variables: $statestr")
+    println(io, "├── $statestr")
     # TODO: add more information?
 end
