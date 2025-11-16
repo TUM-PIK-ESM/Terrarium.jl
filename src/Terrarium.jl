@@ -30,7 +30,7 @@ import Oceananigans.TimeSteppers: Clock, update_state!, time_step!, tick!, reset
 import Oceananigans.Units: Time
 import Oceananigans.Utils: launch!
 # Boundary conditions
-import Oceananigans.BoundaryConditions: FieldBoundaryConditions, BoundaryCondition, DefaultBoundaryCondition,
+import Oceananigans.BoundaryConditions: BoundaryCondition, DefaultBoundaryCondition, FieldBoundaryConditions,
                                         ValueBoundaryCondition, FluxBoundaryCondition, GradientBoundaryCondition, NoFluxBoundaryCondition,
                                         ContinuousBoundaryFunction, DiscreteBoundaryFunction,
                                         AbstractBoundaryConditionClassification, Value, Flux, Gradient, # BC type classifications
@@ -51,8 +51,14 @@ import Unitful: 𝐋, 𝐌, 𝐓
 import Unitful: Units, Quantity, AbstractQuantity, NoUnits
 import Unitful: @u_str, uconvert, ustrip, upreferred
 
+"""
+Alias for numeric `Quantity` with type `NF` and units `U`.
+"""
 const LengthQuantity{NF, U} = Quantity{NF, 𝐋, U} where {NF, U<:Units}
 
+"""
+Alias for Oceananigans `AbstractBoundaryConditionClassification`.
+"""
 const BCType = AbstractBoundaryConditionClassification
 
 # Re-export selected types and methods from Oceananigans
@@ -102,7 +108,7 @@ include("state_variables.jl")
 export FieldInitializers, DefaultInitializer
 include("initializers.jl")
 
-export ColumnBoundaryConditions, ColumnBCs, DefaultBoundaryConditions, PrescribedFlux, PrescribedValue, PrescribedGradient
+export FieldBC, FieldBCs, boundary_conditions
 include("boundary_conditions.jl")
 
 # timestepper implementations

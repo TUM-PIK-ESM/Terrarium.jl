@@ -5,14 +5,14 @@ abstract type AbstractVerticalSpacing{NF} end
 
 Return the number of vertical layers defined by this discretization.
 """
-get_npoints(spacing::AbstractVerticalSpacing) = spacing.N
+num_layers(spacing::AbstractVerticalSpacing) = spacing.N
 
 """
     $SIGNATURES
 
 Return a `Vector` of vertical layer thicknesses according to the given discretization.
 """
-get_spacing(spacing::AbstractVerticalSpacing) = spacing.(1:get_npoints(spacing))
+get_spacing(spacing::AbstractVerticalSpacing) = spacing.(1:num_layers(spacing))
 
 Base.@kwdef struct UniformSpacing{NF} <: AbstractVerticalSpacing{NF}
     Δz::NF = 0.1
@@ -34,10 +34,10 @@ Base.@kwdef struct ExponentialSpacing{NF,ST<:Union{Nothing,Integer}} <: Abstract
 end
 
 function (spacing::ExponentialSpacing)(i::Int)
-    @assert 0 < i <= get_npoints(spacing) "index $i out of range"
+    @assert 0 < i <= num_layers(spacing) "index $i out of range"
     logΔz₀ = log2(spacing.Δz_min)
     logΔzₙ = log2(spacing.Δz_max)
-    logΔzᵢ = logΔz₀ + (i-1)*(logΔzₙ - logΔz₀) / (get_npoints(spacing)-1)
+    logΔzᵢ = logΔz₀ + (i-1)*(logΔzₙ - logΔz₀) / (num_layers(spacing)-1)
     if isnothing(spacing.sig)
         return exp2(logΔzᵢ)
     else
@@ -51,5 +51,5 @@ end
 
 (spacing::PrescribedSpacing)(i::Int) = spacing.Δz[i]
 
-get_npoints(spacing::PrescribedSpacing) = length(spacing.Δz)
+num_layers(spacing::PrescribedSpacing) = length(spacing.Δz)
 

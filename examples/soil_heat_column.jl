@@ -5,26 +5,22 @@ import CairoMakie as Makie
 grid = ColumnGrid(ExponentialSpacing())
 initializer = FieldInitializers(
     # steady-ish state initial condition for temperature
-    temperature = (x,z) -> -2 - 0.01*z,
+    temperature = (x,z) -> -1 - 0.01*z,
     # fully saturated soil pores
     saturation_water_ice = 1.0,
 )
-# temperature boundary condition
-boundary_conditions = SoilBoundaryConditions(
-    eltype(grid),
-    # Set a constant temperature of 1°C at the upper boundary
-    top = (temperature = ValueBoundaryCondition(1.0),)
-)
-model = SoilModel(; grid, initializer, boundary_conditions)
-state = initialize(model)
+model = SoilModel(grid; initializer)
+# constant surface temperature of 1°C
+bcs = PrescribedSurfaceTemperature(:T_ub, 1.0)
+driver = initialize(model, ForwardEuler, boundary_conditions=bcs)
 # test one timestep
-@time timestep!(state)
+@time timestep!(driver)
 # run simulation forward for a set period of time
-run!(state, period=Day(10))
+run!(driver, period=Day(10))
 
-T = interior(state.state.temperature)[1,1,:]
-f = interior(state.state.liquid_water_fraction)[1,1,:]
-zs = znodes(state.state.temperature)
+T = interior(driver.state.temperature)[1,1,:]
+f = interior(driver.state.liquid_water_fraction)[1,1,:]
+zs = znodes(driver.state.temperature)
 # Plot temperature and liquid fraction profiles
 Makie.scatterlines(T, zs)
 Makie.scatterlines(f, zs)

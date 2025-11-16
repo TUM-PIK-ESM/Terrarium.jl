@@ -31,6 +31,23 @@ Type alias for an `AbstractField` with any X, Y, Z location or grid.
 const AnyField{NF} = AbstractField{LX, LY, LZ, G, NF} where {LX, LY, LZ, G}
 
 """
+Container type for wrapping multiple `InputSource`s.
+"""
+struct InputSources{Sources<:Tuple{Vararg{InputSource}}}
+    sources::Sources
+end
+
+InputSources(sources::InputSource...) = InputSources(Tuple(sources))
+
+inputs(sources::InputSources) = tuplejoin(map(inputs, sources.sources)...)
+
+function update_inputs!(fields, sources::InputSources, ::Clock)
+    for source in sources.sources
+        update_inputs!(fields, source, clock)
+    end
+end
+
+"""
     $TYPEDEF
 
 Input source that reads directly from pre-specified Oceananigans `Field`s.

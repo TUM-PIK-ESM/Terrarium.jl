@@ -87,7 +87,7 @@ end
 # Immobile soil water (NoFlow)
 
 variables(::NoFlow) = (
-    auxiliary(:saturation_water_ice, XYZ(), domain=UnitInterval(), desc="Saturation level of water and ice in the pore space"),
+    auxiliary(:saturation_water_ice, XYZ()),
 )
 
 @inline initialize!(state, model, hydrology::SoilHydrology) = nothing

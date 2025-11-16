@@ -45,7 +45,7 @@ struct ColumnRingGrid{
         # get number of horizontal grid poitns by summing over mask
         Nh = sum(mask)
         # get number of vertical grid points
-        Nz = get_npoints(vert)
+        Nz = num_layers(vert)
         # TODO: Need to consider ordering of array dimensions;
         # using the z-axis here probably results in inefficient memory access patterns
         # since most or all land computations will be along this axis

@@ -14,7 +14,7 @@ struct ModelDriver{
     TimeStepper<:AbstractTimeStepper{NF},
     Model<:AbstractModel{NF, Grid},
     StateVars<:AbstractStateVariables,
-    InputSources<:Tuple{Vararg{InputSource}},
+    Inputs<:InputSources,
 } <: Oceananigans.AbstractModel{TimeStepper, Arch}
     "The clock holding all information about the current timestep/iteration of a simulation"
     clock::Clock
@@ -26,7 +26,7 @@ struct ModelDriver{
     model::Model
 
     "Input sources"
-    inputs::InputSources
+    inputs::Inputs
 
     "Collection of all state variables defined on the simulation `model`"
     state::StateVars
@@ -49,7 +49,8 @@ timestepper(driver::ModelDriver) = driver.timestepper
 
 function update_state!(driver::ModelDriver; compute_tendencies = true)
     reset_tendencies!(driver.state)
-    update_inputs!(driver.state, driver.inputs...)
+    update_inputs!(driver.state, driver.inputs)
+    fill_halo_regions!(driver.state)
     compute_auxiliary!(driver.state, driver.model)
     if compute_tendencies
         compute_tendencies!(driver.state, driver.model)
@@ -70,7 +71,8 @@ function initialize!(driver::ModelDriver)
     # TODO: reset other variables too?
     reset_tendencies!(driver.state)
     reset!(driver.clock)
-    update_inputs!(driver.inputs, driver.clock)
+    update_inputs!(driver.state, driver.inputs)
+    fill_halo_regions!(driver.state)
     initialize!(driver.state, driver.model)
     return driver
 end
@@ -84,10 +86,12 @@ get_fields(driver::ModelDriver, queries...) = get_fields(driver.state, queries..
 """
     $SIGNATURES
 
-Advance the model forward by one timestep with optional timestep size `Δt`.
+Advance the model forward by one timestep with optional timestep size `Δt`. If `finalize = true`,
+`compute_auxiliary!` is called after the time step in order to update the values of auxiliary/diagnostic
+variables.
 """
-timestep!(driver::ModelDriver; finalize=true) = timestep!(driver, default_dt(timestepper(driver)); finalize)
-function timestep!(driver::ModelDriver, Δt; finalize=true)
+timestep!(driver::ModelDriver; finalize = true) = timestep!(driver, default_dt(timestepper(driver)); finalize)
+function timestep!(driver::ModelDriver, Δt; finalize = true)
     update_state!(driver, compute_tendencies=true)
     timestep!(driver.state, driver.model, driver.timestepper, convert_dt(Δt))
     if finalize
@@ -99,7 +103,7 @@ end
 """
     $SIGNATURES
 
-Run the simulation by `steps` or a `period` with `Δt` timestep size (in seconds or Dates.Period).
+Run the simulation for `steps` or a given time `period` with timestep size `Δt` (in seconds or Dates.Period).
 """
 function run!(
     driver::ModelDriver;
@@ -126,9 +130,16 @@ Creates and initializes a `ModelDriver` for the given `model` with the given `cl
 This method allocates all necessary `Field`s for the state variables and calls `initialize!(::ModelDriver)`.
 Note that this method is **not type stable** and should not be called in an Enzyme `autodiff` call.
 """
-function initialize(model::AbstractModel{NF}, inputs::InputSource...; clock::Clock=Clock(time=zero(NF)), timestepper::Type=ForwardEuler) where {NF}
-    statevars = StateVariables(model, clock)
-    driver = ModelDriver(clock, get_grid(model), model, inputs, statevars, timestepper(statevars))
+function initialize(
+    model::AbstractModel{NF},
+    timestepper::Type{<:AbstractTimeStepper};
+    clock::Clock = Clock(time=zero(NF)),
+    inputs::InputSources = InputSources(),
+    boundary_conditions = (;),
+    fields = (;)
+) where {NF}
+    state = initialize(model; clock, boundary_conditions, fields)
+    driver = ModelDriver(clock, get_grid(model), model, inputs, state, timestepper(state))
     initialize!(driver)
     return driver
 end

@@ -40,7 +40,7 @@ This method should be called after `compute_auxiliary!`.
 """
 function compute_tendencies! end
 
-# Default getter methods for standard `AbstractModel` fields.
+# Default implementations of `AbstractModel` methods
 
 variables(::Any) = ()
 
@@ -50,20 +50,6 @@ variables(::Any) = ()
 Return the spatial grid associated with this `model`.
 """
 get_grid(model::AbstractModel) = model.grid
-
-"""
-    get_boundary_conditions(model::AbstractModel)::AbstractBoundaryConditions
-
-Returns the boundary conditions associated with this `model`.
-"""
-get_boundary_conditions(model::AbstractModel) = model.boundary_conditions
-
-"""
-    get_initializer(model::AbstractModel)::AbstractInitializer
-
-Returns the initializer associated with this `model`.
-"""
-get_initializer(model::AbstractModel) = model.initializer
 
 # Abstract subtypes
 
@@ -128,12 +114,9 @@ function Adapt.adapt_structure(to, model::AbstractModel)
     return setproperties(model, map(prop -> Adapt.adapt_structure(to, prop), getproperties(model)))
 end
 
-function Base.show(io::IO, mime::MIME"text/plain", model::AbstractModel{NF}) where {NF}
-    println(io, "$(nameof(typeof(model))){$NF} with $(nameof(typeof(get_grid(model)))) on $(architecture(get_grid(model)))")
+function Base.show(io::IO, model::AbstractModel{NF}) where {NF}
+    println(io, "$(nameof(typeof(model))){$NF} on $(architecture(get_grid(model)))")
     for name in propertynames(model)
-        print(io, "  $name:  ")
-        # Indent property value by two spaces
-        show(IOContext(io, :indent => 2), mime, getproperty(model, name))
-        println(io)
+        print(io, "├── $name:  $(summary(getproperty(model, name)))\n")
     end
 end

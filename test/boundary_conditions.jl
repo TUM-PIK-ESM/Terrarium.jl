@@ -4,13 +4,8 @@ using Oceananigans: CenterField
 using Test
 
 @testset "Boundary conditions" begin
-    # test default boundary conditions do nothing
     var = prognostic(:test, XYZ())
     grid = ColumnGrid(ExponentialSpacing())
-    default_bcs = DefaultBoundaryConditions()
-    @test isnothing(Terrarium.get_field_boundary_conditions(default_bcs, grid, var))
-    @test variables(default_bcs) == ()
-    
     # test prescribed flux
     flux = PrescribedFlux(:flux, 1.0, XY())
     flux_vars = variables(flux)

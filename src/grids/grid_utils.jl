@@ -54,7 +54,7 @@ is determined by `VarDims` defined on `var`.
 function Field(
     grid::AbstractLandGrid,
     dims::VarDims,
-    boundary_conditions=nothing,
+    boundary_conditions = nothing,
     args...;
     kwargs...
 )
@@ -62,8 +62,12 @@ function Field(
     loc = location(dims)
     FT = Field{map(typeof, loc)...}
     # Specify BCs if defined
-    field = if !isnothing(boundary_conditions)
+    field = if isa(boundary_conditions, FieldBoundaryConditions)
         FT(get_field_grid(grid), args...; boundary_conditions, kwargs...)
+    elseif isa(boundary_conditions, NamedTuple)
+        # assume that named tuple corresponds to FieldBoundaryConditions positions
+        field_bcs = FieldBoundaryConditions(get_field_grid(grid), (Center(), Center(), nothing); boundary_conditions...)
+        FT(get_field_grid(grid), args...; boundary_conditions = field_bcs, kwargs...)
     else
         FT(get_field_grid(grid), args...; kwargs...)
     end

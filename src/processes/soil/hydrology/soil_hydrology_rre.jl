@@ -12,10 +12,10 @@ end
 get_closure(op::RichardsEq) = op.saturation_closure
 
 variables(rre::RichardsEq) = (
-    prognostic(:pressure_head, XYZ(), get_closure(rre)),
-    prognostic(:surface_excess_water, XY(), units=u"m", desc="Excess water at the soil surface in m³/m²"),
-    auxiliary(:water_table, XY(), units=u"m", desc="Elevation of the water table in meters"),
-    auxiliary(:hydraulic_conductivity, XYZ(z=Face()), units=u"m/s", desc="Hydraulic conductivity of soil volumes in m/s")
+    prognostic(:pressure_head, XYZ(); closure=get_closure(rre)),
+    prognostic(:surface_excess_water, XY(); units=u"m"),
+    auxiliary(:water_table, XY(); units=u"m"),
+    auxiliary(:hydraulic_conductivity, XYZ(z=Face()); units=u"m/s")
 )
 
 function initialize!(state, model, ::SoilHydrology{NF, <:RichardsEq}) where {NF}

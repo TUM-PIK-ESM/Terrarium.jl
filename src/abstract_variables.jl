@@ -60,11 +60,9 @@ Return an `AuxiliaryVariable` corresponding to the closure variable defined by t
 function closurevar end
 
 """
-    $TYPEDEF
-
-Base type for state variable specification.
+Base type for state variable placeholder types.
 """
-abstract type AbstractVariable{VD<:VarDims} end
+abstract type AbstractVariable{name, VD} end
 
 """
     $SIGNATURES
@@ -72,7 +70,7 @@ abstract type AbstractVariable{VD<:VarDims} end
 Retrieve the name of the given variable or closure. For closure relations, `varname`
 should return the name of the variable returned by the closure relation.
 """
-varname(var::AbstractVariable) = var.name
+varname(::AbstractVariable{name}) where {name} = name
 varname(namespace::Pair{Symbol}) = first(namespace)
 
 """
@@ -89,10 +87,34 @@ Retrieve the physical units for the given variable.
 """
 varunits(var::AbstractVariable) = var.units
 
+# Test equality between variables by their names, dimensions, and physical units
 Base.:(==)(var1::AbstractVariable, var2::AbstractVariable) =
     varname(var1) == varname(var2) &&
     vardims(var1) == vardims(var2) &&
     varunits(var1) == varunits(var2)
+
+"""
+    $TYPEDEF
+
+Represents a generic state variable with the given `name` and spatial `dims`.
+"""
+struct Variable{name, VD, UT} <: AbstractVariable{name, VD}
+    "Variable dimensions"
+    dims::VD
+
+    "Physical units"
+    units::UT
+
+    Variable(name::Symbol, dims::VarDims, units::Units = NoUnits) = new{name, typeof(dims), typeof(units)}(dims, units)
+end
+
+"""
+Base type for state variable placeholder types with 
+"""
+abstract type AbstractProcessVariable{name, VD} <: AbstractVariable{name, VD} end
+
+vardims(pv::AbstractProcessVariable) = vardims(pv.var)
+varunits(pv::AbstractProcessVariable) = varunits(pv.var)
 
 function Base.show(io::IO, ::MIME"text/plain", var::AbstractVariable)
     units = varunits(var)
@@ -106,97 +128,59 @@ end
 """
     $TYPEDEF
 
-Represents an auxiliary (sometimes called "diagnostic") variable with the given `name`
-and `dims` on the spatial grid.
+Represents an auxiliary (a.k.a "diagnostic") state variable with the given `name`
+and spatial `dims`. Auxiliary variables are those which are diagnosed directly or
+indirectly from the values of one or more prognostic variables.
 """
-struct AuxiliaryVariable{VD<:VarDims, DT<:AbstractInterval, UT<:Units} <: AbstractVariable{VD}
-    "Name of the auxiliary variable"
-    name::Symbol
-
-    "Grid dimensions on which the variable is defined"
-    dims::VD
-
-    "Physical untis associated with this state variable"
-    units::UT
-
-    "Interval domain on which scalar fields of this variable are defined"
-    domain::DT
-
-    "Human-readable description of this state variable"
-    desc::String
-end
-
-"""
-    $TYPEDEF
-
-Represents an input (e.g. forcing) variable with the given `name` and `dims` on the spatial grid.
-"""
-struct InputVariable{VD<:VarDims, DT<:AbstractInterval, UT<:Units} <: AbstractVariable{VD}
-    "Name of the auxiliary variable"
-    name::Symbol
-
-    "Grid dimensions on which the variable is defined"
-    dims::VD
-
-    "Physical untis associated with this state variable"
-    units::UT
-
-    "Interval domain on which scalar fields of this variable are defined"
-    domain::DT
-
-    "Human-readable description of this state variable"
-    desc::String
-end
-
-"""
-    $TYPEDEF
-
-Represents a prognostic variable with the given `name` and `dims` on the spatial grid.
-"""
-struct PrognosticVariable{
+struct AuxiliaryVariable{
+    name,
     VD<:VarDims,
     UT<:Units,
-    TV<:Union{Nothing, AuxiliaryVariable},
-    DT<:AbstractInterval,
-    CL<:Union{Nothing, AbstractClosureRelation}
-} <: AbstractVariable{VD}
-    "Name of the prognostic variable"
-    name::Symbol
+    Var<:Variable{name, VD, UT}
+} <: AbstractProcessVariable{name, VD}
+    "State variable"
+    var::Var
+end
 
-    "Grid dimensions on which the variable is defined"
-    dims::VD
+"""
+    $TYPEDEF
+
+Represents an input (e.g. forcing) variable with the given `name` and spatial `dims`.
+"""
+struct InputVariable{
+    name,
+    VD<:VarDims,
+    UT<:Units,
+    Var<:Variable{name, VD, UT}
+} <: AbstractProcessVariable{name, VD}
+    "State variable"
+    var::Var
+end
+
+"""
+    $TYPEDEF
+
+Represents a prognostic state variable with the given `name` and spatial `dims`.
+"""
+struct PrognosticVariable{
+    name,
+    VD<:VarDims,
+    UT<:Units,
+    Var<:Variable{name, VD, UT},
+    CL<:Union{Nothing, AbstractClosureRelation},
+    TV<:Union{Nothing, AuxiliaryVariable}
+} <: AbstractProcessVariable{name, VD}
+    "State variable"
+    var::Var
 
     "Closure relation for the tendency of the prognostic variable"
     closure::CL
 
     "Variable corresponding to the tendency for prognostic variables"
     tendency::TV
-
-    "Physical untis associated with this state variable"
-    units::UT
-
-    "Interval domain on which scalar fields of this variable are defined"
-    domain::DT
-
-    "Human-readable description of this state variable"
-    desc::String
 end
 
 hasclosure(var::PrognosticVariable) = !isnothing(var.closure)
-
-"""
-    $TYPEDEF
-
-Represents a new variable namespace, typically from a subcomponent of the model.
-It is (currently) assumed that the name of the namespace corresponds to a property
-defined on the model type.
-"""
-struct Namespace{Vars}
-    name::Symbol
-    vars::Vars
-end
-
-varname(ns::Namespace) = ns.name
 
 # Variable container
 
@@ -214,8 +198,21 @@ struct Variables{ProgVars, TendVars, AuxVars, InputVars, Namespaces}
     namespaces::Namespaces
 end
 
-Variables(vars::Tuple{Vararg{Union{AbstractVariable, Namespace}}}...) = Variables(vars)
-function Variables(vars::Tuple{Vararg{Union{AbstractVariable, Namespace}}})
+"""
+    $TYPEDEF
+
+Represents a new variable namespace, typically from a subcomponent of the model.
+"""
+struct Namespace{name, Vars}
+    vars::Vars
+
+    Namespace(name::Symbol, vars::Variables) = new{name, typeof(vars)}(vars)
+end
+
+varname(ns::Namespace) = ns.name
+
+Variables(vars::Tuple{Vararg{Union{AbstractProcessVariable, Namespace}}}...) = Variables(vars)
+function Variables(vars::Tuple{Vararg{Union{AbstractProcessVariable, Namespace}}})
     # partition variables into prognostic, auxiliary, input, and namespace groups;
     # duplicates within each group are automatically merged
     prognostic_vars = merge_duplicates(filter(var -> isa(var, PrognosticVariable), vars))
@@ -259,44 +256,33 @@ end
 """
     $SIGNATURES
 
+Convenience constructor for `Variable`.
+"""
+var(name::Symbol, dims::VarDims, units::Units = NoUnits) = Variable(name, dims, units)
+
+"""
+    $SIGNATURES
+
 Convenience constructors for `PrognosticVariable`.
 """
-prognostic(name::Symbol, dims::VarDims, closure::Nothing=nothing; units=NoUnits, domain=RealLine(), desc="") =
-    PrognosticVariable(
-        name,
-        dims,
-        closure,
-        tendency(name, dims, units),
-        units,
-        domain,
-        desc
-    )
-prognostic(name::Symbol, dims::VarDims, closure::AbstractClosureRelation; units=NoUnits, domain=RealLine(), desc="") =
-    PrognosticVariable(
-        name,
-        dims,
-        # closure term
-        closure,
-        # tendency variable
-        tendency(closure, dims),
-        units,
-        domain,
-        desc
-    )
+prognostic(name::Symbol, dims::VarDims; units=NoUnits, closure=nothing) = prognostic(var(name, dims, units); closure)
+prognostic(var::Variable; closure=nothing) = PrognosticVariable(var, closure, tendency(varname(var), vardims(var), varunits(var), closure))
 
 """
     $SIGNATURES
 
 Convenience constructor method for `AuxiliaryVariable`.
 """
-auxiliary(name::Symbol, dims::VarDims; units=NoUnits, domain=RealLine(), desc="") = AuxiliaryVariable(name, dims, units, domain, desc)
+auxiliary(name::Symbol, dims::VarDims; units=NoUnits) = auxiliary(var(name, dims, units))
+auxiliary(var::Variable) = AuxiliaryVariable(var)
 
 """
     $SIGNATURES
 
 Convenience constructor method for `InputVariable`.
 """
-input(name::Symbol, dims::VarDims; units=NoUnits, domain=RealLine(), desc="") = InputVariable(name, dims, units, domain, desc)
+input(name::Symbol, dims::VarDims; units=NoUnits) = input(var(name, dims, units))
+input(var::Variable) = InputVariable(var)
 
 """
     $SIGNATURES
@@ -304,12 +290,15 @@ input(name::Symbol, dims::VarDims; units=NoUnits, domain=RealLine(), desc="") = 
 Creates an `AuxiliaryVariable` for the tendency of a prognostic variable with the given name, dimensions, and physical units.
 This constructor is primarily used internally by other constructors and does not usually need to be called by implementations of `variables`.
 """
-tendency(progname::Symbol, progdims::VarDims, progunits::Units) = AuxiliaryVariable(progname, progdims, upreferred(progunits)/u"s", RealLine(), "Tendency for $progname")
-function tendency(closure::AbstractClosureRelation, dims::VarDims)
-    # get the auxiliary closure variable
-    var = closurevar(closure)
-    # create a tendency variable based on its name and units
-    return tendency(varname(var), dims, varunits(var))
+function tendency(progname::Symbol, progdims::VarDims, progunits::Units, closure)
+    if isnothing(closure)
+        auxiliary(progname, progdims, units=upreferred(progunits)/u"s")
+    else
+        # auxiliary closure variable
+        var = closurevar(closure)
+        # create a tendency variable based on its name and units
+        return auxiliary(varname(var), vardims(var), units=upreferred(varunits(var))/u"s")
+    end
 end
 
 """

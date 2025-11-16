@@ -55,25 +55,29 @@ end
 ConstructionBase.constructorof(::Type{StateVariables{NF}}) where {NF} = (args...) -> StateVariables(NF, args...)
 
 function StateVariables(
-    model::AbstractModel{NF},
-    clock::Clock
+    vars::Variables,
+    grid::AbstractLandGrid{NF},
+    clock::Clock;
+    boundary_conditions = (;),
+    fields = (;)
 ) where {NF}
-    # extract abstract variables from model
-    vars = Variables(variables(model)...)
-    # get grid and boundary conditions
-    grid = get_grid(model)
-    bcs = get_boundary_conditions(model)
-    field_bcs = get_field_boundary_conditions(bcs, grid)
-    # create fields from abstract variables
-    init(var::AbstractVariable) = Field(grid, vardims(var), get(field_bcs, varname(var), nothing))
-    prognostic_fields = map(init, vars.prognostic)
-    tendency_fields =  map(init, vars.tendencies)
-    auxiliary_fields = map(init, vars.auxiliary)
-    input_fields = map(init, vars.inputs)
+    # Initialize Fields for each variable group, if they are not already given in the user defined `fields`
+    input_fields = map(var -> get(fields, varname(var), Field(grid, vardims(var))), vars.inputs)
+    tendency_fields =  map(var -> get(fields, varname(var), Field(grid, vardims(var))), vars.tendencies)
+    auxiliary_fields = map(vars.auxiliary) do var
+        bcs = get(boundary_conditions, varname(var), nothing)
+        get(fields, varname(var), Field(grid, vardims(var), bcs))
+    end
+    prognostic_fields = map(vars.prognostic) do var
+        bcs = get(boundary_conditions, varname(var), nothing)
+        get(fields, varname(var), Field(grid, vardims(var), bcs))
+    end
     # recursively initialize state variables for each namespace
-    namespaces = map(ns -> StateVariables(ns, grid, clock, get(boundary_conditions, varname(var), (;))), vars.namespaces)
+    namespaces = map(vars.namespaces) do ns
+        StateVariables(ns, grid, clock, get(boundary_conditions, varname(ns), (;)), get(fields, varname(ns), (;)))
+    end
     # get named tuple mapping prognostic variabels to their respective closure relations, if defined
-    closures = map(var -> var.closure, filter(hasclosure, prognostic_vars))
+    closures = map(var -> var.closure, filter(hasclosure, vars.prognostic))
     # construct and return StateVariables
     return StateVariables(
         NF,
@@ -169,8 +173,7 @@ function Base.copyto!(
     for nsname in nsnames
         copyto!(getproperty(state.namespaces, nsname), getproperty(other.namespaces, nsname))
     end
-    # currently clock isn't copied, not defined, and not our type
-    #copyto!(state.clock, other.clock)
+    set!(state.clock, other.clock)
     return nothing
 end
 
@@ -195,14 +198,12 @@ end
 """
 Update input variables from the given input `sources`.
 """
-function update_inputs!(state::StateVariables, sources::InputSource...)
-    for source in sources
-        # update inputs in current namespace
-        update_inputs!(state.inputs, source, state.clock)
-    end
+function update_inputs!(state::StateVariables, sources::InputSources)
+    # update inputs in current namespace
+    update_inputs!(state.inputs, sources, state.clock)
     # recursively update namespaces
     for ns in state.namespaces
-        update_inputs!(ns, sources...)
+        update_inputs!(ns, sources)
     end
 end
 
@@ -257,4 +258,13 @@ function get_fields(state::StateVariables, queries::Union{Symbol, Pair}...)
         end
     end
     return (; fields...)
+end
+
+# Default initialize dispatch for model types
+
+function initialize(model::AbstractModel{NF}; clock=Clock(time=zero(NF)), boundary_conditions = (;), fields =(;)) where {NF}
+    vars = Variables(variables(model))
+    grid = get_grid(model)
+    state = StateVariables(vars, grid, clock; boundary_conditions, fields)
+    return state
 end

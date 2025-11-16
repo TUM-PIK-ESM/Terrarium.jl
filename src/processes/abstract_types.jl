@@ -138,5 +138,5 @@ abstract type AbstractAtmosphere{
     PR<:AbstractPrecipitation,
     IR<:AbstractIncomingRadiation,
     HM<:AbstractHumidity
-} <: AbstractBoundaryConditions
+} <: AbstractProcess
 end

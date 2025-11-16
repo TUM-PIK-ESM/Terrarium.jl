@@ -8,7 +8,6 @@ struct LandModel{
     SnowModel<:AbstractSnowModel,
     VegetationModel<:AbstractVegetationModel,
     HydrologyModel<:AbstractHydrologyModel,
-    BoundaryConditions<:AbstractBoundaryConditions,
     Initializer<:AbstractInitializer,
 } <: AbstractLandModel{NF, GridType}
     "Spatial grid"
@@ -31,9 +30,6 @@ struct LandModel{
     
     "Surface hydrology model"
     hydrology::HydrologyModel
-
-    "Bounday conditions"
-    boundary_conditions::BoundaryConditions
 
     "State variable initializer"
     initializer::Initializer

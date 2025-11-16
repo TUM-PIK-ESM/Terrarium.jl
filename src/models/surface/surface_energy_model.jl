@@ -33,8 +33,6 @@ end
 
 variables(model::SurfaceEnergyModel) = tuplejoin(variables(model.atmosphere), variables(model.surface_energy_balance))
 
-get_boundary_conditions(::SurfaceEnergyModel) = DefaultBoundaryConditions()
-
 function compute_auxiliary!(state, model::SurfaceEnergyModel)
     compute_auxiliary!(state, model, model.atmosphere)
     compute_auxiliary!(state, model, model.surface_energy_balance)

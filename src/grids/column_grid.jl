@@ -21,7 +21,7 @@ struct ColumnGrid{NF, Arch, RectGrid<:OceananigansGrids.RectilinearGrid} <: Abst
         vert::AbstractVerticalSpacing,
         num_columns::Int = 1,
     ) where {NF<:AbstractFloat}
-        Nz = get_npoints(vert)
+        Nz = num_layers(vert)
         # TODO: Need to eventually consider ordering of array dimensions;
         # using the z-axis here probably results in inefficient memory access patterns
         # since most or all land computations will be along this axis

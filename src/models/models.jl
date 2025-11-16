@@ -3,11 +3,12 @@
 export SoilModel
 include("soil/soil_model.jl")
 
-export SoilBoundaryConditions, SoilBC
-export GroundHeatFlux, GeothermalHeatFlux, PrescribedTemperature
+export GroundHeatFlux, GeothermalHeatFlux, PrescribedSurfaceTemperature, PrescribedBottomTemperature
 export FreeDrainage, ImpermeableBoundary, InfiltrationFlux
 include("soil/soil_model_bcs.jl")
 
+export SoilInitializer
+export ConstantInitialSoilTemperature, QuasiThermalSteadyState, PiecewiseLinearInitialSoilTemperature
 include("soil/soil_model_init.jl")
 
 # Vegetation
