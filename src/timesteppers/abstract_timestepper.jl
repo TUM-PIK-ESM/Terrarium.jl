@@ -32,9 +32,9 @@ Return `true` if the given time stepper is adaptive, false otherwise.
 function is_adaptive end
 
 """
-    timestep!(driver::ModelDriver, timestepper::AbstractTimeStepper, Δt)
+    timestep!(state, timestepper::AbstractTimeStepper, model::AbstractModel, inputs::InputSources, Δt)
 
-Advance prognostic variabels by one step based on the current state, or by `Δt` units of time.
+Advance prognostic variables by one time step based on the current state, or by `Δt` units of time.
 """
 function timestep! end
 

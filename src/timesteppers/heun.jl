@@ -30,10 +30,9 @@ function average_tendencies!(
     end
 end
 
-function timestep!(driver::ModelDriver, timestepper::Heun, Δt = default_dt(timestepper))
+function timestep!(state, timestepper::Heun, model::AbstractModel, inputs::InputSources, Δt = default_dt(timestepper))
     @assert is_initialized(timestepper)
 
-    (; model, state, inputs) = driver
     grid = get_grid(model)
 
     # Copy current state to stage

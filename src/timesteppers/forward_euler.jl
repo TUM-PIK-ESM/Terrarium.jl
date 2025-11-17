@@ -14,11 +14,11 @@ is_adaptive(euler::ForwardEuler) = false
 
 is_initialized(euler::ForwardEuler) = true
 
-function timestep!(driver::ModelDriver, timestepper::ForwardEuler, Δt)
+function timestep!(state, timestepper::ForwardEuler, model::AbstractModel, inputs::InputSources, Δt)
     # Euler step
-    explicit_step!(driver.state, get_grid(driver.model), timestepper, Δt)
+    explicit_step!(state, get_grid(model), timestepper, Δt)
     # Apply closure relations
-    closure!(driver.state, driver.model)
+    closure!(state, model)
     # Update clock
-    tick!(driver.state.clock, Δt)
+    tick!(state.clock, Δt)
 end

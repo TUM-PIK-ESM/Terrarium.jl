@@ -85,7 +85,7 @@ variables.
 timestep!(driver::ModelDriver; finalize = true) = timestep!(driver, default_dt(timestepper(driver)); finalize)
 function timestep!(driver::ModelDriver, Δt; finalize = true)
     update_state!(driver, compute_tendencies = true)
-    timestep!(driver, driver.timestepper, convert_dt(Δt))
+    timestep!(driver.state, driver.timestepper, driver.model, driver.inputs, convert_dt(Δt))
     if finalize
         compute_auxiliary!(driver.state, driver.model)
     end

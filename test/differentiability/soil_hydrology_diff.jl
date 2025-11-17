@@ -99,9 +99,12 @@ end
     hydraulic_properties = ConstantHydraulics(Float64)
     model = build_soil_energy_hydrology_model(CPU(), Float64; hydraulic_properties)
     driver = initialize(model, ForwardEuler())
+    inputs = driver.inputs
     state = driver.state
     dstate = make_zero(state)
-    @time Enzyme.autodiff(set_runtime_activity(Reverse), timestep!, Const, Duplicated(state, dstate), Const(model), Const(driver.timestepper))
+    stepper = driver.timestepper
+    dstepper = make_zero(stepper)
+    @time Enzyme.autodiff(set_runtime_activity(Reverse), timestep!, Const, Duplicated(state, dstate), Duplicated(stepper, dstepper), Const(model), Const(inputs))
     @test all(isfinite.(dstate.temperature))
     @test all(isfinite.(dstate.pressure_head))
 end
