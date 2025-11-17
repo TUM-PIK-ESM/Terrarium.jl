@@ -74,7 +74,6 @@ Diagnose the skin temperature implied by the current `ground_heat_flux` and `gro
 """
 @kernel function update_skin_temperature_kernel!(state, grid, skinT::ImplicitSkinTemperature)
     i, j = @index(Global, NTuple)
-    idx = (i, j)
     # get thickness of topmost soil/ground grid cell
     field_grid = get_field_grid(grid)
     Δz₁ = Δzᵃᵃᶜ(i, j, field_grid.Nz, field_grid)
@@ -83,14 +82,14 @@ Diagnose the skin temperature implied by the current `ground_heat_flux` and `gro
     # get ground temperature
     Tₛ = state.ground_temperature[i, j]
     # compute new skin temperature T₀ by setting G equal to the half-cell heat flux
-    κₛ = skin_thermal_conductivity(idx, state, skinT)
+    κₛ = skin_thermal_conductivity(i, j, state, skinT)
     state.skin_temperature[i, j, 1] = Tₛ - G * Δz₁ / (2*κₛ)
 end
 
 # Kernel functions
 
-@inline skin_thermal_conductivity(idx, state, skinT::ImplicitSkinTemperature) = skinT.κₛ
+@inline skin_thermal_conductivity(i, j, state, skinT::ImplicitSkinTemperature) = skinT.κₛ
 
-@inline @inbounds skin_temperature(idx, state, ::AbstractSkinTemperature) = state.skin_temperature[idx]
+@inline skin_temperature(i, j, state, ::AbstractSkinTemperature) = @inbounds state.skin_temperature[i, j]
 
-@inline @inbounds ground_heat_flux(idx, state, ::AbstractSkinTemperature) = state.ground_heat_flux[idx]
+@inline ground_heat_flux(i, j, state, ::AbstractSkinTemperature) = @inbounds state.ground_heat_flux[i, j]

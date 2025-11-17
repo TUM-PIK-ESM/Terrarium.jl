@@ -11,9 +11,9 @@ variables(::PrescribedAlbedo) = (
     input(:emissivity, XY(), domain=UnitInterval(), desc="Surface emissivity, i.e. efficiency of longwave emission [-]"),
 )
 
-@inline albedo(idx, state, ::PrescribedAlbedo) = state.albedo[idx...]
+@inline albedo(i, j, state, ::PrescribedAlbedo) = @inbounds state.albedo[i, j]
 
-@inline emissivity(idx, state, ::PrescribedAlbedo) = state.emissivity[idx...]
+@inline emissivity(i, j, state, ::PrescribedAlbedo) = @inbounds state.emissivity[i, j]
 
 """
     $TYPEDEF
@@ -31,6 +31,6 @@ end
 
 ConstantAlbedo(::Type{NF}; kwargs...) where {NF} = ConstantAlbedo{NF}(; kwargs...)
 
-@inline albedo(idx, state, albedo::ConstantAlbedo) = albedo.albedo
+@inline albedo(i, j, state, albedo::ConstantAlbedo) = albedo.albedo
 
-@inline emissivity(idx, state, albedo::ConstantAlbedo) = albedo.emissivity
+@inline emissivity(i, j, state, albedo::ConstantAlbedo) = albedo.emissivity

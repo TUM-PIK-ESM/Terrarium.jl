@@ -29,13 +29,6 @@ const RingGridOrField = Union{RingGrids.AbstractGrid, RingGrids.AbstractField}
 on_architecture(::GPU, obj::RingGridOrField) = RingGrids.Architectures.on_architecture(RingGrids.Architectures.GPU(), obj)
 on_architecture(::CPU, obj::RingGridOrField) = RingGrids.Architectures.on_architecture(RingGrids.Architectures.CPU(), obj)
 
-# Field utilities
-
-# A bit of type piracy to allow `Field`s to be indexed with tuples
-# TODO: Consider proposing this as a change in Oceananigans
-@inline @propagate_inbounds Base.getindex(field::Field, idx::NTuple{2, Integer}) = field[idx...]
-@inline @propagate_inbounds Base.getindex(field::Field, idx::NTuple{3, Integer}) = field[idx...]
-
 # Field construction
 
 """

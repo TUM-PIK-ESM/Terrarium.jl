@@ -86,18 +86,17 @@ end
     strat::AbstractStratigraphy,
     bgc::AbstractSoilBiogeochemistry,
 )
-    idx = @index(Global, NTuple)
-    state.tendencies.internal_energy[idx...] += energy_tendency(idx, state, grid, energy, hydrology, strat, bgc)
+    i, j, k = @index(Global, NTuple)
+    state.tendencies.internal_energy[i, j, k] += energy_tendency(i, j, k, state, grid, energy, hydrology, strat, bgc)
 end
 
 @inline function energy_tendency(
-    idx, state, grid,
+    i, j, k, state, grid,
     energy::SoilEnergyBalance{NF, <:ExplicitTwoPhaseHeatConduction},
     hydrology::AbstractSoilHydrology,
     strat::AbstractStratigraphy,
     bgc::AbstractSoilBiogeochemistry,
 ) where {NF}
-    i, j, k = idx
     # operators require the underlying Oceananigans grid
     field_grid = get_field_grid(grid)
 
@@ -113,8 +112,7 @@ end
     strat::AbstractStratigraphy,
     bgc::AbstractSoilBiogeochemistry,
 )
-    idx = (i, j, k)
-    soil = soil_composition(idx, state, strat, hydrology, bgc)
+    soil = soil_composition(i, j, k, state, strat, hydrology, bgc)
     return thermalconductivity(energy.thermal_properties, soil)
 end
 
@@ -175,23 +173,22 @@ end
     bgc::AbstractSoilBiogeochemistry,
     constants::PhysicalConstants,
 )
-    idx = @index(Global, NTuple)
+    i, j, k = @index(Global, NTuple)
     fc = freezecurve(energy, hydrology)
-    temperature_to_energy!(idx, state, fc, energy, hydrology, strat, bgc, constants)
+    temperature_to_energy!(i, j, k, state, fc, energy, hydrology, strat, bgc, constants)
 end
 
 @inline function temperature_to_energy!(
-    idx, state, ::FreeWater,
+    i, j, k, state, ::FreeWater,
     energy::SoilEnergyBalance,
     hydrology::AbstractSoilHydrology,
     strat::AbstractStratigraphy,
     bgc::AbstractSoilBiogeochemistry,
     constants::PhysicalConstants,
 )
-    i, j, k = idx
     T = state.temperature[i, j, k] # assumed given
     L = constants.ρw*constants.Lsl
-    por = porosity(idx, state, hydrology, strat, bgc)
+    por = porosity(i, j, k, state, hydrology, strat, bgc)
     sat = state.saturation_water_ice[i, j, k]
     # calculate unfrozen water content from temperature
     # N.B. For the free water freeze curve, the mapping from temperature to unfrozen water content
@@ -204,7 +201,7 @@ end
         one(sat),
         zero(sat),
     )
-    soil = soil_composition(idx, state, strat, hydrology, bgc)
+    soil = soil_composition(i, j, k, state, strat, hydrology, bgc)
     C = heatcapacity(energy.thermal_properties, soil)
     # compute energy from temperature, heat capacity, and ice fraction
     U = state.internal_energy[i, j, k] = T*C - L*sat*por*(1 - liq)
@@ -219,28 +216,28 @@ end
     bgc::AbstractSoilBiogeochemistry,
     constants::PhysicalConstants,
 )
-    idx = @index(Global, NTuple)
+    i, j, k = @index(Global, NTuple)
     fc = freezecurve(energy, hydrology)
-    energy_to_temperature!(idx, state, fc, energy, hydrology, strat, bgc, constants)
+    energy_to_temperature!(i, j, k, state, fc, energy, hydrology, strat, bgc, constants)
 end
 
 @inline function energy_to_temperature!(
-    idx, state, fc::FreeWater,
+    i, j, k, state, fc::FreeWater,
     energy::SoilEnergyBalance{NF},
     hydrology::AbstractSoilHydrology,
     strat::AbstractStratigraphy,
     bgc::AbstractSoilBiogeochemistry,
     constants::PhysicalConstants,
 ) where {NF}
-    i, j, k = idx
+
     U = state.internal_energy[i, j, k] # assumed given
     L = constants.ρw*constants.Lsl
-    por = porosity(idx, state, hydrology, strat, bgc)
+    por = porosity(i, j, k, state, hydrology, strat, bgc)
     sat = state.saturation_water_ice[i, j, k]
     Lθ = L*sat*por
     # calculate unfrozen water content
     state.liquid_water_fraction[i, j, k] = liquid_water_fraction(fc, U, Lθ, sat)
-    soil = soil_composition(idx, state, strat, hydrology, bgc)
+    soil = soil_composition(i, j, k, state, strat, hydrology, bgc)
     C = heatcapacity(energy.thermal_properties, soil)
     # calculate temperature from internal energy and liquid water fraction
     T = state.temperature[i, j, k] = energy_to_temperature(fc, U, Lθ, C)
