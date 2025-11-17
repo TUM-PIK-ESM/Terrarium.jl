@@ -104,7 +104,8 @@ end
     dstate = make_zero(state)
     stepper = driver.timestepper
     dstepper = make_zero(stepper)
-    @time Enzyme.autodiff(set_runtime_activity(Reverse), timestep!, Const, Duplicated(state, dstate), Duplicated(stepper, dstepper), Const(model), Const(inputs))
+    Δt = 60.0
+    @time Enzyme.autodiff(set_runtime_activity(Reverse), timestep!, Const, Duplicated(state, dstate), Duplicated(stepper, dstepper), Const(model), Const(inputs), Const(Δt))
     @test all(isfinite.(dstate.temperature))
     @test all(isfinite.(dstate.pressure_head))
 end
