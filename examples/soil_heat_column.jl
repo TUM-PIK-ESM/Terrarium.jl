@@ -12,7 +12,7 @@ initializer = FieldInitializers(
 model = SoilModel(grid; initializer)
 # constant surface temperature of 1°C
 bcs = PrescribedSurfaceTemperature(:T_ub, 1.0)
-driver = initialize(model, ForwardEuler, boundary_conditions=bcs)
+driver = initialize(model, ForwardEuler(), boundary_conditions=bcs)
 # test one timestep
 @time timestep!(driver)
 # run simulation forward for a set period of time

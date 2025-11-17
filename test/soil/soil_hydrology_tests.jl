@@ -118,7 +118,7 @@ end
         saturation_water_ice = (x, z) -> 1.0
     )
     model = SoilModel(grid; hydrology, initializer)
-    driver = initialize(model, ForwardEuler)
+    driver = initialize(model, ForwardEuler())
     state = driver.state
     # check that initial water table depth is correctly calculated from initial condition
     @test all(iszero.(state.water_table))
@@ -140,7 +140,7 @@ end
         saturation_water_ice = (x, z) -> min(1, 0.5 - 0.1*z)
     )
     model = SoilModel(grid; hydrology, initializer)
-    driver = initialize(model, ForwardEuler)
+    driver = initialize(model, ForwardEuler())
     state = driver.state
     water_table = state.water_table
     hydraulic_cond = state.hydraulic_conductivity
@@ -190,7 +190,7 @@ end
         saturation_water_ice = 1.0 # fully saturated
     )
     model = SoilModel(grid; hydrology, initializer)
-    driver = initialize(model, ForwardEuler)
+    driver = initialize(model, ForwardEuler())
     state = driver.state
     # check that forcing_ET is zero when no latent heat flux is supplied
     @test iszero(Terrarium.forcing_ET(1, 1, Nz, grid.grid, state, evapotranspiration, model.constants))

@@ -26,7 +26,7 @@ end
     model = build_soil_energy_hydrology_model(CPU(), Float64; hydraulic_properties)
     swrc = Terrarium.get_swrc(model.hydrology) # θ(ψₘ)
     swrc_inv = inv(swrc) # ψₘ(θ)
-    driver = initialize(model, ForwardEuler)
+    driver = initialize(model, ForwardEuler())
     state = driver.state
     dstate = make_zero(state)
     set!(state.saturation_water_ice, sat)
@@ -72,7 +72,7 @@ end
 @testset "Soil hydrology: compute_auxiliary! RRE" begin
     hydraulic_properties = SoilHydraulicsSURFEX(Float64)
     model = build_soil_energy_hydrology_model(CPU(), Float64; hydraulic_properties)
-    driver = initialize(model, ForwardEuler)
+    driver = initialize(model, ForwardEuler())
     state = driver.state
     dstate = make_zero(state)
     set!(dstate.hydraulic_conductivity, 1.0) # seed hydraulic cond
@@ -84,7 +84,7 @@ end
 @testset "Soil hydrology: compute_tendencies! RRE" begin
     hydraulic_properties = SoilHydraulicsSURFEX(Float64)
     model = build_soil_energy_hydrology_model(CPU(), Float64; hydraulic_properties)
-    driver = initialize(model, ForwardEuler)
+    driver = initialize(model, ForwardEuler())
     state = driver.state
     # first run compute_auxiliary! for the full model (needed to compute hydraulic conductivities)
     compute_auxiliary!(state, model)
@@ -98,7 +98,7 @@ end
 @testset "Soil energy/hydrology model: timestep!" begin
     hydraulic_properties = ConstantHydraulics(Float64)
     model = build_soil_energy_hydrology_model(CPU(), Float64; hydraulic_properties)
-    driver = initialize(model, ForwardEuler)
+    driver = initialize(model, ForwardEuler())
     state = driver.state
     dstate = make_zero(state)
     @time Enzyme.autodiff(set_runtime_activity(Reverse), timestep!, Const, Duplicated(state, dstate), Const(model), Const(driver.timestepper))

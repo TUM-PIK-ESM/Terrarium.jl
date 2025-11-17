@@ -47,15 +47,7 @@ architecture(driver::ModelDriver) = architecture(get_grid(driver.model))
 
 timestepper(driver::ModelDriver) = driver.timestepper
 
-function update_state!(driver::ModelDriver; compute_tendencies = true)
-    reset_tendencies!(driver.state)
-    update_inputs!(driver.state, driver.inputs)
-    fill_halo_regions!(driver.state)
-    compute_auxiliary!(driver.state, driver.model)
-    if compute_tendencies
-        compute_tendencies!(driver.state, driver.model)
-    end
-end
+update_state!(driver::ModelDriver; compute_tendencies = true) = update_state!(driver.state, driver.model, driver.inputs; compute_tendencies)
 
 # for now, just forward Oceananigans.time_step! to timestep!
 # consider renaming later...
@@ -92,8 +84,8 @@ variables.
 """
 timestep!(driver::ModelDriver; finalize = true) = timestep!(driver, default_dt(timestepper(driver)); finalize)
 function timestep!(driver::ModelDriver, Δt; finalize = true)
-    update_state!(driver, compute_tendencies=true)
-    timestep!(driver.state, driver.model, driver.timestepper, convert_dt(Δt))
+    update_state!(driver, compute_tendencies = true)
+    timestep!(driver, driver.timestepper, convert_dt(Δt))
     if finalize
         compute_auxiliary!(driver.state, driver.model)
     end
@@ -132,7 +124,7 @@ Note that this method is **not type stable** and should not be called in an Enzy
 """
 function initialize(
     model::AbstractModel{NF},
-    timestepper::Type{<:AbstractTimeStepper};
+    timestepper::AbstractTimeStepper;
     clock::Clock = Clock(time=zero(NF)),
     input_sources::InputSources = InputSources(),
     boundary_conditions = (;),
@@ -141,7 +133,8 @@ function initialize(
     grid = get_grid(model)
     input_vars = variables(input_sources)
     state = initialize(model; clock, boundary_conditions, fields, external_variables=input_vars)
-    driver = ModelDriver(clock, grid, model, input_sources, state, timestepper(state))
+    initialized_timestepper = initialize(timestepper, model, state)
+    driver = ModelDriver(clock, grid, model, input_sources, state, initialized_timestepper)
     initialize!(driver)
     return driver
 end

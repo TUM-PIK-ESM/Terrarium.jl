@@ -26,8 +26,8 @@ end
     initializer = FieldInitializers(u = 0., v = 0.1)
     model = ExpModel(grid, initializer)
 
-    driver_heun = initialize(model, Heun)
-    driver_euler = initialize(model, ForwardEuler)
+    driver_heun = initialize(model, Heun())
+    driver_euler = initialize(model, ForwardEuler())
 
     # test that Heun estimate is more accurate (larger value than Euler here)
     # test that both are what we expect 

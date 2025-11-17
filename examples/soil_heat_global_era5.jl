@@ -40,7 +40,7 @@ initializer = FieldInitializers(
 model = SoilModel(grid; initializer, boundary_conditions)
 boundary_conditions = PrescribedSurfaceTemperature(:Tair)
 inputs = InputSources(Tair_forcing)
-driver = initialize(model, ForwardEuler; boundary_conditions, inputs)
+driver = initialize(model, ForwardEuler(); boundary_conditions, inputs)
 @time timestep!(driver)
 @time run!(driver, period=Day(10), dt=120.0)
 

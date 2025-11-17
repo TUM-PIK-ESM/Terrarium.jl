@@ -114,12 +114,6 @@ include("initializers.jl")
 export FieldBC, FieldBCs, boundary_conditions
 include("boundary_conditions.jl")
 
-# timestepper implementations
-export ForwardEuler
-include("timesteppers/forward_euler.jl")
-export Heun
-include("timesteppers/heun.jl")
-
 # physical processes
 include("processes/processes.jl")
 
@@ -129,5 +123,11 @@ include("models/models.jl")
 # model simulation types and methods
 export ModelDriver, initialize, current_time, iteration
 include("models/model_driver.jl")
+
+# timestepper implementations
+export ForwardEuler
+include("timesteppers/forward_euler.jl")
+export Heun
+include("timesteppers/heun.jl")
 
 end # module Terrarium

@@ -53,7 +53,7 @@ end
     # periodic upper boundary temperature
     upperbc(z, t) = T₀ + A*sin(2π*t/P)
     bcs = (temperature = (top = ValueBoundaryCondition(upperbc),),)
-    driver = initialize(model, ForwardEuler, boundary_conditions = bcs)
+    driver = initialize(model, ForwardEuler(), boundary_conditions = bcs)
     # TODO: Rewrite this part once we have a proper output handling system
     Ts_buf = [deepcopy(driver.state.temperature)]
     ts = [0.0]
@@ -90,7 +90,7 @@ end
     model = SoilModel(grid; hydrology, biogeochem, initializer)
     # constant upper boundary temperature set to T₁
     bcs = (temperature = (top = ValueBoundaryCondition(T₁),),)
-    driver = initialize(model, ForwardEuler, boundary_conditions = bcs)
+    driver = initialize(model, ForwardEuler(), boundary_conditions = bcs)
     # TODO: Rewrite this part once we have a proper output handling system
     Ts_buf = [deepcopy(driver.state.temperature)]
     ts = [0.0]

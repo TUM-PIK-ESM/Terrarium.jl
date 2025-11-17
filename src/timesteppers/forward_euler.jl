@@ -8,22 +8,17 @@ Simple forward Euler time stepping scheme.
     Δt::NF = 300.0
 end
 
-"""
-    ForwardEuler(state::StateVariables; kwargs...)
-
-Create a `ForwardEuler` timestepper with the given numeric format `NF`.
-"""
-ForwardEuler(state::StateVariables; kwargs...) = ForwardEuler{eltype(state)}(; kwargs...)
-
 default_dt(euler::ForwardEuler) = euler.Δt
 
 is_adaptive(euler::ForwardEuler) = false
 
-function timestep!(state, model::AbstractModel, timestepper::ForwardEuler, Δt)
+is_initialized(euler::ForwardEuler) = true
+
+function timestep!(driver::ModelDriver, timestepper::ForwardEuler, Δt)
     # Euler step
-    explicit_step!(state, get_grid(model), timestepper, Δt)
+    explicit_step!(driver.state, get_grid(driver.model), timestepper, Δt)
     # Apply closure relations
-    closure!(state, model)
+    closure!(driver.state, driver.model)
     # Update clock
-    tick!(state.clock, Δt)
+    tick!(driver.state.clock, Δt)
 end

@@ -11,6 +11,13 @@ Base type for time steppers.
 abstract type AbstractTimeStepper{NF} end
 
 """
+    is_initialized(timestepper::AbstractTimeStepper)
+
+Return `true` if the timestepper is initialized, `false` otherwise.
+"""
+function is_initialized end
+
+"""
     default_dt(timestepper::AbstractTimeStepper)
 
 Get the current timestep size for the time stepper.
@@ -25,18 +32,18 @@ Return `true` if the given time stepper is adaptive, false otherwise.
 function is_adaptive end
 
 """
-    timestep!(state, model::AbstractModel, timestepper::AbstractTimeStepper, Δt)
+    timestep!(driver::ModelDriver, timestepper::AbstractTimeStepper, Δt)
 
 Advance prognostic variabels by one step based on the current state, or by `Δt` units of time.
 """
 function timestep! end
 
 """
-    initialize(::AbstractTimeStepper, prognostic_fields, closure_fields, tendencies) where {NF}
+    initialize(::AbstractTimeStepper, model, state) where {NF}
 
 Initialize and return the time stepping state cache for the given time stepper.
 """
-initialize(::AbstractTimeStepper, prognostic_fields, closure_fields, tendencies) = nothing
+initialize(timestepper::AbstractTimeStepper, model, state) = timestepper
 
 """
     $SIGNATURES
@@ -48,6 +55,7 @@ additional dispatches of `explicit_step_kernel!(field, tendency, ::AbstractLandG
 can be defined to implement more specialized time-stepping schemes.
 """
 function explicit_step!(state, grid::AbstractLandGrid, timestepper::AbstractTimeStepper, Δt)
+    @assert is_initialized(timestepper)
     fastiterate(keys(state.prognostic)) do name
         # update prognostic state variable
         explicit_step!(state.prognostic[name], state.tendencies[name], grid, timestepper, Δt)
