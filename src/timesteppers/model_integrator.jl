@@ -19,9 +19,6 @@ struct ModelIntegrator{
     "The clock holding all information about the current timestep/iteration of a simulation"
     clock::Clock
 
-    "Spatial discretization of the underlying `model`"
-    grid::Grid
-
     "Underlying model evaluated by this integrator"
     model::Model
 
@@ -40,6 +37,17 @@ end
 Base.time(integrator::ModelIntegrator) = integrator.clock.time
 
 Base.eltype(::ModelIntegrator{NF}) where {NF} = NF
+
+function Base.getproperty(integrator::ModelIntegrator, name::Symbol)
+    # Temporary hack to make Oceananigans output writers play nicely with ModelIntegrator
+    # TODO: Raise an issue in Oceananigans for better long-term solution
+    if name == :grid
+        model = getfield(integrator, :model)
+        return get_field_grid(get_grid(model))
+    else
+        return getfield(integrator, name)
+    end
+end
 
 iteration(integrator::ModelIntegrator) = integrator.clock.iteration
 
@@ -134,7 +142,7 @@ function initialize(
     input_vars = variables(input_sources)
     state = initialize(model; clock, boundary_conditions, fields, external_variables=input_vars)
     initialized_timestepper = initialize(timestepper, model, state)
-    integrator = ModelIntegrator(clock, grid, model, input_sources, state, initialized_timestepper)
+    integrator = ModelIntegrator(clock, model, input_sources, state, initialized_timestepper)
     initialize!(integrator)
     return integrator
 end
@@ -148,9 +156,8 @@ function Base.show(io::IO, integrator::ModelIntegrator)
     modelstr = summary(integrator.model)
     statestr = summary(integrator.state)
     tsstr = summary(integrator.timestepper)
-    println(io, "integrator of $modelstr")
+    println(io, "Integrator of $modelstr with $tsstr")
     println(io, "├── Current time: $(current_time(integrator))")
-    println(io, "├── Timestepper: $tsstr")
     println(io, "├── $statestr")
     # TODO: add more information?
 end
