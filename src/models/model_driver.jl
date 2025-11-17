@@ -134,12 +134,14 @@ function initialize(
     model::AbstractModel{NF},
     timestepper::Type{<:AbstractTimeStepper};
     clock::Clock = Clock(time=zero(NF)),
-    inputs::InputSources = InputSources(),
+    input_sources::InputSources = InputSources(),
     boundary_conditions = (;),
     fields = (;)
 ) where {NF}
-    state = initialize(model; clock, boundary_conditions, fields)
-    driver = ModelDriver(clock, get_grid(model), model, inputs, state, timestepper(state))
+    grid = get_grid(model)
+    input_vars = variables(input_sources)
+    state = initialize(model; clock, boundary_conditions, fields, external_variables=input_vars)
+    driver = ModelDriver(clock, grid, model, input_sources, state, timestepper(state))
     initialize!(driver)
     return driver
 end

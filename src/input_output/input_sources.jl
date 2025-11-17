@@ -15,7 +15,7 @@ abstract type InputSource{NF} end
 
 Returns a tuple of `Symbol`s corresponding to variable names supported by this `InputSource`.
 """
-inputs(::InputSource) = ()
+variables(::InputSource) = ()
 
 """
     $SIGNATURES
@@ -39,7 +39,7 @@ end
 
 InputSources(sources::InputSource...) = InputSources(Tuple(sources))
 
-inputs(sources::InputSources) = tuplejoin(map(inputs, sources.sources)...)
+variables(sources::InputSources) = tuplejoin(map(variables, sources.sources)...)
 
 function update_inputs!(fields, sources::InputSources, ::Clock)
     for source in sources.sources
@@ -65,7 +65,7 @@ function InputSource(named_fields::Pair{Symbol, <:Field}...)
     return FieldInputSource(dims, (; named_fields...))
 end
 
-inputs(source::FieldInputSource{NF, VD, names}) where {NF, VD, names} = names
+variables(source::FieldInputSource{NF, VD, names}) where {NF, VD, names} = map(name -> input(name, source.dims), names)
 
 function update_inputs!(fields, source::FieldInputSource, ::Clock)
     for name in keys(source.fields)
@@ -99,7 +99,7 @@ function InputSource(named_fts::Pair{Symbol, <:FieldTimeSeries}...)
     return FieldTimeSeriesInputSource(dims, (; named_fts...))
 end
 
-inputs(source::FieldTimeSeriesInputSource{NF, VD, names}) where {NF, VD, names} = names
+variables(source::FieldTimeSeriesInputSource{NF, VD, names}) where {NF, VD, names} = map(name -> input(name, source.dims), names)
 
 function update_inputs!(fields, source::FieldTimeSeriesInputSource, clock::Clock)
     for name in keys(source.fts)

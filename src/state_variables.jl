@@ -160,8 +160,14 @@ end
 
 # Default initialize dispatch for model types
 
-function initialize(model::AbstractModel{NF}; clock=Clock(time=zero(NF)), boundary_conditions = (;), fields = (;)) where {NF}
-    vars = Variables(variables(model))
+function initialize(
+    model::AbstractModel{NF};
+    clock = Clock(time=zero(NF)),
+    external_variables = (),
+    boundary_conditions = (;),
+    fields = (;)
+) where {NF}
+    vars = Variables(tuplejoin(variables(model), external_variables))
     grid = get_grid(model)
     state = StateVariables(vars, grid, clock; boundary_conditions, fields)
     return state
