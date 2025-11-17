@@ -1,11 +1,7 @@
-# Abstract types
-
-include("abstract_types.jl")
+# Utilities
 
 export PhysicalConstants
 include("physical_constants.jl")
-
-# Utilities
 include("physics_utils.jl")
 
 # Atmosphere
@@ -14,6 +10,8 @@ export PrescribedAtmosphere, TwoPhasePrecipitation, LongShortWaveRadiation, Trac
 include("prescribed_atmosphere.jl")
 
 # Soil
+
+include("soil/abstract_types.jl")
 
 export SoilTexture
 include("soil/biogeochem/soil_texture.jl")
@@ -43,6 +41,8 @@ include("soil/energy/soil_energy.jl")
 
 # Vegetation
 
+include("vegetation/abstract_types.jl")
+
 export PALADYNCarbonDynamics
 include("vegetation/carbon_dynamics.jl")
 
@@ -62,6 +62,8 @@ export PALADYNAutotrophicRespiration
 include("vegetation/autotrophic_respiration.jl")
 
 # Surface Energy Balance
+
+include("surface_energy/abstract_types.jl")
 
 export PrescribedAlbedo, ConstantAlbedo
 include("surface_energy/albedo.jl")

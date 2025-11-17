@@ -100,6 +100,9 @@ include("timesteppers/abstract_timestepper.jl")
 export get_grid, timestepper, get_boundary_conditions, variables, compute_auxiliary!, compute_tendencies!
 include("abstract_model.jl")
 
+# process interface
+include("abstract_process.jl")
+
 # state variables
 export StateVariables, get_fields
 include("state_variables.jl")

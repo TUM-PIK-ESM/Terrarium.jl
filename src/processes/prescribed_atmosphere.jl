@@ -1,3 +1,16 @@
+abstract type AbstractHumidity end
+
+abstract type AbstractPrecipitation end
+
+abstract type AbstractIncomingRadiation end
+
+abstract type AbstractAtmosphere{
+    PR<:AbstractPrecipitation,
+    IR<:AbstractIncomingRadiation,
+    HM<:AbstractHumidity
+} <: AbstractProcess
+end
+
 """
 Generic type representing the concentration of a particular tracer gas in the atmosphere.
 """
