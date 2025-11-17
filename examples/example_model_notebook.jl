@@ -27,13 +27,13 @@ end
 md"""
 # A super basic example model with Terrarium 
 
-In this example we will set up an embarrassingly simple example to demonstrate Terrarium's model interface. Our model should just exhibit 1-dimensional exponential dynamics with an offset as follows
+In this example we will set up an embarrassingly simple example to demonstrate Terrarium's model interface. Our model will have 1-dimensional exponential dynamics with a constant offset
 
 ```math 
 \frac{du}{dt} = u + c
 ```
 
-with some state variable ``u``. For the sake of this demonstration we will treat the offset ``c`` as an auxiliary/diagnostic variable even though it is constant in time.
+for an arbitrary state variable ``u``. For the sake of this demonstration we will treat the offset ``c`` as an auxiliary/diagnostic variable even though it is constant in time.
 
 We begin by defining our model `struct` that subtypes `Terrarium.AbstractModel`: 
 """
@@ -55,7 +55,7 @@ The `grid` defines the spatial discretization. Our implementation of the grid us
 * `ColumnGrid` is a set of laterally independent vertical columns with dimensions ``(x, y, z)`` where ``x`` is the column dimension, ``y=1`` is constant, and ``z`` is the vertical axis, 
 * `ColumnRingGrid` represents a global (spherical) grid of independent, vertical columns where the spatial discretization in the horizontal direction is defined by a `RingGrids.AbstractGrid`. 
 
-In both cases we need to specificy the vertical discretizataion via an `UniformSpacing`, `ExponentialSpacing` or `PrescribedSpacing`
+In both cases we need to specificy the vertical discretizataion via an `UniformSpacing`, `ExponentialSpacing` or `PrescribedSpacing`.
 
 ## Initializer and Boundary Conditions 
 
@@ -63,7 +63,7 @@ For our basic example here the defaults will suffice, and we won't have to defin
 
 ## What's our `grid`? 
 
-For our example we just want a single column with a single level, we can define it like so: 
+For our example we just want a single column with a single vertical layer, we can define it like so: 
 """
 
 # ╔═╡ 78f268ef-5385-4c63-bc35-2c973de69da5
@@ -75,7 +75,7 @@ md"""
 
 Now, we want to define our intended model behaviour. For this, we need to define the following routines: 
 
-* `variables(::Model)` returns a tuple of variable metadata declaring the state variables. Variables must be one of two types: `prognostic` or `auxiliary` (sometimes referred to as “diagnostic”). Prognostic variables fully characterize the state of the system at any given timestep and are updated according to their tendencies (i.e. ``u`` in our example). Tendencies are automatically allocated for each prognostic variable declared by the model. In this example we will treat the offset ``c`` as an auxiliary variable (even though we could just include it as a constant in the tendency computations)
+* `variables(::Model)` returns a tuple of variable metadata declaring the state variables. Variables must be one of three types: `prognostic`, `auxiliary` (sometimes referred to as “diagnostic”), or `input`. Prognostic variables fully characterize the state of the system at any given timestep and are updated according to their tendencies (i.e. ``u`` in our example). Tendencies are automatically allocated for each prognostic variable declared by the model. In this example we will treat the offset ``c`` as an auxiliary variable, though we could also just include it as a constant in the tendency computations.
 * `compute_auxiliary!(state, ::Model)` computes the values of all auxiliary variables (if necessary) assuming that the prognostic variables of the system in state are available for the current timestep.
 * `compute_tendencies!(state, ::Model)` computes the tendencies based on the current values of the prognostic and auxiliary variables stored in state.
 
@@ -83,16 +83,20 @@ So, let's define those:
 """
 
 # ╔═╡ 82e45724-ba16-4806-9470-5cb4c43ea734
-Terrarium.variables(::ExpModel) = (Terrarium.prognostic(:u, Terrarium.XY()), 
-                              	   Terrarium.auxiliary(:c, Terrarium.XY()))
+Terrarium.variables(::ExpModel) = (
+	Terrarium.prognostic(:u, Terrarium.XY()), 
+    Terrarium.auxiliary(:c, Terrarium.XY())
+)
 
 # ╔═╡ 32373599-768f-4809-acdd-4704acc3f30b
 md"""
-Here, we defined our two variables with their name as a `Symbol` and whether they are 2D variables (`XY`) or 3D variables (`XYZ`). 
+Here, we defined our two variables with their name as a `Symbol` and whether they are 2D variables (`XY`) or 3D variables (`XYZ`).
 
-## Our state variables
+Note that, when implementing models within the Terrarium module itself, the `Terrarium.` prefix is not necessary.
 
-Next, we define the actual compute function. For this we need to know a little about how the variables we just defined are handled in our `StateVariables`. The `StateVariables` hold all prognostic and auxiliary variables, their tendencies and closures and additional inputs and forcings in seperate `NamedTuples`. We have shortcuts defined so, that e.g. in our example both `state.prognostic.u` and `state.u` will work. With that let's define the following:
+## Defining the dynamics
+
+Next, we define the functions that do the actual computations. In order to do this, we need to know a little about how the variables we just defined are handled in our `StateVariables`. The `StateVariables` hold all prognostic and auxiliary variables, their tendencies and closures and additional inputs and forcings in seperate `NamedTuples`. We have shortcuts defined so, that e.g. in our example both `state.prognostic.u` and `state.u` will work. With that in mind, let's define the following:
 """
 
 # ╔═╡ d55aaf4c-3033-45ba-9d64-8fa8ae4b671c
@@ -108,9 +112,9 @@ end
 
 # ╔═╡ 8d331856-6e9b-41d4-b1be-a84d5fedac8d
 md"""
-These example compute functions are really the simplest possible, for more complex operations, we would need to define them via `KernelAbstractions` kernels. In this notebook we will not go into further details on that. 
+These example compute functions are really the simplest possible, for more complex operations, we would need to define them via `KernelAbstractions` kernels. We will not go into further details on that in this notebook.
 
-However, now we have everything our model needs and we can use it! 
+However, now we have everything our model needs and we can finally use it! 
 
 ## Running our model 
 
@@ -153,7 +157,7 @@ modelstate.state.u
 md"""
 In one hour our state already grew to `7.46953e54`, if that's not exponential growth ;) 
 
-Well, and that's already it. We defined a simple exponential model within our Terrarium `AbstractModel` interface!
+Well, and that's already it. We defined a simple exponential model following the Terrarium `AbstractModel` interface!
 """
 
 # ╔═╡ Cell order:
