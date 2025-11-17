@@ -120,14 +120,14 @@ include("processes/processes.jl")
 # concrete model implementations
 include("models/models.jl")
 
-# model simulation types and methods
-export ModelDriver, initialize, current_time, iteration
-include("models/model_driver.jl")
-
 # timestepper implementations
 export ForwardEuler
 include("timesteppers/forward_euler.jl")
 export Heun
 include("timesteppers/heun.jl")
+
+# model integrator/simulation types and methods
+export ModelIntegrator, initialize, current_time, iteration
+include("timesteppers/model_integrator.jl")
 
 end # module Terrarium

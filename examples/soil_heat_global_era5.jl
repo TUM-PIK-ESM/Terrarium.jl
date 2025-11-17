@@ -40,9 +40,9 @@ initializer = FieldInitializers(
 model = SoilModel(grid; initializer, boundary_conditions)
 boundary_conditions = PrescribedSurfaceTemperature(:Tair)
 inputs = InputSources(Tair_forcing)
-driver = initialize(model, ForwardEuler(); boundary_conditions, inputs)
-@time timestep!(driver)
-@time run!(driver, period=Day(10), dt=120.0)
+integrator = initialize(model, ForwardEuler(); boundary_conditions, inputs)
+@time timestep!(integrator)
+@time run!(integrator, period=Day(10), dt=120.0)
 
 # plot heatmap of soil temperature at the surface
-heatmap(RingGrids.Field(interior(driver.state.temperature, :, :, Nz), grid))
+heatmap(RingGrids.Field(interior(integrator.state.temperature, :, :, Nz), grid))

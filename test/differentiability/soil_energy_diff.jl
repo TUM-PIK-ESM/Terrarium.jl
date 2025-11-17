@@ -71,12 +71,12 @@ end
 
 @testset "Soil energy model: timestep!" begin
     model = build_soil_energy_model(CPU(), Float64)
-    driver = initialize(model, ForwadEuler())
-    inputs = driver.inputs
-    state = driver.state
+    integrator = initialize(model, ForwadEuler())
+    inputs = integrator.inputs
+    state = integrator.state
     dstate = make_zero(state)
-    stepper = driver.timestepper
+    stepper = integrator.timestepper
     dstepper = make_zero(stepper)
-    @time Enzyme.autodiff(set_runtime_activity(Reverse), mean_soil_temperature_step!, Active, Duplicated(state, dstate), Duplicated(stepper, dstepper), Const(model), Const(driver.inputs), Const(driver.timestepper.Δt))
+    @time Enzyme.autodiff(set_runtime_activity(Reverse), mean_soil_temperature_step!, Active, Duplicated(state, dstate), Duplicated(stepper, dstepper), Const(model), Const(integrator.inputs), Const(integrator.timestepper.Δt))
     @test all(isfinite.(dstate.temperature))
 end

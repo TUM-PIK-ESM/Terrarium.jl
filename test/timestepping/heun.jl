@@ -26,21 +26,21 @@ end
     initializer = FieldInitializers(u = 0., v = 0.1)
     model = ExpModel(grid, initializer)
 
-    driver_heun = initialize(model, Heun())
-    driver_euler = initialize(model, ForwardEuler())
+    integrator_heun = initialize(model, Heun())
+    integrator_euler = initialize(model, ForwardEuler())
 
     # test that Heun estimate is more accurate (larger value than Euler here)
     # test that both are what we expect 
-    timestep!(driver_heun)
-    timestep!(driver_euler)
+    timestep!(integrator_heun)
+    timestep!(integrator_euler)
 
-    @test driver_heun.state.u[2] > driver_euler.state.u[2]
+    @test integrator_heun.state.u[2] > integrator_euler.state.u[2]
 
     # Euler: expected value: u = 0.1*Δt
-    dt_euler = default_dt(driver_euler.timestepper)
-    @test driver_euler.state.u[2] == 0.1*dt_euler
+    dt_euler = default_dt(integrator_euler.timestepper)
+    @test integrator_euler.state.u[2] == 0.1*dt_euler
 
     # Heun: expected value: u = (0.1Δt + (0.1*Δt+0.1)* Δt)/2
-    dt_heun = default_dt(driver_heun.timestepper)
-    @test driver_heun.state.u[2] == (0.1*dt_heun + (0.1*dt_heun+0.1)*dt_heun)/2
+    dt_heun = default_dt(integrator_heun.timestepper)
+    @test integrator_heun.state.u[2] == (0.1*dt_heun + (0.1*dt_heun+0.1)*dt_heun)/2
 end 

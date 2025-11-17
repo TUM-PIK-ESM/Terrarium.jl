@@ -53,19 +53,19 @@ end
     # periodic upper boundary temperature
     upperbc(z, t) = T₀ + A*sin(2π*t/P)
     bcs = (temperature = (top = ValueBoundaryCondition(upperbc),),)
-    driver = initialize(model, ForwardEuler(), boundary_conditions = bcs)
+    integrator = initialize(model, ForwardEuler(), boundary_conditions = bcs)
     # TODO: Rewrite this part once we have a proper output handling system
-    Ts_buf = [deepcopy(driver.state.temperature)]
+    Ts_buf = [deepcopy(integrator.state.temperature)]
     ts = [0.0]
     Δt = 60.0
     # run for one hour, saving every time step
-    while current_time(driver) < 2*P
-        timestep!(driver, Δt)
-        push!(Ts_buf, deepcopy(driver.state.temperature))
-        push!(ts, current_time(driver))
+    while current_time(integrator) < 2*P
+        timestep!(integrator, Δt)
+        push!(Ts_buf, deepcopy(integrator.state.temperature))
+        push!(ts, current_time(integrator))
     end
 
-    z_centers = znodes(driver.state.temperature)
+    z_centers = znodes(integrator.state.temperature)
     Ts = reduce(hcat, Ts_buf)[1,:,:]
     Ts_target = T_sol.(reshape(-z_centers, 1, :), reshape(ts, :, 1))
     relative_error = abs.((Ts .- Ts_target) ./ Ts_target)
@@ -90,23 +90,23 @@ end
     model = SoilModel(grid; hydrology, biogeochem, initializer)
     # constant upper boundary temperature set to T₁
     bcs = (temperature = (top = ValueBoundaryCondition(T₁),),)
-    driver = initialize(model, ForwardEuler(), boundary_conditions = bcs)
+    integrator = initialize(model, ForwardEuler(), boundary_conditions = bcs)
     # TODO: Rewrite this part once we have a proper output handling system
-    Ts_buf = [deepcopy(driver.state.temperature)]
+    Ts_buf = [deepcopy(integrator.state.temperature)]
     ts = [0.0]
     Δt = 10.0
     # run for 24 hours, saving every time step
-    while current_time(driver) < 24*3600
-        timestep!(driver, Δt)
-        push!(Ts_buf, deepcopy(driver.state.temperature))
-        push!(ts, current_time(driver))
+    while current_time(integrator) < 24*3600
+        timestep!(integrator, Δt)
+        push!(Ts_buf, deepcopy(integrator.state.temperature))
+        push!(ts, current_time(integrator))
     end
 
     soil_thermal_props = model.energy.thermal_properties
     k = soil_thermal_props.cond.mineral
     c = soil_thermal_props.heatcap.mineral
     α = k / c
-    z_centers = znodes(driver.state.temperature)
+    z_centers = znodes(integrator.state.temperature)
     ΔT_sol = heat_conduction_linear_step_ub(T₁ - T₀, α)
     Ts = reduce(hcat, Ts_buf)[1,:,:]
     Ts_target = T₀ .+ ΔT_sol.(reshape(-z_centers, 1, :), reshape(ts, :, 1))

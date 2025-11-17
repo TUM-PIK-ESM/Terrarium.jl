@@ -12,15 +12,15 @@ initializer = FieldInitializers(
 model = SoilModel(grid; initializer)
 # constant surface temperature of 1°C
 bcs = PrescribedSurfaceTemperature(:T_ub, 1.0)
-driver = initialize(model, ForwardEuler(), boundary_conditions=bcs)
+integrator = initialize(model, ForwardEuler(), boundary_conditions=bcs)
 # test one timestep
-@time timestep!(driver)
+@time timestep!(integrator)
 # run simulation forward for a set period of time
-run!(driver, period=Day(10))
+run!(integrator, period=Day(10))
 
-T = interior(driver.state.temperature)[1,1,:]
-f = interior(driver.state.liquid_water_fraction)[1,1,:]
-zs = znodes(driver.state.temperature)
+T = interior(integrator.state.temperature)[1,1,:]
+f = interior(integrator.state.liquid_water_fraction)[1,1,:]
+zs = znodes(integrator.state.temperature)
 # Plot temperature and liquid fraction profiles
 Makie.scatterlines(T, zs)
 Makie.scatterlines(f, zs)

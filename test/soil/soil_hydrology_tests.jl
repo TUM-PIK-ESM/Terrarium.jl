@@ -118,8 +118,8 @@ end
         saturation_water_ice = (x, z) -> 1.0
     )
     model = SoilModel(grid; hydrology, initializer)
-    driver = initialize(model, ForwardEuler())
-    state = driver.state
+    integrator = initialize(model, ForwardEuler())
+    state = integrator.state
     # check that initial water table depth is correctly calculated from initial condition
     @test all(iszero.(state.water_table))
     # also check that pressure head is zero everywhere
@@ -132,7 +132,7 @@ end
     # check that all tendencies are zero
     @test all(iszero.(state.tendencies.saturation_water_ice))
     # check timestep!
-    timestep!(driver)
+    timestep!(integrator)
     @test all(state.saturation_water_ice .≈ 1)
 
     # Variably saturated with water table
@@ -140,8 +140,8 @@ end
         saturation_water_ice = (x, z) -> min(1, 0.5 - 0.1*z)
     )
     model = SoilModel(grid; hydrology, initializer)
-    driver = initialize(model, ForwardEuler())
-    state = driver.state
+    integrator = initialize(model, ForwardEuler())
+    state = integrator.state
     water_table = state.water_table
     hydraulic_cond = state.hydraulic_conductivity
     saturation = state.saturation_water_ice
@@ -160,7 +160,7 @@ end
     ∫sat₀ = Field(Integral(saturation, dims=3))
     compute!(∫sat₀)
     Δt = 60.0
-    timestep!(driver, Δt)
+    timestep!(integrator, Δt)
     ∫sat₁ = Field(Integral(saturation, dims=3))
     compute!(∫sat₁)
     # check saturation levels are all finite and valid
@@ -169,7 +169,7 @@ end
     # check mass conservation
     @test ∫sat₀[1,1,1] ≈ ∫sat₁[1,1,1]
     # run for one simulation hour and check that mass is still conserved
-    run!(driver; period=Hour(1), Δt)
+    run!(integrator; period=Hour(1), Δt)
     ∫sat₂ = Field(Integral(saturation, dims=3))
     compute!(∫sat₂)
     @test all(isfinite.(saturation))
@@ -190,8 +190,8 @@ end
         saturation_water_ice = 1.0 # fully saturated
     )
     model = SoilModel(grid; hydrology, initializer)
-    driver = initialize(model, ForwardEuler())
-    state = driver.state
+    integrator = initialize(model, ForwardEuler())
+    state = integrator.state
     # check that forcing_ET is zero when no latent heat flux is supplied
     @test iszero(Terrarium.forcing_ET(1, 1, Nz, grid.grid, state, evapotranspiration, model.constants))
     # negative latent heat flux → condensation
@@ -207,6 +207,6 @@ end
     @test dθdt == ET_flux
     # take one timestep and check that water was evaporated
     dt = 60.0
-    timestep!(driver, dt)
+    timestep!(integrator, dt)
     @test state.saturation_water_ice[1, 1, Nz] .≈ 1 + ET_flux*dt / hydraulic_properties.porosity
 end

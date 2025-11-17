@@ -26,8 +26,8 @@ end
     model = build_soil_energy_hydrology_model(CPU(), Float64; hydraulic_properties)
     swrc = Terrarium.get_swrc(model.hydrology) # θ(ψₘ)
     swrc_inv = inv(swrc) # ψₘ(θ)
-    driver = initialize(model, ForwardEuler())
-    state = driver.state
+    integrator = initialize(model, ForwardEuler())
+    state = integrator.state
     dstate = make_zero(state)
     set!(state.saturation_water_ice, sat)
     set!(dstate.pressure_head, 1.0) # seed pressure head (output)
@@ -72,8 +72,8 @@ end
 @testset "Soil hydrology: compute_auxiliary! RRE" begin
     hydraulic_properties = SoilHydraulicsSURFEX(Float64)
     model = build_soil_energy_hydrology_model(CPU(), Float64; hydraulic_properties)
-    driver = initialize(model, ForwardEuler())
-    state = driver.state
+    integrator = initialize(model, ForwardEuler())
+    state = integrator.state
     dstate = make_zero(state)
     set!(dstate.hydraulic_conductivity, 1.0) # seed hydraulic cond
     Enzyme.autodiff(set_runtime_activity(Reverse), compute_auxiliary!, Const, Duplicated(state, dstate), Const(model), Const(model.hydrology))
@@ -84,8 +84,8 @@ end
 @testset "Soil hydrology: compute_tendencies! RRE" begin
     hydraulic_properties = SoilHydraulicsSURFEX(Float64)
     model = build_soil_energy_hydrology_model(CPU(), Float64; hydraulic_properties)
-    driver = initialize(model, ForwardEuler())
-    state = driver.state
+    integrator = initialize(model, ForwardEuler())
+    state = integrator.state
     # first run compute_auxiliary! for the full model (needed to compute hydraulic conductivities)
     compute_auxiliary!(state, model)
     dstate = make_zero(state)
@@ -98,11 +98,11 @@ end
 @testset "Soil energy/hydrology model: timestep!" begin
     hydraulic_properties = ConstantHydraulics(Float64)
     model = build_soil_energy_hydrology_model(CPU(), Float64; hydraulic_properties)
-    driver = initialize(model, ForwardEuler())
-    inputs = driver.inputs
-    state = driver.state
+    integrator = initialize(model, ForwardEuler())
+    inputs = integrator.inputs
+    state = integrator.state
     dstate = make_zero(state)
-    stepper = driver.timestepper
+    stepper = integrator.timestepper
     dstepper = make_zero(stepper)
     Δt = 60.0
     @time Enzyme.autodiff(set_runtime_activity(Reverse), timestep!, Const, Duplicated(state, dstate), Duplicated(stepper, dstepper), Const(model), Const(inputs), Const(Δt))
