@@ -203,7 +203,7 @@ end
     ET_flux = Terrarium.forcing_ET(1, 1, Nz, grid.grid, state, evapotranspiration, model.constants)
     @test ET_flux < 0
     # check tendency calculation
-    dθdt = Terrarium.volumetric_water_content_tendency((1, 1, Nz), grid, state, hydrology, model.constants)
+    dθdt = Terrarium.volumetric_water_content_tendency(1, 1, Nz, grid, state, hydrology, model.constants)
     @test dθdt == ET_flux
     # take one timestep and check that water was evaporated
     dt = 60.0

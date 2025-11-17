@@ -3,7 +3,7 @@
 """
     $TYPEDEF
 
-Base type for all models.
+Base type for all model types.
 """
 abstract type AbstractModel{NF, Grid<:AbstractLandGrid{NF}} end
 
@@ -20,7 +20,7 @@ function variables end
     initialize!(state, model::AbstractModel)
     initialize!(state, model::AbstractModel, initializer::AbstractInitializer)
 
-Calls `initialize!` on the `model` and its corresponding `initializer`. This method only needs to be
+Call `initialize!` on the `model` and its corresponding `initializer`. This method only needs to be
 implemented if initialization routines are necessary in addition to direct field/variable initializers.
 """
 function initialize! end
@@ -28,14 +28,14 @@ function initialize! end
 """
     compute_auxiliary!(state, model::AbstractModel)
 
-Computes updates to all auxiliary variables based on the current prognostic state of the `model`.
+Compute updates to all auxiliary variables based on the current prognostic state of the `model`.
 """
 function compute_auxiliary! end
 
 """
     compute_tendencies!(state, model::AbstractModel)
 
-Computes tendencies for all prognostic state variables for `model` stored in the given `state`.
+Compute tendencies for all prognostic state variables for `model` stored in the given `state`.
 This method should be called after `compute_auxiliary!`.
 """
 function compute_tendencies! end
