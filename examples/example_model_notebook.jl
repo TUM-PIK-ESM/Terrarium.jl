@@ -46,7 +46,7 @@ A `Terrarium.AbstractModel` typically constists of the fields
  * `boundary_conditions` that defines the behaviour fo the state variabels at the spatial boundaries of the `grid` 
  * further fields that define processes, dynamics and submodels 
 
-When we follow the advised naming notations of `grid`, `initializer` and `boundary_conditions` we inherit default methods from `Terrarium.AbstractModel` that we will suffice for our basic example. For more complex models we might need to implement custom `initialize!(state, ::Model, ::Initializer)` to initialize model states. 
+When we follow the advised naming notations of `grid`, `initializer` and `boundary_conditions` we inherit default methods from `Terrarium.AbstractModel` that will suffice for our basic example. For more complex models we might need to implement custom `initialize!(state, ::Model, ::Initializer)` to initialize model states. 
 
 ## What's the `grid`? 
 
