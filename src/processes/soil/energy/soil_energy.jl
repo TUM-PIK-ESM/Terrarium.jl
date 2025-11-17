@@ -137,7 +137,11 @@ U(T) = T\\times C(T) - L_f \\theta_{wi} (1 - F(T))
 ```
 where T is temperature, C(T) is the temperature-dependent heat capacity, L_f is the
 volumetric latent heat of fusion, and F(T) is the constitutive relation between temperature
-and the unfrozen fraction of pore water. Note that this formulation implies that the zero
+and the unfrozen fraction of pore water. Note that, under this formulation, zero energy corresponds to
+0°C with no ice, i.e. all pore water fully thawed.
+
+The closure relation is defined as being a mapping from the conserved quantity (energy) to the continuous
+quantity (temperature), i.e. the inverse of U(T).
 """
 struct EnergyTemperatureClosure <: AbstractClosureRelation end
 

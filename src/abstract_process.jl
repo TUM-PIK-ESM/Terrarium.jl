@@ -28,10 +28,10 @@ variables(op::AbstractOperator) = ()
     get_closure(op::AbstractOperator)
 
 Returns an `AbstractClosureRelation` for the given differential operator.
-Deefaults to returning `nothing` (i.e. no closure).
+Defaults to returning `nothing` (i.e. no closure).
 """
 get_closure(op::AbstractOperator) = nothing
 
+# Allow dispatch on nothing types for processes
 closure!(state, model::AbstractModel, ::Nothing) = nothing
-
 invclosure!(state, model::AbstractModel, ::Nothing) = nothing
