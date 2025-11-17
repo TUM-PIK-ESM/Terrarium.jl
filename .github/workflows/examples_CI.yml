@@ -31,7 +31,9 @@ jobs:
       - name: Run Soil Model Heat Global 
         run: julia --project=examples/ examples/soil_heat_global.jl
       - name: Run Pluto Notebook Simple
-        run: julia --project=examples/ examples/example_model_notebook.jl
+        run: 
+          cd examples/
+          julia example_model_notebook.jl
 #     - name: Run Soil Model Heat Global ERA5 
 #       run: julia --project=examples/ examples/soil_heat_global_era5.jl
         
