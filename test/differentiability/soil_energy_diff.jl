@@ -71,7 +71,7 @@ end
 
 @testset "Soil energy model: timestep!" begin
     model = build_soil_energy_model(CPU(), Float64)
-    integrator = initialize(model, ForwadEuler())
+    integrator = initialize(model, ForwardEuler())
     inputs = integrator.inputs
     state = integrator.state
     dstate = make_zero(state)
