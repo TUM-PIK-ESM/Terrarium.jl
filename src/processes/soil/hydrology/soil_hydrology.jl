@@ -62,9 +62,22 @@ end
 Return the soil water retention curve from the `hydraulic_properties` associated with
 the given `SoilHydrology` configuration.
 """
-get_swrc(hydrology::SoilHydrology) = hydrology.hydraulic_properties.cond_unsat.swrc
+@inline get_swrc(hydrology::SoilHydrology) = hydrology.hydraulic_properties.cond_unsat.swrc
 
-get_closure(::SoilHydrology{NF, NoFlow}) where {NF} = nothing
+"""
+    get_hydraulic_properties(hydrology::SoilHydrology)
+
+Return the soil hydraulic properties defined by the given `hydrology` process.
+"""
+@inline get_hydraulic_properties(hydrology::SoilHydrology) = hydrology.hydraulic_properties
+
+"""
+    get_closure(::SoilHydrology{NF, NoFlow}) where {NF}
+
+Return the saturation-pressure closure defined by the given `hydrology` process, or `nothing`
+if not defined for the given configuration.
+"""
+@inline get_closure(::SoilHydrology{NF, NoFlow}) where {NF} = nothing
 
 """
 State variables for `SoilHydrology` processes.
@@ -75,22 +88,13 @@ variables(hydrology::SoilHydrology{NF}) where {NF} = (
     variables(hydrology.evapotranspiration)...,
 )
 
-"""
-    porosity(i, j, k, state, hydrology::SoilHydrology, strat::AbstractStratigraphy, bgc::AbstractSoilBiogeochemistry)
-
-Return the porosity of the soil volume at the given indices based on the current state, hydrology, stratigraphy, and biogeochemistry configurations.
-"""
-@inline function porosity(i, j, k, state, hydrology::SoilHydrology, strat::AbstractStratigraphy, bgc::AbstractSoilBiogeochemistry)
-    org = organic_fraction(i, j, k, state, bgc)
-    texture = soil_texture(i, j, k, state, strat)
-    return (1 - org)*mineral_porosity(hydrology.hydraulic_properties, texture) + org*organic_porosity(i, j, k, state, bgc)
-end
-
 # Immobile soil water (NoFlow)
 
 variables(::NoFlow) = (
     auxiliary(:saturation_water_ice, XYZ(), domain=UnitInterval(), desc="Saturation level of water and ice in the pore space"),
 )
+
+@inline saturation_water_ice(i, j, k, state, hydrology::AbstractSoilHydrology) = @inbounds state.saturation_water_ice[i, j, k]
 
 @inline initialize!(state, model, hydrology::SoilHydrology) = nothing
 

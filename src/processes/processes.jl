@@ -14,13 +14,11 @@ include("prescribed_atmosphere.jl")
 include("soil/abstract_types.jl")
 
 export SoilTexture
-include("soil/biogeochem/soil_texture.jl")
-
+include("soil/stratigraphy/soil_texture.jl")
 export SoilComposition, volumetric_fractions
-include("soil/biogeochem/soil_composition.jl")
-
+include("soil/stratigraphy/soil_composition.jl")
 export HomogeneousSoil
-include("soil/biogeochem/homogeneous_soil.jl")
+include("soil/stratigraphy/homogeneous_soil.jl")
 
 export ConstantSoilCarbonDensity
 include("soil/biogeochem/constant_soil_carbon.jl")
@@ -29,8 +27,9 @@ export ConstantHydraulics, SoilHydraulicsSURFEX, UnsatKLinear, UnsatKVanGenuchte
 export saturated_hydraulic_conductivity, mineral_porosity, field_capacity, wilting_point
 include("soil/hydrology/soil_hydraulic_properties.jl")
 
-export SoilHydrology, NoFlow, RichardsEq
+export SoilHydrology, NoFlow
 include("soil/hydrology/soil_hydrology.jl")
+export RichardsEq
 include("soil/hydrology/soil_hydrology_rre.jl")
 
 export SoilThermalConductivities, SoilHeatCapacities, SoilThermalProperties, InverseQuadratic
