@@ -3,10 +3,9 @@ struct CoupledSoilAtmosphereModel{
     GridType<:AbstractLandGrid{NF},
     Atmosphere<:AbstractAtmosphere,
     SurfaceEnergy<:AbstractSurfaceEnergyBalance,
-    TimeStepper<:AbstractTimeStepper,
-    SoilModel<:AbstractSoilModel{NF, GridType, TimeStepper},
+    SoilModel<:AbstractSoilModel{NF, GridType},
     Initializer<:AbstractInitializer,
-} <: AbstractSoilModel{NF, GridType, TimeStepper}
+} <: AbstractSoilModel{NF, GridType}
     "Spatial discretization"
     grid::GridType
 
@@ -33,19 +32,8 @@ function CoupledSoilAtmosphereModel(
     constants::PhysicalConstants = PhysicalConstants(NF),
     initializer::AbstractInitializer = DefaultInitializer()
 ) where {NF}
-    surface_fluxes = SoilBC(energy=GroundHeatFlux(), hydrology=DefaultBoundaryConditions())
-    coupled_soil_bcs = SoilBoundaryConditions(
-        NF,
-        top = surface_fluxes,
-        bottom = DefaultBoundaryConditions() # temporary hack
-    )
-    soil = setproperties(soil, boundary_conditions=coupled_soil_bcs)
     return CoupledSoilAtmosphereModel(soil.grid, atmosphere, surface_energy_balance, soil, constants, initializer)
 end
-
-get_boundary_conditions(model::CoupledSoilAtmosphereModel) = get_boundary_conditions(model.soil)
-
-get_time_stepping(model::CoupledSoilAtmosphereModel) = model.soil.time_stepping
 
 get_soil_energy_balance(model) = model.soil.energy
 
@@ -68,6 +56,19 @@ function variables(model::CoupledSoilAtmosphereModel)
         # redefine ground temperature as auxiliary variable
         auxiliary(:ground_temperature, XY(), units=u"°C", desc="Temperature of the uppermost ground or soil grid cell in °C")
     )
+end
+
+function initialize(
+    model::CoupledSoilAtmosphereModel{NF};
+    clock = Clock(time=zero(NF)),
+    boundary_conditions = (;),
+    fields = (;),
+    external_variables = ()
+) where {NF}
+    vars = Variables(variables(model)..., external_variables...)
+    surface_fluxes = GroundHeatFlux()
+    bcs = merge_recursive(boundary_conditions, surface_fluxes)
+    return StateVariables(vars, model.grid, clock, boundary_conditions=bcs)
 end
 
 function initialize!(state, model::CoupledSoilAtmosphereModel)
