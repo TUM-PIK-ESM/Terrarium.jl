@@ -61,6 +61,13 @@ function variables(model::SoilModel)
     return tuplejoin(strat_vars, hydrology_vars, energy_vars, bgc_vars)
 end
 
+function get_closures(model::SoilModel)
+    return (
+        get_closure(model.hydrology),
+        get_closure(model.energy)
+    )
+end
+
 function compute_auxiliary!(state, model::SoilModel)
     compute_auxiliary!(state, model, model.biogeochem)
     compute_auxiliary!(state, model, model.strat)
@@ -75,16 +82,6 @@ function compute_tendencies!(state, model::SoilModel)
     compute_tendencies!(state, model, model.hydrology)
     compute_tendencies!(state, model, model.energy)
     return nothing
-end
-
-function closure!(state, model::SoilModel)
-    closure!(state, model, get_closure(model.hydrology))
-    closure!(state, model, get_closure(model.energy))
-end
-
-function invclosure!(state, model::SoilModel)
-    invclosure!(state, model, get_closure(model.hydrology))
-    invclosure!(state, model, get_closure(model.energy))
 end
 
 # Initialization

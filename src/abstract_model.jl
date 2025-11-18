@@ -70,14 +70,22 @@ get_closures(model::AbstractModel) = ()
 
 Apply each closure relation defined for the given `model`.
 """
-closure!(state, model::AbstractModel) = nothing
+function closure!(state, model::AbstractModel)
+    for closure in get_closures(model)
+        closure!(state, model, closure)
+    end
+end
 
 """
     invclosure!(state, model::AbstractModel)
 
 Apply the inverse of each closure relation defined for the given `model`.
 """
-invclosure!(state, model::AbstractModel) = nothing
+function invclosure!(state, model::AbstractModel)
+    for closure in get_closures(model)
+        invclosure!(state, model, closure)
+    end
+end
 
 # Abstract subtypes
 
