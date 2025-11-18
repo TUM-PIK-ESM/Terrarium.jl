@@ -64,7 +64,7 @@ the given `SoilHydrology` configuration.
 """
 get_swrc(hydrology::SoilHydrology) = hydrology.hydraulic_properties.cond_unsat.swrc
 
-get_closure(::SoilHydrology{NoFlow}) = nothing
+get_closure(::SoilHydrology{NF, NoFlow}) where {NF} = nothing
 
 """
 State variables for `SoilHydrology` processes.
