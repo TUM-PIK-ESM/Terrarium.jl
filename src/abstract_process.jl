@@ -15,22 +15,9 @@ compute_auxiliary!(state, model, ::AbstractProcess) = nothing
 
 compute_tendencies!(state, model, ::AbstractProcess) = nothing
 
-# also allow dispatch on nothing
+# Also allow dispatch on nothing
 compute_auxiliary!(state, model, ::Nothing) = nothing
 compute_tendencies!(state, model, ::Nothing) = nothing
-
-# Interface for differential operators
-abstract type AbstractOperator end
-
-variables(op::AbstractOperator) = ()
-
-"""
-    get_closure(op::AbstractOperator)
-
-Returns an `AbstractClosureRelation` for the given differential operator.
-Defaults to returning `nothing` (i.e. no closure).
-"""
-get_closure(op::AbstractOperator) = nothing
 
 # Allow dispatch on nothing types for processes
 closure!(state, model::AbstractModel, ::Nothing) = nothing

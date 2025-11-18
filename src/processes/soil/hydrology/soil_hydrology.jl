@@ -1,7 +1,7 @@
 """
 Base type for implementations of soil water flow dynamics.
 """
-abstract type AbstractVerticalFlow <: AbstractOperator end
+abstract type AbstractVerticalFlow end
 
 """
 Represents a hydrology scheme where soil water is immobile.

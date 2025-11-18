@@ -6,10 +6,10 @@ flow in porous media.
 """
 @kwdef struct RichardsEq{PS} <: AbstractVerticalFlow
     "Closure relation for mapping between water potential (hydraulic head) and saturation"
-    saturation_closure::PS = SaturationPressureClosure()
+    closure::PS = SaturationPressureClosure()
 end
 
-get_closure(op::RichardsEq) = op.saturation_closure
+get_closure(hydrology::SoilHydrology{NF, <:RichardsEq}) = hydrology.vertflow.closure
 
 variables(rre::RichardsEq) = (
     prognostic(:saturation_water_ice, XYZ(); closure=get_closure(rre), domain=UnitInterval(), desc="Saturation level of water and ice in the pore space"),
@@ -19,7 +19,7 @@ variables(rre::RichardsEq) = (
 )
 
 function initialize!(state, model, hydrology::SoilHydrology{NF, <:RichardsEq}) where {NF}
-    closure!(state, model, get_closure(hydrology.vertflow))
+    closure!(state, model, get_closure(hydrology))
     return nothing
 end
 

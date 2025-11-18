@@ -1,4 +1,4 @@
-abstract type AbstractHeatOperator <: AbstractOperator end
+abstract type AbstractHeatOperator end
 
 """
     $TYPEDEF
@@ -15,8 +15,6 @@ energy via an arbitrary set of additional parameters \$\\phi\$ which are determi
 @kwdef struct ExplicitTwoPhaseHeatConduction{ET} <: AbstractHeatOperator
     closure::ET = EnergyTemperatureClosure()
 end
-
-get_closure(op::ExplicitTwoPhaseHeatConduction) = op.closure
 
 """
     $TYPEDEF
@@ -54,7 +52,7 @@ freezecurve(
     ::AbstractSoilHydrology
 ) where {NF, OP} = FreeWater()
 
-get_closure(energy::SoilEnergyBalance) = get_closure(energy.operator)
+get_closure(energy::SoilEnergyBalance) = energy.operator.closure
 
 variables(energy::SoilEnergyBalance) = (
     prognostic(:internal_energy, XYZ(); closure=get_closure(energy.operator), units=u"J/m^3", desc="Internal energy of the soil volume, including both latent and sensible components"),
