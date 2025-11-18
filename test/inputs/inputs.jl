@@ -6,29 +6,20 @@ using Unitful
 @testset "Input sources" begin
     # Field input source
     grid = ColumnGrid(ExponentialSpacing())
-    X1 = Field(grid, XY())
-    field_input = InputSource(; X1)
+    field_input = InputSource(eltype(grid), :X1)
     @test isa(field_input, FieldInputSource)
     ## check that dimensions were inferred correctly
     @test field_input.dims == XY()
-    @test field_input.fields == (; X1)
-    X2 = Field(grid, XY())
-    field_input = InputSource(; X1, X2)
+    @test variables(field_input) == (Terrarium.input(:X1, XY()),)
+    field_input = InputSource(eltype(grid), :X1, :X2)
     @test isa(field_input, FieldInputSource)
     @test field_input.dims == XY()
-    @test field_input.fields == (; X1, X2)
-    X3 = Field(grid, XYZ())
-    ## check that trying to create a FieldInputSource with inconsistent types or dimensions fails
-    @test_throws AssertionError InputSource(; X1, X2, X3)
-    @test_throws AssertionError InputSource(; X1, X2, Y=zeros(size(X1)))
-    ## check update_inputs!
-    set!(X1, 1.0)
-    set!(X2, 2.0)
-    fields = (X1 = Field(grid, XY()), X2 = Field(grid, XY()))
+    @test variables(field_input) == (Terrarium.input(:X1, XY()), Terrarium.input(:X2, XY()))
+    ## check state variables are allocated
     clock = Clock(time=0)
-    update_inputs!(fields, field_input, clock)
-    @test all(fields.X1 .== X1)
-    @test all(fields.X2 .== X2)
+    state = initialize(Variables(field_input), grid, clock)
+    @test hasproperty(state.inputs, :X1)
+    @test hasproperty(state.inputs, :X2)
 
     # FieldTimeSeries input source
     grid = ColumnGrid(ExponentialSpacing())
@@ -45,7 +36,8 @@ using Unitful
     @test fts_input.dims == XY()
     @test fts_input.fts == (; S1, S2)
     S3 = FieldTimeSeries(grid, XYZ(), ts)
-    ## check that trying to create a FieldInputSource with inconsistent types or dimensions fails
+    ## check that trying to create a FieldTimeSeriesInputSource
+    # with inconsistent types or dimensions fails
     @test_throws AssertionError InputSource(; S1, S2, S3)
     @test_throws AssertionError InputSource(; X1, S1, S2)
     # populate S1 with random data

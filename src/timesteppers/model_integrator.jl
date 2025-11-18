@@ -134,15 +134,14 @@ function initialize(
     model::AbstractModel{NF},
     timestepper::AbstractTimeStepper;
     clock::Clock = Clock(time=zero(NF)),
-    input_sources::InputSources = InputSources(),
+    inputs::InputSources = InputSources(),
     boundary_conditions = (;),
     fields = (;)
 ) where {NF}
-    grid = get_grid(model)
-    input_vars = variables(input_sources)
+    input_vars = variables(inputs)
     state = initialize(model; clock, boundary_conditions, fields, external_variables=input_vars)
     initialized_timestepper = initialize(timestepper, model, state)
-    integrator = ModelIntegrator(clock, model, input_sources, state, initialized_timestepper)
+    integrator = ModelIntegrator(clock, model, inputs, state, initialized_timestepper)
     initialize!(integrator)
     return integrator
 end

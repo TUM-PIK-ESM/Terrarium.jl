@@ -41,7 +41,7 @@ InputSources(sources::InputSource...) = InputSources(Tuple(sources))
 
 variables(sources::InputSources) = tuplejoin(map(variables, sources.sources)...)
 
-function update_inputs!(fields, sources::InputSources, ::Clock)
+function update_inputs!(fields, sources::InputSources, clock::Clock)
     for source in sources.sources
         update_inputs!(fields, source, clock)
     end
@@ -50,31 +50,29 @@ end
 """
     $TYPEDEF
 
-Input source that reads directly from pre-specified Oceananigans `Field`s.
+Input source that defines `input` state variables with the given names which
+can then be directly modified by the user.
 """
-struct FieldInputSource{NF, VD<:VarDims, names, Fields<:Tuple{Vararg{AnyField{NF}}}} <: InputSource{NF}
+struct FieldInputSource{NF, VD<:VarDims, names} <: InputSource{NF}
     "Variable dimensions"
     dims::VD    
-    
-    "Named tuple of input `Field`s"
-    fields::NamedTuple{names, Fields}
+
+    FieldInputSource(::Type{NF}, dims::VarDims, names::Symbol...) where {NF} = new{NF, typeof(dims), names}(dims)
 end
 
-function InputSource(named_fields::Pair{Symbol, <:Field}...)
-    dims = checkdims(; named_fields...)
-    return FieldInputSource(dims, (; named_fields...))
+"""
+    InputSource(::Type{NF}, names::Symbol...; dims = XY())
+
+Create a `FieldInputSource` with the given numeric type and input variable `names`.
+"""
+function InputSource(::Type{NF}, names::Symbol...; dims = XY()) where {NF}
+    return FieldInputSource(NF, dims, names...)
 end
 
 variables(source::FieldInputSource{NF, VD, names}) where {NF, VD, names} = map(name -> input(name, source.dims), names)
 
-function update_inputs!(fields, source::FieldInputSource, ::Clock)
-    for name in keys(source.fields)
-        if hasproperty(fields, name)
-            field = getproperty(fields, name)
-            set!(field, source.fields[name])
-        end
-    end
-end
+# For single fields; users can write directly into the allocated input variable
+update_inputs!(fields, ::FieldInputSource, ::Clock) = nothing
 
 """
 Type alias for a `FieldTimeSeries` with any X, Y, Z location or grid.

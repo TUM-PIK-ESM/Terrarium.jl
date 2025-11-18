@@ -30,17 +30,16 @@ end
 @testset "Forcing input" begin
     grid = ColumnGrid(CPU(), DEFAULT_NF, ExponentialSpacing())
     model = TestModel(; grid)
-    F = Field(grid, XY())
-    set!(F, one(eltype(F)))
-    F_in = FieldInputSource(; F)
-    sim = initialize(model, F_in)
+    F_in = FieldInputSource(eltype(grid), :F)
+    inputs = InputSources(F_in)
+    integrator = initialize(model, ForwardEuler(eltype(grid)); inputs)
     # check initial values
-    @test all(sim.state.x .≈ 0)
-    @test all(sim.state.F .≈ 1)
+    @test all(integrator.state.x .≈ 0)
+    @test all(integrator.state.F .≈ 1)
     # advance one timestep and check updated values
-    timestep!(sim, 0.1)
-    @test all(sim.state.x .≈ 0.1)
-    @test all(sim.state.F .≈ 1)
+    timestep!(integrator, 0.1)
+    @test all(integrator.state.x .≈ 0.1)
+    @test all(integrator.state.F .≈ 1)
 end
 
 end
