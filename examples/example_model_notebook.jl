@@ -11,17 +11,10 @@ begin
 end
 
 # ╔═╡ 94d82d31-42ec-41de-91e9-b5585b3a72d4
-begin
-	using Terrarium 
-	
-	@kwdef struct ExpModel{NF, Grid, I, BC} <: Terrarium.AbstractModel{NF, Grid}
-	    grid::Grid
-	    initializer::I = DefaultInitializer()
-	    boundary_conditions::BC = DefaultBoundaryConditions()
-	end
-	
-	ExpModel(grid::Grid, initializer::I, boundary_conditions::BC) where {Grid, I, BC} = ExpModel{eltype(grid), Grid, I, BC}(grid, initializer, boundary_conditions)
-end
+using Terrarium
+
+# ╔═╡ eeb283fa-5360-4bab-83cf-dcbc0bee7949
+using CairoMakie
 
 # ╔═╡ 5630efd5-2482-463d-913f-9addb120beec
 md"""
@@ -30,10 +23,10 @@ md"""
 In this example we will set up an embarrassingly simple example to demonstrate Terrarium's model interface. Our model will have 1-dimensional exponential dynamics with a constant offset
 
 ```math 
-\frac{du}{dt} = u + c
+\frac{du}{dt} = \alpha u + c
 ```
 
-for an arbitrary state variable ``u``. For the sake of this demonstration we will treat the offset ``c`` as an auxiliary/diagnostic variable even though it is constant in time.
+for an arbitrary prognostic variable ``u``. For the sake of this demonstration we will treat the offset ``c`` as an auxiliary/diagnostic variable even though it is constant in time.
 
 We begin by defining our model `struct` that subtypes `Terrarium.AbstractModel`: 
 """
@@ -43,31 +36,63 @@ md"""
 A `Terrarium.AbstractModel` typically constists of the fields 
  * `grid` which defines the discretization of the spatial domain
  * `initializer` which is responsible for initializing state variables
- * `boundary_conditions` that defines the behaviour fo the state variabels at the spatial boundaries of the `grid` 
  * further fields that define processes, dynamics and submodels 
 
-When we follow the advised naming notations of `grid`, `initializer` and `boundary_conditions` we inherit default methods from `Terrarium.AbstractModel` that will suffice for our basic example. For more complex models we might need to implement custom `initialize!(state, ::Model, ::Initializer)` to initialize model states. 
+When we follow the advised naming notations of `grid` and `initializer` we inherit default methods from `Terrarium.AbstractModel` such as `get_grid` and `get_initializer`. For more complex models we might need to implement custom overrides of `initialize!(state, ::Model, ::Initializer)` to initialize model states. 
 
-## What's the `grid`? 
+## What is a "grid"? 
 
-The `grid` defines the spatial discretization. Our implementation of the grid uses Oceananigans.jl (and SpeedyWeather.jl/RingGrids.jl) grids to ease computations (and coupling). We have two main grid types available: 
+The `grid` defines the spatial discretization. Our grids are based on those of Oceananigans.jl (and SpeedyWeather.jl/RingGrids.jl) in order to take advantage of their capabilities for device-agnostic parallelization.
+
+Terrarium currently provides two grid types: 
 
 * `ColumnGrid` is a set of laterally independent vertical columns with dimensions ``(x, y, z)`` where ``x`` is the column dimension, ``y=1`` is constant, and ``z`` is the vertical axis, 
 * `ColumnRingGrid` represents a global (spherical) grid of independent, vertical columns where the spatial discretization in the horizontal direction is defined by a `RingGrids.AbstractGrid`. 
 
 In both cases we need to specificy the vertical discretizataion via an `UniformSpacing`, `ExponentialSpacing` or `PrescribedSpacing`.
 
-## Initializer and Boundary Conditions 
+## Initializer and Boundary Conditions
 
-For our basic example here the defaults will suffice, and we won't have to define custom ones. 
+For our basic example here the default initializer (which does nothing) will suffice, and we won't have to define a custom one.
+
+Boundary conditions are specified by passing Oceananigans `BoundaryCondition` types to `initialize`. In the case of a linear ODE, however, no boundary conditions are required.
 
 ## What's our `grid`? 
 
-For our example we just want a single column with a single vertical layer, we can define it like so: 
+For our current example, we are defining a simple linear ODE without any spatial dynamics, so we can get away with just a single column with one vertical layer. We can define it like so:
 """
 
 # ╔═╡ 78f268ef-5385-4c63-bc35-2c973de69da5
 grid = ColumnGrid(CPU(), Float64, UniformSpacing(N=1))
+
+# ╔═╡ 054a8b11-250f-429f-966f-ca3c9a5dc2ef
+md"""
+## Defining the model
+
+We start by defining a `struct` for our model that inherits from `AbstractModel` and consists of three properties: the spatial `grid`, an `initializer`, and a single `AbstractProcess` defining the dynamics, which we will also implement below.
+"""
+
+# ╔═╡ 407786db-607f-4508-b697-fe75b3ce0b25
+begin
+	@kwdef struct LinearDynamics{NF} <: Terrarium.AbstractProcess
+		"Exponential growth rate"
+		alpha::NF = 0.01
+
+		"Constant offset for exponential growth"
+		c::NF = 0.1
+	end
+	
+	@kwdef struct ExpModel{NF, Grid <: Terrarium.AbstractLandGrid{NF}, Dyn, Init} <: Terrarium.AbstractModel{NF, Grid}
+		"Spatial grid on which state variables are discretized"
+		grid::Grid
+
+		"Linear dynamics resulting in exponential growth/decay"
+		dynamics::Dyn = LinearDynamics()
+
+		"Model initializer"
+		initializer::Init = DefaultInitializer()
+	end
+end
 
 # ╔═╡ 575d920c-b12e-493f-95a7-5c962c3591fd
 md"""
@@ -88,26 +113,60 @@ Terrarium.variables(::ExpModel) = (
     Terrarium.auxiliary(:c, Terrarium.XY())
 )
 
+# ╔═╡ d4d19de7-6f77-4873-9182-9832d1ca4381
+md"""
+Here, we defined our two variables with their name as a `Symbol` and whether they are 2D variables (`XY`) on the spatial grid or 3D variables (`XYZ`) that also vary along the vertical z-axis. Here we are considering only a simple scalar model so we choose 2D (`XY`).
+
+We also need to define `compute_auxiliary!` and `compute_tendencies!` as discussed above. As is common in many Terrarium model definitions, we will simply forward these method calls to the process defined by the `dynamics` property.
+"""
+
+# ╔═╡ 5ea313fc-3fbb-4092-a2cc-e0cd1f2fe641
+function Terrarium.compute_auxiliary!(state, model::ExpModel) 
+    compute_auxiliary!(state, model, model.dynamics)
+end 
+
+# ╔═╡ 3815424f-6210-470d-aef1-99c60c71072f
+function Terrarium.compute_tendencies!(state, model::ExpModel) 
+    compute_tendencies!(state, model, model.dynamics)
+end 
+
 # ╔═╡ 32373599-768f-4809-acdd-4704acc3f30b
 md"""
-Here, we defined our two variables with their name as a `Symbol` and whether they are 2D variables (`XY`) or 3D variables (`XYZ`).
+Note that, when implementing models within the Terrarium module itself, the `Terrarium.` qualifier in the definition is not needed.
 
-Note that, when implementing models within the Terrarium module itself, the `Terrarium.` prefix is not necessary.
+## Implementing the dynamics
 
-## Defining the dynamics
+Next, we define the functions that compute the actual dynamics. In order to do this, we need to know a little about how the variables we just defined are handled in our `StateVariables`. The `StateVariables` hold all prognostic and auxiliary variables, their tendencies and closures and additional inputs and forcings in seperate `NamedTuples`. Note that Terrarium also defines shortcuts such that, e.g. in our example, both `state.prognostic.u` and `state.u` would work.
 
-Next, we define the functions that do the actual computations. In order to do this, we need to know a little about how the variables we just defined are handled in our `StateVariables`. The `StateVariables` hold all prognostic and auxiliary variables, their tendencies and closures and additional inputs and forcings in seperate `NamedTuples`. We have shortcuts defined so, that e.g. in our example both `state.prognostic.u` and `state.u` will work. With that in mind, let's define the following:
+With that in mind, let's define the methods:
 """
 
 # ╔═╡ d55aaf4c-3033-45ba-9d64-8fa8ae4b671c
-function Terrarium.compute_auxiliary!(state, model::ExpModel) 
-    state.auxiliary.c .= 0.1
+function Terrarium.compute_auxiliary!(
+	state,
+	model::ExpModel,
+	dynamics::LinearDynamics
+)
+	# set auxiliary variable for offset c
+    state.auxiliary.c .= dynamics.c
 end 
 
 # ╔═╡ 5c8be7e4-f150-492b-a75d-96887a11f6da
-# du/dt = u + c = u + 0.1
-function Terrarium.compute_tendencies!(state, model::ExpModel) 
-    state.tendencies.u .= state.prognostic.u + state.auxiliary.c
+# du/dt = u + c
+function Terrarium.compute_tendencies!(
+	state,
+	model::ExpModel,
+	dynamics::LinearDynamics
+)
+	# define the dynamics; we'll use some special characters to make the equation nicer to look at :)
+	let u = state.prognostic.u,
+		∂u∂t = state.tendencies.u,
+		α = dynamics.alpha,
+		# note again that here we could also just use dynamics.c instead of defining an auxiliary variable! 
+		c = state.auxiliary.c;
+		# Write into tendency variable ∂u∂t
+		∂u∂t .=  α * u + c
+	end
 end
 
 # ╔═╡ 8d331856-6e9b-41d4-b1be-a84d5fedac8d
@@ -118,46 +177,113 @@ However, now we have everything our model needs and we can finally use it!
 
 ## Running our model 
 
-First, we need to define our initial conditions via a `FieldInitializer`.
+First, we will define our initial conditions using `FieldInitializer`.
 
 `FieldInitializer` can take in functions `(x,z)->val`, arrays or values. It uses `Oceananigans.set!(field, x)`, and allows all input arguments for `x` that `set!` allows: 
 """
 
 # ╔═╡ fad517e2-9d3a-43cd-8e4d-0b72ca55b8c8
-initializer = FieldInitializers(u = 0., c = 0.1)
+initializer = FieldInitializers(u = 1.0)
 
 # ╔═╡ 4b483c23-9e15-4d03-b275-8f530854669e
 md"""
-Then, we can actually construct our model 
+Then, we construct our model from the chosen `grid` and `initializer`
 """
 
 # ╔═╡ 2a4234c5-f529-4166-94c3-0556565348ea
-model = ExpModel(; grid, initializer)
+model = ExpModel(grid; initializer)
 
 # ╔═╡ 4c36fdc0-5120-46b9-86ca-e875e23a6c1d
 md"""
-Then we initialize our model, i.e. we run all pre-computation, and initialize the `StateVariables`. Here, we can also define our timestepper
+We now can initialize our model, i.e. we run all pre-computation, and initialize a numerical integrator for our model by passing it
+to `initialize` along with a suitable timestepper, which we here choose to be the second-order Heun method with a timestep of 1 second.
 """
 
 # ╔═╡ 7e38132b-d406-4863-b88f-90efe2a1bfa2
-modelstate = initialize(model; timestepper=Heun)
+integrator = initialize(model, ForwardEuler(Δt = 1.0))
+
+# ╔═╡ ab442662-9975-42e5-b5c7-48687f8cbe12
+md"""
+We can advance our model by one step via the `timestep!` method:
+"""
+
+# ╔═╡ 879d86d2-6828-4957-9aac-cd43508cbf1a
+timestep!(integrator)
+
+# ╔═╡ 4676ab3b-4f8f-4f47-9538-5f1e4ef257b1
+integrator.state.u
 
 # ╔═╡ 21e20c28-dfe1-4a0a-992f-c3499fbe4be8
 md"""
-Then, we can finally run our model using `run!` that allows either for a number of `steps` or a `Dates.Period` to be specified: 
+or we can use `run!` for a fixed number of `steps` or over a desired `Dates.Period`:
 """
 
 # ╔═╡ de3d4210-c39f-11f0-3d50-3f95a2361e2a
-run!(modelstate, period=Hour(1))
+run!(integrator, period=Hour(1))
 
 # ╔═╡ cce4d4d3-0fa4-4376-bcb6-c52603bc17d6
-modelstate.state.u
+integrator.state.u
 
 # ╔═╡ 7fa2dfbf-7077-4162-bcc1-ba2bd12b093c
 md"""
-In one hour our state already grew to `7.46953e54`, if that's not exponential growth ;) 
+As you can see, in just 1 hour of simulated time, our state variable already grew from `1` to `4e16`! If that's not exponential growth, we don't know what is ;) 
+"""
 
-Well, and that's already it. We defined a simple exponential model following the Terrarium `AbstractModel` interface!
+# ╔═╡ 4c6d76e8-bc92-4abd-b2e8-15d26f5d4953
+md"""
+But wait there's more! What if we want to actually save the results?
+
+The `integrator` data structure implements the Oceananigans model interface, so we can also use it to set up a `Simulation`:
+"""
+
+# ╔═╡ 95f479e2-2ffa-4e15-8952-421465eab2ee
+sim = Simulation(integrator; stop_time = 300.0, Δt = 1.0)
+
+# ╔═╡ 26000a4e-77cb-4c04-aeb2-ba5b0e14112a
+begin
+	# We need to import some types from Oceananigans here for output handling
+	using Oceananigans: TimeInterval, JLD2Writer
+	using Oceananigans.Units: seconds
+
+	# Reset the integrator to its initial state
+	Terrarium.initialize!(integrator);
+
+	output_file = tempname()
+	sim.output_writers[:snapshots] = JLD2Writer(integrator,
+												(u = integrator.state.u,);
+												filename = output_file,
+												overwrite_existing = true,
+												schedule = TimeInterval(10seconds))
+end
+
+# ╔═╡ 081d0b29-927c-4a03-a3dd-4dcac043dcc1
+md"""
+We can then add an output writer to the simulation,
+"""
+
+# ╔═╡ 09118f2e-6c41-49e3-abf2-92b70976d755
+md"""
+and finally `run!` it!
+"""
+
+# ╔═╡ 4d416eb0-fbbc-4fec-939c-5c3909b2cef2
+run!(sim)
+
+# ╔═╡ 0f607788-53e7-4a55-95f0-3690e9867099
+md"""
+Then load the output data and plot the results:
+"""
+
+# ╔═╡ dbe8d0fa-893f-4c05-9e46-220ab41636f3
+# Load output into field time series
+fts = FieldTimeSeries(output_file, "u")
+
+# ╔═╡ c06502ff-c021-488c-a333-36233091d046
+plot(1:length(fts), [fts[i][1,1,1] for i in 1:length(fts)])
+
+# ╔═╡ 25e22154-946f-4c32-a1fa-73d86e935ff3
+md"""
+Well that's it. We defined and ran a simple exponential model following the Terrarium `AbstractModel` interface! Stay tuned for more!
 """
 
 # ╔═╡ Cell order:
@@ -166,8 +292,13 @@ Well, and that's already it. We defined a simple exponential model following the
 # ╠═94d82d31-42ec-41de-91e9-b5585b3a72d4
 # ╟─4922e264-c80d-4a5b-8891-a7c8a3fdbfe7
 # ╠═78f268ef-5385-4c63-bc35-2c973de69da5
-# ╟─575d920c-b12e-493f-95a7-5c962c3591fd
+# ╠═054a8b11-250f-429f-966f-ca3c9a5dc2ef
+# ╠═407786db-607f-4508-b697-fe75b3ce0b25
+# ╠═575d920c-b12e-493f-95a7-5c962c3591fd
 # ╠═82e45724-ba16-4806-9470-5cb4c43ea734
+# ╟─d4d19de7-6f77-4873-9182-9832d1ca4381
+# ╠═5ea313fc-3fbb-4092-a2cc-e0cd1f2fe641
+# ╠═3815424f-6210-470d-aef1-99c60c71072f
 # ╟─32373599-768f-4809-acdd-4704acc3f30b
 # ╠═d55aaf4c-3033-45ba-9d64-8fa8ae4b671c
 # ╠═5c8be7e4-f150-492b-a75d-96887a11f6da
@@ -177,7 +308,21 @@ Well, and that's already it. We defined a simple exponential model following the
 # ╠═2a4234c5-f529-4166-94c3-0556565348ea
 # ╟─4c36fdc0-5120-46b9-86ca-e875e23a6c1d
 # ╠═7e38132b-d406-4863-b88f-90efe2a1bfa2
+# ╟─ab442662-9975-42e5-b5c7-48687f8cbe12
+# ╠═879d86d2-6828-4957-9aac-cd43508cbf1a
+# ╠═4676ab3b-4f8f-4f47-9538-5f1e4ef257b1
 # ╟─21e20c28-dfe1-4a0a-992f-c3499fbe4be8
 # ╠═de3d4210-c39f-11f0-3d50-3f95a2361e2a
 # ╠═cce4d4d3-0fa4-4376-bcb6-c52603bc17d6
 # ╟─7fa2dfbf-7077-4162-bcc1-ba2bd12b093c
+# ╟─4c6d76e8-bc92-4abd-b2e8-15d26f5d4953
+# ╠═95f479e2-2ffa-4e15-8952-421465eab2ee
+# ╟─081d0b29-927c-4a03-a3dd-4dcac043dcc1
+# ╠═26000a4e-77cb-4c04-aeb2-ba5b0e14112a
+# ╟─09118f2e-6c41-49e3-abf2-92b70976d755
+# ╠═4d416eb0-fbbc-4fec-939c-5c3909b2cef2
+# ╟─eeb283fa-5360-4bab-83cf-dcbc0bee7949
+# ╟─0f607788-53e7-4a55-95f0-3690e9867099
+# ╠═dbe8d0fa-893f-4c05-9e46-220ab41636f3
+# ╠═c06502ff-c021-488c-a333-36233091d046
+# ╟─25e22154-946f-4c32-a1fa-73d86e935ff3
