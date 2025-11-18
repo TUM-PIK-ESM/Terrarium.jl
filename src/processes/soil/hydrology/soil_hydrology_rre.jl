@@ -9,7 +9,7 @@ flow in porous media.
     closure::PS = SaturationPressureClosure()
 end
 
-get_closure(hydrology::SoilHydrology{NF, <:RichardsEq}) = hydrology.vertflow.closure
+get_closure(hydrology::SoilHydrology{NF, <:RichardsEq}) where {NF} = hydrology.vertflow.closure
 
 variables(rre::RichardsEq) = (
     prognostic(:saturation_water_ice, XYZ(); closure=get_closure(rre), domain=UnitInterval(), desc="Saturation level of water and ice in the pore space"),

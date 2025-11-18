@@ -55,7 +55,7 @@ freezecurve(
 get_closure(energy::SoilEnergyBalance) = energy.operator.closure
 
 variables(energy::SoilEnergyBalance) = (
-    prognostic(:internal_energy, XYZ(); closure=get_closure(energy.operator), units=u"J/m^3", desc="Internal energy of the soil volume, including both latent and sensible components"),
+    prognostic(:internal_energy, XYZ(); closure=get_closure(energy), units=u"J/m^3", desc="Internal energy of the soil volume, including both latent and sensible components"),
     auxiliary(:liquid_water_fraction, XYZ(), domain=UnitInterval(), desc="Fraction of unfrozen water in the pore space"),
 )
 
