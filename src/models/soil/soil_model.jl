@@ -40,13 +40,13 @@ end
 
 # SoilModel getter methods
 
-get_stratigraphy(model::SoilModel) = model.strat
+get_soil_stratigraphy(model::SoilModel) = model.strat
 
 get_soil_energy_balance(model::SoilModel) = model.energy
 
 get_soil_hydrology(model::SoilModel) = model.hydrology
 
-get_biogeochemistry(model::SoilModel) = model.biogeochem
+get_soil_biogeochemistry(model::SoilModel) = model.biogeochem
 
 get_constants(model::SoilModel) = model.constants
 
@@ -62,20 +62,18 @@ function variables(model::SoilModel)
 end
 
 function compute_auxiliary!(state, model::SoilModel)
+    compute_auxiliary!(state, model, model.biogeochem)
     compute_auxiliary!(state, model, model.strat)
     compute_auxiliary!(state, model, model.hydrology)
     compute_auxiliary!(state, model, model.energy)
-    compute_auxiliary!(state, model, model.biogeochem)
     return nothing
 end
 
 function compute_tendencies!(state, model::SoilModel)
-    # Default implementation forwards the method dispatch to processes in the order:
-    # Stratigraphy -> Hydrology -> Energy -> Biogeochemistry
+    compute_tendencies!(state, model, model.biogeochem)
     compute_tendencies!(state, model, model.strat)
     compute_tendencies!(state, model, model.hydrology)
     compute_tendencies!(state, model, model.energy)
-    compute_tendencies!(state, model, model.biogeochem)
     return nothing
 end
 

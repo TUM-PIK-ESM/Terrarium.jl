@@ -39,9 +39,9 @@ get_soil_energy_balance(model) = model.soil.energy
 
 get_soil_hydrology(model) = model.soil.hydrology
 
-get_stratigraphy(model) = model.soil.strat
+get_soil_stratigraphy(model) = model.soil.strat
 
-get_biogeochemistry(model) = model.soil.biogeochem
+get_soil_biogeochemistry(model) = model.soil.biogeochem
 
 get_constants(model) = model.soil.constants
 
