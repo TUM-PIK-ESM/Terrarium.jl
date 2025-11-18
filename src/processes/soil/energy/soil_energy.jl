@@ -72,7 +72,7 @@ function compute_tendencies!(state, model, energy::SoilEnergyBalance)
     hydrology = get_soil_hydrology(model)
     strat = get_stratigraphy(model)
     bgc = get_biogeochemistry(model)
-    launch!(grid, :xyz, compute_energy_tendency!, state, grid, energy, hydrology, strat, bgc)
+    launch!(state, grid, :xyz, compute_energy_tendency!, energy, hydrology, strat, bgc)
     return nothing
 end
 
@@ -152,7 +152,7 @@ function closure!(state, model::AbstractSoilModel, ::EnergyTemperatureClosure)
     strat = get_stratigraphy(model)
     bgc = get_biogeochemistry(model)
     constants = get_constants(model)
-    launch!(grid, :xyz, energy_to_temperature!, state, energy, hydrology, strat, bgc, constants)
+    launch!(state, grid, :xyz, energy_to_temperature!, energy, hydrology, strat, bgc, constants)
     return nothing
 end
 
@@ -163,12 +163,12 @@ function invclosure!(state, model::AbstractSoilModel, ::EnergyTemperatureClosure
     strat = get_stratigraphy(model)
     bgc = get_biogeochemistry(model)
     constants = get_constants(model)
-    launch!(grid, :xyz, temperature_to_energy!, state, energy, hydrology, strat, bgc, constants)
+    launch!(state, grid, :xyz, temperature_to_energy!, energy, hydrology, strat, bgc, constants)
     return nothing
 end
 
 @kernel function temperature_to_energy!(
-    state,
+    state, grid,
     energy::SoilEnergyBalance,
     hydrology::AbstractSoilHydrology,
     strat::AbstractStratigraphy,
@@ -180,8 +180,22 @@ end
     temperature_to_energy!(i, j, k, state, fc, energy, hydrology, strat, bgc, constants)
 end
 
+@kernel function energy_to_temperature!(
+    state, grid,
+    energy::SoilEnergyBalance,
+    hydrology::AbstractSoilHydrology,
+    strat::AbstractStratigraphy,
+    bgc::AbstractSoilBiogeochemistry,
+    constants::PhysicalConstants,
+)
+    i, j, k = @index(Global, NTuple)
+    fc = freezecurve(energy, hydrology)
+    energy_to_temperature!(i, j, k, state, fc, energy, hydrology, strat, bgc, constants)
+end
+
 @inline function temperature_to_energy!(
-    i, j, k, state, ::FreeWater,
+    i, j, k, state,
+    ::FreeWater,
     energy::SoilEnergyBalance,
     hydrology::AbstractSoilHydrology,
     strat::AbstractStratigraphy,
@@ -210,21 +224,9 @@ end
     return U
 end
 
-@kernel function energy_to_temperature!(
-    state,
-    energy::SoilEnergyBalance,
-    hydrology::AbstractSoilHydrology,
-    strat::AbstractStratigraphy,
-    bgc::AbstractSoilBiogeochemistry,
-    constants::PhysicalConstants,
-)
-    i, j, k = @index(Global, NTuple)
-    fc = freezecurve(energy, hydrology)
-    energy_to_temperature!(i, j, k, state, fc, energy, hydrology, strat, bgc, constants)
-end
-
 @inline function energy_to_temperature!(
-    i, j, k, state, fc::FreeWater,
+    i, j, k, state,
+    fc::FreeWater,
     energy::SoilEnergyBalance{NF},
     hydrology::AbstractSoilHydrology,
     strat::AbstractStratigraphy,
