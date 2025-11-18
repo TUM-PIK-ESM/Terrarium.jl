@@ -3,7 +3,7 @@
 """
     $TYPEDEF
 
-Base type for all models.
+Base type for all model types.
 """
 abstract type AbstractModel{NF, Grid<:AbstractLandGrid{NF}} end
 
@@ -20,7 +20,7 @@ function variables end
     initialize!(state, model::AbstractModel)
     initialize!(state, model::AbstractModel, initializer::AbstractInitializer)
 
-Calls `initialize!` on the `model` and its corresponding `initializer`. This method only needs to be
+Call `initialize!` on the `model` and its corresponding `initializer`. This method only needs to be
 implemented if initialization routines are necessary in addition to direct field/variable initializers.
 """
 function initialize! end
@@ -28,19 +28,19 @@ function initialize! end
 """
     compute_auxiliary!(state, model::AbstractModel)
 
-Computes updates to all auxiliary variables based on the current prognostic state of the `model`.
+Compute updates to all auxiliary variables based on the current prognostic state of the `model`.
 """
 function compute_auxiliary! end
 
 """
     compute_tendencies!(state, model::AbstractModel)
 
-Computes tendencies for all prognostic state variables for `model` stored in the given `state`.
+Compute tendencies for all prognostic state variables for `model` stored in the given `state`.
 This method should be called after `compute_auxiliary!`.
 """
 function compute_tendencies! end
 
-# Default getter methods for standard `AbstractModel` fields.
+# Default implementations of `AbstractModel` methods
 
 variables(::Any) = ()
 
@@ -52,18 +52,32 @@ Return the spatial grid associated with this `model`.
 get_grid(model::AbstractModel) = model.grid
 
 """
-    get_boundary_conditions(model::AbstractModel)::AbstractBoundaryConditions
-
-Returns the boundary conditions associated with this `model`.
-"""
-get_boundary_conditions(model::AbstractModel) = model.boundary_conditions
-
-"""
     get_initializer(model::AbstractModel)::AbstractInitializer
 
 Returns the initializer associated with this `model`.
 """
 get_initializer(model::AbstractModel) = model.initializer
+
+"""
+    get_closures(model::AbstractModel)
+
+Return all closure relations defined for the given `model`.
+"""
+get_closures(model::AbstractModel) = ()
+
+"""
+    closure!(state, model::AbstractModel)
+
+Apply each closure relation defined for the given `model`.
+"""
+closure!(state, model::AbstractModel) = nothing
+
+"""
+    invclosure!(state, model::AbstractModel)
+
+Apply the inverse of each closure relation defined for the given `model`.
+"""
+invclosure!(state, model::AbstractModel) = nothing
 
 # Abstract subtypes
 
@@ -128,12 +142,9 @@ function Adapt.adapt_structure(to, model::AbstractModel)
     return setproperties(model, map(prop -> Adapt.adapt_structure(to, prop), getproperties(model)))
 end
 
-function Base.show(io::IO, mime::MIME"text/plain", model::AbstractModel{NF}) where {NF}
-    println(io, "$(nameof(typeof(model))){$NF} with $(nameof(typeof(get_grid(model)))) on $(architecture(get_grid(model)))")
+function Base.show(io::IO, model::AbstractModel{NF}) where {NF}
+    println(io, "$(nameof(typeof(model))){$NF} on $(architecture(get_grid(model)))")
     for name in propertynames(model)
-        print(io, "  $name:  ")
-        # Indent property value by two spaces
-        show(IOContext(io, :indent => 2), mime, getproperty(model, name))
-        println(io)
+        print(io, "├── $name:  $(summary(getproperty(model, name)))\n")
     end
 end

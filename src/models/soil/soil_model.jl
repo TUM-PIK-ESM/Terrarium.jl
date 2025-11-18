@@ -14,7 +14,6 @@ $(TYPEDFIELDS)
     SoilHydrology<:AbstractSoilHydrology,
     Biogeochemistry<:AbstractSoilBiogeochemistry,
     Constants<:PhysicalConstants{NF},
-    BoundaryConditions<:AbstractBoundaryConditions,
     Initializer<:AbstractInitializer,
 } <: AbstractSoilModel{NF, GridType}
     "Spatial grid type"
@@ -35,9 +34,6 @@ $(TYPEDFIELDS)
     "Physical constants"
     constants::Constants = PhysicalConstants(eltype(grid))
 
-    "Boundary conditions"
-    boundary_conditions::BoundaryConditions = SoilBoundaryConditions(eltype(grid), energy, hydrology)
-
     "State variable initializer"
     initializer::Initializer = SoilInitializer()
 end
@@ -57,17 +53,15 @@ get_constants(model::SoilModel) = model.constants
 # Model interface methods
 
 function variables(model::SoilModel)
-    bc_vars = variables(model.boundary_conditions)
     strat_vars = variables(model.strat)
     hydrology_vars = variables(model.hydrology)
     energy_vars = variables(model.energy)
     bgc_vars = variables(model.biogeochem)
     # combine all variables into one tuple
-    return tuplejoin(bc_vars, strat_vars, hydrology_vars, energy_vars, bgc_vars)
+    return tuplejoin(strat_vars, hydrology_vars, energy_vars, bgc_vars)
 end
 
 function compute_auxiliary!(state, model::SoilModel)
-    compute_auxiliary!(state, model, model.boundary_conditions)
     compute_auxiliary!(state, model, model.strat)
     compute_auxiliary!(state, model, model.hydrology)
     compute_auxiliary!(state, model, model.energy)
@@ -76,9 +70,6 @@ function compute_auxiliary!(state, model::SoilModel)
 end
 
 function compute_tendencies!(state, model::SoilModel)
-    # Fill halo regions and compute boundary tendencies
-    fill_halo_regions!(state)
-    compute_tendencies!(state, model, model.boundary_conditions)
     # Default implementation forwards the method dispatch to processes in the order:
     # Stratigraphy -> Hydrology -> Energy -> Biogeochemistry
     compute_tendencies!(state, model, model.strat)
@@ -86,6 +77,16 @@ function compute_tendencies!(state, model::SoilModel)
     compute_tendencies!(state, model, model.energy)
     compute_tendencies!(state, model, model.biogeochem)
     return nothing
+end
+
+function closure!(state, model::SoilModel)
+    closure!(state, model, get_closure(model.hydrology))
+    closure!(state, model, get_closure(model.energy))
+end
+
+function invclosure!(state, model::SoilModel)
+    invclosure!(state, model, get_closure(model.hydrology))
+    invclosure!(state, model, get_closure(model.energy))
 end
 
 # Initialization

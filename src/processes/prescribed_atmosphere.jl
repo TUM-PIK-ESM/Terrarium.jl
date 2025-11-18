@@ -1,3 +1,16 @@
+abstract type AbstractHumidity end
+
+abstract type AbstractPrecipitation end
+
+abstract type AbstractIncomingRadiation end
+
+abstract type AbstractAtmosphere{
+    PR<:AbstractPrecipitation,
+    IR<:AbstractIncomingRadiation,
+    HM<:AbstractHumidity
+} <: AbstractProcess
+end
+
 """
 Generic type representing the concentration of a particular tracer gas in the atmosphere.
 """
@@ -91,25 +104,25 @@ variables(atmos::PrescribedAtmosphere) = (
 @inline compute_tendencies!(state, model, atmos::PrescribedAtmosphere) = nothing
 
 """
-    air_temperature(idx, state, ::PrescribedAtmosphere)
+    air_temperature(i, j, state, ::PrescribedAtmosphere)
 
 Retrieve or compute the air temperature at the current time step.
 """
-@inline air_temperature(idx, state, ::PrescribedAtmosphere) = state.air_temperature[idx]
+@inline air_temperature(i, j, state, ::PrescribedAtmosphere) = state.air_temperature[i, j]
 
 """
-    air_pressure(idx, state, ::PrescribedAtmosphere)
+    air_pressure(i, j, state, ::PrescribedAtmosphere)
 
 Retrieve or compute the air pressure at the current time step.
 """
-@inline air_pressure(idx, state, ::PrescribedAtmosphere) = state.air_pressure[idx]
+@inline air_pressure(i, j, state, ::PrescribedAtmosphere) = state.air_pressure[i, j]
 
 """
-    windspeed(idx, state, ::PrescribedAtmosphere)
+    windspeed(i, j, state, ::PrescribedAtmosphere)
 
 Retrieve or compute the windspeed at the current time step.
 """
-@inline windspeed(idx, state, ::PrescribedAtmosphere) = state.windspeed[idx]
+@inline windspeed(i, j, state, ::PrescribedAtmosphere) = state.windspeed[i, j]
 
 struct SpecificHumidity <: AbstractHumidity end
 
@@ -118,11 +131,11 @@ variables(::SpecificHumidity) = (
 )
 
 """
-    specific_humidity(idx, state, ::PrescribedAtmosphere{PR, IR, <:SpecificHumidity})
+    specific_humidity(i, j, state, ::PrescribedAtmosphere{PR, IR, <:SpecificHumidity})
 
 Retrieve or compute the specific_humidity at the current time step.
 """
-@inline specific_humidity(idx, state, ::AbstractAtmosphere{PR, IR, <:SpecificHumidity}) where {PR, IR} = state.specific_humidity[idx]
+@inline specific_humidity(i, j, state, ::AbstractAtmosphere{PR, IR, <:SpecificHumidity}) where {PR, IR} = state.specific_humidity[i, j]
 
 
 struct TwoPhasePrecipitation <: AbstractPrecipitation end
@@ -133,18 +146,18 @@ variables(::TwoPhasePrecipitation) = (
 )
 
 """
-    rainfall(idx, state, ::AbstractAtmosphere{<:TwoPhasePrecipitation})
+    rainfall(i, j, state, ::AbstractAtmosphere{<:TwoPhasePrecipitation})
 
 Retrieve or compute the liquid precipitation (rainfall) at the current time step.
 """
-@inline rainfall(idx, state, ::AbstractAtmosphere{<:TwoPhasePrecipitation}) = state.rainfall[idx]
+@inline rainfall(i, j, state, ::AbstractAtmosphere{<:TwoPhasePrecipitation}) = state.rainfall[i, j]
 
 """
-    snowfall(idx, state, ::AbstractAtmosphere{<:TwoPhasePrecipitation})
+    snowfall(i, j, state, ::AbstractAtmosphere{<:TwoPhasePrecipitation})
 
 Retrieve or compute the frozen precipitation (snowfall) at the current time step.
 """
-@inline snowfall(idx, state, ::AbstractAtmosphere{<:TwoPhasePrecipitation}) = state.snowfall[idx]
+@inline snowfall(i, j, state, ::AbstractAtmosphere{<:TwoPhasePrecipitation}) = state.snowfall[i, j]
 
 struct LongShortWaveRadiation <: AbstractIncomingRadiation end
 
@@ -154,15 +167,15 @@ variables(::LongShortWaveRadiation) = (
 )
 
 """
-    shortwave_in(idx, state, ::AbstractAtmosphere{PR, <:LongShortWaveRadiation})
+    shortwave_in(i, j, state, ::AbstractAtmosphere{PR, <:LongShortWaveRadiation})
 
 Retrieve or compute the incoming/downwelling shortwave radiation at the current time step.
 """
-shortwave_in(idx, state, ::AbstractAtmosphere{PR, <:LongShortWaveRadiation}) where {PR} = state.surface_shortwave_down[idx...]
+shortwave_in(i, j, state, ::AbstractAtmosphere{PR, <:LongShortWaveRadiation}) where {PR} = state.surface_shortwave_down[i, j]
 
 """
-    longwave_in(idx, state, ::AbstractAtmosphere{PR, <:LongShortWaveRadiation})
+    longwave_in(i, j, state, ::AbstractAtmosphere{PR, <:LongShortWaveRadiation})
 
 Retrieve or compute the incoming/downwelling longwave radiation at the current time step.
 """
-longwave_in(idx, state, ::AbstractAtmosphere{PR, <:LongShortWaveRadiation}) where {PR} = state.surface_longwave_down[idx...]
+longwave_in(i, j, state, ::AbstractAtmosphere{PR, <:LongShortWaveRadiation}) where {PR} = state.surface_longwave_down[i, j]

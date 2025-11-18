@@ -52,13 +52,15 @@ function Terrarium.InputSource(grid::ColumnRingGrid{NF}, rasters::AbstractRaster
     return RasterInputSource(vardims, idxmap, reftime, (; named_rasters...))
 end
 
-function Terrarium.update_inputs!(inputs::InputFields, source::RasterInputSource, clock::Clock)
+function Terrarium.update_inputs!(fields, source::RasterInputSource, clock::Clock)
     for name in keys(source.rasters)
-        field = Terrarium.get_input_field(inputs, name, source.dims)
-        raster = source.rasters[name]
-        timedim = dims(raster, Ti)
-        current_time = timestamp(source.reftime, clock.time)
-        update_from_raster!(field, raster, source.idxmap, timedim, current_time)
+        if hasproperty(fields, name)
+            field = getproperty(fields, name)
+            raster = source.rasters[name]
+            timedim = dims(raster, Ti)
+            current_time = timestamp(source.reftime, clock.time)
+            update_from_raster!(field, raster, source.idxmap, timedim, current_time)
+        end
     end
 end
 

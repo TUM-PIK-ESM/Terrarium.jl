@@ -29,20 +29,13 @@ const RingGridOrField = Union{RingGrids.AbstractGrid, RingGrids.AbstractField}
 on_architecture(::GPU, obj::RingGridOrField) = RingGrids.Architectures.on_architecture(RingGrids.Architectures.GPU(), obj)
 on_architecture(::CPU, obj::RingGridOrField) = RingGrids.Architectures.on_architecture(RingGrids.Architectures.CPU(), obj)
 
-# Field utilities
-
-# A bit of type piracy to allow `Field`s to be indexed with tuples
-# TODO: Consider proposing this as a change in Oceananigans
-@inline @propagate_inbounds Base.getindex(field::Field, idx::NTuple{2, Integer}) = field[idx...]
-@inline @propagate_inbounds Base.getindex(field::Field, idx::NTuple{3, Integer}) = field[idx...]
-
 # Field construction
 
 """
     Field(
         grid::AbstractLandGrid,
         dims::VarDims,
-        boundary_conditions=nothing,
+        boundary_conditions = nothing,
         args...;
         kwargs...
     )
@@ -54,16 +47,20 @@ is determined by `VarDims` defined on `var`.
 function Field(
     grid::AbstractLandGrid,
     dims::VarDims,
-    boundary_conditions=nothing,
+    boundary_conditions = nothing,
     args...;
     kwargs...
 )
-    # infer the location of the Field on the FVM grid and specify its type
+    # infer the location of the Field on the Oceananigans grid from `dims`
     loc = location(dims)
     FT = Field{map(typeof, loc)...}
     # Specify BCs if defined
-    field = if !isnothing(boundary_conditions)
+    field = if isa(boundary_conditions, FieldBoundaryConditions)
         FT(get_field_grid(grid), args...; boundary_conditions, kwargs...)
+    elseif isa(boundary_conditions, NamedTuple)
+        # assume that named tuple corresponds to FieldBoundaryConditions positions
+        field_bcs = FieldBoundaryConditions(get_field_grid(grid), (Center(), Center(), nothing); boundary_conditions...)
+        FT(get_field_grid(grid), args...; boundary_conditions = field_bcs, kwargs...)
     else
         FT(get_field_grid(grid), args...; kwargs...)
     end

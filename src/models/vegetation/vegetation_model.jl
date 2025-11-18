@@ -18,7 +18,6 @@ $TYPEDFIELDS
     Phenology<:AbstractPhenology,
     GridType<:AbstractLandGrid{NF},
     Constants<:PhysicalConstants{NF},
-    BoundaryConditions<:AbstractBoundaryConditions,
     Initializer<:AbstractInitializer,
 } <: AbstractVegetationModel{NF, GridType}
     "Spatial grid type"
@@ -44,9 +43,6 @@ $TYPEDFIELDS
 
     "Physical constants"
     constants::Constants = PhysicalConstants{eltype(grid)}()
-
-    "Boundary conditions"
-    boundary_conditions::BoundaryConditions = DefaultBoundaryConditions()
 
     "State variable initializer"
     initializer::Initializer = DefaultInitializer()
@@ -99,9 +95,6 @@ function compute_auxiliary!(state, model::VegetationModel)
 end
 
 function compute_tendencies!(state, model::VegetationModel)
-    # Fill halo regions for fields with boundary conditions
-    fill_halo_regions!(state)
-
     # Needs NPP(t), C_veg(t-1), LAI_b(t-1) and computes tendency for C_veg
     compute_tendencies!(state, model, model.carbon_dynamics)
 

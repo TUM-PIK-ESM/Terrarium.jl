@@ -36,9 +36,6 @@ end
     initializer = FieldInitializers(
         temperature = (x,z) -> T_sol(-z, 0.0)
     )
-    # periodic upper boundary
-    upperbc(z, t) = T₀ + A*sin(2π*t/P)
-    boundary_conditions = SoilBoundaryConditions(eltype(grid), top=(temperature=ValueBoundaryCondition(upperbc),))
     # set carbon content to zero so the soil has only a mineral constituent
     biogeochem = ConstantSoilCarbonDensity(ρ_soc=0.0)
     # set porosity to zero to remove influence of pore space;
@@ -52,20 +49,23 @@ end
     )
     hydrology = SoilHydrology(eltype(grid); hydraulic_properties)
     energy = SoilEnergyBalance(eltype(grid); thermal_properties)
-    model = SoilModel(; grid, energy, hydrology, biogeochem, initializer, boundary_conditions)
-    sim = initialize(model)
+    model = SoilModel(grid; energy, hydrology, biogeochem, initializer)
+    # periodic upper boundary temperature
+    upperbc(z, t) = T₀ + A*sin(2π*t/P)
+    bcs = (temperature = (top = ValueBoundaryCondition(upperbc),),)
+    integrator = initialize(model, ForwardEuler(), boundary_conditions = bcs)
     # TODO: Rewrite this part once we have a proper output handling system
-    Ts_buf = [deepcopy(sim.state.temperature)]
+    Ts_buf = [deepcopy(integrator.state.temperature)]
     ts = [0.0]
     Δt = 60.0
     # run for one hour, saving every time step
-    while current_time(sim) < 2*P
-        timestep!(sim, Δt)
-        push!(Ts_buf, deepcopy(sim.state.temperature))
-        push!(ts, current_time(sim))
+    while current_time(integrator) < 2*P
+        timestep!(integrator, Δt)
+        push!(Ts_buf, deepcopy(integrator.state.temperature))
+        push!(ts, current_time(integrator))
     end
 
-    z_centers = znodes(sim.state.temperature)
+    z_centers = znodes(integrator.state.temperature)
     Ts = reduce(hcat, Ts_buf)[1,:,:]
     Ts_target = T_sol.(reshape(-z_centers, 1, :), reshape(ts, :, 1))
     relative_error = abs.((Ts .- Ts_target) ./ Ts_target)
@@ -81,32 +81,32 @@ end
     grid = ColumnGrid(CPU(), Float64, ExponentialSpacing(Δz_min=0.01, Δz_max=100.0, N=100))
     # temperature initial condition
     initializer = FieldInitializers(temperature=T₀)
-    # constant upper boundary temperature set to T₁
-    boundary_conditions = SoilBoundaryConditions(eltype(grid), top=(temperature=ValueBoundaryCondition(T₁),))
     # set carbon content to zero so the soil has only a mineral constituent
     biogeochem = ConstantSoilCarbonDensity(ρ_soc=0.0)
     # set porosity to zero to remove influence of pore space;
     # this is just a hack to configure the model to simulate heat conduction in a fully solid medium
     hydraulic_properties = ConstantHydraulics(Float64; porosity=0.0)
     hydrology = SoilHydrology(eltype(grid); hydraulic_properties)
-    model = SoilModel(; grid, hydrology, biogeochem, initializer, boundary_conditions)
-    sim = initialize(model)
+    model = SoilModel(grid; hydrology, biogeochem, initializer)
+    # constant upper boundary temperature set to T₁
+    bcs = (temperature = (top = ValueBoundaryCondition(T₁),),)
+    integrator = initialize(model, ForwardEuler(), boundary_conditions = bcs)
     # TODO: Rewrite this part once we have a proper output handling system
-    Ts_buf = [deepcopy(sim.state.temperature)]
+    Ts_buf = [deepcopy(integrator.state.temperature)]
     ts = [0.0]
     Δt = 10.0
     # run for 24 hours, saving every time step
-    while current_time(sim) < 24*3600
-        timestep!(sim, Δt)
-        push!(Ts_buf, deepcopy(sim.state.temperature))
-        push!(ts, current_time(sim))
+    while current_time(integrator) < 24*3600
+        timestep!(integrator, Δt)
+        push!(Ts_buf, deepcopy(integrator.state.temperature))
+        push!(ts, current_time(integrator))
     end
 
     soil_thermal_props = model.energy.thermal_properties
     k = soil_thermal_props.cond.mineral
     c = soil_thermal_props.heatcap.mineral
     α = k / c
-    z_centers = znodes(sim.state.temperature)
+    z_centers = znodes(integrator.state.temperature)
     ΔT_sol = heat_conduction_linear_step_ub(T₁ - T₀, α)
     Ts = reduce(hcat, Ts_buf)[1,:,:]
     Ts_target = T₀ .+ ΔT_sol.(reshape(-z_centers, 1, :), reshape(ts, :, 1))

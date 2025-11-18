@@ -19,8 +19,8 @@ function build_soil_energy_model(arch, ::Type{NF}) where {NF}
     return model
 end
 
-function mean_soil_temperature_step!(state, model, timestepper, Δt)
-    timestep!(state, model, timestepper, Δt)
+function mean_soil_temperature_step!(state, timestepper, model, inputs, Δt)
+    timestep!(state, timestepper, model, inputs, Δt)
     return mean(interior(state.temperature))
     # TODO: Figure out why this is segfaulting in Enzyme
     # Answer: Average operator is not type inferrable, see:
@@ -71,9 +71,12 @@ end
 
 @testset "Soil energy model: timestep!" begin
     model = build_soil_energy_model(CPU(), Float64)
-    model_state = initialize(model)
-    state = model_state.state
+    integrator = initialize(model, ForwardEuler())
+    inputs = integrator.inputs
+    state = integrator.state
     dstate = make_zero(state)
-    @time Enzyme.autodiff(set_runtime_activity(Reverse), mean_soil_temperature_step!, Active, Duplicated(state, dstate), Const(model), Const(model_state.timestepper), Const(model_state.timestepper.Δt))
+    stepper = integrator.timestepper
+    dstepper = make_zero(stepper)
+    @time Enzyme.autodiff(set_runtime_activity(Reverse), mean_soil_temperature_step!, Active, Duplicated(state, dstate), Duplicated(stepper, dstepper), Const(model), Const(integrator.inputs), Const(integrator.timestepper.Δt))
     @test all(isfinite.(dstate.temperature))
 end

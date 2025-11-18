@@ -1,7 +1,7 @@
 """
 Base type for implementations of soil water flow dynamics.
 """
-abstract type AbstractVerticalFlow <: AbstractOperator end
+abstract type AbstractVerticalFlow end
 
 """
 Represents a hydrology scheme where soil water is immobile.
@@ -64,6 +64,8 @@ the given `SoilHydrology` configuration.
 """
 get_swrc(hydrology::SoilHydrology) = hydrology.hydraulic_properties.cond_unsat.swrc
 
+get_closure(::SoilHydrology{NF, NoFlow}) where {NF} = nothing
+
 """
 State variables for `SoilHydrology` processes.
 """
@@ -74,14 +76,14 @@ variables(hydrology::SoilHydrology{NF}) where {NF} = (
 )
 
 """
-    porosity(idx, state, hydrology::SoilHydrology, strat::AbstractStratigraphy, bgc::AbstractSoilBiogeochemistry)
+    porosity(i, j, k, state, hydrology::SoilHydrology, strat::AbstractStratigraphy, bgc::AbstractSoilBiogeochemistry)
 
-Return the porosity of the soil volume at `idx` given the current state, hydrology, stratigraphy, and biogeochemistry configurations.
+Return the porosity of the soil volume at the given indices based on the current state, hydrology, stratigraphy, and biogeochemistry configurations.
 """
-@inline function porosity(idx, state, hydrology::SoilHydrology, strat::AbstractStratigraphy, bgc::AbstractSoilBiogeochemistry)
-    org = organic_fraction(idx, state, bgc)
-    texture = soil_texture(idx, state, strat)
-    return (1 - org)*mineral_porosity(hydrology.hydraulic_properties, texture) + org*organic_porosity(idx, state, bgc)
+@inline function porosity(i, j, k, state, hydrology::SoilHydrology, strat::AbstractStratigraphy, bgc::AbstractSoilBiogeochemistry)
+    org = organic_fraction(i, j, k, state, bgc)
+    texture = soil_texture(i, j, k, state, strat)
+    return (1 - org)*mineral_porosity(hydrology.hydraulic_properties, texture) + org*organic_porosity(i, j, k, state, bgc)
 end
 
 # Immobile soil water (NoFlow)

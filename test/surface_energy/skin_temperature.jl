@@ -6,8 +6,7 @@ using Test
     skin_temperature = PrescribedSkinTemperature()
     surface_energy_balance = SurfaceEnergyBalance(Float64; skin_temperature)
     model = SurfaceEnergyModel(grid, surface_energy_balance)
-    model_state = initialize(model)
-    state = model_state.state
+    state = initialize(model)
     @test hasproperty(state.inputs, :skin_temperature)
     set!(state.skin_temperature, 1.0)
     compute_auxiliary!(state, model, surface_energy_balance)
@@ -20,8 +19,7 @@ end
     skin_temperature = ImplicitSkinTemperature()
     surface_energy_balance = SurfaceEnergyBalance(Float64; skin_temperature)
     model = SurfaceEnergyModel(grid, surface_energy_balance)
-    model_state = initialize(model)
-    state = model_state.state
+    state = initialize(model)
     @test !hasproperty(state.inputs, :skin_temperature)
     @test hasproperty(state.inputs, :ground_temperature)
     set!(state.surface_shortwave_down, 200.0)

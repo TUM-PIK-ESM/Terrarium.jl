@@ -11,6 +11,13 @@ Base type for time steppers.
 abstract type AbstractTimeStepper{NF} end
 
 """
+    is_initialized(timestepper::AbstractTimeStepper)
+
+Return `true` if the timestepper is initialized, `false` otherwise.
+"""
+function is_initialized end
+
+"""
     default_dt(timestepper::AbstractTimeStepper)
 
 Get the current timestep size for the time stepper.
@@ -25,18 +32,18 @@ Return `true` if the given time stepper is adaptive, false otherwise.
 function is_adaptive end
 
 """
-    do_timestep!(state, model::AbstractModel, timestepper::AbstractTimeStepper, Δt)
+    timestep!(state, timestepper::AbstractTimeStepper, model::AbstractModel, inputs::InputSources, Δt)
 
-Advance prognostic variabels by one step based on the current state, or by `Δt` units of time.
+Advance prognostic variables by one time step based on the current state, or by `Δt` units of time.
 """
-function do_timestep! end
+function timestep! end
 
 """
-    initialize(::AbstractTimeStepper, prognostic_fields, closure_fields, tendencies) where {NF}
+    initialize(::AbstractTimeStepper, model, state) where {NF}
 
 Initialize and return the time stepping state cache for the given time stepper.
 """
-initialize(::AbstractTimeStepper, prognostic_fields, closure_fields, tendencies) = nothing
+initialize(timestepper::AbstractTimeStepper, model, state) = timestepper
 
 """
     $SIGNATURES
@@ -48,16 +55,10 @@ additional dispatches of `explicit_step_kernel!(field, tendency, ::AbstractLandG
 can be defined to implement more specialized time-stepping schemes.
 """
 function explicit_step!(state, grid::AbstractLandGrid, timestepper::AbstractTimeStepper, Δt)
+    @assert is_initialized(timestepper)
     fastiterate(keys(state.prognostic)) do name
-        # update prognostic or closure state variable
-        if haskey(state.closures, name)
-            closure = state.closures[name]
-            cname = varname(closurevar(closure))
-            explicit_step!(state.auxiliary[cname], state.tendencies[cname], grid, timestepper, Δt)
-        else
-            explicit_step!(state.prognostic[name], state.tendencies[name], grid, timestepper, Δt)
-        end
-
+        # update prognostic state variable
+        explicit_step!(state.prognostic[name], state.tendencies[name], grid, timestepper, Δt)
     end
     fastiterate(state.namespaces) do ns
         explicit_step!(ns, grid, timestepper, Δt)

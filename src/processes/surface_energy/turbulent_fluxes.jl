@@ -15,9 +15,9 @@ variables(::PrescribedTurbulentFluxes) = (
     input(:latent_heat_flux, XY(), units=u"W/m^2", desc="Latent heat flux at the surface [W m⁻²]")
 )
 
-sensible_heat_flux(idx, state, ::PrescribedTurbulentFluxes) = state.sensible_heat_flux[idx]
+sensible_heat_flux(i, j, state, ::PrescribedTurbulentFluxes) = state.sensible_heat_flux[i, j]
 
-latent_heat_flux(idx, state, ::PrescribedTurbulentFluxes) = state.latent_heat_flux[idx]
+latent_heat_flux(i, j, state, ::PrescribedTurbulentFluxes) = state.latent_heat_flux[i, j]
 
 """
     $TYPEDEF
@@ -74,17 +74,16 @@ end
     constants::PhysicalConstants
 )
     i, j = @index(Global, NTuple)
-    idx = (i, j)
     # compute sensible heat flux
-    state.sensible_heat_flux[i, j, 1] = sensible_heat_flux(idx, state, tur, skinT, atmos, constants)
+    state.sensible_heat_flux[i, j, 1] = sensible_heat_flux(i, j, state, tur, skinT, atmos, constants)
     # compute latent heat flux
-    state.latent_heat_flux[i, j, 1] = latent_heat_flux(idx, state, tur, skinT, atmos, constants)
+    state.latent_heat_flux[i, j, 1] = latent_heat_flux(i, j, state, tur, skinT, atmos, constants)
 end
 
 # Kernel functions
 
 function sensible_heat_flux(
-    idx, state,
+    i, j, state,
     tur::DiagnosedTurbulentFluxes,
     skinT::AbstractSkinTemperature,
     atmos::AbstractAtmosphere,
@@ -92,9 +91,9 @@ function sensible_heat_flux(
 )
     let ρₐ = constants.ρₐ, # density of air
         cₐ = constants.cₐ, # specific heat capacity of air
-        rₐ = aerodynamic_resistance(idx, state, tur.resistance), # aerodynamic resistance
-        Ts = skin_temperature(idx, state, skinT), # skin temperature
-        Tair = air_temperature(idx, state, atmos); # air temperature
+        rₐ = aerodynamic_resistance(i, j, state, tur.resistance), # aerodynamic resistance
+        Ts = skin_temperature(i, j, state, skinT), # skin temperature
+        Tair = air_temperature(i, j, state, atmos); # air temperature
         # Calculate sensible heat flux (positive upwards)
         Hₛ = -ρₐ * cₐ / rₐ * (Tair - Ts)
         return Hₛ
@@ -102,7 +101,7 @@ function sensible_heat_flux(
 end
 
 function latent_heat_flux(
-    idx, state,
+    i, j, state,
     tur::DiagnosedTurbulentFluxes,
     skinT::AbstractSkinTemperature,
     atmos::AbstractAtmosphere,
@@ -110,10 +109,10 @@ function latent_heat_flux(
 )
     let L = constants.Lsg, # specific latent heat of vaporization of water
         ρₐ = constants.ρₐ, # density of air
-        rₐ = aerodynamic_resistance(idx, state, tur.resistance), # aerodynamic resistance
-        β = soil_moisture_limiting_factor(idx, state, tur.soil_moisture_limiting_factor),
-        q_sat = surface_humidity_at_saturation(idx, state, skinT, atmos, constants), # near-surface specific humidity
-        q_air = specific_humidity(idx, state, atmos); # specific humidity of the air
+        rₐ = aerodynamic_resistance(i, j, state, tur.resistance), # aerodynamic resistance
+        β = soil_moisture_limiting_factor(i, j, state, tur.soil_moisture_limiting_factor),
+        q_sat = surface_humidity_at_saturation(i, j, state, skinT, atmos, constants), # near-surface specific humidity
+        q_air = specific_humidity(i, j, state, atmos); # specific humidity of the air
         # Calculate latent heat flux (positive upwards)
         Hₗ = -L * ρₐ * β / rₐ * (q_air - q_sat)
         return Hₗ
@@ -125,14 +124,14 @@ Near-surface specific humidity at saturation, ``q_{\\text{sat}}``, determined ba
 the skin temperature and atmospheric pressure.
 """
 function surface_humidity_at_saturation(
-    idx, state,
+    i, j, state,
     skinT::AbstractSkinTemperature,
     atmos::AbstractAtmosphere,
     constants::PhysicalConstants
 )
-    let T = skin_temperature(idx, state, skinT),
+    let T = skin_temperature(i, j, state, skinT),
         γ = constants.γ,
-        p = air_pressure(idx, state, atmos),
+        p = air_pressure(i, j, state, atmos),
         e = saturation_vapor_pressure(T);
         # convert saturation vapor pressure to specific humidity
         q_sat = γ * e / p
@@ -152,8 +151,8 @@ end
 
 ConstantAerodynamicResistance(::Type{NF}; kwargs...) where {NF} = ConstantAerodynamicResistance{NF}(; kwargs...)
 
-aerodynamic_resistance(idx, state, res::ConstantAerodynamicResistance) = res.rₐ
+@inline aerodynamic_resistance(i, j, state, res::ConstantAerodynamicResistance) = res.rₐ
 
 struct UnlimitedSoilMoisture <: AbstractSoilMoistureLimitingFactor end
 
-soil_moisture_limiting_factor(idx, state, ::UnlimitedSoilMoisture) = 1
+@inline soil_moisture_limiting_factor(i, j, state, ::UnlimitedSoilMoisture) = 1

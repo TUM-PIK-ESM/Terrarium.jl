@@ -3,7 +3,7 @@
 
 Base type for input data sources. Implementations of `InputSource` are free to load data
 from any arbitrary backend but are required to implement the
-`update_inputs!(::InputFields, ::InputSource, ::Clock)` method. Implementations should
+`update_inputs!(fields, ::InputSource, ::Clock)` method. Implementations should
 additionally provide a constructor as a dispatch of `InputSource`.
 
 The type argument `NF` corresponds to the numeric type of the input data.
@@ -13,15 +13,39 @@ abstract type InputSource{NF} end
 """
     $SIGNATURES
 
+Returns a tuple of `Symbol`s corresponding to variable names supported by this `InputSource`.
+"""
+variables(::InputSource) = ()
+
+"""
+    $SIGNATURES
+
 Updates the values of input variables stored in `fields` from the given input `source`.
 Default implementation simply returns `nothing`.
 """
-update_inputs!(::InputFields, ::InputSource, ::Clock) = nothing
+update_inputs!(fields, ::InputSource, ::Clock) = nothing
 
 """
 Type alias for an `AbstractField` with any X, Y, Z location or grid.
 """
 const AnyField{NF} = AbstractField{LX, LY, LZ, G, NF} where {LX, LY, LZ, G}
+
+"""
+Container type for wrapping multiple `InputSource`s.
+"""
+struct InputSources{Sources<:Tuple{Vararg{InputSource}}}
+    sources::Sources
+end
+
+InputSources(sources::InputSource...) = InputSources(Tuple(sources))
+
+variables(sources::InputSources) = tuplejoin(map(variables, sources.sources)...)
+
+function update_inputs!(fields, sources::InputSources, ::Clock)
+    for source in sources.sources
+        update_inputs!(fields, source, clock)
+    end
+end
 
 """
     $TYPEDEF
@@ -41,10 +65,14 @@ function InputSource(named_fields::Pair{Symbol, <:Field}...)
     return FieldInputSource(dims, (; named_fields...))
 end
 
-function update_inputs!(inputs::InputFields, source::FieldInputSource, ::Clock)
+variables(source::FieldInputSource{NF, VD, names}) where {NF, VD, names} = map(name -> input(name, source.dims), names)
+
+function update_inputs!(fields, source::FieldInputSource, ::Clock)
     for name in keys(source.fields)
-        field = get_input_field(inputs, name, source.dims)
-        set!(field, source.fields[name])
+        if hasproperty(fields, name)
+            field = getproperty(fields, name)
+            set!(field, source.fields[name])
+        end
     end
 end
 
@@ -71,15 +99,15 @@ function InputSource(named_fts::Pair{Symbol, <:FieldTimeSeries}...)
     return FieldTimeSeriesInputSource(dims, (; named_fts...))
 end
 
-function update_inputs!(inputs::InputFields, source::FieldTimeSeriesInputSource, clock::Clock)
-    fields = get_input_fields(inputs, source.dims)
+variables(source::FieldTimeSeriesInputSource{NF, VD, names}) where {NF, VD, names} = map(name -> input(name, source.dims), names)
+
+function update_inputs!(fields, source::FieldTimeSeriesInputSource, clock::Clock)
     for name in keys(source.fts)
-        field_t = get!(fields, name) do
-            # lazily instantiate input field if not yet defined
-            Field(inputs.grid, source.dims)
+        if hasproperty(fields, name)
+            field_t = getproperty(fields, name)
+            fts = source.fts[name]
+            set!(field_t, fts[Time(clock.time)])
         end
-        fts = source.fts[name]
-        set!(field_t, fts[Time(clock.time)])
     end
 end
 

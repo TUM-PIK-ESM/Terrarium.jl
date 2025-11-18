@@ -3,22 +3,6 @@ using Terrarium: FieldInputSource, FieldTimeSeriesInputSource
 using Test
 using Unitful
 
-@testset "InputFields" begin
-    grid = ColumnGrid(ExponentialSpacing())
-    inputs = InputFields(grid)
-    @test isempty(get_input_fields(inputs, XY()))
-    @test isempty(get_input_fields(inputs, XYZ()))
-    test2D_input_field = get_input_field(inputs, :test2D, XY())
-    # check that new input field was allocated
-    @test haskey(get_input_fields(inputs, XY()), :test2D)
-    # check that the 3D (XYZ) inputs are still empty
-    @test isempty(get_input_fields(inputs, XYZ()))
-    test3D_input_field = get_input_field(inputs, :test3D, XYZ())
-    @test haskey(get_input_fields(inputs, XYZ()), :test3D)
-    @test get_input_field(inputs, InputVariable(:test2D, XY(), NoUnits, "")) === test2D_input_field
-    @test get_input_field(inputs, InputVariable(:test3D, XYZ(), NoUnits, "")) === test3D_input_field
-end
-
 @testset "Input sources" begin
     # Field input source
     grid = ColumnGrid(ExponentialSpacing())
@@ -38,11 +22,13 @@ end
     @test_throws AssertionError InputSource(; X1, X2, X3)
     @test_throws AssertionError InputSource(; X1, X2, Y=zeros(size(X1)))
     ## check update_inputs!
-    inputs = InputFields(grid)
+    set!(X1, 1.0)
+    set!(X2, 2.0)
+    fields = (X1 = Field(grid, XY()), X2 = Field(grid, XY()))
     clock = Clock(time=0)
-    update_inputs!(inputs, field_input, clock)
-    @test get_input_field(inputs, :X1, XY()) === X1
-    @test get_input_field(inputs, :X2, XY()) === X2
+    update_inputs!(fields, field_input, clock)
+    @test all(fields.X1 .== X1)
+    @test all(fields.X2 .== X2)
 
     # FieldTimeSeries input source
     grid = ColumnGrid(ExponentialSpacing())
@@ -65,27 +51,14 @@ end
     # populate S1 with random data
     S1.data .= randn(size(S1))
     ## check update_inputs!
-    inputs = InputFields(grid)
+    fields = (S1 = Field(grid, XY()), S2 = Field(grid, XY()))
     clock = Clock(time=0)
-    update_inputs!(inputs, fts_input, clock)
-    @test all(get_input_field(inputs, :S1, XY()) .== S1[1])
-    @test get_input_field(inputs, :S2, XY()) == S2[1]
+    update_inputs!(fields, fts_input, clock)
+    @test all(fields.S1 .== S1[1])
+    @test all(fields.S2 .== S2[1])
     # advance clock and check that inputs are updated
     Terrarium.tick_time!(clock, 1.0)
-    update_inputs!(inputs, fts_input, clock)
-    @test all(get_input_field(inputs, :S1, XY()) .== S1[2])
-    @test get_input_field(inputs, :S2, XY()) == S2[2]
-end
-
-@testset "InputProvider" begin
-    # Field input source
-    grid = ColumnGrid(ExponentialSpacing())
-    X1 = Field(grid, XY())
-    set!(X1, 1)
-    field_input = FieldInputSource(; X1)
-    provider = InputProvider(grid, field_input)
-    clock = Clock(time=0)
-    update_inputs!(provider, clock)
-    @test get_input_field(provider.fields, :X1, XY()) === X1
-    @test all(get_input_field(provider.fields, :X1, XY()) .== 1)
+    update_inputs!(fields, fts_input, clock)
+    @test all(fields.S1 .== S1[2])
+    @test all(fields.S2 .== S2[2])
 end

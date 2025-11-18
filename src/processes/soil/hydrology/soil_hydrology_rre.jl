@@ -6,20 +6,20 @@ flow in porous media.
 """
 @kwdef struct RichardsEq{PS} <: AbstractVerticalFlow
     "Closure relation for mapping between water potential (hydraulic head) and saturation"
-    saturation_closure::PS = PressureSaturationClosure()
+    closure::PS = SaturationPressureClosure()
 end
 
-get_closure(op::RichardsEq) = op.saturation_closure
+get_closure(hydrology::SoilHydrology{NF, <:RichardsEq}) where {NF} = hydrology.vertflow.closure
 
 variables(rre::RichardsEq) = (
-    prognostic(:pressure_head, XYZ(), get_closure(rre)),
+    prognostic(:saturation_water_ice, XYZ(); closure=rre.closure, domain=UnitInterval(), desc="Saturation level of water and ice in the pore space"),
     prognostic(:surface_excess_water, XY(), units=u"m", desc="Excess water at the soil surface in m³/m²"),
     auxiliary(:water_table, XY(), units=u"m", desc="Elevation of the water table in meters"),
     auxiliary(:hydraulic_conductivity, XYZ(z=Face()), units=u"m/s", desc="Hydraulic conductivity of soil volumes in m/s")
 )
 
-function initialize!(state, model, ::SoilHydrology{NF, <:RichardsEq}) where {NF}
-    invclosure!(state, model, state.closures.pressure_head)
+function initialize!(state, model, hydrology::SoilHydrology{NF, <:RichardsEq}) where {NF}
+    closure!(state, model, get_closure(hydrology))
     return nothing
 end
 
@@ -157,11 +157,10 @@ Kernel for computing the tendency of the prognostic `saturation_water_ice` varia
     constants::PhysicalConstants
 )
     i, j, k = @index(Global, NTuple)
-    idx = (i, j, k)
     # Get porosity
-    por = porosity(idx, state, hydrology, strat, bgc)
+    por = porosity(i, j, k, state, hydrology, strat, bgc)
     # Compute volumetic water content tendency
-    ∂θ∂t = volumetric_water_content_tendency(idx, grid, state, hydrology, constants)
+    ∂θ∂t = volumetric_water_content_tendency(i, j, k, grid, state, hydrology, constants)
     # Rescale by porosity to get saturation tendency
     state.tendencies.saturation_water_ice[i, j, k] +=  ∂θ∂t / por
 end
@@ -169,17 +168,15 @@ end
 # Kernel functions
 
 @inline function hydraulic_conductivity(i, j, k, grid, state, strat, hydrology, bgc)
-    idx = (i, j, k)
-    soil = soil_composition(idx, state, strat, hydrology, bgc)
+    soil = soil_composition(i, j, k, state, strat, hydrology, bgc)
     return hydraulic_conductivity(hydrology.hydraulic_properties, soil)
 end
 
 @inline function volumetric_water_content_tendency(
-    idx, grid, state,
+    i, j, k, grid, state,
     hydrology::SoilHydrology{NF, <:RichardsEq},
     constants::PhysicalConstants
 ) where {NF}
-    i, j, k = idx
     # Operators require the underlying Oceananigans grid
     field_grid = get_field_grid(grid)
 
@@ -213,32 +210,11 @@ end
 
 # Matric potential <--> saturation closure relation
 
-@kwdef struct PressureSaturationClosure <: AbstractClosureRelation end
+@kwdef struct SaturationPressureClosure <: AbstractClosureRelation end
 
-closurevar(::PressureSaturationClosure) = auxiliary(
-    :saturation_water_ice,
-    XYZ();
-    domain=UnitInterval(),
-    desc="Saturation level of water and ice in the pore space",
-)
+closurevar(::SaturationPressureClosure) = auxiliary(:pressure_head, XYZ(), units=u"m", desc="Total hydraulic pressure head in m water displaced at standard pressure")
 
-function closure!(state, model::AbstractSoilModel, ::PressureSaturationClosure)
-    grid = get_grid(model)
-    hydrology = get_soil_hydrology(model)
-    strat = get_stratigraphy(model)
-    bgc = get_biogeochemistry(model)
-    z_faces = znodes(get_field_grid(grid), Center(), Center(), Face())
-    z_centers = znodes(get_field_grid(grid), Center(), Center(), Center())
-    # determine saturation from pressure
-    launch!(grid, :xyz, pressure_to_saturation!, state, hydrology, strat, bgc, z_centers)
-    # apply saturation correction
-    launch!(grid, :xy, adjust_saturation_profile!, state, grid, hydrology)
-    # update water table
-    launch!(grid, :xy, compute_water_table!, state, grid, hydrology, z_faces)
-    return nothing
-end
-
-function invclosure!(state, model::AbstractSoilModel, ::PressureSaturationClosure)
+function closure!(state, model::AbstractSoilModel, ::SaturationPressureClosure)
     grid = get_grid(model)
     hydrology = get_soil_hydrology(model)
     strat = get_stratigraphy(model)
@@ -254,6 +230,22 @@ function invclosure!(state, model::AbstractSoilModel, ::PressureSaturationClosur
     return nothing
 end
 
+function invclosure!(state, model::AbstractSoilModel, ::SaturationPressureClosure)
+    grid = get_grid(model)
+    hydrology = get_soil_hydrology(model)
+    strat = get_stratigraphy(model)
+    bgc = get_biogeochemistry(model)
+    z_faces = znodes(get_field_grid(grid), Center(), Center(), Face())
+    z_centers = znodes(get_field_grid(grid), Center(), Center(), Center())
+    # determine saturation from pressure
+    launch!(grid, :xyz, pressure_to_saturation!, state, hydrology, strat, bgc, z_centers)
+    # apply saturation correction
+    launch!(grid, :xy, adjust_saturation_profile!, state, grid, hydrology)
+    # update water table
+    launch!(grid, :xy, compute_water_table!, state, grid, hydrology, z_faces)
+    return nothing
+end
+
 @kernel function pressure_to_saturation!(
     state,
     hydrology::SoilHydrology{NF, <:RichardsEq},
@@ -261,18 +253,17 @@ end
     bgc::AbstractSoilBiogeochemistry,
     zs
 ) where {NF}
-    idx = @index(Global, NTuple)
-    pressure_to_saturation!(idx, state, hydrology, strat, bgc, zs)
+    i, j, k = @index(Global, NTuple)
+    pressure_to_saturation!(i, j, k, state, hydrology, strat, bgc, zs)
 end
 
 @inline function pressure_to_saturation!(
-    idx, state,
+    i, j, k, state,
     hydrology::SoilHydrology{NF, <:RichardsEq},
     strat::AbstractStratigraphy,
     bgc::AbstractSoilBiogeochemistry,
     zs
 ) where {NF}
-    i, j, k = idx
     ψ = state.pressure_head[i, j, k] # assumed given
     # compute elevation pressure head
     ψz = zs[k]
@@ -282,7 +273,7 @@ end
     # remove hydrostatic and elevation components
     ψm = ψ - ψh - ψz
     swrc = get_swrc(hydrology)
-    por = porosity(idx, state, hydrology, strat, bgc)
+    por = porosity(i, j, k, state, hydrology, strat, bgc)
     vol_water_ice_content = swrc(ψm; θsat=por)
     state.saturation_water_ice[i, j, k] = vol_water_ice_content / por
     return nothing
@@ -295,22 +286,21 @@ end
     bgc::AbstractSoilBiogeochemistry,
     zs
 ) where {NF}
-    idx = @index(Global, NTuple)
-    saturation_to_pressure!(idx, state, hydrology, strat, bgc, zs)
+    i, j, k = @index(Global, NTuple)
+    saturation_to_pressure!(i, j, k, state, hydrology, strat, bgc, zs)
 end
 
 @inline function saturation_to_pressure!(
-    idx, state,
+    i, j, k, state,
     hydrology::SoilHydrology{NF, <:RichardsEq},
     strat::AbstractStratigraphy,
     bgc::AbstractSoilBiogeochemistry,
     zs
 ) where {NF}
-    i, j, k = idx
     sat = state.saturation_water_ice[i, j, k] # assumed given
     # get inverse of SWRC
     inv_swrc = inv(get_swrc(hydrology))
-    por = porosity(idx, state, hydrology, strat, bgc)
+    por = porosity(i, j, k, state, hydrology, strat, bgc)
     # compute matric pressure head
     ψm = inv_swrc(sat*por; θsat=por)
     # compute elevation pressure head

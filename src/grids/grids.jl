@@ -4,6 +4,13 @@
 abstract type AbstractLandGrid{NF, Arch} end
 
 Base.eltype(::AbstractLandGrid{NF}) where {NF} = NF
+Base.summary(grid::AbstractLandGrid{NF, Arch}) where {NF, Arch} = "$(nameof(typeof(grid))){$NF, $Arch} with dimensions $(size(grid))"
+Base.size(grid::AbstractLandGrid) = size(get_field_grid(grid))
+
+"""
+Return the number of vertical layers defined by the given `grid`.
+"""
+num_layers(grid::AbstractLandGrid) = size(get_field_grid(grid), 3)
 
 """
     get_field_grid(grid::AbstractLandGrid)::Oceananigans.AbstractGrid

@@ -30,7 +30,7 @@ import Oceananigans.TimeSteppers: Clock, update_state!, time_step!, tick!, reset
 import Oceananigans.Units: Time
 import Oceananigans.Utils: launch!
 # Boundary conditions
-import Oceananigans.BoundaryConditions: FieldBoundaryConditions, BoundaryCondition, DefaultBoundaryCondition,
+import Oceananigans.BoundaryConditions: BoundaryCondition, DefaultBoundaryCondition, FieldBoundaryConditions,
                                         ValueBoundaryCondition, FluxBoundaryCondition, GradientBoundaryCondition, NoFluxBoundaryCondition,
                                         ContinuousBoundaryFunction, DiscreteBoundaryFunction,
                                         AbstractBoundaryConditionClassification, Value, Flux, Gradient, # BC type classifications
@@ -51,8 +51,14 @@ import Unitful: 𝐋, 𝐌, 𝐓
 import Unitful: Units, Quantity, AbstractQuantity, NoUnits
 import Unitful: @u_str, uconvert, ustrip, upreferred
 
+"""
+Alias for numeric `Quantity` with type `NF` and units `U`.
+"""
 const LengthQuantity{NF, U} = Quantity{NF, 𝐋, U} where {NF, U<:Units}
 
+"""
+Alias for Oceananigans `AbstractBoundaryConditionClassification`.
+"""
 const BCType = AbstractBoundaryConditionClassification
 
 # Re-export selected types and methods from Oceananigans
@@ -82,9 +88,9 @@ include("grids/vertical_discretization.jl")
 export ColumnGrid, ColumnRingGrid, get_field_grid
 include("grids/grids.jl")
 
-export InputFields, InputProvider, InputSource
-export update_inputs!, get_input_fields, get_input_field
-include("inputs/inputs.jl")
+export InputSource
+export update_inputs!
+include("input_output/input_sources.jl")
 
 # timestepping
 export timestep!, default_dt, is_adaptive
@@ -94,6 +100,9 @@ include("timesteppers/abstract_timestepper.jl")
 export get_grid, timestepper, get_boundary_conditions, variables, compute_auxiliary!, compute_tendencies!
 include("abstract_model.jl")
 
+# process interface
+include("abstract_process.jl")
+
 # state variables
 export StateVariables, get_fields
 include("state_variables.jl")
@@ -102,14 +111,8 @@ include("state_variables.jl")
 export FieldInitializers, DefaultInitializer
 include("initializers.jl")
 
-export ColumnBoundaryConditions, ColumnBCs, DefaultBoundaryConditions, PrescribedFlux, PrescribedValue, PrescribedGradient
+export FieldBC, FieldBCs, boundary_conditions
 include("boundary_conditions.jl")
-
-# timestepper implementations
-export ForwardEuler
-include("timesteppers/forward_euler.jl")
-export Heun
-include("timesteppers/heun.jl")
 
 # physical processes
 include("processes/processes.jl")
@@ -117,8 +120,14 @@ include("processes/processes.jl")
 # concrete model implementations
 include("models/models.jl")
 
-# model simulation types and methods
-export ModelState, initialize, current_time, iteration
-include("model_state.jl")
+# timestepper implementations
+export ForwardEuler
+include("timesteppers/forward_euler.jl")
+export Heun
+include("timesteppers/heun.jl")
+
+# model integrator/simulation types and methods
+export ModelIntegrator, initialize, current_time, iteration
+include("timesteppers/model_integrator.jl")
 
 end # module Terrarium

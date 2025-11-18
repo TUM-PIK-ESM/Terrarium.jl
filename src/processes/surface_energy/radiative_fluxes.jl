@@ -1,7 +1,7 @@
 """
-Return the current value of the `surface_net_radiation` at the given `idx`.
+Return the current value of the `surface_net_radiation` at the given indices.
 """
-@inline surface_net_radiation(idx, state, ::AbstractRadiativeFluxes) = state.surface_net_radiation[idx...]
+@inline surface_net_radiation(i, j, k, state, ::AbstractRadiativeFluxes) = state.surface_net_radiation[i, j, k]
 
 """
     $TYPEDEF
@@ -63,20 +63,19 @@ end
     rad::AbstractRadiativeFluxes,
     atmos::AbstractAtmosphere,
     skinT::AbstractSkinTemperature,
-    albd::AbstractAlbedo,
+    abd::AbstractAlbedo,
     consts::PhysicalConstants
 )
     i, j = @index(Global, NTuple)
-    idx = (i, j)
 
     # get inputs
     surface_shortwave_up = state.surface_shortwave_up[i, j]
     surface_longwave_up = state.surface_longwave_up[i, j]
-    surface_shortwave_down = shortwave_in(idx, state, atmos)
-    surface_longwave_down = longwave_in(idx, state, atmos)
-    Tsurf = skin_temperature(idx, state, skinT)
-    α = albedo(idx, state, albd)
-    ϵ = emissivity(idx, state, albd)
+    surface_shortwave_down = shortwave_in(i, j, state, atmos)
+    surface_longwave_down = longwave_in(i, j, state, atmos)
+    Tsurf = skin_temperature(i, j, state, skinT)
+    α = albedo(i, j, state, abd)
+    ϵ = emissivity(i, j, state, abd)
 
     # compute outputs
     state.surface_shortwave_up[i, j, 1] = surface_shortwave_up = shortwave_out(rad, surface_shortwave_down, α)
@@ -86,12 +85,11 @@ end
 
 @kernel function compute_net_radiation!(state, ::AbstractLandGrid, rad::AbstractRadiativeFluxes, atmos::AbstractAtmosphere)
     i, j = @index(Global, NTuple)
-    idx = (i, j)
     # get inputs
     surface_shortwave_up = state.surface_shortwave_up[i, j]
     surface_longwave_up = state.surface_longwave_up[i, j]
-    surface_shortwave_down = shortwave_in(idx, state, atmos)
-    surface_longwave_down = longwave_in(idx, state, atmos)
+    surface_shortwave_down = shortwave_in(i, j, state, atmos)
+    surface_longwave_down = longwave_in(i, j, state, atmos)
     
     # compute net radiation
     state.surface_net_radiation[i, j, 1] = surface_net_radiation(rad, surface_shortwave_down, surface_shortwave_up, surface_longwave_down, surface_longwave_up)
