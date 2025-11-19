@@ -35,8 +35,15 @@ struct LandModel{
     initializer::Initializer
 end
 
-# TODO
 variables(::LandModel) = ()
+
+get_processes(model::LandModel) = (
+    model.atmosphere,
+    model.surface_energy_balance,
+    get_processes(model.ground)...,
+    get_processes(model.snow)...,
+    get_processes(model.hydrology)...,
+)
 
 function compute_auxiliary!(state, ::LandModel)
     # TODO

@@ -1,4 +1,4 @@
-struct CoupledSoilAtmosphereModel{
+@kwdef struct CoupledSoilEnergyModel{
     NF,
     GridType<:AbstractLandGrid{NF},
     Atmosphere<:AbstractAtmosphere,
@@ -10,42 +10,37 @@ struct CoupledSoilAtmosphereModel{
     grid::GridType
 
     "Near-surface atmospheric conditions"
-    atmosphere::Atmosphere
+    atmosphere::Atmosphere = PrescribedAtmosphere(eltype(grid))
 
     "Surface energy balance"
-    surface_energy_balance::SurfaceEnergy
+    surface_energy_balance::SurfaceEnergy = SurfaceEnergyBalance(eltype(grid))
 
     "Soil model"
-    soil::SoilModel
-
-    "Physical constants"
-    constants::PhysicalConstants{NF}
+    soil::SoilModel = SoilModel(eltype(grid))
 
     "Initializer for coupled model"
-    initializer::Initializer
+    initializer::Initializer = DefaultInitializer()
 end
 
-function CoupledSoilAtmosphereModel(
-    soil::SoilModel{NF};
-    atmosphere::AbstractAtmosphere = PrescribedAtmosphere(eltype(soil.grid)),
-    surface_energy_balance::SurfaceEnergyBalance = SurfaceEnergyBalance(eltype(soil.grid)),
-    constants::PhysicalConstants = PhysicalConstants(NF),
-    initializer::AbstractInitializer = DefaultInitializer()
-) where {NF}
-    return CoupledSoilAtmosphereModel(soil.grid, atmosphere, surface_energy_balance, soil, constants, initializer)
+get_soil_energy_balance(model::CoupledSoilEnergyModel) = model.soil.energy
+
+get_soil_hydrology(model::CoupledSoilEnergyModel) = model.soil.hydrology
+
+get_soil_stratigraphy(model::CoupledSoilEnergyModel) = model.soil.strat
+
+get_soil_biogeochemistry(model::CoupledSoilEnergyModel) = model.soil.biogeochem
+
+get_constants(model::CoupledSoilEnergyModel) = model.soil.constants
+
+function get_processes(model::CoupledSoilEnergyModel)
+    return (
+        model.atmosphere,
+        model.surface_energy_balance,
+        get_processes(model.soil)...,
+    )
 end
 
-get_soil_energy_balance(model) = model.soil.energy
-
-get_soil_hydrology(model) = model.soil.hydrology
-
-get_soil_stratigraphy(model) = model.soil.strat
-
-get_soil_biogeochemistry(model) = model.soil.biogeochem
-
-get_constants(model) = model.soil.constants
-
-function variables(model::CoupledSoilAtmosphereModel)
+function variables(model::CoupledSoilEnergyModel)
     atmos_vars = variables(model.atmosphere)
     seb_vars = variables(model.surface_energy_balance)
     soil_vars = variables(model.soil)
@@ -59,7 +54,7 @@ function variables(model::CoupledSoilAtmosphereModel)
 end
 
 function initialize(
-    model::CoupledSoilAtmosphereModel{NF};
+    model::CoupledSoilEnergyModel{NF};
     clock = Clock(time=zero(NF)),
     boundary_conditions = (;),
     fields = (;),
@@ -71,29 +66,25 @@ function initialize(
     return StateVariables(vars, model.grid, clock, boundary_conditions=bcs)
 end
 
-function initialize!(state, model::CoupledSoilAtmosphereModel)
+function initialize!(state, model::CoupledSoilEnergyModel)
+    # Call initialize! with model initializer
     initialize!(state, model, model.initializer)
+    # Then for soil model
     initialize!(state, model.soil)
 end
 
-function compute_auxiliary!(state, model::CoupledSoilAtmosphereModel)
+function compute_auxiliary!(state, model::CoupledSoilEnergyModel)
     grid = get_grid(model)
     # set ground temperature field to uppermost soil temperature
-    # TODO: Ideally the ground temperature field should *just be* the view of the uppermost
-    # soil temeprature, but this currently isn't possible.
+    # TODO: Probably the ground temperature field should be initialized as a
+    # view of the uppermost soil layer temperature to save memory
     set!(state.ground_temperature, view(state.temperature, :, :, grid.grid.Nz))
     compute_auxiliary!(state, model, model.atmosphere)
     compute_auxiliary!(state, model, model.surface_energy_balance)
     compute_auxiliary!(state, model.soil)
 end
 
-function compute_tendencies!(state, model::CoupledSoilAtmosphereModel)
-    compute_tendencies!(state, model, model.atmosphere)
+function compute_tendencies!(state, model::CoupledSoilEnergyModel)
     compute_tendencies!(state, model, model.surface_energy_balance)
     compute_tendencies!(state, model.soil)
-end
-
-function timestep!(state, model::CoupledSoilAtmosphereModel)
-    # Just forward call to soil model
-    timestep!(state, model.soil)
 end

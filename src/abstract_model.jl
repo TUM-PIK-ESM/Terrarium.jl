@@ -12,12 +12,6 @@ more other process types.
 """
 abstract type AbstractProcess end
 
-"""
-Convenience constructor for all `AbstractProcess` types that allows the `grid` to be passed
-as the first positional argument.
-"""
-(::Type{Process})(grid::AbstractLandGrid, args...; kwargs...) where {Process<:AbstractProcess} = Process(args...; grid, kwargs...)
-
 # AbstractModel interface
 
 """
@@ -202,6 +196,12 @@ abstract type AbstractHydrologyModel{NF, GR} <: AbstractModel{NF, GR} end
 Base type for full land models which couple together multiple component models.
 """
 abstract type AbstractLandModel{NF, GR} <: AbstractModel{NF, GR} end
+
+"""
+Convenience constructor for all `AbstractModel` types that allows the `grid` to be passed
+as the first positional argument.
+"""
+(::Type{Model})(grid::AbstractLandGrid, args...; kwargs...) where {Model<:AbstractModel} = Model(args...; grid, kwargs...)
 
 function Base.show(io::IO, model::AbstractModel{NF}) where {NF}
     println(io, "$(nameof(typeof(model))){$NF} on $(architecture(get_grid(model)))")

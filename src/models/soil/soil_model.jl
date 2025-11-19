@@ -52,30 +52,24 @@ get_constants(model::SoilModel) = model.constants
 
 # Model interface methods
 
-function variables(model::SoilModel)
-    strat_vars = variables(model.strat)
-    hydrology_vars = variables(model.hydrology)
-    energy_vars = variables(model.energy)
-    bgc_vars = variables(model.biogeochem)
-    # combine all variables into one tuple
-    return tuplejoin(strat_vars, hydrology_vars, energy_vars, bgc_vars)
-end
+variables(model::SoilModel) = tuplejoin(
+    variables(model.hydrology),
+    variables(model.energy),
+    variables(model.strat),
+    variables(model.biogeochem),
+)
 
-function get_processes(model::SoilModel)
-    return (
-        model.strat,
-        model.energy,
-        model.hydrology,
-        model.biogeochem
-    )
-end
+get_processes(model::SoilModel) = (
+    model.strat,
+    model.energy,
+    model.hydrology,
+    model.biogeochem
+)
 
-function get_closures(model::SoilModel)
-    return (
-        get_closure(model.hydrology),
-        get_closure(model.energy)
-    )
-end
+get_closures(model::SoilModel) = (
+    get_closure(model.hydrology),
+    get_closure(model.energy)
+)
 
 function compute_auxiliary!(state, model::SoilModel)
     compute_auxiliary!(state, model, model.biogeochem)
