@@ -7,8 +7,8 @@ $TYPEDFIELDS
 @kwdef struct PrescribedAlbedo <: AbstractAlbedo end
 
 variables(::PrescribedAlbedo) = (
-    input(:albedo, XY(), domain=UnitInterval(), desc="Surface albedo, i.e. ratio of outgoing to incoming shortwave radiation [-]"),
-    input(:emissivity, XY(), domain=UnitInterval(), desc="Surface emissivity, i.e. efficiency of longwave emission [-]"),
+    input(:albedo, XY(), domain = UnitInterval(), desc = "Surface albedo, i.e. ratio of outgoing to incoming shortwave radiation [-]"),
+    input(:emissivity, XY(), domain = UnitInterval(), desc = "Surface emissivity, i.e. efficiency of longwave emission [-]"),
 )
 
 @inline albedo(i, j, state, ::PrescribedAlbedo) = @inbounds state.albedo[i, j]

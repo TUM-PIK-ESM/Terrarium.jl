@@ -5,9 +5,9 @@ abstract type AbstractPrecipitation end
 abstract type AbstractIncomingRadiation end
 
 abstract type AbstractAtmosphere{
-    PR<:AbstractPrecipitation,
-    IR<:AbstractIncomingRadiation,
-    HM<:AbstractHumidity
+    PR <: AbstractPrecipitation,
+    IR <: AbstractIncomingRadiation,
+    HM <: AbstractHumidity,
 } <: AbstractProcess
 end
 
@@ -21,14 +21,14 @@ end
 Base.nameof(::TracerGas{name}) where {name} = name
 
 variables(::TracerGas{name}) where {name} = (
-    input(name, XY(), units=u"ppm", desc="Ambient atmospheric $(name) concentration in ppm"),
+    input(name, XY(), units = u"ppm", desc = "Ambient atmospheric $(name) concentration in ppm"),
 )
 
 """
 Creates a `TracerGas` for ambient CO2 with concentration prescribed by an input variable with
 the given name.
 """
-AmbientCO2(name=:CO2) = TracerGas(name)
+AmbientCO2(name = :CO2) = TracerGas(name)
 
 """
 Creates a `NamedTuple` from the given tracer gas types.
@@ -54,13 +54,13 @@ rain- and snowfall given as separate inputs, while for solar radiation, the defa
 wave lengths representing solar and thermal (infrared) radiation.
 """
 struct PrescribedAtmosphere{
-    NF,
-    tracernames,
-    Humid<:AbstractHumidity,
-    Precip<:AbstractPrecipitation,
-    IncomingRad<:AbstractIncomingRadiation,
-    Tracers<:NamedTuple{tracernames,<:Tuple{Vararg{TracerGas}}}
-} <: AbstractAtmosphere{Precip, IncomingRad, Humid}
+        NF,
+        tracernames,
+        Humid <: AbstractHumidity,
+        Precip <: AbstractPrecipitation,
+        IncomingRad <: AbstractIncomingRadiation,
+        Tracers <: NamedTuple{tracernames, <:Tuple{Vararg{TracerGas}}},
+    } <: AbstractAtmosphere{Precip, IncomingRad, Humid}
     "Surface-relative altitude in meters at which the atmospheric forcings are assumed to be applied"
     altitude::NF
 
@@ -78,20 +78,20 @@ struct PrescribedAtmosphere{
 end
 
 function PrescribedAtmosphere(
-    ::Type{NF};
-    altitude::NF = 10.0, # Default to 10 m
-    humidity::AbstractHumidity = SpecificHumidity(),
-    precip::AbstractPrecipitation = TwoPhasePrecipitation(),
-    radiation::AbstractIncomingRadiation = LongShortWaveRadiation(),
-    tracers::NamedTuple = TracerGases(AmbientCO2()),
-) where {NF}
+        ::Type{NF};
+        altitude::NF = 10.0, # Default to 10 m
+        humidity::AbstractHumidity = SpecificHumidity(),
+        precip::AbstractPrecipitation = TwoPhasePrecipitation(),
+        radiation::AbstractIncomingRadiation = LongShortWaveRadiation(),
+        tracers::NamedTuple = TracerGases(AmbientCO2()),
+    ) where {NF}
     return PrescribedAtmosphere(altitude, humidity, precip, radiation, tracers)
 end
 
 variables(atmos::PrescribedAtmosphere) = (
-    input(:air_temperature, XY(), units=u"°C", desc="Near-surface air temperature in °C"),
-    input(:air_pressure, XY(), units=u"Pa", desc="Atmospheric pressure at the surface in Pa"),
-    input(:windspeed, XY(), units=u"m/s", desc="Wind speed in m/s"),
+    input(:air_temperature, XY(), units = u"°C", desc = "Near-surface air temperature in °C"),
+    input(:air_pressure, XY(), units = u"Pa", desc = "Atmospheric pressure at the surface in Pa"),
+    input(:windspeed, XY(), units = u"m/s", desc = "Wind speed in m/s"),
     variables(atmos.humidity)...,
     variables(atmos.precip)...,
     variables(atmos.radiation)...,
@@ -127,7 +127,7 @@ Retrieve or compute the windspeed at the current time step.
 struct SpecificHumidity <: AbstractHumidity end
 
 variables(::SpecificHumidity) = (
-    input(:specific_humidity, XY(), units=u"kg/kg", desc="Near-surface specific humidity in kg/kg"),
+    input(:specific_humidity, XY(), units = u"kg/kg", desc = "Near-surface specific humidity in kg/kg"),
 )
 
 """
@@ -141,8 +141,8 @@ Retrieve or compute the specific_humidity at the current time step.
 struct TwoPhasePrecipitation <: AbstractPrecipitation end
 
 variables(::TwoPhasePrecipitation) = (
-    input(:rainfall, XY(), units=u"m/s", desc="Liquid precipitation (rainfall) rate"),
-    input(:snowfall, XY(), units=u"m/s", desc="Frozen precipitation (snowfall) rate"),
+    input(:rainfall, XY(), units = u"m/s", desc = "Liquid precipitation (rainfall) rate"),
+    input(:snowfall, XY(), units = u"m/s", desc = "Frozen precipitation (snowfall) rate"),
 )
 
 """
@@ -162,8 +162,8 @@ Retrieve or compute the frozen precipitation (snowfall) at the current time step
 struct LongShortWaveRadiation <: AbstractIncomingRadiation end
 
 variables(::LongShortWaveRadiation) = (
-    input(:surface_shortwave_down, XY(), units=u"W/m^2", desc="Incoming (downwelling) shortwave solar radiation"),
-    input(:surface_longwave_down, XY(), units=u"W/m^2", desc="Incoming (downwelling) longwave thermal radiation"),
+    input(:surface_shortwave_down, XY(), units = u"W/m^2", desc = "Incoming (downwelling) shortwave solar radiation"),
+    input(:surface_longwave_down, XY(), units = u"W/m^2", desc = "Incoming (downwelling) longwave thermal radiation"),
 )
 
 """

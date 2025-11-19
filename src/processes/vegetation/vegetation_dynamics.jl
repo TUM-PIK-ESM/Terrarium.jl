@@ -15,7 +15,7 @@ $TYPEDFIELDS
 
     "Minimum vegetation disturbance rate [1/year]"
     # TODO this parameter is yearly, should be changed to daily for now
-    γv_min::NF = 0.002 
+    γv_min::NF = 0.002
 end
 
 variables(::PALADYNVegetationDynamics) = (
@@ -40,7 +40,7 @@ end
 Computes `ν_star` which is the maximum between the current vegetation fraction `ν` and the seed fraction `ν_seed` [-],
 to ensure that a PFT is always seeded.
 """
-@inline function compute_ν_star(veg_dynamics::PALADYNVegetationDynamics, ν) 
+@inline function compute_ν_star(veg_dynamics::PALADYNVegetationDynamics, ν)
     return max(ν, veg_dynamics.ν_seed)
 end
 
@@ -51,11 +51,12 @@ Computes the vegetation fraction tendency for a single PFT,
 Eq. 73, PALADYN (Willeit 2016).
 """
 @inline function compute_ν_tend(
-    veg_dynamics::PALADYNVegetationDynamics, 
-    vegcarbon_dynamics::PALADYNCarbonDynamics{NF},
-    LAI_b::NF,
-    C_veg::NF,
-    ν::NF) where NF
+        veg_dynamics::PALADYNVegetationDynamics,
+        vegcarbon_dynamics::PALADYNCarbonDynamics{NF},
+        LAI_b::NF,
+        C_veg::NF,
+        ν::NF
+    ) where {NF}
 
     # Compute λ_NPP
     λ_NPP = compute_λ_NPP(vegcarbon_dynamics, LAI_b)
@@ -66,8 +67,8 @@ Eq. 73, PALADYN (Willeit 2016).
     # Compute ν_star
     ν_star = compute_ν_star(veg_dynamics, ν)
 
-    # Compute the vegetation fraction tendency 
-    ν_tendency =  (λ_NPP * C_veg / ν_star) * (NF(1.0) - ν) - γv * ν_star
+    # Compute the vegetation fraction tendency
+    ν_tendency = (λ_NPP * C_veg / ν_star) * (NF(1.0) - ν) - γv * ν_star
     return ν_tendency
 end
 
@@ -78,14 +79,14 @@ end
 
 function compute_tendencies!(state, model, veg_dynamics::PALADYNVegetationDynamics)
     grid = get_grid(model)
-    launch!(grid, :xy, compute_tendencies_kernel!, state, veg_dynamics, get_carbon_dynamics(model))
+    return launch!(grid, :xy, compute_tendencies_kernel!, state, veg_dynamics, get_carbon_dynamics(model))
 end
 
 @kernel function compute_tendencies_kernel!(
-    state,
-    veg_dynamics::PALADYNVegetationDynamics{NF},
-    vegcarbon_dynamics::PALADYNCarbonDynamics{NF}
-) where NF
+        state,
+        veg_dynamics::PALADYNVegetationDynamics{NF},
+        vegcarbon_dynamics::PALADYNCarbonDynamics{NF}
+    ) where {NF}
     i, j = @index(Global, NTuple)
 
     # Get inputs
@@ -95,7 +96,7 @@ end
 
     # Compute the vegetation fraction tendency
     ν_tendency = compute_ν_tend(veg_dynamics, vegcarbon_dynamics, LAI_b, C_veg, ν)
-    
+
     # Store result
     state.tendencies.ν[i, j] = ν_tendency
 end

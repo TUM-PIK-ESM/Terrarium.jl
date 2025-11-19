@@ -36,9 +36,9 @@ Computes temperature factors `f_temp_air` and `f_temp_soil` for autotrophic resp
 """
 
 @inline function compute_f_temp(
-    autoresp::PALADYNAutotrophicRespiration{NF},
-    T_air::NF,
-) where NF
+        autoresp::PALADYNAutotrophicRespiration{NF},
+        T_air::NF,
+    ) where {NF}
     # Compute f_temp_soil
     # TODO add f_temp_soil implementaion (depends on soil temperature)
     # For now, placeholder as a constant value
@@ -57,7 +57,7 @@ $SIGNATURES
 
 Computes `resp10` 
 """
-@inline function compute_resp10(autoresp::PALADYNAutotrophicRespiration{NF}) where NF
+@inline function compute_resp10(autoresp::PALADYNAutotrophicRespiration{NF}) where {NF}
     # TODO check physical meaning of this variable + add unit
     # TODO add resp10 implementation
     # For now, placeholder as a constant value
@@ -72,33 +72,33 @@ $SIGNATURES
 Computes maintenance respiration `Rm` in [kgC/m²/day].
 """
 @inline function compute_Rm(
-    autoresp::PALADYNAutotrophicRespiration{NF}, 
-    vegcarbon_dynamics::PALADYNCarbonDynamics{NF}, 
-    T_air,
-    Rd, 
-    phen,
-    C_veg,
-) where NF
+        autoresp::PALADYNAutotrophicRespiration{NF},
+        vegcarbon_dynamics::PALADYNCarbonDynamics{NF},
+        T_air,
+        Rd,
+        phen,
+        C_veg,
+    ) where {NF}
 
     # Compute f_temp for autotrophic respiration
     f_temp_air, f_temp_soil = compute_f_temp(autoresp, T_air)
 
     # Compute resp10
     resp10 = compute_resp10(autoresp)
-    
+
     # Compute leaf respiration
-    R_leaf = Rd/NF(1000.0) # convert from gC/m²/day to kgC/m²/day
+    R_leaf = Rd / NF(1000.0) # convert from gC/m²/day to kgC/m²/day
 
     # Compute stem respiration
-    R_stem = resp10 * f_temp_air * (vegcarbon_dynamics.awl * ((NF(2.0) / vegcarbon_dynamics.SLA) + vegcarbon_dynamics.awl)) / 
-                                   (C_veg * autoresp.aws * autoresp.cn_sapwood) 
+    R_stem = resp10 * f_temp_air * (vegcarbon_dynamics.awl * ((NF(2.0) / vegcarbon_dynamics.SLA) + vegcarbon_dynamics.awl)) /
+        (C_veg * autoresp.aws * autoresp.cn_sapwood)
 
     # Compute root respiration
-    R_root = resp10 * f_temp_soil * phen * (NF(2.0) / vegcarbon_dynamics.SLA) / 
-                                                       (vegcarbon_dynamics.SLA * C_veg * autoresp.cn_root)
+    R_root = resp10 * f_temp_soil * phen * (NF(2.0) / vegcarbon_dynamics.SLA) /
+        (vegcarbon_dynamics.SLA * C_veg * autoresp.cn_root)
 
     # Compute maintenance respiration Rm
-    Rm = R_leaf + R_stem + R_root 
+    Rm = R_leaf + R_stem + R_root
 
     return Rm
 end
@@ -108,7 +108,7 @@ $SIGNATURES
 
 Computes growth respiration `Rg` in [kgC/m²/day].
 """
-@inline function compute_Rg(autoresp::PALADYNAutotrophicRespiration{NF}, GPP, Rm) where NF
+@inline function compute_Rg(autoresp::PALADYNAutotrophicRespiration{NF}, GPP, Rm) where {NF}
     Rg = NF(0.25) * (GPP - Rm)
     return Rg
 end
@@ -118,11 +118,11 @@ $SIGNATURES
 
 Computes autotrophic respiration `Ra` as the sum of maintenance respiration `Rm` and growth respiration `Rg` in [kgC/m²/day].
 """
-@inline function compute_Ra(autoresp::PALADYNAutotrophicRespiration, vegcarbon_dynamics::PALADYNCarbonDynamics, T_air, Rd, phen, C_veg, GPP) 
-     # Compute Rm, maintenance respiration
+@inline function compute_Ra(autoresp::PALADYNAutotrophicRespiration, vegcarbon_dynamics::PALADYNCarbonDynamics, T_air, Rd, phen, C_veg, GPP)
+    # Compute Rm, maintenance respiration
     Rm = compute_Rm(autoresp, vegcarbon_dynamics, T_air, Rd, phen, C_veg)
 
-    # Compute Rg, growth respiration 
+    # Compute Rg, growth respiration
     Rg = compute_Rg(autoresp, GPP, Rm)
 
     # Compute Ra, autotrophic respiration
@@ -136,7 +136,7 @@ $SIGNATURES
 Computes Net Primary Productivity `NPP` as the difference between Gross Primary Production `GPP` and autotrophic respiration `Ra`
 in [kgC/m²/day].
 """
-@inline function compute_NPP(autoresp::PALADYNAutotrophicRespiration, GPP, Ra) 
+@inline function compute_NPP(autoresp::PALADYNAutotrophicRespiration, GPP, Ra)
     NPP = GPP - Ra
     return NPP
 end
@@ -145,18 +145,18 @@ end
 function compute_auxiliary!(state, model, autoresp::PALADYNAutotrophicRespiration)
     grid = get_grid(model)
     bcs = get_boundary_conditions(model)
-    launch!(grid, :xy, compute_auxiliary_kernel!, state, autoresp, get_carbon_dynamics(model), bcs.top)
+    return launch!(grid, :xy, compute_auxiliary_kernel!, state, autoresp, get_carbon_dynamics(model), bcs.top)
 end
 
 @kernel function compute_auxiliary_kernel!(
-    state,
-    autoresp::PALADYNAutotrophicRespiration{NF},
-    vegcarbon_dynamics::PALADYNCarbonDynamics{NF},
-    ::PrescribedAtmosphere
-) where NF
+        state,
+        autoresp::PALADYNAutotrophicRespiration{NF},
+        vegcarbon_dynamics::PALADYNCarbonDynamics{NF},
+        ::PrescribedAtmosphere
+    ) where {NF}
     i, j = @index(Global, NTuple)
 
-    # Get inputs    
+    # Get inputs
     T_air = state.T_air[i, j]
     Rd = state.Rd[i, j]
     phen = state.phen[i, j]
@@ -173,5 +173,3 @@ end
     state.Ra[i, j] = Ra
     state.NPP[i, j] = NPP
 end
-
-   

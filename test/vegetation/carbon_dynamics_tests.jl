@@ -6,12 +6,12 @@ using Test
     vegcarbon_dynamics = PALADYNCarbonDynamics()
     # Test LAI_b < LAI_min (λ_NPP should be 0)
     LAI_b = vegcarbon_dynamics.LAI_min / 2.0
-    λ_NPP = compute_λ_NPP(vegcarbon_dynamics, LAI_b) 
+    λ_NPP = compute_λ_NPP(vegcarbon_dynamics, LAI_b)
     @test λ_NPP == 0.0
 
     # Test LAI_b == LAI_min (λ_NPP should be 0)
     LAI_b = vegcarbon_dynamics.LAI_min
-    λ_NPP = compute_λ_NPP(vegcarbon_dynamics, LAI_b) 
+    λ_NPP = compute_λ_NPP(vegcarbon_dynamics, LAI_b)
     @test λ_NPP == 0.0
 
     # Test LAI_min < LAI_b < LAI_max (λ_NPP should be between 0 and 1)

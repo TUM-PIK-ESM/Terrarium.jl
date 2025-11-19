@@ -1,9 +1,9 @@
 struct SurfaceEnergyBalance{
-    Albedo<:AbstractAlbedo,
-    SkinTemperature<:AbstractSkinTemperature,
-    TurbulentFluxes<:AbstractTurbulentFluxes,
-    RadiativeFluxes<:AbstractRadiativeFluxes
-} <: AbstractSurfaceEnergyBalance
+        Albedo <: AbstractAlbedo,
+        SkinTemperature <: AbstractSkinTemperature,
+        TurbulentFluxes <: AbstractTurbulentFluxes,
+        RadiativeFluxes <: AbstractRadiativeFluxes,
+    } <: AbstractSurfaceEnergyBalance
     "Scheme for parameterizing surface albedo"
     albedo::Albedo
 
@@ -18,12 +18,12 @@ struct SurfaceEnergyBalance{
 end
 
 function SurfaceEnergyBalance(
-    ::Type{NF};
-    albedo::AbstractAlbedo = ConstantAlbedo(NF),
-    radiative_fluxes::AbstractRadiativeFluxes = DiagnosedRadiativeFluxes(),
-    turbulent_fluxes::AbstractTurbulentFluxes = DiagnosedTurbulentFluxes(NF),
-    skin_temperature::AbstractSkinTemperature = ImplicitSkinTemperature()
-) where {NF}
+        ::Type{NF};
+        albedo::AbstractAlbedo = ConstantAlbedo(NF),
+        radiative_fluxes::AbstractRadiativeFluxes = DiagnosedRadiativeFluxes(),
+        turbulent_fluxes::AbstractTurbulentFluxes = DiagnosedTurbulentFluxes(NF),
+        skin_temperature::AbstractSkinTemperature = ImplicitSkinTemperature()
+    ) where {NF}
     return SurfaceEnergyBalance(albedo, skin_temperature, radiative_fluxes, turbulent_fluxes)
 end
 
@@ -38,10 +38,10 @@ function compute_auxiliary!(state, model, seb::SurfaceEnergyBalance)
     compute_auxiliary!(state, model, seb.albedo)
     compute_auxiliary!(state, model, seb.skin_temperature)
     # compute energy fluxes
-    compute_surface_energy_fluxes!(state, model, seb)
+    return compute_surface_energy_fluxes!(state, model, seb)
 end
 
-function compute_auxiliary!(state, model, seb::SurfaceEnergyBalance{AL, <:ImplicitSkinTemperature}) where {AL<:AbstractAlbedo}
+function compute_auxiliary!(state, model, seb::SurfaceEnergyBalance{AL, <:ImplicitSkinTemperature}) where {AL <: AbstractAlbedo}
     compute_auxiliary!(state, model, seb.albedo)
     # set skin temeprature initially to ground temperature
     set!(state.skin_temperature, state.ground_temperature)
@@ -50,11 +50,11 @@ function compute_auxiliary!(state, model, seb::SurfaceEnergyBalance{AL, <:Implic
     # diagnose skin temperature
     update_skin_temperature!(state, model, seb.skin_temperature)
     # recompute fluxes
-    compute_surface_energy_fluxes!(state, model, seb)
+    return compute_surface_energy_fluxes!(state, model, seb)
 end
 
 function compute_surface_energy_fluxes!(state, model, seb::SurfaceEnergyBalance)
     compute_auxiliary!(state, model, seb.radiative_fluxes)
     compute_auxiliary!(state, model, seb.turbulent_fluxes)
-    compute_auxiliary!(state, model, seb.skin_temperature)
+    return compute_auxiliary!(state, model, seb.skin_temperature)
 end

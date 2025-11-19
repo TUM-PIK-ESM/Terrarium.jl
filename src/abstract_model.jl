@@ -5,7 +5,7 @@
 
 Base type for all model types.
 """
-abstract type AbstractModel{NF, Grid<:AbstractLandGrid{NF}} end
+abstract type AbstractModel{NF, Grid <: AbstractLandGrid{NF}} end
 
 """
     variables(model::AbstractModel)
@@ -136,7 +136,7 @@ abstract type AbstractLandModel{NF, GR} <: AbstractModel{NF, GR} end
 Convenience constructor for all `AbstractLandModel` types that allows the `grid` to be passed
 as the first positional argument.
 """
-(::Type{Model})(grid::AbstractLandGrid; kwargs...) where {Model<:AbstractModel} = Model(; grid, kwargs...)
+(::Type{Model})(grid::AbstractLandGrid; kwargs...) where {Model <: AbstractModel} = Model(; grid, kwargs...)
 
 function Adapt.adapt_structure(to, model::AbstractModel)
     return setproperties(model, map(prop -> Adapt.adapt_structure(to, prop), getproperties(model)))
@@ -147,4 +147,5 @@ function Base.show(io::IO, model::AbstractModel{NF}) where {NF}
     for name in propertynames(model)
         print(io, "├── $name:  $(summary(getproperty(model, name)))\n")
     end
+    return
 end

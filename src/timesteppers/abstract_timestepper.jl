@@ -71,14 +71,14 @@ Accumulate `tendency*Δt` in the given prognostic `field`. This method can be ov
 timestepping schemes as needed.
 """
 function explicit_step!(
-    field::AbstractField{LX, LY, LZ},
-    tendency::AbstractField{LX, LY, LZ},
-    grid::AbstractLandGrid,
-    timestepper::AbstractTimeStepper,
-    Δt,
-    args...
-) where {LX, LY, LZ}
-    launch!(
+        field::AbstractField{LX, LY, LZ},
+        tendency::AbstractField{LX, LY, LZ},
+        grid::AbstractLandGrid,
+        timestepper::AbstractTimeStepper,
+        Δt,
+        args...
+    ) where {LX, LY, LZ}
+    return launch!(
         grid,
         :xyz,
         explicit_step_kernel_3D!,
@@ -91,14 +91,14 @@ function explicit_step!(
 end
 
 function explicit_step!(
-    field::AbstractField{LX, LY, Nothing},
-    tendency::AbstractField{LX, LY, Nothing},
-    grid::AbstractLandGrid,
-    timestepper::AbstractTimeStepper,
-    Δt,
-    args...
-) where {LX, LY}
-    launch!(
+        field::AbstractField{LX, LY, Nothing},
+        tendency::AbstractField{LX, LY, Nothing},
+        grid::AbstractLandGrid,
+        timestepper::AbstractTimeStepper,
+        Δt,
+        args...
+    ) where {LX, LY}
+    return launch!(
         grid,
         :xy,
         explicit_step_kernel_2D!,
@@ -111,29 +111,29 @@ function explicit_step!(
 end
 
 @kernel function explicit_step_kernel_3D!(
-    field,
-    tendency,
-    ::AbstractTimeStepper,
-    Δt
-)
+        field,
+        tendency,
+        ::AbstractTimeStepper,
+        Δt
+    )
     i, j, k = @index(Global, NTuple)
     u = field
     ∂u∂t = tendency
-    @inbounds let Δt = convert(eltype(tendency), Δt);
+    @inbounds let Δt = convert(eltype(tendency), Δt)
         u[i, j, k] += ∂u∂t[i, j, k] * Δt
     end
 end
 
 @kernel function explicit_step_kernel_2D!(
-    field,
-    tendency,
-    ::AbstractTimeStepper,
-    Δt
-)
+        field,
+        tendency,
+        ::AbstractTimeStepper,
+        Δt
+    )
     i, j = @index(Global, NTuple)
     u = field
     ∂u∂t = tendency
-    @inbounds let Δt = convert(eltype(tendency), Δt);
+    @inbounds let Δt = convert(eltype(tendency), Δt)
         u[i, j, 1] += ∂u∂t[i, j] * Δt
     end
 end

@@ -7,7 +7,7 @@ const FieldBC = Union{FieldBoundaryConditions, NamedTuple{locs, <:Tuple{Vararg{B
 """
 Alias for a `NamedTuple` of `FieldBC` types where the keys correspond to field/variable names.
 """
-const FieldBCs{names, BCs} = NamedTuple{names, BCs} where {names, BCs<:Tuple{Vararg{FieldBC}}}
+const FieldBCs{names, BCs} = NamedTuple{names, BCs} where {names, BCs <: Tuple{Vararg{FieldBC}}}
 
 """
     boundary_conditions(bcs::FieldBCs...)

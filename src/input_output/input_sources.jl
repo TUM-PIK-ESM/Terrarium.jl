@@ -33,7 +33,7 @@ const AnyField{NF} = AbstractField{LX, LY, LZ, G, NF} where {LX, LY, LZ, G}
 """
 Container type for wrapping multiple `InputSource`s.
 """
-struct InputSources{Sources<:Tuple{Vararg{InputSource}}}
+struct InputSources{Sources <: Tuple{Vararg{InputSource}}}
     sources::Sources
 end
 
@@ -45,6 +45,7 @@ function update_inputs!(fields, sources::InputSources, ::Clock)
     for source in sources.sources
         update_inputs!(fields, source, clock)
     end
+    return
 end
 
 """
@@ -52,10 +53,10 @@ end
 
 Input source that reads directly from pre-specified Oceananigans `Field`s.
 """
-struct FieldInputSource{NF, VD<:VarDims, names, Fields<:Tuple{Vararg{AnyField{NF}}}} <: InputSource{NF}
+struct FieldInputSource{NF, VD <: VarDims, names, Fields <: Tuple{Vararg{AnyField{NF}}}} <: InputSource{NF}
     "Variable dimensions"
-    dims::VD    
-    
+    dims::VD
+
     "Named tuple of input `Field`s"
     fields::NamedTuple{names, Fields}
 end
@@ -74,6 +75,7 @@ function update_inputs!(fields, source::FieldInputSource, ::Clock)
             set!(field, source.fields[name])
         end
     end
+    return
 end
 
 """
@@ -86,10 +88,10 @@ const AnyFieldTimeSeries{NF} = FieldTimeSeries{LX, LY, LZ, TI, K, I, D, G, NF} w
 
 Input source that reads input fields from pre-specified Oceananigans `FieldTimeSeries`.
 """
-struct FieldTimeSeriesInputSource{NF, VD<:VarDims, names, FTS<:Tuple{Vararg{AnyFieldTimeSeries{NF}}}} <: InputSource{NF}
+struct FieldTimeSeriesInputSource{NF, VD <: VarDims, names, FTS <: Tuple{Vararg{AnyFieldTimeSeries{NF}}}} <: InputSource{NF}
     "Variable dimensions"
     dims::VD
-    
+
     "Field time series data"
     fts::NamedTuple{names, FTS}
 end
@@ -109,6 +111,7 @@ function update_inputs!(fields, source::FieldTimeSeriesInputSource, clock::Clock
             set!(field_t, fts[Time(clock.time)])
         end
     end
+    return
 end
 
 # Internal helper method to check that all Field dimensions match

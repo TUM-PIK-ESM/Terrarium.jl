@@ -6,8 +6,8 @@ using InteractiveUtils
 
 # ╔═╡ 808d5d89-c1d2-4f6a-bd55-4b3a8444c90f
 begin
-	import Pkg 
-	Pkg.activate(".")
+    import Pkg
+    Pkg.activate(".")
 end
 
 # ╔═╡ 94d82d31-42ec-41de-91e9-b5585b3a72d4
@@ -63,7 +63,7 @@ For our current example, we are defining a simple linear ODE without any spatial
 """
 
 # ╔═╡ 78f268ef-5385-4c63-bc35-2c973de69da5
-grid = ColumnGrid(CPU(), Float64, UniformSpacing(N=1))
+grid = ColumnGrid(CPU(), Float64, UniformSpacing(N = 1))
 
 # ╔═╡ 054a8b11-250f-429f-966f-ca3c9a5dc2ef
 md"""
@@ -74,24 +74,24 @@ We start by defining a `struct` for our model that inherits from `AbstractModel`
 
 # ╔═╡ 407786db-607f-4508-b697-fe75b3ce0b25
 begin
-	@kwdef struct LinearDynamics{NF} <: Terrarium.AbstractProcess
-		"Exponential growth rate"
-		alpha::NF = 0.01
+    @kwdef struct LinearDynamics{NF} <: Terrarium.AbstractProcess
+        "Exponential growth rate"
+        alpha::NF = 0.01
 
-		"Constant offset for exponential growth"
-		c::NF = 0.1
-	end
-	
-	@kwdef struct ExpModel{NF, Grid <: Terrarium.AbstractLandGrid{NF}, Dyn, Init} <: Terrarium.AbstractModel{NF, Grid}
-		"Spatial grid on which state variables are discretized"
-		grid::Grid
+        "Constant offset for exponential growth"
+        c::NF = 0.1
+    end
 
-		"Linear dynamics resulting in exponential growth/decay"
-		dynamics::Dyn = LinearDynamics()
+    @kwdef struct ExpModel{NF, Grid <: Terrarium.AbstractLandGrid{NF}, Dyn, Init} <: Terrarium.AbstractModel{NF, Grid}
+        "Spatial grid on which state variables are discretized"
+        grid::Grid
 
-		"Model initializer"
-		initializer::Init = DefaultInitializer()
-	end
+        "Linear dynamics resulting in exponential growth/decay"
+        dynamics::Dyn = LinearDynamics()
+
+        "Model initializer"
+        initializer::Init = DefaultInitializer()
+    end
 end
 
 # ╔═╡ 575d920c-b12e-493f-95a7-5c962c3591fd
@@ -109,8 +109,8 @@ So, let's define those:
 
 # ╔═╡ 82e45724-ba16-4806-9470-5cb4c43ea734
 Terrarium.variables(::ExpModel) = (
-	Terrarium.prognostic(:u, Terrarium.XY()), 
-    Terrarium.auxiliary(:c, Terrarium.XY())
+    Terrarium.prognostic(:u, Terrarium.XY()),
+    Terrarium.auxiliary(:c, Terrarium.XY()),
 )
 
 # ╔═╡ d4d19de7-6f77-4873-9182-9832d1ca4381
@@ -121,14 +121,14 @@ We also need to define `compute_auxiliary!` and `compute_tendencies!` as discuss
 """
 
 # ╔═╡ 5ea313fc-3fbb-4092-a2cc-e0cd1f2fe641
-function Terrarium.compute_auxiliary!(state, model::ExpModel) 
-    compute_auxiliary!(state, model, model.dynamics)
-end 
+function Terrarium.compute_auxiliary!(state, model::ExpModel)
+    return compute_auxiliary!(state, model, model.dynamics)
+end
 
 # ╔═╡ 3815424f-6210-470d-aef1-99c60c71072f
-function Terrarium.compute_tendencies!(state, model::ExpModel) 
-    compute_tendencies!(state, model, model.dynamics)
-end 
+function Terrarium.compute_tendencies!(state, model::ExpModel)
+    return compute_tendencies!(state, model, model.dynamics)
+end
 
 # ╔═╡ 32373599-768f-4809-acdd-4704acc3f30b
 md"""
@@ -143,30 +143,30 @@ With that in mind, let's define the methods:
 
 # ╔═╡ d55aaf4c-3033-45ba-9d64-8fa8ae4b671c
 function Terrarium.compute_auxiliary!(
-	state,
-	model::ExpModel,
-	dynamics::LinearDynamics
-)
-	# set auxiliary variable for offset c
-    state.auxiliary.c .= dynamics.c
-end 
+        state,
+        model::ExpModel,
+        dynamics::LinearDynamics
+    )
+    # set auxiliary variable for offset c
+    return state.auxiliary.c .= dynamics.c
+end
 
 # ╔═╡ 5c8be7e4-f150-492b-a75d-96887a11f6da
 # du/dt = u + c
 function Terrarium.compute_tendencies!(
-	state,
-	model::ExpModel,
-	dynamics::LinearDynamics
-)
-	# define the dynamics; we'll use some special characters to make the equation nicer to look at :)
-	let u = state.prognostic.u,
-		∂u∂t = state.tendencies.u,
-		α = dynamics.alpha,
-		# note again that here we could also just use dynamics.c instead of defining an auxiliary variable! 
-		c = state.auxiliary.c;
-		# Write into tendency variable ∂u∂t
-		∂u∂t .=  α * u + c
-	end
+        state,
+        model::ExpModel,
+        dynamics::LinearDynamics
+    )
+    # define the dynamics; we'll use some special characters to make the equation nicer to look at :)
+    return let u = state.prognostic.u,
+            ∂u∂t = state.tendencies.u,
+            α = dynamics.alpha,
+            # note again that here we could also just use dynamics.c instead of defining an auxiliary variable!
+            c = state.auxiliary.c
+        # Write into tendency variable ∂u∂t
+        ∂u∂t .= α * u + c
+    end
 end
 
 # ╔═╡ 8d331856-6e9b-41d4-b1be-a84d5fedac8d
@@ -219,7 +219,7 @@ or we can use `run!` for a fixed number of `steps` or over a desired `Dates.Peri
 """
 
 # ╔═╡ de3d4210-c39f-11f0-3d50-3f95a2361e2a
-run!(integrator, period=Hour(1))
+run!(integrator, period = Hour(1))
 
 # ╔═╡ cce4d4d3-0fa4-4376-bcb6-c52603bc17d6
 integrator.state.u
@@ -241,19 +241,21 @@ sim = Simulation(integrator; stop_time = 300.0, Δt = 1.0)
 
 # ╔═╡ 26000a4e-77cb-4c04-aeb2-ba5b0e14112a
 begin
-	# We need to import some types from Oceananigans here for output handling
-	using Oceananigans: TimeInterval, JLD2Writer
-	using Oceananigans.Units: seconds
+    # We need to import some types from Oceananigans here for output handling
+    using Oceananigans: TimeInterval, JLD2Writer
+    using Oceananigans.Units: seconds
 
-	# Reset the integrator to its initial state
-	Terrarium.initialize!(integrator);
+    # Reset the integrator to its initial state
+    Terrarium.initialize!(integrator)
 
-	output_file = tempname()
-	sim.output_writers[:snapshots] = JLD2Writer(integrator,
-												(u = integrator.state.u,);
-												filename = output_file,
-												overwrite_existing = true,
-												schedule = TimeInterval(10seconds))
+    output_file = tempname()
+    sim.output_writers[:snapshots] = JLD2Writer(
+        integrator,
+        (u = integrator.state.u,);
+        filename = output_file,
+        overwrite_existing = true,
+        schedule = TimeInterval(10seconds)
+    )
 end
 
 # ╔═╡ 081d0b29-927c-4a03-a3dd-4dcac043dcc1
@@ -279,7 +281,7 @@ Then load the output data and plot the results:
 fts = FieldTimeSeries(output_file, "u")
 
 # ╔═╡ c06502ff-c021-488c-a333-36233091d046
-plot(1:length(fts), [fts[i][1,1,1] for i in 1:length(fts)])
+plot(1:length(fts), [fts[i][1, 1, 1] for i in 1:length(fts)])
 
 # ╔═╡ 25e22154-946f-4c32-a1fa-73d86e935ff3
 md"""

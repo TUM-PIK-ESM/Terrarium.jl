@@ -118,7 +118,7 @@ varunits(pv::AbstractProcessVariable) = varunits(pv.var)
 
 function Base.show(io::IO, ::MIME"text/plain", var::AbstractVariable)
     units = varunits(var)
-    if units != NoUnits
+    return if units != NoUnits
         println(io, "$(nameof(typeof(var))) $(varname(var)) with dimensions $(typeof(vardims(var))) and units $(string(varunits(var)))")
     else
         println(io, "$(nameof(typeof(var))) $(varname(var)) with dimensions $(typeof(vardims(var)))")
@@ -133,12 +133,12 @@ and spatial `dims`. Auxiliary variables are those which are diagnosed directly o
 indirectly from the values of one or more prognostic variables.
 """
 struct AuxiliaryVariable{
-    name,
-    VD<:VarDims,
-    UT<:Units,
-    Var<:Variable{name, VD, UT},
-    DT<:AbstractInterval
-} <: AbstractProcessVariable{name, VD}
+        name,
+        VD <: VarDims,
+        UT <: Units,
+        Var <: Variable{name, VD, UT},
+        DT <: AbstractInterval,
+    } <: AbstractProcessVariable{name, VD}
     "State variable"
     var::Var
 
@@ -155,12 +155,12 @@ end
 Represents an input (e.g. forcing) variable with the given `name` and spatial `dims`.
 """
 struct InputVariable{
-    name,
-    VD<:VarDims,
-    UT<:Units,
-    Var<:Variable{name, VD, UT},
-    DT<:AbstractInterval
-} <: AbstractProcessVariable{name, VD}
+        name,
+        VD <: VarDims,
+        UT <: Units,
+        Var <: Variable{name, VD, UT},
+        DT <: AbstractInterval,
+    } <: AbstractProcessVariable{name, VD}
     "State variable"
     var::Var
 
@@ -177,14 +177,14 @@ end
 Represents a prognostic state variable with the given `name` and spatial `dims`.
 """
 struct PrognosticVariable{
-    name,
-    VD<:VarDims,
-    UT<:Units,
-    Var<:Variable{name, VD, UT},
-    CL<:Union{Nothing, AbstractClosureRelation},
-    TV<:Union{Nothing, AuxiliaryVariable},
-    DT<:AbstractInterval
-} <: AbstractProcessVariable{name, VD}
+        name,
+        VD <: VarDims,
+        UT <: Units,
+        Var <: Variable{name, VD, UT},
+        CL <: Union{Nothing, AbstractClosureRelation},
+        TV <: Union{Nothing, AuxiliaryVariable},
+        DT <: AbstractInterval,
+    } <: AbstractProcessVariable{name, VD}
     "State variable"
     var::Var
 
@@ -273,6 +273,7 @@ function check_duplicates(vars...)
             error("Found conflicting variable/namespace definitions for $key:\n$(join(groups[key], "\n"))")
         end
     end
+    return
 end
 
 """
@@ -287,24 +288,24 @@ var(name::Symbol, dims::VarDims, units::Units = NoUnits) = Variable(name, dims, 
 
 Convenience constructors for `PrognosticVariable`.
 """
-prognostic(name::Symbol, dims::VarDims; units=NoUnits, closure=nothing, domain=RealLine(), desc="") = prognostic(var(name, dims, units); closure, domain, desc)
-prognostic(var::Variable; closure=nothing, domain=RealLine(), desc="") = PrognosticVariable(var, closure, tendency(var), domain, desc)
+prognostic(name::Symbol, dims::VarDims; units = NoUnits, closure = nothing, domain = RealLine(), desc = "") = prognostic(var(name, dims, units); closure, domain, desc)
+prognostic(var::Variable; closure = nothing, domain = RealLine(), desc = "") = PrognosticVariable(var, closure, tendency(var), domain, desc)
 
 """
     $SIGNATURES
 
 Convenience constructor method for `AuxiliaryVariable`.
 """
-auxiliary(name::Symbol, dims::VarDims; units=NoUnits, domain=RealLine(), desc="") = auxiliary(var(name, dims, units); domain, desc)
-auxiliary(var::Variable; domain=RealLine(), desc="") = AuxiliaryVariable(var, domain, desc)
+auxiliary(name::Symbol, dims::VarDims; units = NoUnits, domain = RealLine(), desc = "") = auxiliary(var(name, dims, units); domain, desc)
+auxiliary(var::Variable; domain = RealLine(), desc = "") = AuxiliaryVariable(var, domain, desc)
 
 """
     $SIGNATURES
 
 Convenience constructor method for `InputVariable`.
 """
-input(name::Symbol, dims::VarDims; units=NoUnits, domain=RealLine(), desc="") = input(var(name, dims, units); domain, desc)
-input(var::Variable; domain=RealLine(), desc="") = InputVariable(var, domain, desc)
+input(name::Symbol, dims::VarDims; units = NoUnits, domain = RealLine(), desc = "") = input(var(name, dims, units); domain, desc)
+input(var::Variable; domain = RealLine(), desc = "") = InputVariable(var, domain, desc)
 
 """
     $SIGNATURES
@@ -312,7 +313,7 @@ input(var::Variable; domain=RealLine(), desc="") = InputVariable(var, domain, de
 Creates an `AuxiliaryVariable` for the tendency of a prognostic variable with the given name, dimensions, and physical units.
 This constructor is primarily used internally by other constructors and does not usually need to be called by implementations of `variables`.
 """
-tendency(var::Variable) = auxiliary(varname(var), vardims(var), units=upreferred(varunits(var))/u"s")
+tendency(var::Variable) = auxiliary(varname(var), vardims(var), units = upreferred(varunits(var)) / u"s")
 
 """
     $SIGNATURES

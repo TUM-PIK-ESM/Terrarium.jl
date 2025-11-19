@@ -9,17 +9,17 @@ Properties:
 $TYPEDFIELDS
 """
 @kwdef struct VegetationModel{
-    NF,
-    Photosynthesis<:AbstractPhotosynthesis,
-    StomatalConducatance<:AbstractStomatalConductance,
-    AutotrophicRespiration<:AbstractAutotrophicRespiration,
-    CarbonDynamics<:AbstractVegetationCarbonDynamics,
-    VegetationDynamics<:AbstractVegetationDynamics,
-    Phenology<:AbstractPhenology,
-    GridType<:AbstractLandGrid{NF},
-    Constants<:PhysicalConstants{NF},
-    Initializer<:AbstractInitializer,
-} <: AbstractVegetationModel{NF, GridType}
+        NF,
+        Photosynthesis <: AbstractPhotosynthesis,
+        StomatalConducatance <: AbstractStomatalConductance,
+        AutotrophicRespiration <: AbstractAutotrophicRespiration,
+        CarbonDynamics <: AbstractVegetationCarbonDynamics,
+        VegetationDynamics <: AbstractVegetationDynamics,
+        Phenology <: AbstractPhenology,
+        GridType <: AbstractLandGrid{NF},
+        Constants <: PhysicalConstants{NF},
+        Initializer <: AbstractInitializer,
+    } <: AbstractVegetationModel{NF, GridType}
     "Spatial grid type"
     grid::GridType
 
@@ -39,7 +39,7 @@ $TYPEDFIELDS
     carbon_dynamics::CarbonDynamics = PALADYNCarbonDynamics() # prognostic
 
     "Vegetation population density or coverage fraction dynamics"
-    vegetation_dynamics::VegetationDynamics =  PALADYNVegetationDynamics() # prognostic
+    vegetation_dynamics::VegetationDynamics = PALADYNVegetationDynamics() # prognostic
 
     "Physical constants"
     constants::Constants = PhysicalConstants{eltype(grid)}()
@@ -89,7 +89,7 @@ function compute_auxiliary!(state, model::VegetationModel)
 
     # Autotrophic respiration: needs atm. inputs(t), GPP(t), Rd(t), C_veg(t-1), phen(t-1) and computes Ra(t) and NPP(t)
     compute_auxiliary!(state, model, model.autotrophic_respiration)
-    
+
     # Note: vegetation_dynamics compute_auxiliary! does nothing for now
     return nothing
 end

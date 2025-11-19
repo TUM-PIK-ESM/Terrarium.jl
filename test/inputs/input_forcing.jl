@@ -6,7 +6,7 @@ using Test
 
 DEFAULT_NF = Float32
 
-@kwdef struct TestModel{NF, Grid<:AbstractLandGrid{NF}, TS} <: Terrarium.AbstractModel{NF, Grid, TS}
+@kwdef struct TestModel{NF, Grid <: AbstractLandGrid{NF}, TS} <: Terrarium.AbstractModel{NF, Grid, TS}
     grid::Grid
     initializer = DefaultInitializer()
     time_stepping::TS = ForwardEuler{DEFAULT_NF}()
@@ -19,12 +19,12 @@ Terrarium.variables(model::TestModel) = (
 
 function Terrarium.compute_tendencies!(state, model::TestModel)
     # set tendency to forcing term
-    state.tendencies.x .= state.F
+    return state.tendencies.x .= state.F
 end
 
 function Terrarium.timestep!(state, model::TestModel, euler::ForwardEuler, Δt)
     Terrarium.compute_tendencies!(state, model)
-    @. state.x += Δt*state.tendencies.x
+    return @. state.x += Δt * state.tendencies.x
 end
 
 @testset "Forcing input" begin
