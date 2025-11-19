@@ -4,6 +4,27 @@ using Literate
 
 using Terrarium
 
+const NOTEBOOK_DIR = joinpath(@__DIR__, "..", "examples", "notebooks")
+
+"""
+    build()
+
+Run all Pluto notebooks (".jl" files) in `NOTEBOOK_DIR`.
+"""
+function build()
+    println("Building notebooks in $NOTEBOOK_DIR")
+    oopts = OutputOptions(; append_build_context=true)
+    output_format = documenter_output
+    bopts = BuildOptions(NOTEBOOK_DIR; output_format)
+    build_notebooks(bopts, oopts)
+    return nothing
+end
+
+# Build the notebooks; defaults to true.
+if get(ENV, "BUILD_DOCS_NOTEBOOKS", "true") == "true"
+    build()
+end
+
 s = ArgParseSettings()
 @add_arg_table! s begin
     "--local", "-l"
@@ -43,6 +64,9 @@ makedocs(
                 "Energy and water balance" => "physics/soil_energy_water.md",
             ],
             "Vegetation" => "physics/vegetation.md",
+        ],
+        "Examples" => [
+            "Model Interface" => "../../examples/notebooks/example_model_notebook.md",
         ],
         "Contributing" => "contributing.md",
         "API Reference" => "api_reference.md",

@@ -24,15 +24,17 @@ jobs:
           version: ${{ matrix.version }}
           arch: ${{ matrix.arch }}
       - uses: julia-actions/cache@v2
-      - name: Install dependencies
-        run: julia --project=examples/ -e 'using Pkg; Pkg.develop(PackageSpec(path=pwd())); Pkg.instantiate()'
+      - name: Install dependencies (scripts)
+        run: julia --project=examples/scripts/ -e 'using Pkg; Pkg.develop(PackageSpec(path=pwd())); Pkg.instantiate()'
       - name: Run Soil Model Heat Column 
-        run: julia --project=examples/ examples/soil_heat_column.jl
+        run: julia --project=examples/scripts/ examples/scripts/soil_heat_column.jl
       - name: Run Soil Model Heat Global 
-        run: julia --project=examples/ examples/soil_heat_global.jl
+        run: julia --project=examples/scripts/ examples/scripts/soil_heat_global.jl
+      - name: Install dependencies (notebooks)
+        run: julia --project=examples/notebooks/ -e 'using Pkg; Pkg.develop(PackageSpec(path=pwd())); Pkg.instantiate()'
       - name: Run Pluto Notebook Simple
         run: |
-          cd examples/ 
+          cd examples/notebooks/ 
           julia --project=. ./example_model_notebook.jl
 #     - name: Run Soil Model Heat Global ERA5 
 #       run: julia --project=examples/ examples/soil_heat_global_era5.jl
