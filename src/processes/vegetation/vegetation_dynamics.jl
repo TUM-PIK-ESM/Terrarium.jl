@@ -18,6 +18,8 @@ $TYPEDFIELDS
     γv_min::NF = 0.002 
 end
 
+PALADYNVegetationDynamics(::Type{NF}; kwargs...) where {NF} = PALADYNVegetationDynamics(; kwargs...)
+
 variables(::PALADYNVegetationDynamics) = (
     prognostic(:ν, XY()), # PFT fractional area coverage [-]
 )

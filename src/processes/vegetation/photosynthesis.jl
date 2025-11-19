@@ -83,6 +83,8 @@ $TYPEDFIELDS
     sec_day::NF = 8.765813e4
 end
 
+LUEPhotosynthesis(::Type{NF}; kwargs...) where {NF} = LUEPhotosynthesis{NF}(; kwargs...)
+
 variables(::LUEPhotosynthesis) = (
     auxiliary(:λc, XY()), # Ratio of leaf-internal and air CO2 concentration [-]
     auxiliary(:LAI, XY()), # Leaf Area Index [m²/m²]
