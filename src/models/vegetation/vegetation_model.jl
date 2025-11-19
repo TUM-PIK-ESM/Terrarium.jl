@@ -13,9 +13,9 @@ $TYPEDFIELDS
     Photosynthesis<:AbstractPhotosynthesis,
     StomatalConducatance<:AbstractStomatalConductance,
     AutotrophicRespiration<:AbstractAutotrophicRespiration,
+    Phenology<:AbstractPhenology,
     CarbonDynamics<:AbstractVegetationCarbonDynamics,
     VegetationDynamics<:AbstractVegetationDynamics,
-    Phenology<:AbstractPhenology,
     GridType<:AbstractLandGrid{NF},
     Constants<:PhysicalConstants{NF},
     Initializer<:AbstractInitializer,
@@ -24,25 +24,25 @@ $TYPEDFIELDS
     grid::GridType
 
     "Photosynthesis scheme"
-    photosynthesis::Photosynthesis = LUEPhotosynthesis() # not prognostic
+    photosynthesis::Photosynthesis = LUEPhotosynthesis(eltype(grid)) # not prognostic
 
     "Stomatal conducantance scheme"
-    stomatal_conductance::StomatalConducatance = MedlynStomatalConductance() # not prognostic
+    stomatal_conductance::StomatalConducatance = MedlynStomatalConductance(eltype(grid)) # not prognostic
 
     "Autotrophic respiration scheme"
-    autotrophic_respiration::AutotrophicRespiration = PALADYNAutotrophicRespiration() # not prognostic
+    autotrophic_respiration::AutotrophicRespiration = PALADYNAutotrophicRespiration(eltype(grid)) # not prognostic
 
     "Phenology scheme"
-    phenology::Phenology = PALADYNPhenology() # not prognostic
+    phenology::Phenology = PALADYNPhenology(eltype(grid)) # not prognostic
 
     "Vegetation carbon pool dynamics"
-    carbon_dynamics::CarbonDynamics = PALADYNCarbonDynamics() # prognostic
+    carbon_dynamics::CarbonDynamics = PALADYNCarbonDynamics(eltype(grid)) # prognostic
 
     "Vegetation population density or coverage fraction dynamics"
-    vegetation_dynamics::VegetationDynamics =  PALADYNVegetationDynamics() # prognostic
+    vegetation_dynamics::VegetationDynamics =  PALADYNVegetationDynamics(eltype(grid)) # prognostic
 
     "Physical constants"
-    constants::Constants = PhysicalConstants{eltype(grid)}()
+    constants::Constants = PhysicalConstants(eltype(grid))
 
     "State variable initializer"
     initializer::Initializer = DefaultInitializer()
@@ -64,24 +64,22 @@ get_vegetation_dynamics(model::VegetationModel) = model.vegetation_dynamics
 get_constants(model::VegetationModel) = model.constants
 
 # Model interface methods
-variables(model::VegetationModel) = (
-    variables(model.photosynthesis)...,
-    variables(model.stomatal_conductance)...,
-    variables(model.autotrophic_respiration)...,
-    variables(model.phenology)...,
-    variables(model.carbon_dynamics)...,
-    variables(model.vegetation_dynamics)...,
+variables(model::VegetationModel) = tuplejoin(
+    variables(model.photosynthesis),
+    variables(model.stomatal_conductance),
+    variables(model.autotrophic_respiration),
+    variables(model.phenology),
+    variables(model.carbon_dynamics),
+    variables(model.vegetation_dynamics),
 )
 
-function get_processes(model::VegetationModel)
-    return (
-        model.photosynthesis,
-        model.stomatal_conductance,
-        model.autotrophic_respiration,
-        model.carbon_dynamics,
-        model.vegetation_dynamics
-    )
-end
+get_processes(model::VegetationModel) = (
+    model.photosynthesis,
+    model.stomatal_conductance,
+    model.autotrophic_respiration,
+    model.carbon_dynamics,
+    model.vegetation_dynamics
+)
 
 function compute_auxiliary!(state, model::VegetationModel)
     # Compute auxiliary variables for each component
