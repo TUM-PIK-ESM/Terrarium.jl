@@ -42,7 +42,7 @@ end
 
 @testset "Forcing input with time series" begin
     grid = ColumnGrid(CPU(), DEFAULT_NF, ExponentialSpacing())
-    model = TestModel(; grid)
+    model = TestModel(grid)
     t_F = 0:0.1:1
 	F = FieldTimeSeries(grid, XY(), t_F)
 	F.data .= ones(size(F));
