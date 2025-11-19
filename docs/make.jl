@@ -1,6 +1,7 @@
 using ArgParse
 using Documenter
 using Literate
+using PlutoStaticHTML
 
 using Terrarium
 
