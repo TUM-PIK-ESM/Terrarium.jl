@@ -2,7 +2,7 @@ using Terrarium
 using Test
 
 @testset "Prescribed turbulent fluxes" begin
-    grid = ColumnGrid(CPU(), Float64, ExponentialSpacing(N=10))
+    grid = ColumnGrid(CPU(), Float64, ExponentialSpacing(N = 10))
     turbulent_fluxes = PrescribedTurbulentFluxes()
     surface_energy_balance = SurfaceEnergyBalance(Float64; turbulent_fluxes)
     model = SurfaceEnergyModel(grid, surface_energy_balance)
@@ -12,11 +12,11 @@ using Test
     set!(state.sensible_heat_flux, 10.0)
     set!(state.latent_heat_flux, 5.0)
     @test Terrarium.sensible_heat_flux(1, 1, state, turbulent_fluxes) == 10.0
-    @test Terrarium.latent_heat_flux(1, 1, state, turbulent_fluxes) == 5.0    
+    @test Terrarium.latent_heat_flux(1, 1, state, turbulent_fluxes) == 5.0
 end
 
 @testset "Diagnosed turbulent fluxes" begin
-    grid = ColumnGrid(CPU(), Float64, ExponentialSpacing(N=10))
+    grid = ColumnGrid(CPU(), Float64, ExponentialSpacing(N = 10))
     turbulent_fluxes = DiagnosedTurbulentFluxes(Float64)
     surface_energy_balance = SurfaceEnergyBalance(Float64; turbulent_fluxes)
     model = SurfaceEnergyModel(grid, surface_energy_balance)

@@ -61,16 +61,16 @@ safediv(x::NF, y::NF) where {NF} = ifelse(iszero(y), Inf, x / (y + eps(NF)))
 
 Return a function `f(z)` that linearly interpolates between the given `knots`.
 """
-function piecewise_linear(knots::Pair{<:LengthQuantity}...; extrapolation=Interpolations.Flat())
+function piecewise_linear(knots::Pair{<:LengthQuantity}...; extrapolation = Interpolations.Flat())
     # extract coordinates and strip units
     zs = collect(map(ustrip ∘ first, knots))
     ys = collect(map(last, knots))
-    @assert issorted(zs, rev=true) "depths must be sorted in descending order"
+    @assert issorted(zs, rev = true) "depths must be sorted in descending order"
     interp = Interpolations.interpolate((reverse(zs),), reverse(ys), Interpolations.Gridded(Interpolations.Linear()))
     return Interpolations.extrapolate(interp, extrapolation)
 end
 
-function adapt(::Type{NF}, obj) where {NF<:Number}
+function adapt(::Type{NF}, obj) where {NF <: Number}
     vals = map(NF, flatten(obj, flattenable, Number))
     return reconstruct(obj, vals, flattenable, Number)
 end
@@ -85,7 +85,7 @@ end
 Same as `map` for `NTuple`s but with guaranteed type stability. `fastmap` is a `@generated`
 function which unrolls calls to `f` into a loop-free tuple construction expression.
 """
-@generated function fastmap(f::F, iters::NTuple{N,Any}...) where {F,N}
+@generated function fastmap(f::F, iters::NTuple{N, Any}...) where {F, N}
     expr = Expr(:tuple)
     for j in 1:N
         push!(expr.args, :(f($(map(i -> :(iters[$i][$j]), 1:length(iters))...))))
@@ -118,7 +118,7 @@ end
 
 Same as `fastmap` but simply invokes `f!` on each argument set without constructing a tuple.
 """
-@generated function fastiterate(f!::F, iters::NTuple{N,Any}...) where {F,N}
+@generated function fastiterate(f!::F, iters::NTuple{N, Any}...) where {F, N}
     expr = Expr(:block)
     for j in 1:N
         push!(expr.args, :(f!($(map(i -> :(iters[$i][$j]), 1:length(iters))...))))

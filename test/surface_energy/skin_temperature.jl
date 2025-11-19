@@ -2,7 +2,7 @@ using Terrarium
 using Test
 
 @testset "Prescribed skin temperature" begin
-    grid = ColumnGrid(CPU(), Float64, ExponentialSpacing(N=10))
+    grid = ColumnGrid(CPU(), Float64, ExponentialSpacing(N = 10))
     skin_temperature = PrescribedSkinTemperature()
     surface_energy_balance = SurfaceEnergyBalance(Float64; skin_temperature)
     model = SurfaceEnergyModel(grid, surface_energy_balance)
@@ -14,8 +14,8 @@ using Test
 end
 
 @testset "Diagnosed skin temperature" begin
-    grid = ColumnGrid(CPU(), Float64, ExponentialSpacing(N=10))
-    clock = Clock(time=0.0)
+    grid = ColumnGrid(CPU(), Float64, ExponentialSpacing(N = 10))
+    clock = Clock(time = 0.0)
     skin_temperature = ImplicitSkinTemperature()
     surface_energy_balance = SurfaceEnergyBalance(Float64; skin_temperature)
     model = SurfaceEnergyModel(grid, surface_energy_balance)

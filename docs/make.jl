@@ -7,11 +7,11 @@ using Terrarium
 s = ArgParseSettings()
 @add_arg_table! s begin
     "--local", "-l"
-       action = :store_true
-       help = "Local docs build mode"
+    action = :store_true
+    help = "Local docs build mode"
     "--draft", "-d"
-       action = :store_true
-       help = "Whether to build docs in draft mode, i.e. skipping execution of examples and doctests"
+    action = :store_true
+    help = "Whether to build docs in draft mode, i.e. skipping execution of examples and doctests"
 end
 parsed_args = parse_args(ARGS, s)
 
@@ -23,9 +23,9 @@ end
 
 makedocs(
     format = Documenter.HTML(
-        prettyurls=get(ENV, "CI", nothing)=="true",
-        ansicolor=true,
-        collapselevel=1,
+        prettyurls = get(ENV, "CI", nothing) == "true",
+        ansicolor = true,
+        collapselevel = 1,
         canonical = "https://tum-pik-esm.github.io/Terrarium.jl/stable/",
         size_threshold = 600_000
     ),      # in bytes
@@ -47,7 +47,7 @@ makedocs(
         "Contributing" => "contributing.md",
         "API Reference" => "api_reference.md",
     ],
-    draft=IS_DRAFT,
+    draft = IS_DRAFT,
 )
 
 deployconfig = Documenter.auto_detect_deploy_system()
@@ -56,8 +56,8 @@ deployconfig = Documenter.auto_detect_deploy_system()
 # rm(joinpath(@__DIR__, "build", ".gitignore"))
 
 deploydocs(
-       repo="github.com/TUM-PIK-ESM/Terrarium.jl.git",
-       push_preview = true,
-       versions = ["v0" => "v^", "v#.#", "dev" => "dev"],
-       deploy_config = deployconfig,
+    repo = "github.com/TUM-PIK-ESM/Terrarium.jl.git",
+    push_preview = true,
+    versions = ["v0" => "v^", "v#.#", "dev" => "dev"],
+    deploy_config = deployconfig,
 )

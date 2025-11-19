@@ -15,7 +15,7 @@ Base.@kwdef struct ConstantSoilCarbonDensity{NF} <: AbstractSoilBiogeochemistry{
     ρ_org::NF = 1300.0
 
     "Natural porosity of organic material"
-    por_org::NF = 0.90
+    por_org::NF = 0.9
 end
 
 ConstantSoilCarbonDensity(::Type{NF}; kwargs...) where {NF} = ConstantSoilCarbonDensity{NF}(; kwargs...)
@@ -35,7 +35,7 @@ Get the prescribed natural porosity of organic soil.
 Calculate the organic solid fraction at the given indices based on the prescribed SOC and natural porosity/density of
 the organic material.
 """
-@inline organic_fraction(i, j, k, state, bgc::ConstantSoilCarbonDensity) = bgc.ρ_soc / ((1 - bgc.por_org)*bgc.ρ_org)
+@inline organic_fraction(i, j, k, state, bgc::ConstantSoilCarbonDensity) = bgc.ρ_soc / ((1 - bgc.por_org) * bgc.ρ_org)
 
 @inline initialize!(state, model, bgc::ConstantSoilCarbonDensity) = nothing
 

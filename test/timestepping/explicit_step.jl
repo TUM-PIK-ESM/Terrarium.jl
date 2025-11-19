@@ -13,7 +13,7 @@ Terrarium.closurevar(closure::TestClosure) = Terrarium.auxiliary(closure.varname
     @test !is_adaptive(euler)
     @test default_dt(euler) == Δt
     # set up grid and fields
-    grid = ColumnGrid(CPU(), Float64, ExponentialSpacing(N=10))
+    grid = ColumnGrid(CPU(), Float64, ExponentialSpacing(N = 10))
     # here we mock the structure of a `StateVariables` object
     # for a model with prognostic variables at the top level and
     # in a nested namespace.
@@ -33,17 +33,17 @@ Terrarium.closurevar(closure::TestClosure) = Terrarium.auxiliary(closure.varname
                 ),
                 namespaces = (;),
             ),
-        )
+        ),
     )
     dxdt = 0.1
     dydt = 0.2
     set!(state.tendencies.x, dxdt)
     set!(state.tendencies.y, dydt)
-    set!(state.namespaces.inner.tendencies.x, dxdt*2)
+    set!(state.namespaces.inner.tendencies.x, dxdt * 2)
     Terrarium.explicit_step!(state, grid, ForwardEuler(; Δt), Δt)
-    @test all(state.prognostic.x .≈ Δt*dxdt)
-    @test all(state.prognostic.y .≈ Δt*dydt)
-    @test all(state.namespaces.inner.prognostic.x .≈ Δt*dxdt*2)
+    @test all(state.prognostic.x .≈ Δt * dxdt)
+    @test all(state.prognostic.y .≈ Δt * dydt)
+    @test all(state.namespaces.inner.prognostic.x .≈ Δt * dxdt * 2)
     # check that z was not changed (inverse closure not evaluated)
     @test all(iszero.(state.auxiliary.z))
 end

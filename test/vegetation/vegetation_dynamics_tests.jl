@@ -40,4 +40,3 @@ end
     ν_tendency = compute_ν_tend(veg_dynamics, vegcarbon_dynamics, LAI_b, C_veg, ν)
     @test isfinite(ν_tendency)
 end
-

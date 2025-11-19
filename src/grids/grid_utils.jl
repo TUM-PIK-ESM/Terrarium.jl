@@ -1,12 +1,12 @@
 # Convenience dispatches for Oceananigans.launch!
 function launch!(grid::AbstractLandGrid, workspec::Symbol, kernel::Function, args...; kwargs...)
     fgrid = get_field_grid(grid)
-    launch!(fgrid.architecture, fgrid, workspec, kernel, args...; kwargs...)
+    return launch!(fgrid.architecture, fgrid, workspec, kernel, args...; kwargs...)
 end
 
 function launch!(state, grid::AbstractLandGrid, workspec::Symbol, kernel::Function, args...; kwargs...)
     fgrid = get_field_grid(grid)
-    launch!(fgrid.architecture, fgrid, workspec, kernel, state, grid, args...; kwargs...)
+    return launch!(fgrid.architecture, fgrid, workspec, kernel, state, grid, args...; kwargs...)
 end
 
 """
@@ -21,7 +21,7 @@ workspec(::Center, ::Center, ::Center) = :xyz
 field_matches_grid(field, grid) = field.grid == grid
 
 function assert_field_matches_grid(field::Union{RingGrids.AbstractField, AbstractField}, grid)
-    @assert field_matches_grid(field, grid) "Field grid $(typeof(field.grid)) does not match $(typeof(grid))"
+    return @assert field_matches_grid(field, grid) "Field grid $(typeof(field.grid)) does not match $(typeof(grid))"
 end
 
 const RingGridOrField = Union{RingGrids.AbstractGrid, RingGrids.AbstractField}
@@ -45,12 +45,12 @@ Additional arguments are passed direclty to the `Field` constructor. The locatio
 is determined by `VarDims` defined on `var`.
 """
 function Field(
-    grid::AbstractLandGrid,
-    dims::VarDims,
-    boundary_conditions = nothing,
-    args...;
-    kwargs...
-)
+        grid::AbstractLandGrid,
+        dims::VarDims,
+        boundary_conditions = nothing,
+        args...;
+        kwargs...
+    )
     # infer the location of the Field on the Oceananigans grid from `dims`
     loc = location(dims)
     FT = Field{map(typeof, loc)...}
@@ -77,10 +77,10 @@ end
 Construct a `FieldTimeSeries` on the given land `grid` with the given `dims` and `times`.
 """
 function FieldTimeSeries(
-    grid::AbstractLandGrid,
-    dims::VarDims,
-    times=eltype(grid)[]
-)
+        grid::AbstractLandGrid,
+        dims::VarDims,
+        times = eltype(grid)[]
+    )
     loc = location(dims)
     return FieldTimeSeries(loc, get_field_grid(grid), times)
 end
@@ -93,5 +93,5 @@ end
 
 Computes the field or function at the vertical (z-axis) face by taking the `min` of the two adjacent vertical layers.
 """
-@inline min_zᵃᵃᶠ(i, j, k, grid, c) = @inbounds min(c[i, j, k], c[i, j, k-1])
-@inline min_zᵃᵃᶠ(i, j, k, grid, f, args...) = @inbounds min(f(i, j, k, grid, args...), f(i, j, k-1, grid, args...))
+@inline min_zᵃᵃᶠ(i, j, k, grid, c) = @inbounds min(c[i, j, k], c[i, j, k - 1])
+@inline min_zᵃᵃᶠ(i, j, k, grid, f, args...) = @inbounds min(f(i, j, k, grid, args...), f(i, j, k - 1, grid, args...))

@@ -28,11 +28,11 @@ variables(strat::HomogeneousSoil) = ()
 Compute and return a `SoilComposition` summarizing the material composition of the soil volume at the given indices.
 """
 @inline function soil_composition(
-    i, j, k, state,
-    strat::HomogeneousSoil,
-    hydrology::AbstractSoilHydrology,
-    bgc::AbstractSoilBiogeochemistry
-)
+        i, j, k, state,
+        strat::HomogeneousSoil,
+        hydrology::AbstractSoilHydrology,
+        bgc::AbstractSoilBiogeochemistry
+    )
     # get current saturation state and liquid fraction
     sat = state.saturation_water_ice[i, j, k]
     liq = state.liquid_water_fraction[i, j, k]

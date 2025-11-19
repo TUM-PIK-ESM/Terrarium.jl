@@ -16,14 +16,14 @@ R_{\\text{net}} = S_{\\uparrow} - S_{\\downarrow} + L_{\\uparrow} - L_{\\downarr
 struct PrescribedRadiativeFluxes <: AbstractRadiativeFluxes end
 
 variables(::PrescribedRadiativeFluxes) = (
-    input(:surface_shortwave_up, XY(), units=u"W/m^2", desc="Outoing (upwelling) shortwave radiation"),
-    input(:surface_longwave_up, XY(), units=u"W/m^2", desc="Outoing (upwelling) longwave radiation"),
-    auxiliary(:surface_net_radiation, XY(), units=u"W/m^2", desc="Net outgoing (positive up) radiation"),
+    input(:surface_shortwave_up, XY(), units = u"W/m^2", desc = "Outoing (upwelling) shortwave radiation"),
+    input(:surface_longwave_up, XY(), units = u"W/m^2", desc = "Outoing (upwelling) longwave radiation"),
+    auxiliary(:surface_net_radiation, XY(), units = u"W/m^2", desc = "Net outgoing (positive up) radiation"),
 )
 
 function compute_auxiliary!(state, model, rad::PrescribedRadiativeFluxes)
     (; grid, atmosphere) = model
-    launch!(state, grid, :xy, compute_net_radiation!, rad, atmosphere)
+    return launch!(state, grid, :xy, compute_net_radiation!, rad, atmosphere)
 end
 
 """
@@ -35,14 +35,14 @@ schemes for the albedo, skin temperature, and atmospheric inputs.
 struct DiagnosedRadiativeFluxes <: AbstractRadiativeFluxes end
 
 variables(::DiagnosedRadiativeFluxes) = (
-    auxiliary(:surface_shortwave_up, XY(), units=u"W/m^2", desc="Outoing (upwelling) shortwave radiation"),
-    auxiliary(:surface_longwave_up, XY(), units=u"W/m^2", desc="Outoing (upwelling) longwave radiation"),
-    auxiliary(:surface_net_radiation, XY(), units=u"W/m^2", desc="Net radiation budget"),
+    auxiliary(:surface_shortwave_up, XY(), units = u"W/m^2", desc = "Outoing (upwelling) shortwave radiation"),
+    auxiliary(:surface_longwave_up, XY(), units = u"W/m^2", desc = "Outoing (upwelling) longwave radiation"),
+    auxiliary(:surface_net_radiation, XY(), units = u"W/m^2", desc = "Net radiation budget"),
 )
 
 function compute_auxiliary!(state, model, rad::DiagnosedRadiativeFluxes)
     (; grid, surface_energy_balance, atmosphere, constants) = model
-    launch!(
+    return launch!(
         state,
         grid,
         :xy,
@@ -58,14 +58,14 @@ end
 # Kernels
 
 @kernel function compute_radiative_fluxes!(
-    state,
-    ::AbstractLandGrid,
-    rad::AbstractRadiativeFluxes,
-    atmos::AbstractAtmosphere,
-    skinT::AbstractSkinTemperature,
-    abd::AbstractAlbedo,
-    consts::PhysicalConstants
-)
+        state,
+        ::AbstractLandGrid,
+        rad::AbstractRadiativeFluxes,
+        atmos::AbstractAtmosphere,
+        skinT::AbstractSkinTemperature,
+        abd::AbstractAlbedo,
+        consts::PhysicalConstants
+    )
     i, j = @index(Global, NTuple)
 
     # get inputs
@@ -90,7 +90,7 @@ end
     surface_longwave_up = state.surface_longwave_up[i, j]
     surface_shortwave_down = shortwave_in(i, j, state, atmos)
     surface_longwave_down = longwave_in(i, j, state, atmos)
-    
+
     # compute net radiation
     state.surface_net_radiation[i, j, 1] = surface_net_radiation(rad, surface_shortwave_down, surface_shortwave_up, surface_longwave_down, surface_longwave_up)
 end

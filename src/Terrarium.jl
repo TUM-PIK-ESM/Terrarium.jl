@@ -31,10 +31,10 @@ import Oceananigans.Units: Time
 import Oceananigans.Utils: launch!
 # Boundary conditions
 import Oceananigans.BoundaryConditions: BoundaryCondition, DefaultBoundaryCondition, FieldBoundaryConditions,
-                                        ValueBoundaryCondition, FluxBoundaryCondition, GradientBoundaryCondition, NoFluxBoundaryCondition,
-                                        ContinuousBoundaryFunction, DiscreteBoundaryFunction,
-                                        AbstractBoundaryConditionClassification, Value, Flux, Gradient, # BC type classifications
-                                        fill_halo_regions!, regularize_field_boundary_conditions, getbc, compute_z_bcs!
+    ValueBoundaryCondition, FluxBoundaryCondition, GradientBoundaryCondition, NoFluxBoundaryCondition,
+    ContinuousBoundaryFunction, DiscreteBoundaryFunction,
+    AbstractBoundaryConditionClassification, Value, Flux, Gradient, # BC type classifications
+    fill_halo_regions!, regularize_field_boundary_conditions, getbc, compute_z_bcs!
 
 # Adapt and KernelAbstractions for GPU parallelization
 import Adapt: Adapt, adapt, @adapt_structure
@@ -54,7 +54,7 @@ import Unitful: @u_str, uconvert, ustrip, upreferred
 """
 Alias for numeric `Quantity` with type `NF` and units `U`.
 """
-const LengthQuantity{NF, U} = Quantity{NF, 𝐋, U} where {NF, U<:Units}
+const LengthQuantity{NF, U} = Quantity{NF, 𝐋, U} where {NF, U <: Units}
 
 """
 Alias for Oceananigans `AbstractBoundaryConditionClassification`.

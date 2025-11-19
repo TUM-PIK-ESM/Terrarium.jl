@@ -6,8 +6,8 @@ Simple scheme for prescribed skin temperatures from input variables.
 struct PrescribedSkinTemperature <: AbstractSkinTemperature end
 
 variables(::PrescribedSkinTemperature) = (
-    auxiliary(:ground_heat_flux, XY(), units=u"W/m^2", desc="Ground heat flux"),
-    input(:skin_temperature, XY(), units=u"°C", desc="Longwave emission temperature of the land surface in °C"),
+    auxiliary(:ground_heat_flux, XY(), units = u"W/m^2", desc = "Ground heat flux"),
+    input(:skin_temperature, XY(), units = u"°C", desc = "Longwave emission temperature of the land surface in °C"),
 )
 
 """
@@ -29,9 +29,9 @@ end
 ImplicitSkinTemperature(::Type{NF}; kwargs...) where {NF} = ImplicitSkinTemperature{NF}(; kwargs...)
 
 variables(::ImplicitSkinTemperature) = (
-    prognostic(:skin_temperature, XY(), units=u"°C", desc="Longwave emission temperature of the land surface in °C"),
-    auxiliary(:ground_heat_flux, XY(), units=u"W/m^2", desc="Ground heat flux"),
-    input(:ground_temperature, XY(), units=u"°C", desc="Temperature of the uppermost ground or soil grid cell in °C")
+    prognostic(:skin_temperature, XY(), units = u"°C", desc = "Longwave emission temperature of the land surface in °C"),
+    auxiliary(:ground_heat_flux, XY(), units = u"W/m^2", desc = "Ground heat flux"),
+    input(:ground_temperature, XY(), units = u"°C", desc = "Temperature of the uppermost ground or soil grid cell in °C"),
 )
 
 """
@@ -39,15 +39,15 @@ Default `compute_auxiliary!` for all skin temperature implementation that comput
 current radiative, sensible, and latent fluxes.
 """
 function compute_auxiliary!(state, model, skinT::AbstractSkinTemperature)
-    compute_ground_heat_flux!(state, model, skinT)
+    return compute_ground_heat_flux!(state, model, skinT)
 end
 
 function compute_ground_heat_flux!(state, model, skinT::AbstractSkinTemperature)
-    launch!(state, model.grid, :xy, compute_ground_heat_flux_kernel!, skinT)
+    return launch!(state, model.grid, :xy, compute_ground_heat_flux_kernel!, skinT)
 end
 
 function update_skin_temperature!(state, model, skinT::AbstractSkinTemperature)
-    launch!(state, model.grid, :xy, update_skin_temperature_kernel!, skinT)
+    return launch!(state, model.grid, :xy, update_skin_temperature_kernel!, skinT)
 end
 
 # Kernels
@@ -83,7 +83,7 @@ Diagnose the skin temperature implied by the current `ground_heat_flux` and `gro
     Tₛ = state.ground_temperature[i, j]
     # compute new skin temperature T₀ by setting G equal to the half-cell heat flux
     κₛ = skin_thermal_conductivity(i, j, state, skinT)
-    state.skin_temperature[i, j, 1] = Tₛ - G * Δz₁ / (2*κₛ)
+    state.skin_temperature[i, j, 1] = Tₛ - G * Δz₁ / (2 * κₛ)
 end
 
 # Kernel functions

@@ -20,12 +20,12 @@ using Unitful
     X3 = Field(grid, XYZ())
     ## check that trying to create a FieldInputSource with inconsistent types or dimensions fails
     @test_throws AssertionError InputSource(; X1, X2, X3)
-    @test_throws AssertionError InputSource(; X1, X2, Y=zeros(size(X1)))
+    @test_throws AssertionError InputSource(; X1, X2, Y = zeros(size(X1)))
     ## check update_inputs!
     set!(X1, 1.0)
     set!(X2, 2.0)
     fields = (X1 = Field(grid, XY()), X2 = Field(grid, XY()))
-    clock = Clock(time=0)
+    clock = Clock(time = 0)
     update_inputs!(fields, field_input, clock)
     @test all(fields.X1 .== X1)
     @test all(fields.X2 .== X2)
@@ -52,7 +52,7 @@ using Unitful
     S1.data .= randn(size(S1))
     ## check update_inputs!
     fields = (S1 = Field(grid, XY()), S2 = Field(grid, XY()))
-    clock = Clock(time=0)
+    clock = Clock(time = 0)
     update_inputs!(fields, fts_input, clock)
     @test all(fields.S1 .== S1[1])
     @test all(fields.S2 .== S2[1])

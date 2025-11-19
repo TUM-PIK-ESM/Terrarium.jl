@@ -27,12 +27,12 @@ Properties:
 $TYPEDFIELDS
 """
 struct SoilHydrology{
-    NF,
-    VerticalFlow<:AbstractVerticalFlow,
-    Runoff<:AbstractSoilRunoff,
-    SoilET<:AbstractSoilET,
-    SoilHydraulics<:AbstractSoilHydraulics{NF},
-} <: AbstractSoilHydrology{NF}
+        NF,
+        VerticalFlow <: AbstractVerticalFlow,
+        Runoff <: AbstractSoilRunoff,
+        SoilET <: AbstractSoilET,
+        SoilHydraulics <: AbstractSoilHydraulics{NF},
+    } <: AbstractSoilHydrology{NF}
     "Soil water vertical flow operator"
     vertflow::VerticalFlow
 
@@ -47,12 +47,12 @@ struct SoilHydrology{
 end
 
 function SoilHydrology(
-    ::Type{NF},
-    vertflow::AbstractVerticalFlow = NoFlow();
-    runoff::AbstractSoilRunoff = SoilRunoff(),
-    evapotranspiration::AbstractSoilET = NoSoilET(),
-    hydraulic_properties::AbstractSoilHydraulics = SoilHydraulicsSURFEX(NF),
-) where {NF}
+        ::Type{NF},
+        vertflow::AbstractVerticalFlow = NoFlow();
+        runoff::AbstractSoilRunoff = SoilRunoff(),
+        evapotranspiration::AbstractSoilET = NoSoilET(),
+        hydraulic_properties::AbstractSoilHydraulics = SoilHydraulicsSURFEX(NF),
+    ) where {NF}
     return SoilHydrology(vertflow, runoff, evapotranspiration, hydraulic_properties)
 end
 
@@ -83,13 +83,13 @@ Return the porosity of the soil volume at the given indices based on the current
 @inline function porosity(i, j, k, state, hydrology::SoilHydrology, strat::AbstractStratigraphy, bgc::AbstractSoilBiogeochemistry)
     org = organic_fraction(i, j, k, state, bgc)
     texture = soil_texture(i, j, k, state, strat)
-    return (1 - org)*mineral_porosity(hydrology.hydraulic_properties, texture) + org*organic_porosity(i, j, k, state, bgc)
+    return (1 - org) * mineral_porosity(hydrology.hydraulic_properties, texture) + org * organic_porosity(i, j, k, state, bgc)
 end
 
 # Immobile soil water (NoFlow)
 
 variables(::NoFlow) = (
-    auxiliary(:saturation_water_ice, XYZ(), domain=UnitInterval(), desc="Saturation level of water and ice in the pore space"),
+    auxiliary(:saturation_water_ice, XYZ(), domain = UnitInterval(), desc = "Saturation level of water and ice in the pore space"),
 )
 
 @inline initialize!(state, model, hydrology::SoilHydrology) = nothing
@@ -111,7 +111,7 @@ Not yet implemented.
 @kwdef struct SoilRunoff{SR, IF, DR} <: AbstractSoilRunoff
     "Excess infiltration runoff scheme"
     excess_infiltration::SR = nothing
-    
+
     "Subsurface interflow runoff"
     interflow::IF = nothing
 
@@ -130,14 +130,14 @@ from the topmost soil layer.
 struct SurfaceEvaporation <: AbstractSoilET end
 
 variables(::SurfaceEvaporation) = (
-    input(:latent_heat_flux, XY(), units=u"W/m^2", desc="Latent heat flux at the surface [W m⁻²]"),
+    input(:latent_heat_flux, XY(), units = u"W/m^2", desc = "Latent heat flux at the surface [W m⁻²]"),
 )
 
 @inline function forcing_ET(i, j, k, grid, state, ::SurfaceEvaporation, constants::PhysicalConstants)
     let Hₗ = state.latent_heat_flux[i, j],
-        L = constants.Lsg, # specific latent heat of vaporization
-        ρw = constants.ρw, # density of water
-        Δz = Δzᵃᵃᶜ(i, j, k, grid);
+            L = constants.Lsg, # specific latent heat of vaporization
+            ρw = constants.ρw, # density of water
+            Δz = Δzᵃᵃᶜ(i, j, k, grid)
         q_E = Hₗ / (L * ρw) # ET water flux in m s⁻¹
         ∂θ∂t = -q_E / Δz # rescale by layer thickness to get water content flux
         return ∂θ∂t * (k == grid.Nz) # only nonzero at the surface

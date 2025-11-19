@@ -11,7 +11,7 @@ $TYPEDFIELDS
 @kwdef struct MedlynStomatalConductance{NF} <: AbstractStomatalConductance
     # TODO check pysical meaning of this parameter
     "Parameter in optimal stomatal conductance formulation, Lin et al. 2015 [-], PFT specific"
-    g1::NF = 2.3 # Value for Needleleaf tree PFT 
+    g1::NF = 2.3 # Value for Needleleaf tree PFT
 end
 
 variables(::MedlynStomatalConductance) = (
@@ -25,7 +25,7 @@ Computes the ratio of leaf-internal and air CO2 concentration `λc`,
 derived from the optimal stomatal conductance model (Medlyn et al. 2011),
 Eq. 71, PALADYN (Willeit 2016).
 """
-@inline function compute_λc(stomcond::MedlynStomatalConductance{NF}, vpd) where NF
+@inline function compute_λc(stomcond::MedlynStomatalConductance{NF}, vpd) where {NF}
     λc = NF(1.0) - NF(1.6) / (NF(1.0) + stomcond.g1 / sqrt(vpd * NF(1.0e-3)))
     return λc
 end
@@ -33,14 +33,14 @@ end
 function compute_auxiliary!(state, model, stomcond::MedlynStomatalConductance)
     grid = get_grid(model)
     bcs = get_boundary_conditions(model)
-    launch!(grid, :xy, compute_auxiliary_kernel!, state, stomcond, bcs.top)
+    return launch!(grid, :xy, compute_auxiliary_kernel!, state, stomcond, bcs.top)
 end
 
 @kernel function compute_auxiliary_kernel!(
-    state,
-    stomcond::MedlynStomatalConductance{NF},
-    ::PrescribedAtmosphere
-) where NF
+        state,
+        stomcond::MedlynStomatalConductance{NF},
+        ::PrescribedAtmosphere
+    ) where {NF}
     i, j = @index(Global, NTuple)
 
     # Get inputs

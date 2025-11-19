@@ -42,7 +42,7 @@ organic_fraction(soil::SoilComposition) = soil.organic
 
 mineral_texture(soil::SoilComposition) = soil.texture
 
-water_ice(soil::SoilComposition) = soil.porosity*soil.saturation
+water_ice(soil::SoilComposition) = soil.porosity * soil.saturation
 
 """
     volumetric_fractions(soil::SoilComposition)
@@ -53,16 +53,16 @@ and returns them as a named tuple of the form `(; water, ice, air, mineral, orga
 @inline function volumetric_fractions(soil::SoilComposition)
     # unpack relevant quantities
     let por = soil.porosity,
-        sat = soil.saturation,
-        liq = soil.liquid,
-        org = soil.organic;
+            sat = soil.saturation,
+            liq = soil.liquid,
+            org = soil.organic
         # calculate volumetric fractions
-        water_ice = sat*por
-        water = water_ice*liq
-        ice = water_ice*(1-liq)
-        air = (1-sat)*por
-        mineral = (1-por)*(1-org)
-        organic = (1-por)*org
+        water_ice = sat * por
+        water = water_ice * liq
+        ice = water_ice * (1 - liq)
+        air = (1 - sat) * por
+        mineral = (1 - por) * (1 - org)
+        organic = (1 - por) * org
         return (; water, ice, air, mineral, organic)
     end
 end

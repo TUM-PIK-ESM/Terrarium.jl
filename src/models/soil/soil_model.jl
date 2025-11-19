@@ -7,15 +7,15 @@ Properties:
 $(TYPEDFIELDS)
 """
 @kwdef struct SoilModel{
-    NF,
-    GridType<:AbstractLandGrid{NF},
-    Stratigraphy<:AbstractStratigraphy,
-    SoilEnergy<:AbstractSoilEnergyBalance,
-    SoilHydrology<:AbstractSoilHydrology,
-    Biogeochemistry<:AbstractSoilBiogeochemistry,
-    Constants<:PhysicalConstants{NF},
-    Initializer<:AbstractInitializer,
-} <: AbstractSoilModel{NF, GridType}
+        NF,
+        GridType <: AbstractLandGrid{NF},
+        Stratigraphy <: AbstractStratigraphy,
+        SoilEnergy <: AbstractSoilEnergyBalance,
+        SoilHydrology <: AbstractSoilHydrology,
+        Biogeochemistry <: AbstractSoilBiogeochemistry,
+        Constants <: PhysicalConstants{NF},
+        Initializer <: AbstractInitializer,
+    } <: AbstractSoilModel{NF, GridType}
     "Spatial grid type"
     grid::GridType
 
@@ -81,12 +81,12 @@ end
 
 function closure!(state, model::SoilModel)
     closure!(state, model, get_closure(model.hydrology))
-    closure!(state, model, get_closure(model.energy))
+    return closure!(state, model, get_closure(model.energy))
 end
 
 function invclosure!(state, model::SoilModel)
     invclosure!(state, model, get_closure(model.hydrology))
-    invclosure!(state, model, get_closure(model.energy))
+    return invclosure!(state, model, get_closure(model.energy))
 end
 
 # Initialization
@@ -98,5 +98,5 @@ function initialize!(state, model::SoilModel)
     initialize!(state, model, model.strat)
     initialize!(state, model, model.hydrology)
     initialize!(state, model, model.energy)
-    initialize!(state, model, model.biogeochem)
+    return initialize!(state, model, model.biogeochem)
 end
