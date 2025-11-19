@@ -13,6 +13,12 @@ end
 # ╔═╡ 94d82d31-42ec-41de-91e9-b5585b3a72d4
 using Terrarium
 
+# ╔═╡ 07c8a3a4-21aa-4213-a876-eadc8754d4a0
+begin # for reproducability set a random seed
+	using Random
+	Random.seed!(1234)
+end
+
 # ╔═╡ eeb283fa-5360-4bab-83cf-dcbc0bee7949
 using CairoMakie
 
@@ -310,8 +316,9 @@ Well that's it. We defined and ran a simple exponential model with external forc
 
 # ╔═╡ Cell order:
 # ╟─5630efd5-2482-463d-913f-9addb120beec
-# ╠═808d5d89-c1d2-4f6a-bd55-4b3a8444c90f
+# ╟─808d5d89-c1d2-4f6a-bd55-4b3a8444c90f
 # ╠═94d82d31-42ec-41de-91e9-b5585b3a72d4
+# ╟─07c8a3a4-21aa-4213-a876-eadc8754d4a0
 # ╟─4922e264-c80d-4a5b-8891-a7c8a3fdbfe7
 # ╠═78f268ef-5385-4c63-bc35-2c973de69da5
 # ╟─054a8b11-250f-429f-966f-ca3c9a5dc2ef
