@@ -38,4 +38,4 @@ if MAIN_TESTS
     @testset "Surface energy balance" begin
         include("surface_energy/seb_tests.jl")
     end
-end 
+end
