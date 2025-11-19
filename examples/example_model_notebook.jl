@@ -202,7 +202,7 @@ end
 
 # ╔═╡ 452f95e1-3c6b-4e49-935f-1a6f96c96bbb
 md"""
-Here we constructed a 2D (`XY()`) time series on our `grid` at times `t_F` with random normal distributed data and definetd our `InputSource` for our model based on it. 
+Here we constructed a 2D (`XY()`) time series on our `grid` at times `t_F` with random normal distributed data and definted our `InputSource` for our model based on it. 
 """
 
 # ╔═╡ 4b483c23-9e15-4d03-b275-8f530854669e
