@@ -147,13 +147,6 @@ function initialize(
     return integrator
 end
 
-initialize(
-    model::AbstractModel{NF},
-    timestepper::AbstractTimeStepper;
-    input_source::InputSource = InputSource(),
-    kwargs...
-) where {NF} = initialize(model, timestepper; input_sources=InputSources(input_source), kwargs...)
- 
 get_steps(steps::Nothing, period::Period, Δt::Real) = div(Second(period).value, Δt)
 get_steps(steps::Int, period::Nothing, Δt::Real) = steps
 get_steps(steps::Nothing, period::Nothing, Δt::Real) = throw(ArgumentError("either `steps` or `period` must be specified"))
