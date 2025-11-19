@@ -1,6 +1,6 @@
-abstract type AbstractEvapotranspirativeResistance end
+abstract type AbstractAerodynamicResistance end
 
-abstract type AbstractSoilMoistureLimitingFactor end
+abstract type AbstractLatentHeatFlux end
 
 """
     $TYPEDEF
@@ -26,29 +26,30 @@ Represents the standard case where the turbulent (sensible and latent) heat flux
 from atmosphere and soil conditions.
 """
 struct DiagnosedTurbulentFluxes{
-    ER<:AbstractEvapotranspirativeResistance,
-    LF<:AbstractSoilMoistureLimitingFactor
+    LF<:AbstractLatentHeatFlux,
+    AR<:AbstractAerodynamicResistance
 } <: AbstractTurbulentFluxes
-    "Parameterization of aerodynamic (rₐ) and canopy/surface (rₛ) resistances"
-    resistance::ER
+    "Formulation of the latent heat flux"
+    latent_heat_flux::LF
 
-    "Parameterization of the soil moisture limiting factor [-]"
-    soil_moisture_limiting_factor::LF
+    "Parameterizations of boundary layer aerodynamics"
+    aerodynamic_resistance::AR
 end
 
 function DiagnosedTurbulentFluxes(
     ::Type{NF};
-    resistance::AbstractEvapotranspirativeResistance=ConstantAerodynamicResistance(NF),
-    soil_moisture_limiting_factor::AbstractSoilMoistureLimitingFactor=UnlimitedSoilMoisture()
+    latent_heat_flux::AbstractLatentHeatFlux = FreeLatentHeatFlux(),
+    aerodynamic_resistance::AbstractAerodynamicResistance = ConstantAerodynamicResistance(NF)
 ) where {NF}
-    return DiagnosedTurbulentFluxes(resistance, soil_moisture_limiting_factor)
+    return DiagnosedTurbulentFluxes(latent_heat_flux, aerodynamic_resistance)
 end
+
+# Process methods
 
 variables(tur::DiagnosedTurbulentFluxes) = (
     auxiliary(:sensible_heat_flux, XY(), units=u"W/m^2", desc="Sensible heat flux at the surface [W m⁻²]"),
-    auxiliary(:latent_heat_flux, XY(), units=u"W/m^2", desc="Latent heat flux at the surface [W m⁻²]"),
-    variables(tur.resistance)...,
-    variables(tur.soil_moisture_limiting_factor)...,
+    variables(tur.latent_heat_flux)...,
+    variables(tur.aerodynamic_resistance)...,
 )
 
 function compute_auxiliary!(state, model, tur::DiagnosedTurbulentFluxes)
@@ -64,6 +65,8 @@ function compute_auxiliary!(state, model, tur::DiagnosedTurbulentFluxes)
         constants,
     )
 end
+
+# Kernels
 
 @kernel function compute_turbulent_fluxes!(
     state,
@@ -82,7 +85,7 @@ end
 
 # Kernel functions
 
-function sensible_heat_flux(
+@inline function sensible_heat_flux(
     i, j, state,
     tur::DiagnosedTurbulentFluxes,
     skinT::AbstractSkinTemperature,
@@ -91,7 +94,7 @@ function sensible_heat_flux(
 )
     let ρₐ = constants.ρₐ, # density of air
         cₐ = constants.cₐ, # specific heat capacity of air
-        rₐ = aerodynamic_resistance(i, j, state, tur.resistance), # aerodynamic resistance
+        rₐ = aerodynamic_resistance(i, j, state, tur.aerodynamic_resistance), # aerodynamic resistance
         Ts = skin_temperature(i, j, state, skinT), # skin temperature
         Tair = air_temperature(i, j, state, atmos); # air temperature
         # Calculate sensible heat flux (positive upwards)
@@ -100,7 +103,7 @@ function sensible_heat_flux(
     end
 end
 
-function latent_heat_flux(
+@inline function latent_heat_flux(
     i, j, state,
     tur::DiagnosedTurbulentFluxes,
     skinT::AbstractSkinTemperature,
@@ -109,8 +112,8 @@ function latent_heat_flux(
 )
     let L = constants.Lsg, # specific latent heat of vaporization of water
         ρₐ = constants.ρₐ, # density of air
-        rₐ = aerodynamic_resistance(i, j, state, tur.resistance), # aerodynamic resistance
-        β = soil_moisture_limiting_factor(i, j, state, tur.soil_moisture_limiting_factor),
+        rₐ = aerodynamic_resistance(i, j, state, tur.aerodynamic_resistance), # aerodynamic resistance
+        β = soil_moisture_limiting_factor(i, j, state, tur.latent_heat_flux),
         q_sat = surface_humidity_at_saturation(i, j, state, skinT, atmos, constants), # near-surface specific humidity
         q_air = specific_humidity(i, j, state, atmos); # specific humidity of the air
         # Calculate latent heat flux (positive upwards)
@@ -123,7 +126,7 @@ end
 Near-surface specific humidity at saturation, ``q_{\\text{sat}}``, determined based on
 the skin temperature and atmospheric pressure.
 """
-function surface_humidity_at_saturation(
+@inline function surface_humidity_at_saturation(
     i, j, state,
     skinT::AbstractSkinTemperature,
     atmos::AbstractAtmosphere,
@@ -139,12 +142,25 @@ function surface_humidity_at_saturation(
     end
 end
 
+# Latent heat flux types
+
+struct UnlimitedET{NF} <: AbstractLatentHeatFlux end
+
+# not yet implemented
+struct SoilMoistureLimitedET{NF} <: AbstractLatentHeatFlux end
+
+variables(::AbstractLatentHeatFlux) = (
+    auxiliary(:latent_heat_flux, XY(), units=u"W/m^2", desc="Latent heat flux at the surface [W m⁻²]"),
+)
+
+@inline soil_moisture_limiting_factor(i, j, state, ::UnlimitedET) = 1
+
 """
     $TYPEDEF
 
 Dummy implementation of the aerodynamic resistance that simply returns a constant value.
 """
-@kwdef struct ConstantAerodynamicResistance{NF} <: AbstractEvapotranspirativeResistance
+@kwdef struct ConstantAerodynamicResistance{NF} <: AbstractAerodynamicResistance
     "Constant aerodynamic resistance [s m⁻¹]"
     rₐ::NF = 50.0
 end
@@ -152,7 +168,3 @@ end
 ConstantAerodynamicResistance(::Type{NF}; kwargs...) where {NF} = ConstantAerodynamicResistance{NF}(; kwargs...)
 
 @inline aerodynamic_resistance(i, j, state, res::ConstantAerodynamicResistance) = res.rₐ
-
-struct UnlimitedSoilMoisture <: AbstractSoilMoistureLimitingFactor end
-
-@inline soil_moisture_limiting_factor(i, j, state, ::UnlimitedSoilMoisture) = 1
