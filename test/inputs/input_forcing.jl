@@ -43,4 +43,21 @@ end
     @test all(sim.state.F .≈ 1)
 end
 
+@testset "Forcing input with time series" begin
+    grid = ColumnGrid(CPU(), DEFAULT_NF, ExponentialSpacing())
+    model = TestModel(; grid)
+    t_F = 0:0.1:1
+	F = FieldTimeSeries(grid, XY(), t_F)
+	F.data .= randn(size(F));
+    F_in = FieldTimeSeriesInputSource(; F)
+    sim = initialize(model, F_in)
+    # check initial values
+    @test all(sim.state.x .≈ 0)
+    @test all(sim.state.F .≈ 1)
+    # advance one timestep and check updated values
+    timestep!(sim, 0.1)
+    @test all(sim.state.x .≈ 0.1)
+    @test all(sim.state.F .≈ 1)
+end
+
 end

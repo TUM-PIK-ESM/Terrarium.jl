@@ -41,7 +41,7 @@ InputSources(sources::InputSource...) = InputSources(Tuple(sources))
 
 variables(sources::InputSources) = tuplejoin(map(variables, sources.sources)...)
 
-function update_inputs!(fields, sources::InputSources, ::Clock)
+function update_inputs!(fields, sources::InputSources, clock::Clock)
     for source in sources.sources
         update_inputs!(fields, source, clock)
     end
