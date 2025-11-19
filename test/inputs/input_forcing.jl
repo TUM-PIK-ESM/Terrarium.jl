@@ -6,10 +6,9 @@ using Test
 
 DEFAULT_NF = Float32
 
-@kwdef struct TestModel{NF, Grid<:AbstractLandGrid{NF}, TS} <: Terrarium.AbstractModel{NF, Grid, TS}
+@kwdef struct TestModel{NF, Grid<:AbstractLandGrid{NF}, TS} <: Terrarium.AbstractModel{NF, Grid}
     grid::Grid
     initializer = DefaultInitializer()
-    time_stepping::TS = ForwardEuler{DEFAULT_NF}()
 end
 
 Terrarium.variables(model::TestModel) = (
@@ -29,10 +28,9 @@ end
 
 @testset "Forcing input" begin
     grid = ColumnGrid(CPU(), DEFAULT_NF, ExponentialSpacing())
-    model = TestModel(; grid)
+    model = TestModel(grid)
     F_in = FieldInputSource(eltype(grid), :F)
-    inputs = InputSources(F_in)
-    integrator = initialize(model, ForwardEuler(eltype(grid)); inputs)
+    integrator = initialize(model, ForwardEuler(eltype(grid)), F_in)
     # check initial values
     @test all(integrator.state.x .≈ 0)
     @test all(integrator.state.F .≈ 1)
@@ -49,7 +47,7 @@ end
 	F = FieldTimeSeries(grid, XY(), t_F)
 	F.data .= ones(size(F));
     F_in = FieldTimeSeriesInputSource(; F)
-    sim = initialize(model, F_in)
+    sim = initialize(model, ForwardEuler(eltype(grid)), F_in)
     # check initial values
     @test all(sim.state.x .≈ 0)
     @test all(sim.state.F .≈ 1)

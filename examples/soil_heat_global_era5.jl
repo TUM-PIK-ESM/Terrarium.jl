@@ -39,8 +39,7 @@ initializer = FieldInitializers(
 )
 model = SoilModel(grid; initializer, boundary_conditions)
 boundary_conditions = PrescribedSurfaceTemperature(:Tair)
-inputs = InputSources(Tair_forcing)
-integrator = initialize(model, ForwardEuler(); boundary_conditions, inputs)
+integrator = initialize(model, ForwardEuler(), Tair_forcing; boundary_conditions)
 @time timestep!(integrator)
 @time run!(integrator, period=Day(10), dt=120.0)
 

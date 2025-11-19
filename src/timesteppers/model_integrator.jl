@@ -132,12 +132,13 @@ Note that this method is **not type stable** and should not be called in an Enzy
 """
 function initialize(
     model::AbstractModel{NF},
-    timestepper::AbstractTimeStepper;
+    timestepper::AbstractTimeStepper,
+    inputs::InputSource...;
     clock::Clock = Clock(time=zero(NF)),
-    inputs::InputSources = InputSources(),
     boundary_conditions = (;),
     fields = (;)
 ) where {NF}
+    inputs = InputSources(inputs...)
     input_vars = variables(inputs)
     state = initialize(model; clock, boundary_conditions, fields, external_variables=input_vars)
     initialized_timestepper = initialize(timestepper, model, state)
