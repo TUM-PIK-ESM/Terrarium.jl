@@ -137,12 +137,13 @@ function invclosure!(state, model::AbstractModel)
     end
 end
 
-# Allow dispatch on nothing types for processes
-initialize!(state, model, ::Nothing) = nothing
-compute_auxiliary!(state, model, ::Nothing) = nothing
-compute_tendencies!(state, model, ::Nothing) = nothing
-closure!(state, model, ::Nothing) = nothing
-invclosure!(state, model, ::Nothing) = nothing
+# Default implementation for processes, also allowing for dispatches on `nothing`
+# TODO: Is this a good idea? Should we force users to *always* define these methods?
+initialize!(state, model, ::Union{Nothing, AbstractProcess}) = nothing
+compute_auxiliary!(state, model, ::Union{Nothing, AbstractProcess}) = nothing
+compute_tendencies!(state, model, ::Union{Nothing, AbstractProcess}) = nothing
+closure!(state, model, ::Union{Nothing, AbstractProcess}) = nothing
+invclosure!(state, model, ::Union{Nothing, AbstractProcess}) = nothing
 
 # AbstractModel subtypes
 
