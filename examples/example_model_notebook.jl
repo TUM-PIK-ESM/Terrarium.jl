@@ -33,7 +33,8 @@ We begin by defining our model `struct` that subtypes `Terrarium.AbstractModel`:
 
 # ╔═╡ 4922e264-c80d-4a5b-8891-a7c8a3fdbfe7
 md""" 
-A "model" in Terrarium is a subtype of `Terrarium.AbstractModel` and is a `struct` type constisting of * `grid` which defines the discretization of the spatial domain
+A "model" in Terrarium is a subtype of `Terrarium.AbstractModel` and is a `struct` type constisting of 
+ * `grid` which defines the discretization of the spatial domain
  * `initializer` which is responsible for initializing state variables
  * further fields that define processes, dynamics and submodels 
 
@@ -122,12 +123,12 @@ We also need to define `compute_auxiliary!` and `compute_tendencies!` as discuss
 
 # ╔═╡ 5ea313fc-3fbb-4092-a2cc-e0cd1f2fe641
 function Terrarium.compute_auxiliary!(state, model::ExpModel)
-    return compute_auxiliary!(state, model, model.dynamics)
+    compute_auxiliary!(state, model, model.dynamics)
 end
 
 # ╔═╡ 3815424f-6210-470d-aef1-99c60c71072f
 function Terrarium.compute_tendencies!(state, model::ExpModel)
-    return compute_tendencies!(state, model, model.dynamics)
+    compute_tendencies!(state, model, model.dynamics)
 end
 
 # ╔═╡ 32373599-768f-4809-acdd-4704acc3f30b
