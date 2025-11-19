@@ -25,10 +25,10 @@ end
 PALADYNAutotrophicRespiration(::Type{NF}; kwargs...) where {NF} = PALADYNAutotrophicRespiration{NF}(; kwargs...)
 
 variables(::PALADYNAutotrophicRespiration) = (
-    auxiliary(:Rd, XY()), # Daily leaf respiration [gC/m²/day]
-    auxiliary(:phen, XY()), # Phenology factor [-]
     auxiliary(:GPP, XY()), # Gross Primary Production [kgC/m²/day]
     auxiliary(:Ra, XY()), # Autotrophic respiration [kgC/m²/day]
+    input(:Rd, XY()), # Daily leaf respiration [gC/m²/day]
+    input(:phen, XY()), # Phenology factor [-]
 )
 
 """
@@ -154,12 +154,12 @@ end
     state,
     autoresp::PALADYNAutotrophicRespiration{NF},
     vegcarbon_dynamics::PALADYNCarbonDynamics{NF},
-    ::PrescribedAtmosphere
+    atmos::AbstractAtmosphere
 ) where NF
     i, j = @index(Global, NTuple)
 
     # Get inputs    
-    T_air = state.T_air[i, j]
+    T_air = air_temperature(i, j, state, atmos)
     Rd = state.Rd[i, j]
     phen = state.phen[i, j]
     C_veg = state.C_veg[i, j]
@@ -168,7 +168,7 @@ end
     # Compute autotrophic respiration Ra
     Ra = compute_Ra(autoresp, vegcarbon_dynamics, T_air, Rd, phen, C_veg, GPP)
 
-    # Compute NPP
+    # Compute net primary product (NPP)
     NPP = compute_NPP(autoresp, GPP, Ra)
 
     # Store results

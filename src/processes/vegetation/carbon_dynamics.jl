@@ -40,7 +40,7 @@ PALADYNCarbonDynamics(::Type{NF}; kwargs...) where {NF} = PALADYNCarbonDynamics{
 variables(::PALADYNCarbonDynamics) = (
     prognostic(:C_veg, XY()), # Vegetation carbon pool [kgC/m²]
     auxiliary(:LAI_b, XY()), # Balanced Leaf Area Index [m²/m²]
-    auxiliary(:NPP, XY()), # Net Primary Production [kgC/m²/day]
+    input(:NPP, XY()), # Net Primary Production [kgC/m²/day]
 )
 
 """
