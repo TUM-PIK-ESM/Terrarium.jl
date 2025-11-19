@@ -48,7 +48,7 @@ end
     model = TestModel(; grid)
     t_F = 0:0.1:1
 	F = FieldTimeSeries(grid, XY(), t_F)
-	F.data .= randn(size(F));
+	F.data .= ones(size(F));
     F_in = FieldTimeSeriesInputSource(; F)
     sim = initialize(model, F_in)
     # check initial values
