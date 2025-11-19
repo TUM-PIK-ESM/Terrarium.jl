@@ -14,6 +14,8 @@ $TYPEDFIELDS
     g1::NF = 2.3 # Value for Needleleaf tree PFT 
 end
 
+MedlynStomatalConductance(::Type{NF}; kwargs...) where {NF} = MedlynStomatalConductance(; kwargs...)
+
 variables(::MedlynStomatalConductance) = (
     auxiliary(:λc, XY()), # Ratio of leaf-internal and air CO2 concentration [-]
 )

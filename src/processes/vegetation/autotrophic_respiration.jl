@@ -22,6 +22,8 @@ $TYPEDFIELDS
     aws::NF = 10.0 # Value for Needleleaf tree PFT
 end
 
+PALADYNAutotrophicRespiration(::Type{NF}; kwargs...) where {NF} = PALADYNAutotrophicRespiration{NF}(; kwargs...)
+
 variables(::PALADYNAutotrophicRespiration) = (
     auxiliary(:Rd, XY()), # Daily leaf respiration [gC/m²/day]
     auxiliary(:phen, XY()), # Phenology factor [-]

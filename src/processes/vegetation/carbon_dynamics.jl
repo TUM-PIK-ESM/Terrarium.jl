@@ -35,6 +35,8 @@ $TYPEDFIELDS
     γS::NF = 0.05 # Value for Needleleaf tree PFT 
 end
 
+PALADYNCarbonDynamics(::Type{NF}; kwargs...) where {NF} = PALADYNCarbonDynamics{NF}(; kwargs...)
+
 variables(::PALADYNCarbonDynamics) = (
     prognostic(:C_veg, XY()), # Vegetation carbon pool [kgC/m²]
     auxiliary(:LAI_b, XY()), # Balanced Leaf Area Index [m²/m²]
