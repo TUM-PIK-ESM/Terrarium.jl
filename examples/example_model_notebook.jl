@@ -33,7 +33,7 @@ We begin by defining our model `struct` that subtypes `Terrarium.AbstractModel`:
 
 # ╔═╡ 4922e264-c80d-4a5b-8891-a7c8a3fdbfe7
 md""" 
-A `Terrarium.AbstractModel` typically constists of the fields 
+A "model" in Terrarium is a subtype of `Terrarium.AbstractModel` and is a `struct` type constisting of
  * `grid` which defines the discretization of the spatial domain
  * `initializer` which is responsible for initializing state variables
  * further fields that define processes, dynamics and submodels 
@@ -98,7 +98,7 @@ end
 md"""
 ## Defining the model behaviour 
 
-Now, we want to define our intended model behaviour. For this, we need to define the following routines: 
+Now, we want to define our intended model behaviour. For this, we need to define the following methods: 
 
 * `variables(::Model)` returns a tuple of variable metadata declaring the state variables. Variables must be one of three types: `prognostic`, `auxiliary` (sometimes referred to as “diagnostic”), or `input`. Prognostic variables fully characterize the state of the system at any given timestep and are updated according to their tendencies (i.e. ``u`` in our example). Tendencies are automatically allocated for each prognostic variable declared by the model. In this example we will treat the offset ``c`` as an auxiliary variable, though we could also just include it as a constant in the tendency computations.
 * `compute_auxiliary!(state, ::Model)` computes the values of all auxiliary variables (if necessary) assuming that the prognostic variables of the system in state are available for the current timestep.
@@ -115,9 +115,9 @@ Terrarium.variables(::ExpModel) = (
 
 # ╔═╡ d4d19de7-6f77-4873-9182-9832d1ca4381
 md"""
-Here, we defined our two variables with their name as a `Symbol` and whether they are 2D variables (`XY`) on the spatial grid or 3D variables (`XYZ`) that also vary along the vertical z-axis. Here we are considering only a simple scalar model so we choose 2D (`XY`).
+Here, we defined our two variables with their name as a `Symbol` and whether they are 2D variables (`XY`) on the spatial grid or 3D variables (`XYZ`) that also vary along the vertical z-axis. Here we are considering only a simple scalar model so we choose 2D (`XY`), bearing in mind that all points in the X and Y dimensions of `ColumnGrid` are independent of each other.
 
-We also need to define `compute_auxiliary!` and `compute_tendencies!` as discussed above. As is common in many Terrarium model definitions, we will simply forward these method calls to the process defined by the `dynamics` property.
+We also need to define `compute_auxiliary!` and `compute_tendencies!` as discussed above. We will use here a pattern which is commonly employed within Terrarium: we unpack the process from the model and forward the method calls to more specialzied ones defined for the `LinearDynamics` process.
 """
 
 # ╔═╡ 5ea313fc-3fbb-4092-a2cc-e0cd1f2fe641
@@ -149,7 +149,7 @@ function Terrarium.compute_auxiliary!(
 )
 	# set auxiliary variable for offset c
     state.auxiliary.c .= dynamics.c
-end 
+end
 
 # ╔═╡ 5c8be7e4-f150-492b-a75d-96887a11f6da
 # du/dt = u + c
@@ -159,11 +159,11 @@ function Terrarium.compute_tendencies!(
 	dynamics::LinearDynamics
 )
 	# define the dynamics; we'll use some special characters to make the equation nicer to look at :)
-	let u = state.prognostic.u,
+	let u = state.u,
 		∂u∂t = state.tendencies.u,
 		α = dynamics.alpha,
 		# note again that here we could also just use dynamics.c instead of defining an auxiliary variable! 
-		c = state.auxiliary.c;
+		c = state.c;
 		# Write into tendency variable ∂u∂t
 		∂u∂t .=  α * u + c
 	end
@@ -292,9 +292,9 @@ Well that's it. We defined and ran a simple exponential model following the Terr
 # ╠═94d82d31-42ec-41de-91e9-b5585b3a72d4
 # ╟─4922e264-c80d-4a5b-8891-a7c8a3fdbfe7
 # ╠═78f268ef-5385-4c63-bc35-2c973de69da5
-# ╠═054a8b11-250f-429f-966f-ca3c9a5dc2ef
+# ╟─054a8b11-250f-429f-966f-ca3c9a5dc2ef
 # ╠═407786db-607f-4508-b697-fe75b3ce0b25
-# ╠═575d920c-b12e-493f-95a7-5c962c3591fd
+# ╟─575d920c-b12e-493f-95a7-5c962c3591fd
 # ╠═82e45724-ba16-4806-9470-5cb4c43ea734
 # ╟─d4d19de7-6f77-4873-9182-9832d1ca4381
 # ╠═5ea313fc-3fbb-4092-a2cc-e0cd1f2fe641
