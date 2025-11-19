@@ -61,6 +61,15 @@ function variables(model::SoilModel)
     return tuplejoin(strat_vars, hydrology_vars, energy_vars, bgc_vars)
 end
 
+function get_processes(model::SoilModel)
+    return (
+        model.strat,
+        model.energy,
+        model.hydrology,
+        model.biogeochem
+    )
+end
+
 function get_closures(model::SoilModel)
     return (
         get_closure(model.hydrology),
