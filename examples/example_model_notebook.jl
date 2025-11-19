@@ -33,7 +33,7 @@ We begin by defining our model `struct` that subtypes `Terrarium.AbstractModel`:
 
 # ╔═╡ 4922e264-c80d-4a5b-8891-a7c8a3fdbfe7
 md""" 
-A `Terrarium.AbstractModel` typically constists of the fields 
+A "model" in Terrarium is a subtype of `Terrarium.AbstractModel` and is a `struct` type constisting of
  * `grid` which defines the discretization of the spatial domain
  * `initializer` which is responsible for initializing state variables
  * further fields that define processes, dynamics and submodels 
@@ -98,7 +98,7 @@ end
 md"""
 ## Defining the model behaviour 
 
-Now, we want to define our intended model behaviour. For this, we need to define the following routines: 
+Now, we want to define our intended model behaviour. For this, we need to define the following methods: 
 
 * `variables(::Model)` returns a tuple of variable metadata declaring the state variables. Variables must be one of three types: `prognostic`, `auxiliary` (sometimes referred to as “diagnostic”), or `input`. Prognostic variables fully characterize the state of the system at any given timestep and are updated according to their tendencies (i.e. ``u`` in our example). Tendencies are automatically allocated for each prognostic variable declared by the model. In this example we will treat the offset ``c`` as an auxiliary variable, though we could also just include it as a constant in the tendency computations.
 * `compute_auxiliary!(state, ::Model)` computes the values of all auxiliary variables (if necessary) assuming that the prognostic variables of the system in state are available for the current timestep.
@@ -118,7 +118,7 @@ Terrarium.variables(::ExpModel) = (
 md"""
 Here, we defined our three variables with their names as a `Symbol` and whether they are 2D variables (`XY`) on the spatial grid or 3D variables (`XYZ`) that also vary along the vertical z-axis. Here we are considering only a simple scalar model so we choose 2D (`XY`).
 
-We also need to define `compute_auxiliary!` and `compute_tendencies!` as discussed above. As is common in many Terrarium model definitions, we will simply forward these method calls to the process defined by the `dynamics` property.
+We also need to define `compute_auxiliary!` and `compute_tendencies!` as discussed above. We will use here a pattern which is commonly employed within Terrarium: we unpack the process from the model and forward the method calls to more specialzied ones defined for the `LinearDynamics` process.
 """
 
 # ╔═╡ 5ea313fc-3fbb-4092-a2cc-e0cd1f2fe641
@@ -144,12 +144,12 @@ With that in mind, let's define the methods:
 
 # ╔═╡ d55aaf4c-3033-45ba-9d64-8fa8ae4b671c
 function Terrarium.compute_auxiliary!(
-        state,
-        model::ExpModel,
-        dynamics::LinearDynamics
-    )
-    # set auxiliary variable for offset c
-    return state.auxiliary.c .= dynamics.c
+	state,
+	model::ExpModel,
+	dynamics::LinearDynamics
+)
+	# set auxiliary variable for offset c
+    state.auxiliary.c .= dynamics.c
 end
 
 # ╔═╡ 5c8be7e4-f150-492b-a75d-96887a11f6da

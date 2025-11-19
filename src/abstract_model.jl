@@ -136,7 +136,7 @@ abstract type AbstractLandModel{NF, GR} <: AbstractModel{NF, GR} end
 Convenience constructor for all `AbstractLandModel` types that allows the `grid` to be passed
 as the first positional argument.
 """
-(::Type{Model})(grid::AbstractLandGrid; kwargs...) where {Model<:AbstractModel} = Model(; grid, kwargs...)
+(::Type{ModelType})(grid::AbstractLandGrid; kwargs...) where {ModelType<:AbstractModel} = ModelType(; grid, kwargs...)
 
 function Adapt.adapt_structure(to, model::AbstractModel)
     return setproperties(model, map(prop -> Adapt.adapt_structure(to, prop), getproperties(model)))

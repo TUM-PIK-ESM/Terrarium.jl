@@ -10,11 +10,11 @@ Alias for a `NamedTuple` of `FieldBC` types where the keys correspond to field/v
 const FieldBCs{names, BCs} = NamedTuple{names, BCs} where {names, BCs<:Tuple{Vararg{FieldBC}}}
 
 """
-    boundary_conditions(bcs::FieldBCs...)
+    merge_boundary_conditions(bcs::FieldBCs...)
 
 Recursively merge an arbitrary number of field/variable boundary conditions.
 """
-boundary_conditions(bcs::FieldBCs...) = merge_recursive(bcs...)
+merge_boundary_conditions(bcs::FieldBCs...) = merge_recursive(bcs...)
 
 """
 Implementation of `Oceananigans.BoundaryConditions.getbc` for variable placeholders that retrieves the input `Field` from
