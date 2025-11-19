@@ -96,12 +96,9 @@ include("input_output/input_sources.jl")
 export timestep!, default_dt, is_adaptive
 include("timesteppers/abstract_timestepper.jl")
 
-# model interface
-export get_grid, timestepper, get_boundary_conditions, variables, compute_auxiliary!, compute_tendencies!
+# process/model interface
+export get_grid, get_initializer, variables, compute_auxiliary!, compute_tendencies!
 include("abstract_model.jl")
-
-# process interface
-include("abstract_process.jl")
 
 # state variables
 export StateVariables, get_fields
