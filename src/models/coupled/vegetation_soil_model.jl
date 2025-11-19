@@ -1,4 +1,4 @@
-struct VegetationSoilModel{
+@kwdef struct VegetationSoilModel{
     NF,
     GridType<:AbstractLandGrid{NF},
     Atmosphere<:AbstractAtmosphere,

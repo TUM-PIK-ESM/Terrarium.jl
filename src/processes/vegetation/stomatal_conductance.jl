@@ -41,14 +41,14 @@ end
 @kernel function compute_auxiliary_kernel!(
     state,
     stomcond::MedlynStomatalConductance{NF},
-    ::PrescribedAtmosphere
+    atmos::AbstractAtmosphere
 ) where NF
     i, j = @index(Global, NTuple)
 
     # Get inputs
-    T_air = state.T_air[i, j] # °C
-    q_air = state.q_air[i, j] # kg/kg
-    pres = state.pressure[i, j] # Pa
+    T_air = air_temperature(i, j, state, atmos) # °C
+    q_air = specific_humidity(i, j, state, atmos) # kg/kg
+    pres = air_pressure(i, j, state, atmos) # Pa
 
     # Compute vpd [Pa]
     vpd = compute_vpd(T_air, q_air, pres)

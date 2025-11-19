@@ -16,12 +16,16 @@ $TYPEDFIELDS
     Phenology<:AbstractPhenology,
     CarbonDynamics<:AbstractVegetationCarbonDynamics,
     VegetationDynamics<:AbstractVegetationDynamics,
+    Atmosphere<:AbstractAtmosphere,
     GridType<:AbstractLandGrid{NF},
     Constants<:PhysicalConstants{NF},
     Initializer<:AbstractInitializer,
 } <: AbstractVegetationModel{NF, GridType}
     "Spatial grid type"
     grid::GridType
+
+    "Atmospheric input configuration"
+    atmosphere::Atmosphere
 
     "Photosynthesis scheme"
     photosynthesis::Photosynthesis = LUEPhotosynthesis(eltype(grid)) # not prognostic
@@ -49,6 +53,8 @@ $TYPEDFIELDS
 end
 
 # VegetationModel getter methods
+get_atmosphere(model::VegetationModel) = model.atmosphere
+
 get_photosynthesis(model::VegetationModel) = model.photosynthesis
 
 get_stomatal_conductance(model::VegetationModel) = model.stomatal_conductance
@@ -65,6 +71,7 @@ get_constants(model::VegetationModel) = model.constants
 
 # Model interface methods
 variables(model::VegetationModel) = tuplejoin(
+    variables(model.atmosphere),
     variables(model.photosynthesis),
     variables(model.stomatal_conductance),
     variables(model.autotrophic_respiration),
@@ -74,6 +81,7 @@ variables(model::VegetationModel) = tuplejoin(
 )
 
 get_processes(model::VegetationModel) = (
+    model.atmosphere,
     model.photosynthesis,
     model.stomatal_conductance,
     model.autotrophic_respiration,

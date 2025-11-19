@@ -18,6 +18,7 @@ PALADYNPhenology(::Type{NF}; kwargs...) where {NF} = PALADYNPhenology{NF}(; kwar
 variables(::PALADYNPhenology) = (
     auxiliary(:phen, XY()), # Phenology factor [-]
     auxiliary(:LAI, XY()), # Leaf Area Index [m²/m²]
+    input(:LAI_b, XY()), # Balanced Leaf Area Index [m²/m²]
 )
 
 """

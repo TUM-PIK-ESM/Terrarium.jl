@@ -22,6 +22,8 @@ PALADYNVegetationDynamics(::Type{NF}; kwargs...) where {NF} = PALADYNVegetationD
 
 variables(::PALADYNVegetationDynamics) = (
     prognostic(:ν, XY()), # PFT fractional area coverage [-]
+    input(:LAI_b, XY()),
+    input(:C_veg, XY()),
 )
 
 """
@@ -93,6 +95,8 @@ end
     # Get inputs
     LAI_b = state.LAI_b[i, j]
     C_veg = state.C_veg[i, j]
+
+    # Current state
     ν = state.ν[i, j]
 
     # Compute the vegetation fraction tendency
