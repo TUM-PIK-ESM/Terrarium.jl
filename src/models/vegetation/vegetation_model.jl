@@ -73,6 +73,16 @@ variables(model::VegetationModel) = (
     variables(model.vegetation_dynamics)...,
 )
 
+function get_processes(model::VegetationModel)
+    return (
+        model.photosynthesis,
+        model.stomatal_conductance,
+        model.autotrophic_respiration,
+        model.carbon_dynamics,
+        model.vegetation_dynamics
+    )
+end
+
 function compute_auxiliary!(state, model::VegetationModel)
     # Compute auxiliary variables for each component
     # Veg. carbon dynamics: needs C_veg(t-1) and computes LAI_b(t-1)

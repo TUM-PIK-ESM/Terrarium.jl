@@ -1,27 +1,67 @@
-# AbstractModel
+"""
+    AbstractProcess
+
+Base type for all "processes". Implementations of `AbstractProcess` define equations,
+state variables, and parameterizations which characterize the dynamics of a system at
+for any given transient state. Note that processes should be largely agnostic to the
+details regarding spatial and temporal discretization of the model; i.e. they should
+not require specification of a specific grid or time stepping scheme but rather should
+be able to operate on any given set of `Field`s and parameters representing the state of
+a model at any point in time. Note that process types may also wrap/orchestrate one or
+more other process types.
+"""
+abstract type AbstractProcess end
+
+"""
+Convenience constructor for all `AbstractProcess` types that allows the `grid` to be passed
+as the first positional argument.
+"""
+(::Type{Process})(grid::AbstractLandGrid, args...; kwargs...) where {Process<:AbstractProcess} = Process(args...; grid, kwargs...)
+
+# AbstractModel interface
 
 """
     $TYPEDEF
 
-Base type for all model types.
+Base type for all Terrarium "models". Models are collections of one or more processes
+that additionally define
+
+(i) a spatial `grid` characterizing the model domain, and
+(ii) an `AbstractInitializer` responsible for defining the initial state of the model.
 """
-abstract type AbstractModel{NF, Grid<:AbstractLandGrid{NF}} end
+abstract type AbstractModel{NF, Grid<:AbstractLandGrid{NF}} <: AbstractProcess end
 
 """
     variables(model::AbstractModel)
+    variables(model::AbstractModel)
 
 Return a `Tuple` of `AbstractVariable`s (i.e. `PrognosticVariable`, `AuxiliaryVariable`, etc.)
-defined by the model. For models that consist of one or more sub-models, variables may optionally
-be grouped into namespaces by returning a `NamedTuple` where the keys correspond to the group names.
+defined by the model or process.
 """
 function variables end
 
 """
+    get_processes(model::AbstractModel)
+
+Return a tuple of `AbstractProcess` types defiend by this `model`.
+"""
+function get_processes end
+
+"""
     initialize!(state, model::AbstractModel)
+
+Initialize all variables defined in `state` which are defined by `model`. This defaults to simply
+calling `initialize!(state, model, get_initializer(model))`.
+
     initialize!(state, model::AbstractModel, initializer::AbstractInitializer)
 
-Call `initialize!` on the `model` and its corresponding `initializer`. This method only needs to be
+Initialize the model state variables using the corresponding `initializer`. This method only needs to be
 implemented if initialization routines are necessary in addition to direct field/variable initializers.
+
+    initialize!(state, model::AbstractModel, process::AbstractProcess)
+
+Initialize all state variables associated with the given `process` defined on `model`. This method is
+typically defined by the corresponding `AbstractProcess` types.
 """
 function initialize! end
 
@@ -29,6 +69,10 @@ function initialize! end
     compute_auxiliary!(state, model::AbstractModel)
 
 Compute updates to all auxiliary variables based on the current prognostic state of the `model`.
+
+    compute_auxiliary!(state, model::AbstractModel, process:AbstractProcess)
+
+Compute updates to auxiliary variables for the given `process` defined on `model`.
 """
 function compute_auxiliary! end
 
@@ -36,13 +80,25 @@ function compute_auxiliary! end
     compute_tendencies!(state, model::AbstractModel)
 
 Compute tendencies for all prognostic state variables for `model` stored in the given `state`.
-This method should be called after `compute_auxiliary!`.
+This method should be called after `compute_tendencies!`.
+
+    compute_tendencies!(state, model::AbstractModel, process:AbstractProcess)
+
+Compute tendencies of all prognostic state variables for the given `process` defined on `model`.
 """
 function compute_tendencies! end
 
 # Default implementations of `AbstractModel` methods
 
+# allow variables to be defined on any type
 variables(::Any) = ()
+
+"""
+    get_processes(::AbstractModel)
+
+Return a tuple of `AbstractProcess`es defind by the given `model`.
+"""
+get_processes(::AbstractModel) = ()
 
 """
     get_grid(model::AbstractModel)::AbstractLandGrid
@@ -87,7 +143,14 @@ function invclosure!(state, model::AbstractModel)
     end
 end
 
-# Abstract subtypes
+# Allow dispatch on nothing types for processes
+initialize!(state, model, ::Nothing) = nothing
+compute_auxiliary!(state, model, ::Nothing) = nothing
+compute_tendencies!(state, model, ::Nothing) = nothing
+closure!(state, model, ::Nothing) = nothing
+invclosure!(state, model, ::Nothing) = nothing
+
+# AbstractModel subtypes
 
 # TODO: define general method interfaces (as needed) for all model types
 
@@ -101,16 +164,16 @@ abstract type AbstractGroundModel{NF, GR} <: AbstractModel{NF, GR} end
 """
     $TYPEDEF
 
-Base type for land-atmosphere energy exchange models.
+Base type for soil ground models.
 """
-abstract type AbstractSurfaceEnergyModel{NF, GR} <: AbstractModel{NF, GR} end
+abstract type AbstractSoilModel{NF, GR} <: AbstractGroundModel{NF, GR} end
 
 """
     $TYPEDEF
 
-Base type for soil ground models.
+Base type for land-atmosphere energy exchange models.
 """
-abstract type AbstractSoilModel{NF, GR} <: AbstractGroundModel{NF, GR} end
+abstract type AbstractSurfaceEnergyModel{NF, GR} <: AbstractModel{NF, GR} end
 
 """
     $TYPEDEF
@@ -139,16 +202,6 @@ abstract type AbstractHydrologyModel{NF, GR} <: AbstractModel{NF, GR} end
 Base type for full land models which couple together multiple component models.
 """
 abstract type AbstractLandModel{NF, GR} <: AbstractModel{NF, GR} end
-
-"""
-Convenience constructor for all `AbstractLandModel` types that allows the `grid` to be passed
-as the first positional argument.
-"""
-(::Type{ModelType})(grid::AbstractLandGrid; kwargs...) where {ModelType<:AbstractModel} = ModelType(; grid, kwargs...)
-
-function Adapt.adapt_structure(to, model::AbstractModel)
-    return setproperties(model, map(prop -> Adapt.adapt_structure(to, prop), getproperties(model)))
-end
 
 function Base.show(io::IO, model::AbstractModel{NF}) where {NF}
     println(io, "$(nameof(typeof(model))){$NF} on $(architecture(get_grid(model)))")
