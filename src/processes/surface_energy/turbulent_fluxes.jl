@@ -38,7 +38,7 @@ end
 
 function DiagnosedTurbulentFluxes(
     ::Type{NF};
-    latent_heat_flux::AbstractLatentHeatFlux = FreeLatentHeatFlux(),
+    latent_heat_flux::AbstractLatentHeatFlux = UnlimitedET(),
     aerodynamic_resistance::AbstractAerodynamicResistance = ConstantAerodynamicResistance(NF)
 ) where {NF}
     return DiagnosedTurbulentFluxes(latent_heat_flux, aerodynamic_resistance)
