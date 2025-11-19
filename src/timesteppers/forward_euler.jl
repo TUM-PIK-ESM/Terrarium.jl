@@ -8,6 +8,8 @@ Simple forward Euler time stepping scheme.
     Δt::NF = 300.0
 end
 
+ForwardEuler(::Type{NF}; kwargs...) where {NF} = ForwardEuler{NF}(; kwargs...)
+
 default_dt(euler::ForwardEuler) = euler.Δt
 
 is_adaptive(euler::ForwardEuler) = false

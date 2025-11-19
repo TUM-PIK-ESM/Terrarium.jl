@@ -1,14 +1,14 @@
 # mock a simple model with exponential dynamics (and a constant offset) to test time steppers 
 
-struct ExpModel{NF, Grid, I} <: Terrarium.AbstractModel{NF, Grid}
+@kwdef struct ExpModel{NF, Grid<:Terrarium.AbstractLandGrid{NF}, I} <: Terrarium.AbstractModel{NF, Grid}
     grid::Grid
-    initializer::I
+    initializer::I = DefaultInitializer()
 end
 
-ExpModel(grid::Grid, initializer::I) where {Grid, I} = ExpModel{eltype(grid), Grid, I}(grid, initializer)
-
-Terrarium.variables(::ExpModel) = (Terrarium.prognostic(:u, Terrarium.XY()), 
-                              Terrarium.auxiliary(:v, Terrarium.XY()))
+Terrarium.variables(::ExpModel) = (
+    Terrarium.prognostic(:u, Terrarium.XY()),
+    Terrarium.auxiliary(:v, Terrarium.XY())
+)
 
 # just a constant offset (we could do it differently but this is for testing auxilitary as wel)
 function Terrarium.compute_auxiliary!(state, model::ExpModel) 

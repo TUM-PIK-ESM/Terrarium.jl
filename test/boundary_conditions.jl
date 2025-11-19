@@ -18,7 +18,7 @@ using Test
     # check that halo matches boundary value that makes the face equal to 1
     @test state.x[1,1,Nz+1] == 1.5
     bc2 = (y = (top = ValueBoundaryCondition(var(:c, XY())), bottom = ValueBoundaryCondition(0.0)),)
-    merged_bcs = boundary_conditions(bc1, bc2)
+    merged_bcs = merge_boundary_conditions(bc1, bc2)
     @test hasproperty(merged_bcs, :x)
     @test hasproperty(merged_bcs, :y)
     state = StateVariables(vars, grid, clock; boundary_conditions = merged_bcs)

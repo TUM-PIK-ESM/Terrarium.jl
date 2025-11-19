@@ -26,6 +26,11 @@ if MAIN_TESTS
         include("timestepping/run_simulation.jl")
         include("timestepping/heun.jl")
     end
+
+    @testset "Inputs" begin
+        include("inputs/inputs.jl")
+        include("inputs/input_forcing.jl")
+    end
     
     @testset "Soil model and processes" begin
         include("soil/soil_model_tests.jl")

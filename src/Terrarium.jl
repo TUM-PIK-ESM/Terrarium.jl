@@ -88,7 +88,7 @@ include("grids/vertical_discretization.jl")
 export ColumnGrid, ColumnRingGrid, get_field_grid
 include("grids/grids.jl")
 
-export InputSource
+export InputSource, InputSources, FieldInputSource, FieldTimeSeriesInputSource
 export update_inputs!
 include("input_output/input_sources.jl")
 
