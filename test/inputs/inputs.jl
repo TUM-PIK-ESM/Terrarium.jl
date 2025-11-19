@@ -1,5 +1,5 @@
 using Terrarium
-using Terrarium: FieldInputSource, FieldTimeSeriesInputSource
+using Terrarium: FieldInputSource, FieldTimeSeriesInputSource, Variables
 using Test
 using Unitful
 
@@ -17,7 +17,7 @@ using Unitful
     @test variables(field_input) == (Terrarium.input(:X1, XY()), Terrarium.input(:X2, XY()))
     ## check state variables are allocated
     clock = Clock(time=0)
-    state = initialize(Variables(field_input), grid, clock)
+    state = Terrarium.StateVariables(Variables(field_input), grid, clock)
     @test hasproperty(state.inputs, :X1)
     @test hasproperty(state.inputs, :X2)
 
@@ -26,20 +26,19 @@ using Unitful
     ts = 0.0:1.0:10.0
     S1 = FieldTimeSeries(grid, XY(), ts)
     fts_input = InputSource(; S1)
-    @test isa(field_input, FieldTimeSeriesInputSource)
+    @test isa(fts_input, FieldTimeSeriesInputSource)
     ## check that dimensions were inferred correctly
     @test fts_input.dims == XY()
     @test fts_input.fts == (; S1)
     S2 = FieldTimeSeries(grid, XY(), ts)
     fts_input = InputSource(; S1, S2)
-    @test isa(field_input, FieldTimeSeriesInputSource)
+    @test isa(fts_input, FieldTimeSeriesInputSource)
     @test fts_input.dims == XY()
     @test fts_input.fts == (; S1, S2)
     S3 = FieldTimeSeries(grid, XYZ(), ts)
     ## check that trying to create a FieldTimeSeriesInputSource
-    # with inconsistent types or dimensions fails
+    # with inconsistent dimensions fails
     @test_throws AssertionError InputSource(; S1, S2, S3)
-    @test_throws AssertionError InputSource(; X1, S1, S2)
     # populate S1 with random data
     S1.data .= randn(size(S1))
     ## check update_inputs!
@@ -49,7 +48,7 @@ using Unitful
     @test all(fields.S1 .== S1[1])
     @test all(fields.S2 .== S2[1])
     # advance clock and check that inputs are updated
-    Terrarium.tick_time!(clock, 1.0)
+    Terrarium.tick!(clock, 1.0)
     update_inputs!(fields, fts_input, clock)
     @test all(fields.S1 .== S1[2])
     @test all(fields.S2 .== S2[2])

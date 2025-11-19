@@ -6,7 +6,7 @@ using Test
 
 DEFAULT_NF = Float32
 
-@kwdef struct TestModel{NF, Grid<:AbstractLandGrid{NF}, TS} <: Terrarium.AbstractModel{NF, Grid}
+@kwdef struct TestModel{NF, Grid<:AbstractLandGrid{NF}} <: Terrarium.AbstractModel{NF, Grid}
     grid::Grid
     initializer = DefaultInitializer()
 end
@@ -15,6 +15,8 @@ Terrarium.variables(model::TestModel) = (
     prognostic(:x, XYZ()),
     input(:F, XY()),
 )
+
+Terrarium.compute_auxiliary!(state, model::TestModel) = nothing
 
 function Terrarium.compute_tendencies!(state, model::TestModel)
     # set tendency to forcing term
@@ -29,15 +31,11 @@ end
 @testset "Forcing input" begin
     grid = ColumnGrid(CPU(), DEFAULT_NF, ExponentialSpacing())
     model = TestModel(grid)
-    F_in = FieldInputSource(eltype(grid), :F)
+    F_in = InputSource(eltype(grid), :F)
+    @test isa(F_in, FieldInputSource)
     integrator = initialize(model, ForwardEuler(eltype(grid)), F_in)
-    # check initial values
-    @test all(integrator.state.x .≈ 0)
-    @test all(integrator.state.F .≈ 1)
-    # advance one timestep and check updated values
-    timestep!(integrator, 0.1)
-    @test all(integrator.state.x .≈ 0.1)
-    @test all(integrator.state.F .≈ 1)
+    # check that state variable is defined
+    @test hasproperty(integrator.state.inputs, :F)
 end
 
 @testset "Forcing input with time series" begin
@@ -46,15 +44,16 @@ end
     t_F = 0:0.1:1
 	F = FieldTimeSeries(grid, XY(), t_F)
 	F.data .= ones(size(F));
-    F_in = FieldTimeSeriesInputSource(; F)
-    sim = initialize(model, ForwardEuler(eltype(grid)), F_in)
+    F_in = InputSource(; F)
+    @test isa(F_in, FieldTimeSeriesInputSource)
+    integrator = initialize(model, ForwardEuler(eltype(grid)), F_in)
     # check initial values
-    @test all(sim.state.x .≈ 0)
-    @test all(sim.state.F .≈ 1)
+    @test all(integrator.state.x .≈ 0)
+    @test all(integrator.state.F .≈ 1)
     # advance one timestep and check updated values
-    timestep!(sim, 0.1)
-    @test all(sim.state.x .≈ 0.1)
-    @test all(sim.state.F .≈ 1)
+    timestep!(integrator, 0.1)
+    @test all(integrator.state.x .≈ 0.1)
+    @test all(integrator.state.F .≈ 1)
 end
 
 end

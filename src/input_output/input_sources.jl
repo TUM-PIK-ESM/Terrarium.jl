@@ -10,6 +10,9 @@ The type argument `NF` corresponds to the numeric type of the input data.
 """
 abstract type InputSource{NF} end
 
+# Default kwarg constructor for convenience
+InputSource(; kwargs...) = InputSource(kwargs...)
+
 """
     $SIGNATURES
 
