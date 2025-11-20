@@ -67,7 +67,7 @@ makedocs(
             "Vegetation" => "physics/vegetation.md",
         ],
         "Examples" => [
-            "Model Interface" => "../../examples/notebooks/example_model_notebook.md",
+            "Model Interface" => joinpath(NOTEBOOK_DIR, "example_model_notebook.md"),
         ],
         "Contributing" => "contributing.md",
         "API Reference" => "api_reference.md",
