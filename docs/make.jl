@@ -5,7 +5,7 @@ using PlutoStaticHTML
 
 using Terrarium
 
-const NOTEBOOK_DIR = joinpath(@__DIR__, "..", "examples", "notebooks")
+const NOTEBOOK_DIR = joinpath(dirname(@__DIR__), "examples", "notebooks")
 
 """
     build()
