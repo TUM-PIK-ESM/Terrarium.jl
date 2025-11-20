@@ -8,6 +8,7 @@ using InteractiveUtils
 begin
     import Pkg
     Pkg.activate(".")
+    Pkg.instantiate()
 end
 
 # ╔═╡ 94d82d31-42ec-41de-91e9-b5585b3a72d4
