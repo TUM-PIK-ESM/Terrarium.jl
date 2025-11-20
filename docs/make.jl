@@ -49,7 +49,9 @@ makedocs(
         ansicolor=true,
         collapselevel=1,
         canonical = "https://tum-pik-esm.github.io/Terrarium.jl/stable/",
-        size_threshold = 600_000
+        size_threshold = 600_000,
+        # Using MathJax3 since Pluto uses that engine too.
+        mathengine=Documenter.MathJax3(),
     ),      # in bytes
     sitename = "Terrarium.jl",
     authors = "Brian Groenke, Maximillian Galbrecht, Maha Badri, and Contributors",
