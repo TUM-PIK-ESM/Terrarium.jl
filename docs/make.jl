@@ -24,8 +24,9 @@ function build()
     output_format = documenter_output
     bopts = BuildOptions(NOTEBOOK_DIR; output_format)
     build_notebooks(bopts, oopts)
-    println()
+
     # move to docs/src/notebooks because for some reason that's needed
+    mkpath(EXAMPLE_DIR)
     for (name, _) in notebook_lookup
         mv(joinpath(NOTEBOOK_DIR, name), joinpath(EXAMPLE_DIR, name))
     end
