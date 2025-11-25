@@ -24,3 +24,7 @@ autodiff(set_runtime_activity(Reverse), run!, Const, Duplicated(integrator, dint
 
 dU = interior(dintegrator.state.internal_energy)[1,1,:]
 dT = interior(dintegrator.state.temperature)[1,1,:]
+zs = znodes(integrator.state.temperature)
+
+Makie.scatterlines(dU, zs)
+Makie.scatterlines(dT, zs)
