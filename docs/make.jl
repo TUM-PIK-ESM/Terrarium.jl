@@ -40,9 +40,9 @@ if get(ENV, "BUILD_DOCS_NOTEBOOKS", "true") == "true"
 end
 
 # Dict for makedocs for notebooks to be included 
-notebook_docpages = Dict()
+notebook_docpages = p[]
 for (name, title) in notebook_lookup
-    notebook_docpages[joinpath(EXAMPLE_DIR, name)] = title
+    push!(joinpath(EXAMPLE_DIR, name) => title)
 end
 
 s = ArgParseSettings()
