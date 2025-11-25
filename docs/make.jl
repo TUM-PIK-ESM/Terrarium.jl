@@ -62,6 +62,9 @@ if haskey(ENV, "GITHUB_ACTIONS")
     ENV["JULIA_DEBUG"] = "Documenter"
 end
 
+println("example dir: $EXAMPLE_DIR")
+println(readdir(EXAMPLE_DIR))
+
 makedocs(
     format = Documenter.HTML(
         prettyurls=get(ENV, "CI", nothing)=="true",
