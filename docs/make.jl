@@ -30,20 +30,19 @@ function build()
     for (name, _) in notebook_lookup
         mv(joinpath(NOTEBOOK_DIR, name), joinpath(EXAMPLE_DIR, name))
     end
-    println("Moved notebooks to $EXAMPLE_DIR")
-    println(readdir(NOTEBOOK_DIR))
-    println(readdir(EXAMPLE_DIR))
-    println("---")
+
     return nothing
 end
 
 # Build the notebooks; defaults to true.
 if get(ENV, "BUILD_DOCS_NOTEBOOKS", "true") == "true"
     build()
-    println("After notebooks built to $EXAMPLE_DIR")
-    println(readdir(NOTEBOOK_DIR))
-    println(readdir(EXAMPLE_DIR))
-    println("---")
+end
+
+# Dict for makedocs for notebooks to be included 
+notebook_docpages = Dict()
+for (name, title) in notebook_lookup
+    notebook_docpages[joinpath(EXAMPLE_DIR, name)] = title
 end
 
 s = ArgParseSettings()
