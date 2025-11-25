@@ -40,7 +40,7 @@ if get(ENV, "BUILD_DOCS_NOTEBOOKS", "true") == "true"
 end
 
 # Dict for makedocs for notebooks to be included 
-notebook_docpages = p[]
+notebook_docpages = Pair{String, String}[]
 for (name, title) in notebook_lookup
     push!(joinpath(EXAMPLE_DIR, name) => title)
 end
