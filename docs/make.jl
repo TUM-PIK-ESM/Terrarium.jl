@@ -87,7 +87,7 @@ makedocs(
             ],
             "Vegetation" => "physics/vegetation.md",
         ],
-        "Examples" => notebook_lookup,
+        "Examples" => notebook_docpages,
         "Contributing" => "contributing.md",
         "API Reference" => "api_reference.md",
     ],
