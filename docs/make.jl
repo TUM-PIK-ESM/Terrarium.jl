@@ -42,7 +42,7 @@ end
 # Dict for makedocs for notebooks to be included 
 notebook_docpages = Pair{String, String}[]
 for (name, title) in notebook_lookup
-    push!(notebook_docpages, joinpath(EXAMPLE_DIR, name) => title)
+    push!(notebook_docpages, title => joinpath(EXAMPLE_DIR, name) )
 end
 
 s = ArgParseSettings()
