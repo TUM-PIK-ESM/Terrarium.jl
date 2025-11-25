@@ -6,6 +6,12 @@ using PlutoStaticHTML
 using Terrarium
 
 const NOTEBOOK_DIR = joinpath(dirname(@__DIR__), "examples", "notebooks")
+const EXAMPLE_DIR = joinpath(@__DIR__, "src", "notebooks")
+
+# lookup table for all Pluto notebooks to be included 
+notebook_lookup = Dict(
+    "example_model_notebook.md" => "Model Interface",
+)
 
 """
     build()
@@ -18,14 +24,17 @@ function build()
     output_format = documenter_output
     bopts = BuildOptions(NOTEBOOK_DIR; output_format)
     build_notebooks(bopts, oopts)
+
+    # move to docs/src/notebooks because for some reason that's needed
+    for (name, _) in notebook_lookup
+        mv(joinpath(NOTEBOOK_DIR, name), joinpath(EXAMPLE_DIR, name))
+    end
     return nothing
 end
 
 # Build the notebooks; defaults to true.
 if get(ENV, "BUILD_DOCS_NOTEBOOKS", "true") == "true"
     build()
-    println(NOTEBOOK_DIR)
-    println(readdir(NOTEBOOK_DIR))
 end
 
 s = ArgParseSettings()
@@ -70,9 +79,7 @@ makedocs(
             ],
             "Vegetation" => "physics/vegetation.md",
         ],
-        "Examples" => [
-            "Model Interface" => joinpath(NOTEBOOK_DIR, "example_model_notebook.md"),
-        ],
+        "Examples" => notebook_lookup,
         "Contributing" => "contributing.md",
         "API Reference" => "api_reference.md",
     ],
