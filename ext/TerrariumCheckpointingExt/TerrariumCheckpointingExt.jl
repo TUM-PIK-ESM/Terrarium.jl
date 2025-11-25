@@ -9,7 +9,7 @@ using Terrarium: run!
 """
     $SIGNATURES
 
-Run the simulation for `steps` or a given time `period` with timestep size `Δt` (in seconds or Dates.Period).
+Run the simulation for `steps` with timestep size `Δt` (in seconds or Dates.Period).
 
 Uses a `checkpointing_scheme` from Checkpointing.jl to checkpoint the integrator state for automatic differentiation with Enzyme.jl. 
 """
