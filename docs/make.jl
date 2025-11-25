@@ -19,16 +19,18 @@ notebook_lookup = Dict(
 Run all Pluto notebooks (".jl" files) in `NOTEBOOK_DIR`.
 """
 function build()
-    println("Building notebooks in $NOTEBOOK_DIR")
+    println("Building notebooks in $NOTEBOOK_DIR and moving them to $EXAMPLE_DIR")
     oopts = OutputOptions(; append_build_context=false)
     output_format = documenter_output
     bopts = BuildOptions(NOTEBOOK_DIR; output_format)
     build_notebooks(bopts, oopts)
-
+    println()
     # move to docs/src/notebooks because for some reason that's needed
     for (name, _) in notebook_lookup
         mv(joinpath(NOTEBOOK_DIR, name), joinpath(EXAMPLE_DIR, name))
     end
+    println(readdir(NOTEBOOK_DIR))
+    println(readdir(EXAMPLE_DIR))
     return nothing
 end
 
