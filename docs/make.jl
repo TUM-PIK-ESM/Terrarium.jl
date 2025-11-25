@@ -24,6 +24,8 @@ end
 # Build the notebooks; defaults to true.
 if get(ENV, "BUILD_DOCS_NOTEBOOKS", "true") == "true"
     build()
+    println(NOTEBOOK_DIR)
+    println(readdir(NOTEBOOK_DIR))
 end
 
 s = ArgParseSettings()
