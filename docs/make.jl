@@ -28,8 +28,8 @@ function build()
 
     # move to docs/src/notebooks because for some reason that's needed
     mkpath(EXAMPLE_DIR)
-    for (name, _) in notebook_lookup
-        mv(joinpath(NOTEBOOK_DIR, name), joinpath(EXAMPLE_DIR, name))
+    for (_, file_name) in notebook_lookup
+        mv(joinpath(NOTEBOOK_DIR, file_name), joinpath(EXAMPLE_DIR, file_name))
     end
 
     return nothing
