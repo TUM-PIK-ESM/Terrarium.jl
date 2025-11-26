@@ -12,7 +12,7 @@ const EXAMPLE_DIR = joinpath(@__DIR__, "src", "notebooks")
 
 # lookup table for all Pluto notebooks to be included 
 notebook_lookup = Dict(
-    "example_model_notebook.md" => "Model Interface",
+    "Model Interface" => "example_model_notebook.md",
 )
 
 """
@@ -43,8 +43,8 @@ end
 
 # Dict for makedocs for notebooks to be included 
 notebook_docpages = Pair{String, String}[]
-for (name, title) in notebook_lookup
-    push!(notebook_docpages, title => joinpath(EXAMPLE_DIR, name) )
+for (title, name) in notebook_lookup
+    push!(notebook_docpages, title => joinpath(EXAMPLE_DIR, name))
 end
 
 s = ArgParseSettings()
