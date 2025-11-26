@@ -5,10 +5,9 @@ using PlutoStaticHTML
 
 using Terrarium
 
-const NOTEBOOK_DIR = joinpath(@__DIR__, "src", "notebooks")
-
-#const NOTEBOOK_DIR = joinpath(dirname(@__DIR__), "examples", "notebooks")
+const NOTEBOOK_DIR = joinpath(dirname(@__DIR__), "examples", "notebooks")
 const EXAMPLE_DIR = joinpath(@__DIR__, "src", "notebooks")
+const EXAMPLE_DIR_RELATIVE = joinpath("notebooks")
 
 # lookup table for all Pluto notebooks to be included 
 notebook_lookup = Dict(
@@ -28,10 +27,10 @@ function build()
     build_notebooks(bopts, oopts)
 
     # move to docs/src/notebooks because for some reason that's needed
-    #mkpath(EXAMPLE_DIR)
-    #for (name, _) in notebook_lookup
-    #    mv(joinpath(NOTEBOOK_DIR, name), joinpath(EXAMPLE_DIR, name))
-    #end
+    mkpath(EXAMPLE_DIR)
+    for (name, _) in notebook_lookup
+        mv(joinpath(NOTEBOOK_DIR, name), joinpath(EXAMPLE_DIR, name))
+    end
 
     return nothing
 end
@@ -44,7 +43,7 @@ end
 # Dict for makedocs for notebooks to be included 
 notebook_docpages = Pair{String, String}[]
 for (title, name) in notebook_lookup
-    push!(notebook_docpages, title => joinpath(EXAMPLE_DIR, name))
+    push!(notebook_docpages, title => joinpath(EXAMPLE_DIR_RELATIVE, name))
 end
 
 s = ArgParseSettings()
@@ -63,9 +62,6 @@ IS_DRAFT = parsed_args["draft"] || parse(Bool, get(ENV, "DRAFTDOCS", "false"))
 if haskey(ENV, "GITHUB_ACTIONS")
     ENV["JULIA_DEBUG"] = "Documenter"
 end
-
-println("example dir: $EXAMPLE_DIR")
-println(readdir(EXAMPLE_DIR))
 
 makedocs(
     format = Documenter.HTML(
