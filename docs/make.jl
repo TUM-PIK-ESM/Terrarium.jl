@@ -5,7 +5,9 @@ using PlutoStaticHTML
 
 using Terrarium
 
-const NOTEBOOK_DIR = joinpath(dirname(@__DIR__), "examples", "notebooks")
+const NOTEBOOK_DIR = joinpath(@__DIR__, "src", "notebooks")
+
+#const NOTEBOOK_DIR = joinpath(dirname(@__DIR__), "examples", "notebooks")
 const EXAMPLE_DIR = joinpath(@__DIR__, "src", "notebooks")
 
 # lookup table for all Pluto notebooks to be included 
@@ -26,10 +28,10 @@ function build()
     build_notebooks(bopts, oopts)
 
     # move to docs/src/notebooks because for some reason that's needed
-    mkpath(EXAMPLE_DIR)
-    for (name, _) in notebook_lookup
-        mv(joinpath(NOTEBOOK_DIR, name), joinpath(EXAMPLE_DIR, name))
-    end
+    #mkpath(EXAMPLE_DIR)
+    #for (name, _) in notebook_lookup
+    #    mv(joinpath(NOTEBOOK_DIR, name), joinpath(EXAMPLE_DIR, name))
+    #end
 
     return nothing
 end
