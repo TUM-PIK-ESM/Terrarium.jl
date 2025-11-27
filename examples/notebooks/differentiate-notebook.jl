@@ -17,7 +17,7 @@ using Terrarium, Enzyme, Checkpointing
 md"""
 # Differentiating Terrarium.jl 
 
-We build Terrarium with differentiability in mind. This means that you are able to take derivatives of outputs of Terrarium with automatic differentiation (AD). AD enables use e.g. an automated, objetive calibration of model paraemters, but also the direct integration of neural networks and other machine learning (ML) methods into our model. For this purpose we build on Enzyme.jl. Enzyme.jl can peform both a reverse-mode AD (typical for most ML applications), and a forward-mode AD (more typical in classical sensitivity analysis). 
+We build Terrarium with differentiability in mind. This means that you are able to take derivatives of outputs of Terrarium with automatic differentiation (AD). AD enables us to use e.g. an automated, objetive calibration of model paraemters, but also the direct integration of neural networks and other machine learning (ML) methods into our model. For this purpose we build on Enzyme.jl. Enzyme.jl can peform both a reverse-mode AD (typical for most ML applications), and a forward-mode AD (more typical in classical sensitivity analysis). 
 
 When differentiating through a model integration, AD would usually need to keep track of every single intermediate value that contributes to our output. For long integrations this quickly becomes infeasible due to its high memory demand. Therefore we support checkpointing schemes from Checkpointing.jl for these cases that only save selected intermediate values and recompute all other intermediate values when needed. For Enzyme.jl this also has another very practical advantage: the first compile time for the gradient is much lower. 
 
