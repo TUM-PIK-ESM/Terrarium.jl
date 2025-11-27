@@ -12,6 +12,7 @@ const EXAMPLE_DIR_RELATIVE = joinpath("notebooks")
 # lookup table for all Pluto notebooks to be included 
 notebook_lookup = Dict(
     "Model Interface" => "example_model_notebook.md",
+    "Differentiating Terrarium" => "differentiate-notebook.md",
 )
 
 """
