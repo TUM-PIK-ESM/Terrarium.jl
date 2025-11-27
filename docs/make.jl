@@ -1,8 +1,50 @@
 using ArgParse
 using Documenter
 using Literate
+using PlutoStaticHTML
 
 using Terrarium
+
+const NOTEBOOK_DIR = joinpath(dirname(@__DIR__), "examples", "notebooks")
+const EXAMPLE_DIR = joinpath(@__DIR__, "src", "notebooks")
+const EXAMPLE_DIR_RELATIVE = joinpath("notebooks")
+
+# lookup table for all Pluto notebooks to be included 
+notebook_lookup = Dict(
+    "Model Interface" => "example_model_notebook.md",
+)
+
+"""
+    build()
+
+Run all Pluto notebooks (".jl" files) in `NOTEBOOK_DIR`.
+"""
+function build()
+    println("Building notebooks in $NOTEBOOK_DIR and moving them to $EXAMPLE_DIR")
+    oopts = OutputOptions(; append_build_context=false)
+    output_format = documenter_output
+    bopts = BuildOptions(NOTEBOOK_DIR; output_format)
+    build_notebooks(bopts, oopts)
+
+    # move to docs/src/notebooks because for some reason that's needed
+    mkpath(EXAMPLE_DIR)
+    for (_, file_name) in notebook_lookup
+        mv(joinpath(NOTEBOOK_DIR, file_name), joinpath(EXAMPLE_DIR, file_name))
+    end
+
+    return nothing
+end
+
+# Build the notebooks; defaults to true.
+if get(ENV, "BUILD_DOCS_NOTEBOOKS", "true") == "true"
+    build()
+end
+
+# Dict for makedocs for notebooks to be included 
+notebook_docpages = Pair{String, String}[]
+for (title, name) in notebook_lookup
+    push!(notebook_docpages, title => joinpath(EXAMPLE_DIR_RELATIVE, name))
+end
 
 s = ArgParseSettings()
 @add_arg_table! s begin
@@ -27,7 +69,9 @@ makedocs(
         ansicolor=true,
         collapselevel=1,
         canonical = "https://tum-pik-esm.github.io/Terrarium.jl/stable/",
-        size_threshold = 600_000
+        size_threshold = 600_000,
+        # Using MathJax3 since Pluto uses that engine too.
+        mathengine=Documenter.MathJax3(),
     ),      # in bytes
     sitename = "Terrarium.jl",
     authors = "Brian Groenke, Maximillian Galbrecht, Maha Badri, and Contributors",
@@ -44,6 +88,7 @@ makedocs(
             ],
             "Vegetation" => "physics/vegetation.md",
         ],
+        "Examples" => notebook_docpages,
         "Contributing" => "contributing.md",
         "API Reference" => "api_reference.md",
     ],
