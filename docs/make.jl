@@ -49,7 +49,7 @@ end
 
 # Dict for makedocs for notebooks to be included 
 notebook_docpages = Pair{String, String}[]
-push!(notebook_docpages, "Overview" => "examples_overview.md")
+push!(notebook_docpages, "Overview" => "notebooks/examples_overview.md")
 for (title, name) in notebook_lookup
     push!(notebook_docpages, title => joinpath(EXAMPLE_DIR_RELATIVE, name))
 end
