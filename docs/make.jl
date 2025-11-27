@@ -11,8 +11,9 @@ const EXAMPLE_DIR_RELATIVE = joinpath("notebooks")
 
 # lookup table for all Pluto notebooks to be included 
 notebook_lookup = Dict(
+    "Examples Overview" => "examples_overview.md",
     "Model Interface" => "example_model_notebook.md",
-    "Differentiating Terrarium" => "differentiate-notebook.md",
+#    "Differentiating Terrarium" => "differentiate-notebook.md",
 )
 
 """
@@ -43,6 +44,7 @@ end
 
 # Dict for makedocs for notebooks to be included 
 notebook_docpages = Pair{String, String}[]
+push!(notebook_docpages, "Overview" => "examples_overview.md")
 for (title, name) in notebook_lookup
     push!(notebook_docpages, title => joinpath(EXAMPLE_DIR_RELATIVE, name))
 end
