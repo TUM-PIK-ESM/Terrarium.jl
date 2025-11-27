@@ -19,4 +19,4 @@ Terrarium = "80418d68-07fa-499d-ae2b-c12e531f5cd8"
 SpeedyWeatherInternals = "0.1.2"
 
 [sources.Terrarium]
-path = ".."
+path = "../.."
