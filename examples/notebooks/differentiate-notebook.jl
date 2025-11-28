@@ -17,7 +17,7 @@ using Terrarium, Enzyme, Checkpointing
 md"""
 # Differentiating Terrarium.jl 
 
-We build Terrarium with differentiability in mind. This means that you are able to take derivatives of outputs of Terrarium with automatic differentiation (AD). AD enables us to use e.g. an automated, objetive calibration of model paraemters, but also the direct integration of neural networks and other machine learning (ML) methods into our model. For this purpose we build on Enzyme.jl. Enzyme.jl can peform both a reverse-mode AD (typical for most ML applications), and a forward-mode AD (more typical in classical sensitivity analysis). 
+We build Terrarium with differentiability in mind. This means that you are able to take derivatives of outputs of Terrarium with automatic differentiation (AD). AD enables us to use e.g. an automated, objetive calibration of model parameters, but also the direct integration of neural networks and other machine learning (ML) methods into our model. For this purpose we ensure compatibility on Enzyme.jl. Enzyme.jl can peform both a reverse-mode AD (typical for most ML applications), and a forward-mode AD (more typical in classical sensitivity analysis). 
 
 When differentiating through a model integration, AD would usually need to keep track of every single intermediate value that contributes to our output. For long integrations this quickly becomes infeasible due to its high memory demand. Therefore we support checkpointing schemes from Checkpointing.jl for these cases that only save selected intermediate values and recompute all other intermediate values when needed. For Enzyme.jl this also has another very practical advantage: the first compile time for the gradient is much lower. 
 
@@ -55,11 +55,11 @@ scheme = Revolve(1)
 
 # ╔═╡ 75c8713a-ae1e-4dce-8e16-f5ecf71ea4c0
 md"""
-Next we prepare for differentiating with Enzyme. For a comprehensive introduction to Enzyme, please see [their documentation](https://enzymead.github.io/Enzyme.jl/stable/). 
+Next we prepare to differentiate with Enzyme. For a comprehensive introduction to Enzyme, please see [their documentation](https://enzymead.github.io/Enzyme.jl/stable/). 
 
-We want to perform a sensitivity analysis of the temperature of the second lowest soiler layer ``T_f`` and the end of our simulation with respect to the initial conditions of our simulation ``\mathbf{U}_0``, ``\mathbf{T}_0``, where ``\mathbf{U}`` is the internal energy. 
+We want to perform a sensitivity analysis of the temperature of the second lowest soiler layer ``T_f`` at the end of our simulation with respect to the initial conditions of our simulation ``\mathbf{U}_0``, ``\mathbf{T}_0``, where ``\mathbf{U}`` is the internal energy. 
 
-Enzyme's `autodiff` is it's core function that we can use to compute vector-Jacobian products (vJP) of our `run!` function that integrates our `integrator` that we initializied. In order to compute the gradient of the just one layer of the soil, we set a "one-hot" seed for the vJP like so: 
+Enzyme's `autodiff` is it's core function that we can use to compute vector-Jacobian products (vJP) of our `run!` function that integrates our model using the `integrator` that we initialized. In order to compute the gradient of the just one layer of the soil, we set a "one-hot" seed for the vJP like so: 
 """
 
 # ╔═╡ f7282395-c69a-45b5-b682-4cae0c586a9d
@@ -74,7 +74,7 @@ end
 
 # ╔═╡ c0497f6a-1252-4c66-b9fe-4cfd9cf0d132
 md"""
-That's all the setup we need, as we have a pre-defined version of `run!` that takes in our `scheme`. We just need to call `autodiff` now. Executing this for the first time, might take a bit.  
+While doing that we allocated a shadow memory `dintegrator` for Enzyme in which it can accumluate the vJP (see Enzyme docs for more information). That's all the setup we need, as we have a pre-defined version of `run!` that takes in our `scheme`. We just need to call `autodiff` now. Executing this for the first time, might take a few minutes. Subsequent executions will be very fast though.   
 """
 
 # ╔═╡ 42e1745a-b9e1-4804-8ce5-71ad00e6ea7d
@@ -123,7 +123,7 @@ This example should just demonstrate the technical possibilities of Terrarium.jl
 # ╠═55e13705-70e4-4af0-a579-d9d9f01a28c5
 # ╟─88953a7d-e208-40bb-a78e-58a7bc875722
 # ╠═24119b2c-454b-4cd4-be35-2a443eec0e39
-# ╠═75c8713a-ae1e-4dce-8e16-f5ecf71ea4c0
+# ╟─75c8713a-ae1e-4dce-8e16-f5ecf71ea4c0
 # ╠═f7282395-c69a-45b5-b682-4cae0c586a9d
 # ╟─c0497f6a-1252-4c66-b9fe-4cfd9cf0d132
 # ╠═42e1745a-b9e1-4804-8ce5-71ad00e6ea7d
