@@ -12,8 +12,15 @@ const EXAMPLE_DIR_RELATIVE = joinpath("notebooks")
 # lookup table for all Pluto notebooks to be included 
 notebook_lookup = Dict(
     "Model Interface" => "example_model_notebook.md",
+#    "Differentiating Terrarium" => "differentiate-notebook.md",
 )
 
+# notebooks to be build (.jl files)
+notebooks_files = []
+for (title, name) in notebook_lookup
+    push!(notebooks_files, replace(name, ".md" => ".jl"))
+end
+    
 """
     build()
 
@@ -24,7 +31,7 @@ function build()
     oopts = OutputOptions(; append_build_context=false)
     output_format = documenter_output
     bopts = BuildOptions(NOTEBOOK_DIR; output_format)
-    build_notebooks(bopts, oopts)
+    build_notebooks(bopts, notebooks_files, oopts)
 
     # move to docs/src/notebooks because for some reason that's needed
     mkpath(EXAMPLE_DIR)
@@ -42,6 +49,7 @@ end
 
 # Dict for makedocs for notebooks to be included 
 notebook_docpages = Pair{String, String}[]
+push!(notebook_docpages, "Overview" => "notebooks/examples_overview.md")
 for (title, name) in notebook_lookup
     push!(notebook_docpages, title => joinpath(EXAMPLE_DIR_RELATIVE, name))
 end
