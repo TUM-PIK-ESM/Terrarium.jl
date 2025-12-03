@@ -10,7 +10,7 @@
     <img alt="EUPLv1.2 license" src="https://img.shields.io/badge/License-EUPLv1.2-blue.svg?style=flat-square">
 </a>
 
-[Terrarium.jl](https://tum-pik-esm.github.io/Terrarium.jl/dev) is a new and upcoming land model that aims to support hybrid physics- and data-driven land modeling across multiple spatial and temporal scales. We envision Terrarium to be part of a new generation of Earth system component models that combine modularity, interactivity, GPU-compability and auto-differentiability (AD) for seamless integration of process-based and data-driven model components in both global and regional scale simulations.
+[Terrarium.jl](https://tum-pik-esm.github.io/Terrarium.jl/dev) is a new and upcoming framework that aims to faciliate hybrid physics- and data-driven land modeling across multiple spatial and temporal scales. We envision Terrarium to be part of a new generation of Earth system component models that combine modularity, interactivity, GPU-compability and auto-differentiability (AD) for seamless integration of process-based and data-driven model components in both global and regional scale simulations.
 
 Terrarium is being developed alongside [SpeedyWeather.jl](https://github.com/SpeedyWeather/SpeedyWeather.jl) and [Oceananigans.jl](https://github.com/CliMA/Oceananigans.jl) as the land component of a new, user-friendly, and fully GPU/AD-compatible Earth System Model in the Julia programming language.
 
@@ -64,7 +64,6 @@ An open source project is only as strong as its community of contributors. We're
 
 Terrarium.jl is in a very early stage of development, so this is a golden opportunity for you to get your ideas in on the ground floor. If you have some ideas or code you would like to contribute, please don't hesitate to create an issue and get involved!
 
-
 ## Copyright and license
 
 See the [NOTICE](./NOTICE) file for copyright information.
@@ -77,3 +76,18 @@ What does that mean for you? You are 100% free to
 - Use the software for both commercial and non-commerical purposes
 
 However, if you make changes or modification to the code, excluding those made purely for the purpose of interoperability, **you are required to re-distribute the modified software under the EUPL v1.2 or a compatible license**. This is vital to ensure the long-term survival of the project and to foster an open, supportive, and diverse community.
+
+## Acknowledgements
+
+Terrarium.jl is a community project supported by the [FutureLab on Artifician Intelligence](https://www.pik-potsdam.de/en/institute/departments/complexity-science/research/artificial-intelligence) at the Potsdam Institute for Climate Impact Research (PIK) and the Technical University of Munich (TUM). We acknowledge funding support from
+- Horizon Europe grant agreement number 101184070
+- Volkswagen Foundation
+
+<img width="409" height="91" alt="image" src="https://github.com/user-attachments/assets/d75524fc-2cd4-4951-91c6-d13f0b62229f" />
+
+**Disclaimer**:
+*Views and opinions expressed are however those of the author(s)
+only and do not necessarily reflect those of the European Union or
+European Research Executive Agency (REA). Neither the
+European Union nor the granting authority can be held responsible
+for them.*
