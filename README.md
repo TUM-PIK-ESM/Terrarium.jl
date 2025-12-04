@@ -79,9 +79,10 @@ However, if you make changes or modification to the code, excluding those made p
 
 ## Acknowledgements
 
-Terrarium.jl is a community project supported by the [FutureLab on Artificial Intelligence](https://www.pik-potsdam.de/en/institute/departments/complexity-science/research/artificial-intelligence) at the Potsdam Institute for Climate Impact Research (PIK) and the Technical University of Munich (TUM). We acknowledge funding support from
+Terrarium.jl is a community-oriented project lead by the [FutureLab on Artificial Intelligence](https://www.pik-potsdam.de/en/institute/departments/complexity-science/research/artificial-intelligence) at the Potsdam Institute for Climate Impact Research (PIK) and Earth System Modeling group at the Technical University of Munich (TUM). We acknowledge funding support from
 - Horizon Europe grant agreement number 101184070
 - Volkswagen Foundation
+- Munich Data Science Institute (MDSI) at Technical University of Munich (TUM) via the Linde/MDSI Doctoral Fellowship program
 
 <img width="409" height="91" alt="image" src="https://github.com/user-attachments/assets/d75524fc-2cd4-4951-91c6-d13f0b62229f" />
 
