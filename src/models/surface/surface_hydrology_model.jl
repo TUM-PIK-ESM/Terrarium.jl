@@ -6,7 +6,6 @@ Model for surface hydrology processes.
 Properties:
 $TYPEDFIELDS
 """
-
 @kwdef struct SurfaceHydrologyModel{
     NF,
     CanopyHydrology<:AbstractCanopyHydrology,
@@ -17,7 +16,6 @@ $TYPEDFIELDS
     Initializer<:AbstractInitializer,
 } <: AbstractSurfaceHydrologyModel{NF, GridType}
     "Canopy hydrology scheme"
-    
     canopy_hydrology::CanopyHydrology = CanopyHydrology()
     
     "Runoff scheme"
