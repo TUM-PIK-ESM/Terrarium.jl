@@ -9,29 +9,29 @@ $TYPEDFIELDS
 @kwdef struct SurfaceHydrologyModel{
     NF,
     CanopyHydrology<:AbstractCanopyHydrology,
-    Runoff<:AbstractRunoff,
-    Snow<:AbstractSnow,
-    GridType<:AbstractLandGrid{NF},
+    SurfaceRunoff<:AbstractSurfaceRunoff,
     Atmosphere<:AbstractAtmosphere,
+    GridType<:AbstractLandGrid{NF},
+    Constants<:PhysicalConstants{NF},
     Initializer<:AbstractInitializer,
 } <: AbstractSurfaceHydrologyModel{NF, GridType}
-    "Canopy hydrology scheme"
-    canopy_hydrology::CanopyHydrology = CanopyHydrology()
-    
-    "Surface runoff scheme"
-    surface_runoff::SurfaceRunoff = Runoff()
-
     "Spatial grid type"
     grid::GridType
 
-    "Atmospheric inputs"
-    atmosphere::Atmosphere
+    "Atmospheric input configuration"
+    atmosphere::Atmosphere = PrescribedAtmosphere(eltype(grid))
+
+    "Canopy hydrology scheme"
+    canopy_hydrology::CanopyHydrology = PALADYNCanopyHydrology(eltype(grid))
+    
+    "Surface runoff scheme"
+    surface_runoff::SurfaceRunoff = SurfaceRunoff(eltype(grid))
 
     "Physical constants"
-    constants::PhysicalConstants
+    constants::Constants = PhysicalConstants(eltype(grid))
 
     "State variable initializer"
-    initializer::Initializer
+    initializer::Initializer = DefaultInitializer()
 end
 
 # SurfaceHydrologyModel getter methods
@@ -54,7 +54,7 @@ get_processes(model::SurfaceHydrologyModel) = (
     model.atmosphere,
     model.canopy_hydrology,
     model.surface_runoff
-    )
+)
 
 function compute_auxiliary!(state, model::SurfaceHydrologyModel)
     compute_auxiliary!(state, model, model.atmosphere)
@@ -62,7 +62,7 @@ function compute_auxiliary!(state, model::SurfaceHydrologyModel)
     compute_auxiliary!(state, model, model.surface_runoff)
 end
 
-function compute_tendencies!(state, ::SurfaceHydrologyModel)
+function compute_tendencies!(state, model::SurfaceHydrologyModel)
     compute_tendencies!(state, model, model.atmosphere)
     compute_tendencies!(state, model, model.canopy_hydrology)
     compute_tendencies!(state, model, model.surface_runoff)
