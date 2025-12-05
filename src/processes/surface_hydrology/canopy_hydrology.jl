@@ -35,9 +35,8 @@ variables(::PALADYNCanopyHydrology) = (
 
 Computes `I_can`, the canopy rain interception, following Eq. 42, PALADYN (Willeit 2016).
 """
-# TODO missing SAI, rainfall reahcing the ground
-@inline function compute_I_can(canopy_hydrology::PALADYNCanopyHydrology{NF}, rainfall_ground, LAI, SAI) where NF   
-    I_can = canopy_hydrology.α_int * rainfall_ground * (1 - exp(-canopy_hydrology.k_ext*(LAI + SAI))) 
+@inline function compute_I_can(canopy_hydrology::PALADYNCanopyHydrology{NF}, rainfall, LAI, SAI) where NF   
+    I_can = canopy_hydrology.α_int * rainfall * (1 - exp(-canopy_hydrology.k_ext*(LAI + SAI))) 
     return I_can
 end
 
@@ -46,9 +45,9 @@ end
 Computes the `w_can` tendency following Eq. 41, PALADYN (Willeit 2016).
 Modified to ignore the evaporation term for now.
 """
-@inline function compute_w_can_tend(canopy_hydrology::PALADYNCanopyHydrology{NF}, rainfall_ground, LAI, SAI, w_can) where NF
+@inline function compute_w_can_tend(canopy_hydrology::PALADYNCanopyHydrology{NF}, rainfall, LAI, SAI, w_can) where NF
     # Compute I_can
-    I_can = compute_I_can(canopy_hydrology, rainfall_ground, LAI, SAI)
+    I_can = compute_I_can(canopy_hydrology, rainfall, LAI, SAI)
 
     # Compute w_can tendency
     w_can_tendency = I_can - w_can / canopy_hydrology.τ_w
@@ -65,11 +64,10 @@ end
     i, j = @index(Global, NTuple)
 
     # Compute canopy rain interception
-    # Assume all rainfall reaches the ground for now
-    rainfall_ground = state.rainfall[i, j]
+    rainfall = state.rainfall[i, j]
     LAI = state.LAI[i, j]
     SAI = state.SAI[i, j]
-    state.I_can[i, j] = compute_I_can(canopy_hydrology, rainfall_ground, LAI, SAI)
+    state.I_can[i, j] = compute_I_can(canopy_hydrology, rainfall, LAI, SAI)
 end
 
 function compute_tendencies!(state, model, canopy_hydrology::PALADYNCanopyHydrology)
@@ -81,14 +79,13 @@ end
     i, j = @index(Global, NTuple)
 
     # Get inputs
-    # Assume all rainfall reaches the ground for now
-    rainfall_ground = state.rainfall[i, j]
+    rainfall = state.rainfall[i, j]
     LAI = state.LAI[i, j]
     SAI = state.SAI[i, j]
     w_can = state.w_can[i, j]
 
     # Compute the canopy water tendency
-    w_can_tendency = compute_w_can_tend(canopy_hydrology, rainfall_ground, LAI, SAI, w_can)
+    w_can_tendency = compute_w_can_tend(canopy_hydrology, rainfall, LAI, SAI, w_can)
     
     # Store result
     state.tendencies.w_can[i, j] = w_can_tendency
