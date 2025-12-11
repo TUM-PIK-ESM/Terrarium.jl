@@ -109,7 +109,7 @@ struct Variable{name, VD, UT} <: AbstractVariable{name, VD}
 end
 
 """
-Base type for state variable placeholder types with 
+Baste type for process state variables with specific intents, e.g. `prognostic`, `auxiliary`, or `input`.
 """
 abstract type AbstractProcessVariable{name, VD} <: AbstractVariable{name, VD} end
 
