@@ -331,9 +331,9 @@ end
 
 function compute_auxiliary!(state, model, photo::LUEPhotosynthesis)
     grid = get_grid(model)
-    bcs = get_boundary_conditions(model)
     phen = get_phenology(model)
-    launch!(grid, :xy, compute_auxiliary_kernel!, state, photo, phen, bcs.top)
+    atmos = get_atmosphere(model)
+    launch!(grid, :xy, compute_auxiliary_kernel!, state, photo, phen, atmos)
 end
 
 @kernel function compute_auxiliary_kernel!(

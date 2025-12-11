@@ -34,8 +34,8 @@ end
 
 function compute_auxiliary!(state, model, stomcond::MedlynStomatalConductance)
     grid = get_grid(model)
-    bcs = get_boundary_conditions(model)
-    launch!(grid, :xy, compute_auxiliary_kernel!, state, stomcond, bcs.top)
+    atmos = get_atmosphere(model)
+    launch!(grid, :xy, compute_auxiliary_kernel!, state, stomcond, atmos)
 end
 
 @kernel function compute_auxiliary_kernel!(
