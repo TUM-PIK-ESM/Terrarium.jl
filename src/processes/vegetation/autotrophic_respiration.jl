@@ -29,6 +29,7 @@ variables(::PALADYNAutotrophicRespiration) = (
     auxiliary(:Ra, XY()), # Autotrophic respiration [kgC/m²/day]
     input(:Rd, XY()), # Daily leaf respiration [gC/m²/day]
     input(:phen, XY()), # Phenology factor [-]
+    input(:ground_temperature, XY(), units=u"°C"), # Ground surface temperature [°C]
 )
 
 """
@@ -40,16 +41,19 @@ Computes temperature factors `f_temp_air` and `f_temp_soil` for autotrophic resp
 @inline function compute_f_temp(
     autoresp::PALADYNAutotrophicRespiration{NF},
     T_air::NF,
+    T_soil::NF
 ) where NF
-    # Compute f_temp_soil
-    # TODO add f_temp_soil implementaion (depends on soil temperature)
-    # For now, placeholder as a constant value
-    f_temp_soil = zero(NF)
-
-    # Compute f_temp_air
     # TODO: These hardcoded constants need to be moved either into the model struct as
     # parameters or into the PhysicalConstants struct
-    f_temp_air = exp(NF(308.56) * (NF(1.0) / NF(56.02) - NF(1.0) / (NF(46.02) + T_air)))
+    f_temp(T) = exp(NF(308.56) * (NF(1.0) / NF(56.02) - NF(1.0) / (NF(46.02) + T)))
+
+    # Compute f_temp_soil
+    # TODO: This hard bound at 7°C comes from CLIMBER-X/PALADYN but is there not further justified.
+    # Maybe these functions can be considered candidates for further improvement or data-driven replacement.
+    f_temp_soil = (T_soil > 7)*f_temp(T_soil)
+
+    # Compute f_temp_air
+    f_temp_air = f_temp(T_air)
 
     return f_temp_air, f_temp_soil
 end
@@ -77,13 +81,14 @@ Computes maintenance respiration `Rm` in [kgC/m²/day].
     autoresp::PALADYNAutotrophicRespiration{NF}, 
     vegcarbon_dynamics::PALADYNCarbonDynamics{NF}, 
     T_air,
+    T_soil,
     Rd, 
     phen,
-    C_veg,
+    C_veg
 ) where NF
 
     # Compute f_temp for autotrophic respiration
-    f_temp_air, f_temp_soil = compute_f_temp(autoresp, T_air)
+    f_temp_air, f_temp_soil = compute_f_temp(autoresp, T_air, T_soil)
 
     # Compute resp10
     resp10 = compute_resp10(autoresp)
@@ -120,9 +125,9 @@ $SIGNATURES
 
 Computes autotrophic respiration `Ra` as the sum of maintenance respiration `Rm` and growth respiration `Rg` in [kgC/m²/day].
 """
-@inline function compute_Ra(autoresp::PALADYNAutotrophicRespiration, vegcarbon_dynamics::PALADYNCarbonDynamics, T_air, Rd, phen, C_veg, GPP) 
+@inline function compute_Ra(autoresp::PALADYNAutotrophicRespiration, vegcarbon_dynamics::PALADYNCarbonDynamics, T_air, T_soil, Rd, phen, C_veg, GPP) 
      # Compute Rm, maintenance respiration
-    Rm = compute_Rm(autoresp, vegcarbon_dynamics, T_air, Rd, phen, C_veg)
+    Rm = compute_Rm(autoresp, vegcarbon_dynamics, T_air, T_soil, Rd, phen, C_veg)
 
     # Compute Rg, growth respiration 
     Rg = compute_Rg(autoresp, GPP, Rm)
@@ -146,8 +151,9 @@ end
 
 function compute_auxiliary!(state, model, autoresp::PALADYNAutotrophicRespiration)
     grid = get_grid(model)
-    bcs = get_boundary_conditions(model)
-    launch!(grid, :xy, compute_auxiliary_kernel!, state, autoresp, get_carbon_dynamics(model), bcs.top)
+    atmos = get_atmosphere(model)
+    carbon = get_vegetation_carbon_dynamics(model)
+    launch!(grid, :xy, compute_auxiliary_kernel!, state, autoresp, carbon, atmos)
 end
 
 @kernel function compute_auxiliary_kernel!(
@@ -159,21 +165,23 @@ end
     i, j = @index(Global, NTuple)
 
     # Get inputs    
-    T_air = air_temperature(i, j, state, atmos)
-    Rd = state.Rd[i, j]
-    phen = state.phen[i, j]
-    C_veg = state.C_veg[i, j]
-    GPP = state.GPP[i, j]
+    @inboudns let T_air = air_temperature(i, j, state, atmos),
+        T_soil = state.ground_temperature[i, j],
+        Rd = state.Rd[i, j],
+        phen = state.phen[i, j],
+        C_veg = state.C_veg[i, j],
+        GPP = state.GPP[i, j];
 
-    # Compute autotrophic respiration Ra
-    Ra = compute_Ra(autoresp, vegcarbon_dynamics, T_air, Rd, phen, C_veg, GPP)
+        # Compute autotrophic respiration Ra
+        Ra = compute_Ra(autoresp, vegcarbon_dynamics, T_air, T_soil, Rd, phen, C_veg, GPP)
 
-    # Compute net primary product (NPP)
-    NPP = compute_NPP(autoresp, GPP, Ra)
+        # Compute net primary product (NPP)
+        NPP = compute_NPP(autoresp, GPP, Ra)
 
-    # Store results
-    state.Ra[i, j] = Ra
-    state.NPP[i, j] = NPP
+        # Store results
+        state.Ra[i, j] = Ra
+        state.NPP[i, j] = NPP
+    end
 end
 
    

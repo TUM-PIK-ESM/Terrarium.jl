@@ -63,7 +63,7 @@ get_autotrophic_respiration(model::VegetationModel) = model.autotrophic_respirat
 
 get_phenology(model::VegetationModel) = model.phenology
 
-get_carbon_dynamics(model::VegetationModel) = model.carbon_dynamics
+get_vegetation_carbon_dynamics(model::VegetationModel) = model.carbon_dynamics
 
 get_vegetation_dynamics(model::VegetationModel) = model.vegetation_dynamics
 
