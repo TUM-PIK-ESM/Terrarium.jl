@@ -44,6 +44,7 @@ scheme = Revolve(1)
 dintegrator = make_zero(integrator)
 N_t = 200 
 
+# this uses checkpointing 
 autodiff(set_runtime_activity(Enzyme.Reverse), run!, Const, Duplicated(integrator, dintegrator), Const(scheme), Const(N_t))
 
 function run_sim!(integrater, N_t)
@@ -51,6 +52,7 @@ function run_sim!(integrater, N_t)
     return nothing
 end
 
+# no checkpointing 
 N_t = 1 
 autodiff(set_runtime_activity(Enzyme.Reverse), run_sim!, Const, Duplicated(integrator, dintegrator), Const(N_t))
 
