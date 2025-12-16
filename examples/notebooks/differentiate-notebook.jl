@@ -8,6 +8,8 @@ using InteractiveUtils
 begin 
 	import Pkg 
 	Pkg.activate(".")
+	Pkg.develop(Pkg.PackageSpec(path="../.."))
+    Pkg.instantiate()
 end 
 
 # ╔═╡ 07a7fe5f-262e-4e00-b05b-77a9d3a9d1dc
@@ -117,7 +119,7 @@ This example should just demonstrate the technical possibilities of Terrarium.jl
 
 # ╔═╡ Cell order:
 # ╟─e903296c-cb88-11f0-0036-7de3e02ec6b0
-# ╟─9dee9d2c-6493-474b-93b4-c76da8430c52
+# ╠═9dee9d2c-6493-474b-93b4-c76da8430c52
 # ╠═07a7fe5f-262e-4e00-b05b-77a9d3a9d1dc
 # ╠═bd10a7d6-0f20-4f6a-a8b8-f61490bfafb1
 # ╠═55e13705-70e4-4af0-a579-d9d9f01a28c5
