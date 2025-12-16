@@ -8,7 +8,7 @@ $TYPEDFIELDS
 """
 @kwdef struct PALADYNCanopyHydrology{NF} <: AbstractCanopyHydrology
     
-    "Canopy water interception factor"
+    "Canopy water interception factor for tree PFTs"
     α_int::NF = 0.2 
 
     "Extinction coefficient for radiation"
@@ -27,10 +27,10 @@ variables(::PALADYNCanopyHydrology) = (
     prognostic(:w_can, XY(); desc="Canopy liquid water", units=u"kg/m^2"), 
     auxiliary(:I_can, XY(); desc="Canopy rain interception", units=u"kg/m^2/s"), 
     auxiliary(:E_can, XY(); desc="Canopy evaporation", units=u"kg/m^2/s"),
+    auxiliary(:precip_ground, XY(); desc="Rainfall rate reaching the ground", units=u"kg/m^2/s"),
     input(:LAI, XY(); desc="Leaf Area Index", units=u"m^2/m^2"), 
     input(:SAI, XY(); desc="Stem Area Index", units=u"m^2/m^2")
 )
-
 
 """
     $SIGNATURES
@@ -68,10 +68,25 @@ Computes the `w_can` tendency following Eq. 41, PALADYN (Willeit 2016).
 """
 @inline function compute_w_can_tend(canopy_hydrology::PALADYNCanopyHydrology{NF}, w_can, I_can, E_can) where NF
     
-    w_can_tendency = I_can - E_can - w_can / canopy_hydrology.τ_w
+    w_can_tend = I_can - E_can - w_can / canopy_hydrology.τ_w
 
-    return w_can_tendency
+    return w_can_tend
 end
+
+"""
+    $SIGNATURES
+
+Computes `precip_ground`, the rate of rain reaching the ground, following Eq. 44, PALADYN (Willeit 2016).
+"""
+@inline function compute_precip_ground(canopy_hydrology::PALADYNCanopyHydrology{NF}, precip, w_can, I_can, E_can) where NF   
+    # Compute the canopy water tendency
+    w_can_tend = compute_w_can_tend(canopy_hydrology, w_can, I_can, E_can)
+
+    # Compute the precipitation reaching the ground
+    precip_ground = precip - E_can - w_can_tend
+    return precip_ground
+end
+
 
 function compute_auxiliary!(state, model, canopy_hydrology::PALADYNCanopyHydrology)
     grid = get_grid(model)
@@ -101,10 +116,19 @@ end
     w_can = state.w_can[i, j]
 
     # Compute canopy rain interception
-    state.I_can[i, j] = compute_I_can(canopy_hydrology, precip, LAI, SAI)
+    I_can = compute_I_can(canopy_hydrology, precip, LAI, SAI)
     
-    # Compute canopy evaporation for diagnostic output
-    state.E_can[i, j] = compute_E_can(canopy_hydrology, constants, w_can, LAI, SAI, rₐ, q_sat, q_air)
+    # Compute canopy evaporation
+    E_can = compute_E_can(canopy_hydrology, constants, w_can, LAI, SAI, rₐ, q_sat, q_air)
+
+    # Compute precipitation reaching the ground
+    precip_ground = compute_precip_ground(canopy_hydrology, precip, w_can, I_can, E_can)
+
+    # Store results
+    state.I_can[i, j] = I_can
+    state.E_can[i, j] = E_can
+    state.precip_ground[i, j] = precip_ground
+
 end
 
 function compute_tendencies!(state, model, canopy_hydrology::PALADYNCanopyHydrology)
