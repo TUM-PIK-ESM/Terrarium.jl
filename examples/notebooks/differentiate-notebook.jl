@@ -61,7 +61,7 @@ Next we prepare to differentiate with Enzyme. For a comprehensive introduction t
 
 We want to perform a sensitivity analysis of the temperature of the second lowest soiler layer ``T_f`` at the end of our simulation with respect to the initial conditions of our simulation ``\mathbf{U}_0``, ``\mathbf{T}_0``, where ``\mathbf{U}`` is the internal energy. 
 
-Enzyme's `autodiff` is it's core function that we can use to compute vector-Jacobian products (vJP) of our `run!` function that integrates our model using the `integrator` that we initialized. In order to compute the gradient of the just one layer of the soil, we set a "one-hot" seed for the vJP like so: 
+Enzyme's `autodiff` is it's core function that we can use to compute vector-Jacobian products (vJP) for the reverse-mode AD of our `run!` function that integrates our model using the `integrator` that we initialized. In order to compute the gradient of the just one layer of the soil, we set a "one-hot" seed for the vJP like so: 
 """
 
 # ╔═╡ f7282395-c69a-45b5-b682-4cae0c586a9d
