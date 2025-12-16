@@ -50,7 +50,7 @@ When we follow the advised naming notations of `grid` and `initializer` we inher
 
 ## What is a "grid"? 
 
-The `grid` defines the spatial discretization. Our grids are based on those of Oceananigans.jl (and SpeedyWeather.jl/RingGrids.jl) in order to take advantage of their capabilities for device-agnostic parallelization.
+The `grid` defines the spatial discretization. Our grids are based on those of [Oceananigans.jl](https://github.com/CliMA/Oceananigans.jl) (and [SpeedyWeather.jl](https://github.com/SpeedyWeather/SpeedyWeather.jl)/[RingGrids.jl](https://github.com/SpeedyWeather/SpeedyWeather.jl/tree/main/RingGrids)) in order to take advantage of their capabilities for device-agnostic parallelization.
 
 Terrarium currently provides two grid types: 
 
@@ -197,7 +197,7 @@ initializer = FieldInitializers(u = 1.0)
 
 # ╔═╡ f2d02218-76f6-4b3a-84ca-38772f55d428
 md"""
-Then, we define our forcing. For that, our time-dependent forcing is loaded in from a `Oceananigans.FieldTimeSeries`. If you want to load the forcing from e.g. a netCDF file you can use the `RasterInputSource` that is based on `Rasters.jl`. In the concrete case, we'll just generate a random forcing: 
+Then, we define our forcing. For that, our time-dependent forcing is loaded in from a `Oceananigans.FieldTimeSeries`. If you want to load the forcing from e.g. a netCDF file you can use the `RasterInputSource` that is based on [Rasters.jl](https://github.com/rafaqz/Rasters.jl). In the concrete case, we'll just generate a random forcing: 
 """
 
 # ╔═╡ 252af6a1-73c8-4abe-8100-690564641b0d
