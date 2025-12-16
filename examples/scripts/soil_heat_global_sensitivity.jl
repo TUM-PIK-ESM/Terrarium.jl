@@ -1,3 +1,4 @@
+# currently only works in Julia 1.10 with Enzyme
 using Terrarium
 
 using CUDA
@@ -25,6 +26,10 @@ land_mask = land_sea_frac_field .> 0.5 # select only grid points with > 50% land
 # for now let's do it actually without the mask to keep the example simple
 grid = ColumnRingGrid(arch, Float64, ExponentialSpacing(N=30), land_mask.grid) #, land_mask.grid, land_mask)
 lon, lat = RingGrids.get_londlatds(grid.rings)
+
+# alternative with ColumnGrid 
+#grid = ColumnGrid(arch, Float64, ExponentialSpacing(N=30)) #, land_mask.grid, land_mask)
+#grid = ColumnGrid(ExponentialSpacing()) #, land_mask.grid, land_mask)
 
 # Initial conditions
 initializer = FieldInitializers(
