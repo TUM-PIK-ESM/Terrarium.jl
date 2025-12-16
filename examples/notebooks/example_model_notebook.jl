@@ -228,7 +228,7 @@ to `initialize` along with a suitable timestepper and our input/forcing data, wh
 """
 
 # ╔═╡ 7e38132b-d406-4863-b88f-90efe2a1bfa2
-integrator = initialize(model, ForwardEuler(Δt = 1.0), input)
+integrator = initialize(model, Heun(Δt=1.0), input)
 
 # ╔═╡ ab442662-9975-42e5-b5c7-48687f8cbe12
 md"""
