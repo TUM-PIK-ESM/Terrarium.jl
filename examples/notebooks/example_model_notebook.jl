@@ -284,20 +284,15 @@ begin
         overwrite_existing = true,
         schedule = TimeInterval(10seconds)
     )
+
+	# Run the simulation
+	run!(sim)
 end
 
 # ╔═╡ 081d0b29-927c-4a03-a3dd-4dcac043dcc1
 md"""
-We can then add an output writer to the simulation,
+We can then add an output writer to the simulation and finally `run!` it!
 """
-
-# ╔═╡ 09118f2e-6c41-49e3-abf2-92b70976d755
-md"""
-and finally `run!` it!
-"""
-
-# ╔═╡ 4d416eb0-fbbc-4fec-939c-5c3909b2cef2
-run!(sim)
 
 # ╔═╡ 0f607788-53e7-4a55-95f0-3690e9867099
 md"""
@@ -353,8 +348,6 @@ Well that's it. We defined and ran a simple exponential model with external forc
 # ╠═95f479e2-2ffa-4e15-8952-421465eab2ee
 # ╟─081d0b29-927c-4a03-a3dd-4dcac043dcc1
 # ╠═26000a4e-77cb-4c04-aeb2-ba5b0e14112a
-# ╟─09118f2e-6c41-49e3-abf2-92b70976d755
-# ╠═4d416eb0-fbbc-4fec-939c-5c3909b2cef2
 # ╟─eeb283fa-5360-4bab-83cf-dcbc0bee7949
 # ╟─0f607788-53e7-4a55-95f0-3690e9867099
 # ╠═dbe8d0fa-893f-4c05-9e46-220ab41636f3
