@@ -53,14 +53,3 @@ N_t = 200
 
 # this uses checkpointing 
 autodiff(set_runtime_activity(Enzyme.Reverse), run!, Const, Duplicated(integrator, dintegrator), Const(scheme), Const(N_t))
-
-function run_sim!(integrater, N_t)
-    run!(integrater, steps=N_t, Δt=900.0)
-    return nothing
-end
-
-# no checkpointing 
-N_t = 1 
-autodiff(set_runtime_activity(Enzyme.Reverse), run_sim!, Const, Duplicated(integrator, dintegrator), Const(N_t))
-
-    
