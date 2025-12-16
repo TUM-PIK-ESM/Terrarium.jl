@@ -69,7 +69,7 @@ struct ColumnRingGrid{
         arch::AbstractArchitecture,
         ::Type{NF},
         vert::AbstractVerticalSpacing,
-        mask::RingGrids.AbstractField{Bool}=convert.(Bool, ones(rings))
+        mask::RingGrids.AbstractField{Bool},
     ) where {NF} = ColumnRingGrid(arch, NF, vert, mask.grid, mask)
 
     ColumnRingGrid(
