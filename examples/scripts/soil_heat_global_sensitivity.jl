@@ -21,7 +21,9 @@ heatmap(land_sea_frac_field)
 
 # Set up grids
 land_mask = land_sea_frac_field .> 0.5 # select only grid points with > 50% land
-grid = ColumnRingGrid(arch, Float64, ExponentialSpacing(N=30), land_mask.grid, land_mask)
+
+# for now let's do it actually without the mask to keep the example simple
+grid = ColumnRingGrid(arch, Float64, ExponentialSpacing(N=30), land_mask.grid) #, land_mask.grid, land_mask)
 lon, lat = RingGrids.get_londlatds(grid.rings)
 
 # Initial conditions
