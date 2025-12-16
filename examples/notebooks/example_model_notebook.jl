@@ -8,6 +8,7 @@ using InteractiveUtils
 begin
     import Pkg
     Pkg.activate(".")
+    Pkg.develop(Pkg.PackageSpec(path="../.."))
     Pkg.instantiate()
 end
 
