@@ -165,7 +165,7 @@ end
     i, j = @index(Global, NTuple)
 
     # Get inputs    
-    @inboudns let T_air = air_temperature(i, j, state, atmos),
+    @inbounds let T_air = air_temperature(i, j, state, atmos),
         T_soil = state.ground_temperature[i, j],
         Rd = state.Rd[i, j],
         phen = state.phen[i, j],

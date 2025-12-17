@@ -180,7 +180,7 @@ abstract type AbstractSnowModel{NF, GR} <: AbstractModel{NF, GR} end
 """
     $TYPEDEF
 
-Base type for vegetation/carbon models.
+Base type for vegetation models.
 """
 abstract type AbstractVegetationModel{NF, GR} <: AbstractModel{NF, GR} end
 
