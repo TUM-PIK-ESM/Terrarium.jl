@@ -18,7 +18,7 @@ heatmap(land_sea_frac_field)
 
 # Load ERA-5 2 meter air temperature at ~1° resolution
 Tair_raster = Raster("inputs/external/era5-land/2m_temperature/era5_land_2m_temperature_2023_N72.nc")
-Tsurf_0 = convert.(Float32, replace_missing(Tair_raster, NaN)) .- 273.15f0
+Tair_raster = convert.(Float32, replace_missing(Tair_raster, NaN)) .- 273.15f0
 # heatmap(Tair_raster[:,:,1])
 
 # Set up grids

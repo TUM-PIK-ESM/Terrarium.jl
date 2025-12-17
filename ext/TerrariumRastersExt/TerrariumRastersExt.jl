@@ -31,6 +31,8 @@ struct RasterInputSource{NF, VD, TT, IM<:AbstractVector{Int}, RS<:Tuple{Vararg{A
     rasters::NamedTuple{names, RS}
 end
 
+Terrarium.variables(source::RasterInputSource) = map(name -> Terrarium.input(name, source.dims), keys(source.rasters))
+
 """
     InputSource(data::Raster, grid::ColumnRingGrid; name = data.name)
 
