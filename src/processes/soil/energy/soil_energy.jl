@@ -72,7 +72,9 @@ function compute_tendencies!(state, model, energy::SoilEnergyBalance)
     hydrology = get_soil_hydrology(model)
     strat = get_stratigraphy(model)
     bgc = get_biogeochemistry(model)
-    launch!(grid, :xyz, compute_energy_tendency!, state, grid, energy, hydrology, strat, bgc)
+
+    model_compents = getter(model)
+    launch!(grid, :xyz, compute_energy_tendency!, state, model_compents...)
     return nothing
 end
 

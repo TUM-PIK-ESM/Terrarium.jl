@@ -59,13 +59,61 @@ function global_mean_surface_temp(integrator, num_steps = 1)
 	return sum(interior(integrator.state.temperature)[:,:,end-1])
 end
 
+function one_step(state_out, integrator_in)
+	# this uses checkpointing
+	copyto!(state_out, integrator_in.state)
+	# integrator_out = ModelIntegrator(integrator_in.clock, integrator_in.model, integrator_in.inputs, state_out, integrator_in.timestepper)
+	Terrarium.compute_tendencies!(state_out, integrator_in.model)
+	return nothing
+end
+
+function one_step_state(state_out, state_in, model)
+	# this uses checkpointing
+	copyto!(state_out, state_in)
+	# integrator_out = ModelIntegrator(integrator_in.clock, integrator_in.model, integrator_in.inputs, state_out, integrator_in.timestepper)
+	Terrarium.compute_tendencies!(state_out, model)
+	return nothing
+end
+
+
 # differentiate response using Enzyme
-dintegrator = make_zero(integrator)
-N_t = 1
+# dintegrator = make_zero(integrator)
+# N_t = 1
+# autodiff(
+# 	set_runtime_activity(Enzyme.Reverse),
+# 	global_mean_surface_temp,
+# 	Active,
+# 	Duplicated(integrator, dintegrator),
+# 	Const(N_t)
+# )
+
+# integrator_out = deepcopy(integrator)
+# state_out = integrator_out.state
+# integrator_in = deepcopy(integrator)
+# dintegrator_in = make_zero(integrator)
+# dstate_out = make_zero(state_out)
+# fill!(dstate_out.tendencies.internal_energy, 1)
+# autodiff(
+# 	set_runtime_activity(Enzyme.Reverse),
+# 	one_step,
+# 	Const,
+# 	Duplicated(state_out, dstate_out),
+# 	Duplicated(integrator_in, dintegrator_in)
+# )
+
+state_in = integrator.state
+dstate_in = make_zero(state_in)
+
+state_out = integrator_out.state
+dstate_out = make_zero(state_out)
+fill!(dstate_out.tendencies.internal_energy, 1)
+
+dmodel = make_zero(integrator.model)
 autodiff(
 	set_runtime_activity(Enzyme.Reverse),
-	global_mean_surface_temp,
-	Active,
-	Duplicated(integrator, dintegrator),
-	Const(N_t)
+	one_step_state,
+	Const,
+	Duplicated(state_out, dstate_out),
+	Duplicated(state_in, dstate_in),
+	Duplicated(integrator.model, dmodel)
 )

@@ -80,3 +80,50 @@ end
     @time Enzyme.autodiff(set_runtime_activity(Reverse), mean_soil_temperature_step!, Active, Duplicated(state, dstate), Duplicated(stepper, dstepper), Const(model), Const(integrator.inputs), Const(integrator.timestepper.Δt))
     @test all(isfinite.(dstate.temperature))
 end
+
+model = build_soil_energy_model(CPU(), Float64)
+dmodel = make_zero(model)
+integrator = initialize(model, ForwardEuler())
+inputs = integrator.inputs
+state = integrator.state
+dstate = make_zero(state)
+stepper = integrator.timestepper
+dstepper = make_zero(stepper)
+@time Enzyme.autodiff(
+    set_runtime_activity(Reverse),
+    mean_soil_temperature_step!,
+    Active,
+    Duplicated(state, dstate),
+    Duplicated(stepper, dstepper),
+    Duplicated(model, dmodel),
+    Const(integrator.inputs),
+    Const(integrator.timestepper.Δt)
+)
+
+@inline function thermalconductivity(props::SoilThermalProperties)#, soil::SoilComposition)
+    # κs = Terrarium.getproperties(props.cond)
+    # fracs = volumetric_fractions(soil)
+    return props.cond.mineral*2
+    # return sum(fastmap((x, w) -> sqrt(x)*w, κs, fracs))^2
+    # apply bulk conductivity weighting
+    # return props.cond_bulk(κs, fracs)
+end
+
+props = SoilThermalProperties(Float64)
+dprops = make_zero(props)
+#comp = SoilComposition()
+#dcomp = make_zero(comp)
+thermalconductivity(props, comp)
+Enzyme.autodiff(Reverse, thermalconductivity, Active, Duplicated(props, dprops))#, Duplicated(comp, dcomp))
+
+
+@kwdef struct Foo{A,B} 
+    a::A
+    b::B
+end  
+
+get_field_arg(foo::Foo) = 2*(foo.a + foo.b)
+
+bar = Foo(a=3.0, b=2.0)
+dbar = make_zero(bar)
+Enzyme.autodiff(Reverse, get_field_arg, Active, Duplicated(bar, dbar))

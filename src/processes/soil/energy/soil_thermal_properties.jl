@@ -71,8 +71,10 @@ Compute the bulk thermal conductivity of the given soil volume.
 @inline function thermalconductivity(props::SoilThermalProperties, soil::SoilComposition)
     κs = getproperties(props.cond)
     fracs = volumetric_fractions(soil)
+    return sum(map((x, w) -> sqrt(x)*w, values(κs), values(fracs)))^2
+    # return sum(fastmap((x, w) -> sqrt(x)*w, κs, fracs))^2
     # apply bulk conductivity weighting
-    return props.cond_bulk(κs, fracs)
+    # return props.cond_bulk(κs, fracs)
 end
 
 """
