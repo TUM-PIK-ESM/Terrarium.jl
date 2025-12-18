@@ -16,8 +16,8 @@ R_{\\text{net}} = S_{\\uparrow} - S_{\\downarrow} + L_{\\uparrow} - L_{\\downarr
 struct PrescribedRadiativeFluxes <: AbstractRadiativeFluxes end
 
 variables(::PrescribedRadiativeFluxes) = (
-    input(:surface_shortwave_up, XY(), units=u"W/m^2", desc="Outoing (upwelling) shortwave radiation"),
-    input(:surface_longwave_up, XY(), units=u"W/m^2", desc="Outoing (upwelling) longwave radiation"),
+    input(:surface_shortwave_up, XY(), units=u"W/m^2", desc="Outgoing (upwelling) shortwave radiation"),
+    input(:surface_longwave_up, XY(), units=u"W/m^2", desc="Outgoing (upwelling) longwave radiation"),
     auxiliary(:surface_net_radiation, XY(), units=u"W/m^2", desc="Net outgoing (positive up) radiation"),
 )
 
@@ -35,8 +35,8 @@ schemes for the albedo, skin temperature, and atmospheric inputs.
 struct DiagnosedRadiativeFluxes <: AbstractRadiativeFluxes end
 
 variables(::DiagnosedRadiativeFluxes) = (
-    auxiliary(:surface_shortwave_up, XY(), units=u"W/m^2", desc="Outoing (upwelling) shortwave radiation"),
-    auxiliary(:surface_longwave_up, XY(), units=u"W/m^2", desc="Outoing (upwelling) longwave radiation"),
+    auxiliary(:surface_shortwave_up, XY(), units=u"W/m^2", desc="Outgoing (upwelling) shortwave radiation"),
+    auxiliary(:surface_longwave_up, XY(), units=u"W/m^2", desc="Outgoing (upwelling) longwave radiation"),
     auxiliary(:surface_net_radiation, XY(), units=u"W/m^2", desc="Net radiation budget"),
 )
 

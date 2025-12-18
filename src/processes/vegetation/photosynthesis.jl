@@ -83,11 +83,13 @@ $TYPEDFIELDS
     sec_day::NF = 8.765813e4
 end
 
+LUEPhotosynthesis(::Type{NF}; kwargs...) where {NF} = LUEPhotosynthesis{NF}(; kwargs...)
+
 variables(::LUEPhotosynthesis) = (
-    auxiliary(:λc, XY()), # Ratio of leaf-internal and air CO2 concentration [-]
-    auxiliary(:LAI, XY()), # Leaf Area Index [m²/m²]
     auxiliary(:Rd, XY()), # Daily leaf respiration [gC/m²/day]
     auxiliary(:GPP, XY()), # Gross Primary Production [kgC/m²/day]
+    input(:λc, XY()), # Ratio of leaf-internal and air CO2 concentration [-]
+    input(:LAI, XY()), # Leaf Area Index [m²/m²]
 )
 
 
@@ -329,25 +331,25 @@ end
 
 function compute_auxiliary!(state, model, photo::LUEPhotosynthesis)
     grid = get_grid(model)
-    bcs = get_boundary_conditions(model)
     phen = get_phenology(model)
-    launch!(grid, :xy, compute_auxiliary_kernel!, state, photo, phen, bcs.top)
+    atmos = get_atmosphere(model)
+    launch!(grid, :xy, compute_auxiliary_kernel!, state, photo, phen, atmos)
 end
 
 @kernel function compute_auxiliary_kernel!(
     state,
     photo::LUEPhotosynthesis{NF},
-    ::PALADYNPhenology,
-    ::PrescribedAtmosphere
+    phen::PALADYNPhenology,
+    atmos::AbstractAtmosphere
 ) where NF
     # TODO checks for positive/negative values in the original PALADYN code ignored for now
     i, j = @index(Global, NTuple)
 
     # Get inputs
-    T_air = state.T_air[i, j] 
-    pres = state.pressure[i, j] 
-    swdown = state.surface_shortwave_down[i, j] 
-    co2 = state.CO2[i, j]  
+    T_air = air_temperature(i, j, state, atmos)
+    pres = air_pressure(i, j, state, atmos)
+    swdown = shortwave_in(i, j, state, atmos)
+    co2 = state.CO2[i, j] # no method for this currently...
     LAI = state.LAI[i, j]
     λc = state.λc[i, j]
 

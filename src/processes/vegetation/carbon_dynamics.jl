@@ -35,10 +35,12 @@ $TYPEDFIELDS
     γS::NF = 0.05 # Value for Needleleaf tree PFT 
 end
 
+PALADYNCarbonDynamics(::Type{NF}; kwargs...) where {NF} = PALADYNCarbonDynamics{NF}(; kwargs...)
+
 variables(::PALADYNCarbonDynamics) = (
     prognostic(:C_veg, XY()), # Vegetation carbon pool [kgC/m²]
     auxiliary(:LAI_b, XY()), # Balanced Leaf Area Index [m²/m²]
-    auxiliary(:NPP, XY()), # Net Primary Production [kgC/m²/day]
+    input(:NPP, XY()), # Net Primary Production [kgC/m²/day]
 )
 
 """
@@ -112,9 +114,7 @@ end
     i, j = @index(Global, NTuple)
 
     # Compute balanced Leaf Area Index 
-    # TODO is this ok, or better with get input, compute and store result?
     state.LAI_b[i, j] = compute_LAI_b(vegcarbon_dynamics, state.C_veg[i, j])
-
 end
 
 function compute_tendencies!(state, model, vegcarbon_dynamics::PALADYNCarbonDynamics)
