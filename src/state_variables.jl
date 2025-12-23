@@ -59,16 +59,10 @@ function StateVariables(
     fields = (;)
 ) where {NF}
     # Initialize Fields for each variable group, if they are not already given in the user defined `fields`
-    input_fields = map(var -> get(fields, varname(var), Field(grid, vardims(var))), vars.inputs)
-    tendency_fields =  map(var -> get(fields, varname(var), Field(grid, vardims(var))), vars.tendencies)
-    auxiliary_fields = map(vars.auxiliary) do var
-        bcs = get(boundary_conditions, varname(var), nothing)
-        get(fields, varname(var), Field(grid, vardims(var), bcs))
-    end
-    prognostic_fields = map(vars.prognostic) do var
-        bcs = get(boundary_conditions, varname(var), nothing)
-        get(fields, varname(var), Field(grid, vardims(var), bcs))
-    end
+    input_fields = initialize(vars.inputs, grid, clock, boundary_conditions, fields)
+    tendency_fields = initialize(vars.tendencies, grid, clock, boundary_conditions, fields)
+    auxiliary_fields = initialize(vars.auxiliary, grid, clock, boundary_conditions, merge(fields, input_fields))
+    prognostic_fields = initialize(vars.prognostic, grid, clock, boundary_conditions, merge(fields, input_fields, auxiliary_fields))
     # recursively initialize state variables for each namespace
     namespaces = map(vars.namespaces) do ns
         StateVariables(ns.vars, grid, clock; boundary_conditions=get(boundary_conditions, varname(ns), (;)), fields=get(fields, varname(ns), (;)))
@@ -187,6 +181,45 @@ function initialize(
     grid = get_grid(model)
     state = StateVariables(vars, grid, clock; boundary_conditions, fields)
     return state
+end
+
+function initialize(
+    vars::NamedTuple{names, <:Tuple{Vararg{AbstractVariable}}},
+    grid::AbstractLandGrid,
+    clock::Clock,
+    boundary_conditions::NamedTuple,
+    fields::NamedTuple
+)
+    # initialize or retrieve Fields for each variable in `var`, accumulating the newly created Fields in a named tuple
+    return foldl(vars, init=(;)) do nt, var
+        # note that we call initialize here with both the current accumualated named tuple of Fields + the context given by 'fields'
+        field = initialize(var, grid, boundary_conditions, merge(nt, fields))
+        merge(nt, (; varname(var) => field))
+    end
+end
+
+function initialize(var::AbstractVariable, grid::AbstractLandGrid, clock::Clock, boundary_conditions::NamedTuple, fields::NamedTuple)
+    if hasproperty(fields, varname(var))
+        return getproperty(fields, varname(var))
+    else
+        bcs = get(boundary_conditions, varname(var), nothing)
+        field = Field(grid, vardims(var), bcs)
+        # if field is an input variable and has an init value/function, call set! on the specified initial value
+        isa(field, InputVariable) && !isnothing(field.init) && set!(field, field.init)
+    end
+end
+
+function initialize(var::AuxiliaryVariable, grid::AbstractLandGrid, clock::Clock, boundary_conditions::NamedTuple, fields::NamedTuple)
+    if hasproperty(fields, varname(var))
+        return getproperty(fields, varname(var))
+    elseif isnothing(var.ctor)
+        # retrieve boundary condition (if any) and create Field
+        bcs = get(boundary_conditions, varname(var), nothing)
+        return Field(grid, vardims(var), bcs)
+    else
+        # invoke field constructor if specified
+        return Field(var.ctor(grid, clock, fields))
+    end
 end
 
 # Base overrides

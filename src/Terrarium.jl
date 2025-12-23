@@ -17,10 +17,11 @@ import Flatten: flatten, flattenable, reconstruct
 import Interpolations
 
 # Oceananigans numerics
-# TODO: Raise an issue on Oceananigans.jl about refactoring numerics into a separate package.
-import Oceananigans: Oceananigans, Field, AbstractField, Center, Face, set!, interior, xnodes, ynodes, znodes, location
+import Oceananigans
+import Oceananigans.AbstractOperations: Average, Integral
 import Oceananigans.Advection: AbstractAdvectionScheme, UpwindBiased
 import Oceananigans.Architectures: AbstractArchitecture, CPU, GPU, architecture, on_architecture, array_type
+import Oceananigans.Fields: Field, FunctionField, AbstractField, Center, Face, set!, interior, xnodes, ynodes, znodes, location
 import Oceananigans.Grids as OceananigansGrids
 import Oceananigans.Grids: Periodic, Flat, Bounded
 import Oceananigans.Operators: ∂zᵃᵃᶜ, ∂zᵃᵃᶠ, ℑzᵃᵃᶠ, Δzᵃᵃᶜ

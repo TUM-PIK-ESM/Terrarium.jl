@@ -96,7 +96,7 @@ Base.:(==)(var1::AbstractVariable, var2::AbstractVariable) =
 """
     $TYPEDEF
 
-Represents a generic state variable with the given `name` and spatial `dims`.
+Represents metadata for a generic state variable with the given `name` and spatial `dims`.
 """
 struct Variable{name, VD, UT} <: AbstractVariable{name, VD}
     "Variable dimensions"
@@ -137,10 +137,14 @@ struct AuxiliaryVariable{
     VD<:VarDims,
     UT<:Units,
     Var<:Variable{name, VD, UT},
-    DT<:AbstractInterval
+    DT<:AbstractInterval,
+    FC<:Union{Nothing, Function}
 } <: AbstractProcessVariable{name, VD}
     "State variable"
     var::Var
+
+    "Field constructor"
+    ctor::FC
 
     "Variable domain"
     domain::DT
@@ -159,10 +163,13 @@ struct InputVariable{
     VD<:VarDims,
     UT<:Units,
     Var<:Variable{name, VD, UT},
-    DT<:AbstractInterval
+    DT<:AbstractInterval,
+    Init<:Union{Nothing, Function}
 } <: AbstractProcessVariable{name, VD}
     "State variable"
     var::Var
+
+    init::Init
 
     "Variable domain"
     domain::DT
@@ -295,16 +302,17 @@ prognostic(var::Variable; closure=nothing, domain=RealLine(), desc="") = Prognos
 
 Convenience constructor method for `AuxiliaryVariable`.
 """
-auxiliary(name::Symbol, dims::VarDims; units=NoUnits, domain=RealLine(), desc="") = auxiliary(var(name, dims, units); domain, desc)
-auxiliary(var::Variable; domain=RealLine(), desc="") = AuxiliaryVariable(var, domain, desc)
+auxiliary(name::Symbol, dims::VarDims, ctor = nothing, params = nothing; units = NoUnits, domain = RealLine(), desc = "") = auxiliary(var(name, dims, units), ctor, params; domain, desc)
+auxiliary(var::Variable, ::Nothing, ::Nothing; domain=RealLine(), desc="") = AuxiliaryVariable(var, nothing, domain, desc)
+auxiliary(var::Variable, ctor::Function, params; domain=RealLine(), desc="") = AuxiliaryVariable(var, (args...) -> ctor(params, args...), domain, desc)
 
 """
     $SIGNATURES
 
 Convenience constructor method for `InputVariable`.
 """
-input(name::Symbol, dims::VarDims; units=NoUnits, domain=RealLine(), desc="") = input(var(name, dims, units); domain, desc)
-input(var::Variable; domain=RealLine(), desc="") = InputVariable(var, domain, desc)
+input(name::Symbol, dims::VarDims, init = nothing; units = NoUnits, domain = RealLine(), desc="") = input(var(name, dims, units), init; domain, desc)
+input(var::Variable, init = nothing; domain = RealLine(), desc="") = InputVariable(var, init, domain, desc)
 
 """
     $SIGNATURES
