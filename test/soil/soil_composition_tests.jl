@@ -33,8 +33,9 @@ end
         sat = 0.5,
         liq = 0.5,
         org = 0.5,
-        texture = SoilTexture(sand=0.5, clay=0.5);
-        soil = SoilComposition(; porosity=por, saturation=sat, liquid=liq, organic=org, texture)
+        texture = SoilTexture(sand=0.5, clay=0.5),
+        solid = MineralOrganic(; organic=org, texture);
+        soil = SoilComposition(; porosity=por, saturation=sat, liquid=liq, solid)
         fracs = volumetric_fractions(soil)
         @test fracs.water == por*sat*liq
         @test fracs.ice == por*sat*(1-liq)

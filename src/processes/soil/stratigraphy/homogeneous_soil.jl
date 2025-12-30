@@ -54,8 +54,23 @@ Compute the porosity of the soil volume at the given indices based on the curren
 end
 
 """
-Compute and return a `SoilComposition` object summarizing the material composition of the soil volume at the given indices.
+    $SIGNATURES
+
+Construct a `SoilComposition` object summarizing the material composition of the soil volume.
 """
+@inline function soil_composition(
+    state,
+    strat::HomogeneousSoil,
+    bgc::AbstractSoilBiogeochemistry
+)
+    # get current saturation state and liquid fraction
+    sat = state.saturation_water_ice
+    liq = state.liquid_water_fraction
+    por = state.porosity
+    solid = soil_matrix(state, strat, bgc)
+    return SoilComposition(por, sat, liq, org, solid)
+end
+
 @inline function soil_composition(
     i, j, k, state,
     strat::HomogeneousSoil,
@@ -67,7 +82,6 @@ Compute and return a `SoilComposition` object summarizing the material compositi
     sat = saturation_water_ice(i, j, k, state, hydrology)
     liq = liquid_water_fraction(i, j, k, state, energy)
     por = porosity(i, j, k, state, strat)
-    # there is some slight redundant computation here; consider merging into one method?
-    org = organic_fraction(i, j, k, state, bgc)
-    return SoilComposition(por, sat, liq, org, strat.texture)
+    solid = @inbounds soil_matrix(state, strat, bgc)[i, j, k]
+    return SoilComposition(por, sat, liq, org, solid)
 end
