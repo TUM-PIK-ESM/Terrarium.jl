@@ -123,7 +123,7 @@ end
     hydrology::SoilHydrology,
     soil::SoilComposition
 )
-    i, j, k = @Index(Global, NTuple)
+    i, j, k = @index(Global, NTuple)
 
     @inbounds let
         # get solid material fraction for the current volume

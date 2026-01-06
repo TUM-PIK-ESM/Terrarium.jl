@@ -85,13 +85,13 @@ end
 
 LUEPhotosynthesis(::Type{NF}; kwargs...) where {NF} = LUEPhotosynthesis{NF}(; kwargs...)
 
-variables(::LUEPhotosynthesis) = (
+variables(::LUEPhotosynthesis{NF}) where {NF} = (
     auxiliary(:Rd, XY()), # Daily leaf respiration [gC/m²/day]
     auxiliary(:GPP, XY()), # Gross Primary Production [kgC/m²/day]
+    input(:SMLF, XY(), NF(1)), # soil moisture limiting factor with default value of 1
     input(:λc, XY()), # Ratio of leaf-internal and air CO2 concentration [-]
     input(:LAI, XY()), # Leaf Area Index [m²/m²]
 )
-
 
 """
     $SIGNATURES
@@ -268,7 +268,7 @@ end
 
 Computes Gross Primary Production `GPP`in [kgC/m²/day] and leaf respiration `Rd` in [gC/m²/day]
 """
-function compute_photosynthesis(photo::LUEPhotosynthesis{NF}, T_air::NF, swdown::NF, pres::NF, co2::NF, LAI::NF, λc::NF) where NF
+function compute_photosynthesis(photo::LUEPhotosynthesis{NF}, T_air::NF, swdown::NF, pres::NF, co2::NF, LAI::NF, λc::NF, β::NF) where NF
     # Compute partial CO2 and O2 pressures in [Pa]
     pres_O2 = partial_pressure_O2(pres)
     pres_a = partial_pressure_CO2(pres, co2)
@@ -301,9 +301,6 @@ function compute_photosynthesis(photo::LUEPhotosynthesis{NF}, T_air::NF, swdown:
             # Compute Vc_max, maximum rate of carboxylation [gC/m²/day]
             Vc_max = compute_Vc_max(photo, c_1, APAR, Kc, Ko, Γ_star, pres_i, pres_O2)
             
-            # Compute soil moisture limiting factor (depends on soil moisture)
-            β = compute_β(photo)
-            
             # Compute daily leaf respiration [gC/m²/day]
             Rd = compute_Rd(photo, Vc_max, β)
             
@@ -331,32 +328,33 @@ end
 
 function compute_auxiliary!(state, model, photo::LUEPhotosynthesis)
     grid = get_grid(model)
-    phen = get_phenology(model)
     atmos = get_atmosphere(model)
-    launch!(grid, :xy, compute_auxiliary_kernel!, state, photo, phen, atmos)
+    launch!(grid, :xy, compute_photosynthesis_kernel!, state, photo, atmos)
 end
 
-@kernel function compute_auxiliary_kernel!(
+@kernel function compute_photosynthesis_kernel!(
     state,
     photo::LUEPhotosynthesis{NF},
-    phen::PALADYNPhenology,
     atmos::AbstractAtmosphere
 ) where NF
     # TODO checks for positive/negative values in the original PALADYN code ignored for now
     i, j = @index(Global, NTuple)
 
     # Get inputs
-    T_air = air_temperature(i, j, state, atmos)
-    pres = air_pressure(i, j, state, atmos)
-    swdown = shortwave_in(i, j, state, atmos)
-    co2 = state.CO2[i, j] # no method for this currently...
-    LAI = state.LAI[i, j]
-    λc = state.λc[i, j]
+    @inbounds let
+        T_air = air_temperature(i, j, state, atmos),
+        pres = air_pressure(i, j, state, atmos),
+        swdown = shortwave_in(i, j, state, atmos),
+        co2 = state.CO2[i, j], # no method for this currently...
+        β = state.SMLF[i, j],
+        LAI = state.LAI[i, j],
+        λc = state.λc[i, j];
 
-    # Compute GPP, Gross Primary Production in [kgC/m²/day] and Rd, daily leaf respiration in [gC/m²/day]
-    GPP, Rd = compute_photosynthesis(photo, T_air, swdown, pres, co2, LAI, λc)
+        # Compute GPP, Gross Primary Production in [kgC/m²/day] and Rd, daily leaf respiration in [gC/m²/day]
+        GPP, Rd = compute_photosynthesis(photo, T_air, swdown, pres, co2, LAI, λc, β)
     
-    # Store results
-    state.GPP[i, j] = GPP
-    state.Rd[i, j] = Rd
+        # Store results
+        state.GPP[i, j] = GPP
+        state.Rd[i, j] = Rd
+    end
 end

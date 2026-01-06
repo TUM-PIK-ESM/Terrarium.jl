@@ -51,6 +51,12 @@ include("vegetation/vegetation_dynamics.jl")
 export PALADYNPhenology
 include("vegetation/phenology.jl")
 
+export PALADYNRootDistribution
+include("vegetation/root_distribution.jl")
+
+export FieldCapacityLimitedPAW
+include("vegetation/plant_available_water.jl")
+
 export LUEPhotosynthesis
 include("vegetation/photosynthesis.jl")
 
