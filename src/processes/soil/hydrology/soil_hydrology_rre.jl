@@ -25,10 +25,11 @@ end
 
 function compute_auxiliary!(state, model, hydrology::SoilHydrology{NF, <:RichardsEq}) where {NF}
     grid = get_grid(model)
-    energy = get_soil_energy_balance(model)
     strat = get_soil_stratigraphy(model)
     bgc = get_soil_biogeochemistry(model)
-    launch!(grid, :xyz, compute_hydraulic_conductivity!, state, grid, hydrology, energy, strat, bgc)
+    soil = soil_composition(state, strat, bgc)
+    launch!(state, grid, :xyz, compute_hydraulics_kernel!, hydrology, soil)
+    launch!(state, grid, :xyz, compute_hydraulic_conductivity!, hydrology, soil)
     return nothing
 end
 
@@ -36,7 +37,7 @@ function compute_tendencies!(state, model, hydrology::SoilHydrology{NF, <:Richar
     grid = get_grid(model)
     strat = get_soil_stratigraphy(model)
     constants = get_constants(model)
-    launch!(grid, :xyz, compute_saturation_tendency!, state, grid, hydrology, strat, constants)
+    launch!(state, grid, :xyz, compute_saturation_tendency!, hydrology, strat, constants)
     return nothing
 end
 
@@ -121,19 +122,19 @@ Kernel for computing the hydraulic conductivity in all grid cells and soil layer
     state,
     grid,
     hydrology::SoilHydrology,
-    energy::AbstractSoilEnergyBalance,
-    strat::AbstractStratigraphy,
-    bgc::AbstractSoilBiogeochemistry
+    soil::SoilComposition
 )
     i, j, k = @index(Global, NTuple)
     fgrid = get_field_grid(grid)
     if k <= 1
-        state.hydraulic_conductivity[i, j, k] = hydraulic_conductivity(i, j, 1, fgrid, state, hydrology, energy, strat, bgc)
+        k = 1
+        state.hydraulic_conductivity[i, j, k] = hydraulic_conductivity(i, j, k, fgrid, state, hydrology, soil)
     elseif k >= fgrid.Nz
-        state.hydraulic_conductivity[i, j, k] = hydraulic_conductivity(i, j, fgrid.Nz, fgrid, state, hydrology, energy, strat, bgc)
+        k = fgrid.Nz
+        state.hydraulic_conductivity[i, j, k] = hydraulic_conductivity(i, j, k, fgrid, state, hydrology, soil)
         state.hydraulic_conductivity[i, j, k + 1] = state.hydraulic_conductivity[i, j, k]
     else
-        state.hydraulic_conductivity[i, j, k] = min_zᵃᵃᶠ(i, j, k, fgrid, hydraulic_conductivity, state, hydrology, energy, strat, bgc)
+        state.hydraulic_conductivity[i, j, k] = min_zᵃᵃᶠ(i, j, k, fgrid, hydraulic_conductivity, state, hydrology, soil)
     end
 end
 
@@ -165,9 +166,9 @@ end
 
 # Kernel functions
 
-@inline function hydraulic_conductivity(i, j, k, grid, state, hydrology, energy, strat, bgc)
-    soil = soil_composition(i, j, k, state, strat, energy, hydrology, bgc)
-    return hydraulic_conductivity(hydrology.hydraulic_properties, soil)
+@inline function hydraulic_conductivity(i, j, k, grid, state, hydrology::SoilHydrology, soil::SoilComposition)
+    soil_idx = @inbounds soil[i, j, k] # get soil composition at the current i,j,k
+    return hydraulic_conductivity(hydrology.hydraulic_properties, soil_idx)
 end
 
 @inline function volumetric_water_content_tendency(

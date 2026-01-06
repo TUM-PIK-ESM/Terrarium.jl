@@ -86,6 +86,8 @@ variables(hydrology::SoilHydrology{NF}) where {NF} = (
     variables(hydrology.vertflow)...,
     variables(hydrology.runoff)...,
     variables(hydrology.evapotranspiration)...,
+    auxiliary(:field_capacity, XYZ(), desc="Estimated saturation level after drainage"),
+    auxiliary(:wilting_point, XYZ(), desc="Estimated saturation level below which transpiration ceases")
 )
 
 # Immobile soil water (NoFlow)
@@ -101,6 +103,40 @@ variables(::NoFlow) = (
 @inline compute_auxiliary!(state, model, hydrology::SoilHydrology{NF, NoFlow}) where {NF} = nothing
 
 @inline compute_tendencies!(state, model, hydrology::SoilHydrology{NF, NoFlow}) where {NF} = nothing
+
+# Hydraulics
+
+function compute_hydraulics!(
+    state,
+    grid,
+    hydrology::SoilHydrology,
+    strat::AbstractStratigraphy,
+    bgc::AbstractSoilBiogeochemistry
+)
+    soil = soil_composition(state, strat, bgc)
+    launch!(state, grid, :xyz, compute_hydraulics_kernel!, hydrology, soil)
+end
+
+@kernel function compute_hydraulics_kernel!(
+    state,
+    grid,
+    hydrology::SoilHydrology,
+    soil::SoilComposition
+)
+    i, j, k = @Index(Global, NTuple)
+
+    @inbounds let
+        # get solid material fraction for the current volume
+        solid = soil.solid[i, j, k],
+        # compute field capacity and wilting point
+        θfc = field_capacity(hydrology.hydraulic_properties, solid.texture),
+        θwp = wilting_point(hydrology.hydraulic_properties, solid.texture);
+
+        # store field capacity and wilting point in state variables
+        state.field_capacity[i, j, k] = θfc
+        state.wilting_point[i, j, k] = θwp
+    end
+end
 
 # Runoff
 
