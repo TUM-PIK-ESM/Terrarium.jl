@@ -15,8 +15,8 @@ include("soil/abstract_types.jl")
 
 export SoilTexture
 include("soil/stratigraphy/soil_texture.jl")
-export SoilComposition, volumetric_fractions
-include("soil/stratigraphy/soil_composition.jl")
+export SoilVolume, volumetric_fractions
+include("soil/stratigraphy/soil_volume.jl")
 export HomogeneousSoil
 include("soil/stratigraphy/homogeneous_soil.jl")
 

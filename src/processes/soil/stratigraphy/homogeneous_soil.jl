@@ -7,13 +7,13 @@ Properties:
 $TYPEDFIELDS
 """
 struct HomogeneousSoil{NF} <: AbstractStratigraphy{NF}
-    "Material composition of mineral soil componnet"
+    "Material composition of mineral soil component"
     texture::SoilTexture{NF}
 end
 
 HomogeneousSoil(::Type{NF}; texture::SoilTexture{NF} = SoilTexture(NF, :sand)) where {NF} = HomogeneousSoil{NF}(texture)
 
-soil_texture(i, j, k, state, strat::HomogeneousSoil) = strat.texture
+soil_texture(i, j, k, state, grid, strat::HomogeneousSoil) = strat.texture
 
 variables(strat::HomogeneousSoil) = (
     auxiliary(:porosity, XYZ(), domain=UnitInterval(), desc="Bulk porosity (void fraction) of the soil volume"),
@@ -34,21 +34,21 @@ end
 
 @kernel function compute_porosity!(state, grid, strat::HomogeneousSoil, hydrology::AbstractSoilHydrology, bgc::AbstractSoilBiogeochemistry)
     i, j, k = @index(Global, NTuple)
-    state.porosity[i, j, k] = compute_porosity(i, j, k, state, strat, hydrology, bgc)
+    state.porosity[i, j, k] = compute_porosity(i, j, k, state, grid, strat, hydrology, bgc)
 end
 
 # Kernel functions
 
-porosity(i, j, k, state, ::AbstractStratigraphy) = @inbounds state.porosity[i, j, k]
+porosity(i, j, k, state, grid, ::AbstractStratigraphy) = @inbounds state.porosity[i, j, k]
 
 """
-    compute_porosity(i, j, k, state, strat::HomogeneousSoil, bgc::AbstractSoilBiogeochemistry)
+    compute_porosity(i, j, k, state, grid, strat::HomogeneousSoil, bgc::AbstractSoilBiogeochemistry)
 
 Compute the porosity of the soil volume at the given indices based on the current state as well as the stratigraphy, and biogeochemistry configurations.
 """
-@inline function compute_porosity(i, j, k, state, strat::HomogeneousSoil, hydrology::AbstractSoilHydrology, bgc::AbstractSoilBiogeochemistry)
+@inline function compute_porosity(i, j, k, state, grid, strat::HomogeneousSoil, hydrology::AbstractSoilHydrology, bgc::AbstractSoilBiogeochemistry)
     org = organic_fraction(i, j, k, state, bgc)
-    texture = soil_texture(i, j, k, state, strat)
+    texture = soil_texture(i, j, k, state, grid, strat)
     props = get_hydraulic_properties(hydrology)
     return (1 - org)*mineral_porosity(props, texture) + org*organic_porosity(i, j, k, state, bgc)
 end
@@ -56,23 +56,10 @@ end
 """
     $SIGNATURES
 
-Construct a `SoilComposition` object summarizing the material composition of the soil volume.
+Construct a `SoilVolume` object summarizing the material composition of the soil volume.
 """
-@inline function soil_composition(
-    state,
-    strat::HomogeneousSoil,
-    bgc::AbstractSoilBiogeochemistry
-)
-    # get current saturation state and liquid fraction
-    sat = state.saturation_water_ice
-    liq = state.liquid_water_fraction
-    por = state.porosity
-    solid = soil_matrix(state, strat, bgc)
-    return SoilComposition(por, sat, liq, org, solid)
-end
-
-@inline function soil_composition(
-    i, j, k, state,
+@inline function soil_volume(
+    i, j, k, state, grid,
     strat::HomogeneousSoil,
     energy::AbstractSoilEnergyBalance,
     hydrology::AbstractSoilHydrology,
@@ -81,7 +68,7 @@ end
     # get current saturation state and liquid fraction
     sat = saturation_water_ice(i, j, k, state, hydrology)
     liq = liquid_water_fraction(i, j, k, state, energy)
-    por = porosity(i, j, k, state, strat)
-    solid = @inbounds soil_matrix(state, strat, bgc)[i, j, k]
-    return SoilComposition(por, sat, liq, org, solid)
+    por = porosity(i, j, k, state, grid, strat)
+    solid = @inbounds soil_matrix(i, j, k, state, grid, strat, bgc)
+    return SoilVolume(por, sat, liq, solid)
 end

@@ -34,24 +34,26 @@ function compute_auxiliary!(state, model, paw::FieldCapacityLimitedPAW)
     grid = get_grid(model)
     hydrology = get_soil_hydrology(model)
     strat = get_straigraphy(model)
+    energy = get_soil_energy_balance(model)
     bgc = get_soil_biogeochemistry(model)
-    soil = soil_composition(state, strat, bgc)
-    launch!(state, grid, :xyz, compute_paw_kernel!, paw, hydrology, soil)
+    launch!(state, grid, :xyz, compute_paw_kernel!, paw, hydrology, strat, energy, bgc)
 end
 
 @kernel function compute_paw_kernel!(
     state, grid,
     paw::FieldCapacityLimitedPAW,
-    hydrology::SoilHydrology,
-    soil::SoilComposition
+    hydrology::AbstractSoilHydrology,
+    strat::AbstractStratigraphy,
+    energy::AbstractSoilEnergyBalance,
+    bgc::AbstractSoilBiogeochemistry
 )
     i, j, k = @index(Global, NTuple)
 
-    @inbounds let
-        vol = volumetric_fractions(soil[i, j, k]),
-        θw = vol.water,
-        θfc = state.field_capacity[i, j, k],
-        θwp = state.wilting_point[i, j, k];
+    @inbounds let soil = soil_volume(i, j, k, state, grid, strat, energy, hydrology, bgc),
+                  θfc = field_capacity(hydrology.hydraulic_properties, soil_texture(i, j, k, state, grid, strat)),
+                  θwp = field_capacity(hydrology.hydraulic_properties, soil.solid.texture),
+                  vol = volumetric_fractions(soil[i, j, k]),
+                  θw = vol.water;
         # compute PAW
         state.plant_available_water[i, j, k] = (θw - θfc) / (θfc - θwp)
     end

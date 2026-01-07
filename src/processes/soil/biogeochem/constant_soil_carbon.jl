@@ -49,6 +49,7 @@ the organic material.
     tex = strat.texture
     return MineralOrganic(tex, org)
 end
+@inline @propagate_inbounds soil_matrix(i, j, k, state, grid, strat::HomogeneousSoil, bgc::ConstantSoilCarbonDensity) = soil_matrix(state, strat, bgc)[i, j, k]
 
 @inline initialize!(state, model, bgc::ConstantSoilCarbonDensity) = nothing
 

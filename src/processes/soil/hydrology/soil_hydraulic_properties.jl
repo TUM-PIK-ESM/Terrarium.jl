@@ -165,7 +165,7 @@ UnsatKLinear(::Type{NF}; swrc=FreezeCurves.BrooksCorey()) where {NF} = UnsatKLin
 
 function hydraulic_conductivity(
     hydraulics::AbstractSoilHydraulics{NF, <:UnsatKLinear},
-    soil::SoilComposition
+    soil::SoilVolume
 ) where {NF}
     let fracs = volumetric_fractions(soil),
         θw = fracs.water, # unfrozen water content
@@ -196,7 +196,7 @@ UnsatKVanGenuchten(::Type{NF}; impedance::NF = NF(7), swrc=FreezeCurves.VanGenuc
 
 function hydraulic_conductivity(
     hydraulics::AbstractSoilHydraulics{NF, <:UnsatKVanGenuchten},
-    soil::SoilComposition,
+    soil::SoilVolume,
 ) where {NF}
     let n = hydraulics.cond_unsat.swrc.n, # van Genuchten parameter `n`
         fracs = volumetric_fractions(soil),

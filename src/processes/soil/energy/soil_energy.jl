@@ -112,7 +112,7 @@ end
     strat::AbstractStratigraphy,
     bgc::AbstractSoilBiogeochemistry
 )
-    soil = soil_composition(i, j, k, state, strat, energy, hydrology, bgc)
+    soil = soil_volume(i, j, k, state, grid, strat, energy, hydrology, bgc)
     return thermalconductivity(energy.thermal_properties, soil)
 end
 
@@ -206,7 +206,7 @@ end
 )
     T = @inbounds state.temperature[i, j, k] # assumed given
     L = constants.ρw*constants.Lsl
-    por = porosity(i, j, k, state, strat)
+    por = porosity(i, j, k, state, grid, strat)
     sat = saturation_water_ice(i, j, k, state, hydrology)
     # calculate unfrozen water content from temperature
     # N.B. For the free water freeze curve, the mapping from temperature to unfrozen water content
@@ -219,7 +219,7 @@ end
         one(sat),
         zero(sat),
     )
-    soil = soil_composition(i, j, k, state, strat, energy, hydrology, bgc)
+    soil = soil_volume(i, j, k, state, grid, strat, energy, hydrology, bgc)
     C = heatcapacity(energy.thermal_properties, soil)
     # compute energy from temperature, heat capacity, and ice fraction
     U = state.internal_energy[i, j, k] = T*C - L*sat*por*(1 - liq)
@@ -238,12 +238,12 @@ end
 
     U = state.internal_energy[i, j, k] # assumed given
     L = constants.ρw*constants.Lsl
-    por = porosity(i, j, k, state, strat)
+    por = porosity(i, j, k, state, grid, strat)
     sat = saturation_water_ice(i, j, k, state, hydrology)
     Lθ = L*sat*por
     # calculate unfrozen water content
     state.liquid_water_fraction[i, j, k] = liquid_water_fraction(fc, U, Lθ, sat)
-    soil = soil_composition(i, j, k, state, strat, energy, hydrology, bgc)
+    soil = soil_volume(i, j, k, state, grid, strat, energy, hydrology, bgc)
     C = heatcapacity(energy.thermal_properties, soil)
     # calculate temperature from internal energy and liquid water fraction
     T = state.temperature[i, j, k] = energy_to_temperature(fc, U, Lθ, C)

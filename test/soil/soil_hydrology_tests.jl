@@ -63,22 +63,22 @@ end
     hydraulics = ConstantHydraulics(Float64; cond_unsat=UnsatKLinear(Float32))
 
     # saturated case
-    soil = SoilComposition()
+    soil = SoilVolume()
     K = hydraulic_conductivity(hydraulics, soil)
     @test K ≈ hydraulics.cond_sat
 
     # unsaturated
-    soil = SoilComposition(saturation=0.5);
+    soil = SoilVolume(saturation=0.5);
     K = hydraulic_conductivity(hydraulics, soil)
     @test 0 < K < hydraulics.cond_sat
 
     # dry
-    soil = SoilComposition(saturation=0.0);
+    soil = SoilVolume(saturation=0.0);
     K = hydraulic_conductivity(hydraulics, soil)
     @test iszero(K)
 
     # frozen
-    soil = SoilComposition(liquid=0.0);
+    soil = SoilVolume(liquid=0.0);
     K = hydraulic_conductivity(hydraulics, soil)
     @test iszero(K)
 end
@@ -87,22 +87,22 @@ end
     hydraulics = ConstantHydraulics(Float64; cond_unsat=UnsatKVanGenuchten(Float64))
 
     # saturated case
-    soil = SoilComposition()
+    soil = SoilVolume()
     K = hydraulic_conductivity(hydraulics, soil)
     @test K ≈ hydraulics.cond_sat
 
     # unsaturated
-    soil = SoilComposition(saturation=0.5);
+    soil = SoilVolume(saturation=0.5);
     K = hydraulic_conductivity(hydraulics, soil)
     @test 0 < K < hydraulics.cond_sat
 
     # dry
-    soil = SoilComposition(saturation=0.0);
+    soil = SoilVolume(saturation=0.0);
     K = hydraulic_conductivity(hydraulics, soil)
     @test iszero(K)
 
     # frozen
-    soil = SoilComposition(liquid=0.0);
+    soil = SoilVolume(liquid=0.0);
     K = hydraulic_conductivity(hydraulics, soil)
     @test iszero(K)
 end

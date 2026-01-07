@@ -100,38 +100,35 @@ variables(::NoFlow) = (
 
 @inline initialize!(state, model, hydrology::SoilHydrology) = nothing
 
-@inline compute_auxiliary!(state, model, hydrology::SoilHydrology{NF, NoFlow}) where {NF} = nothing
+function compute_auxiliary!(state, model, hydrology::SoilHydrology)
+    grid = get_grid(model)
+    strat = get_soil_stratigraphy(model)
+    energy = get_soil_energy_balance(model)
+    hydrology = get_soil_hydrology(model)
+    bgc = get_soil_biogeochemistry(model)
+    launch!(state, grid, :xyz, compute_hydraulics_kernel!, hydrology, strat, energy, bgc)
+    return nothing
+end
 
 @inline compute_tendencies!(state, model, hydrology::SoilHydrology{NF, NoFlow}) where {NF} = nothing
 
 # Hydraulics
 
-function compute_hydraulics!(
-    state,
-    grid,
-    hydrology::SoilHydrology,
-    strat::AbstractStratigraphy,
-    bgc::AbstractSoilBiogeochemistry
-)
-    soil = soil_composition(state, strat, bgc)
-    launch!(state, grid, :xyz, compute_hydraulics_kernel!, hydrology, soil)
-end
-
 @kernel function compute_hydraulics_kernel!(
     state,
     grid,
     hydrology::SoilHydrology,
-    soil::SoilComposition
+    strat::AbstractStratigraphy,
+    energy::AbstractSoilEnergyBalance,
+    bgc::AbstractSoilBiogeochemistry
 )
     i, j, k = @index(Global, NTuple)
 
-    @inbounds let
-        # get solid material fraction for the current volume
-        solid = soil.solid[i, j, k],
-        # compute field capacity and wilting point
-        θfc = field_capacity(hydrology.hydraulic_properties, solid.texture),
-        θwp = wilting_point(hydrology.hydraulic_properties, solid.texture);
-
+    soil = soil_volume(i, j, k, state, grid, strat, energy, hydrology, bgc)
+    
+    @inbounds let θfc = field_capacity(hydrology.hydraulic_properties, soil.solid.texture),
+                  θwp = wilting_point(hydrology.hydraulic_properties, soil.solid.texture);
+                  
         # store field capacity and wilting point in state variables
         state.field_capacity[i, j, k] = θfc
         state.wilting_point[i, j, k] = θwp

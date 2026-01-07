@@ -1,27 +1,20 @@
 """
-    SoilTexture{T}
+    SoilTexture{NF}
 
 Represents soil texture as a fractional mixture of sand, silt, and clay. Accepts values 
 """
-@kwdef struct SoilTexture{T}
-    sand::T = 1.0
-    clay::T = 0.0
-    silt::T = 1 - sand - clay
+@kwdef struct SoilTexture{NF}
+    sand::NF = 1.0
+    clay::NF = 0.0
+    silt::NF = 1 - sand - clay
 
     SoilTexture(sand, silt, clay) = SoilTexture{promote_type(typeof(sand), typeof(silt), typeof(clay))}(sand, silt, clay)
-    # Scalar constructor
     function SoilTexture{NF}(sand, silt, clay) where {NF<:Number}
         @assert zero(sand) <= sand <= one(sand)
         @assert zero(silt) <= silt <= one(silt)
         @assert zero(clay) <= clay <= one(clay)
         @assert sand + silt + clay ≈ 1.0 "sand, silt, and clay fractions must sum to unity"
         return new{NF}(sand, silt, clay)
-    end
-
-    # Array constructor
-    function SoilTexture{T}(sand::T, silt::T, clay::T) where {NF, T<:AbstractArray{NF}}
-        @assert size(sand) == size(silt) == size(clay)
-        return new{T}(sand, silt, clay)
     end
 end
 

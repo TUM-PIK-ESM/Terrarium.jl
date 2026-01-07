@@ -23,16 +23,6 @@ function initialize!(state, model, hydrology::SoilHydrology{NF, <:RichardsEq}) w
     return nothing
 end
 
-function compute_auxiliary!(state, model, hydrology::SoilHydrology{NF, <:RichardsEq}) where {NF}
-    grid = get_grid(model)
-    strat = get_soil_stratigraphy(model)
-    bgc = get_soil_biogeochemistry(model)
-    soil = soil_composition(state, strat, bgc)
-    launch!(state, grid, :xyz, compute_hydraulics_kernel!, hydrology, soil)
-    launch!(state, grid, :xyz, compute_hydraulic_conductivity!, hydrology, soil)
-    return nothing
-end
-
 function compute_tendencies!(state, model, hydrology::SoilHydrology{NF, <:RichardsEq}) where {NF}
     grid = get_grid(model)
     strat = get_soil_stratigraphy(model)
@@ -109,32 +99,43 @@ Kernel for diagnosing the water table at each grid point given the current soil 
 end
 
 """
-    compute_hydraulic_conductivity!(
+    compute_hydraulics_kernel!(
         state,
         grid,
         hydrology::SoilHydrology,
         strat::AbstractStratigraphy
     )
 
-Kernel for computing the hydraulic conductivity in all grid cells and soil layers.
+Kernel for computing soil hydraulics and unsaturated hydraulic conductivity.
 """
-@kernel function compute_hydraulic_conductivity!(
+@kernel function compute_hydraulics_kernel!(
     state,
     grid,
-    hydrology::SoilHydrology,
-    soil::SoilComposition
-)
+    hydrology::SoilHydrology{NF, <:RichardsEq},
+    strat::AbstractStratigraphy,
+    energy::AbstractSoilEnergyBalance,
+    bgc::AbstractSoilBiogeochemistry
+) where {NF}
     i, j, k = @index(Global, NTuple)
     fgrid = get_field_grid(grid)
-    if k <= 1
-        k = 1
-        state.hydraulic_conductivity[i, j, k] = hydraulic_conductivity(i, j, k, fgrid, state, hydrology, soil)
-    elseif k >= fgrid.Nz
-        k = fgrid.Nz
-        state.hydraulic_conductivity[i, j, k] = hydraulic_conductivity(i, j, k, fgrid, state, hydrology, soil)
-        state.hydraulic_conductivity[i, j, k + 1] = state.hydraulic_conductivity[i, j, k]
-    else
-        state.hydraulic_conductivity[i, j, k] = min_zᵃᵃᶠ(i, j, k, fgrid, hydraulic_conductivity, state, hydrology, soil)
+
+    @inbounds let soil = soil_volume(i, j, k, state, grid, strat, energy, hydrology, bgc),
+                  θfc = field_capacity(hydrology.hydraulic_properties, soil.solid.texture),
+                  θwp = wilting_point(hydrology.hydraulic_properties, soil.solid.texture);;
+        # compute hydraulic conductivity
+        if k <= 1
+            k = 1
+            state.hydraulic_conductivity[i, j, k] = hydraulic_conductivity(hydrology.hydraulic_properties, soil)
+        elseif k >= fgrid.Nz
+            k = fgrid.Nz
+            state.hydraulic_conductivity[i, j, k] = hhydraulic_conductivity(hydrology.hydraulic_properties, soil)
+            state.hydraulic_conductivity[i, j, k + 1] = state.hydraulic_conductivity[i, j, k]
+        else
+            state.hydraulic_conductivity[i, j, k] = min_zᵃᵃᶠ(i, j, k, fgrid, hydraulic_conductivity, state, hydrology, soil)
+        end
+        # store field capacity and wilting point in state variables
+        state.field_capacity[i, j, k] = θfc
+        state.wilting_point[i, j, k] = θwp
     end
 end
 
@@ -157,7 +158,7 @@ Kernel for computing the tendency of the prognostic `saturation_water_ice` varia
 )
     i, j, k = @index(Global, NTuple)
     # Get porosity
-    por = porosity(i, j, k, state, strat)
+    por = porosity(i, j, k, state, grid, strat)
     # Compute volumetic water content tendency
     ∂θ∂t = volumetric_water_content_tendency(i, j, k, grid, state, hydrology, constants)
     # Rescale by porosity to get saturation tendency
@@ -165,11 +166,6 @@ Kernel for computing the tendency of the prognostic `saturation_water_ice` varia
 end
 
 # Kernel functions
-
-@inline function hydraulic_conductivity(i, j, k, grid, state, hydrology::SoilHydrology, soil::SoilComposition)
-    soil_idx = @inbounds soil[i, j, k] # get soil composition at the current i,j,k
-    return hydraulic_conductivity(hydrology.hydraulic_properties, soil_idx)
-end
 
 @inline function volumetric_water_content_tendency(
     i, j, k, grid, state,
@@ -278,7 +274,7 @@ end
     # remove hydrostatic and elevation components
     ψm = ψ - ψh - ψz
     swrc = get_swrc(hydrology)
-    por = porosity(i, j, k, state, strat)
+    por = porosity(i, j, k, state, grid, strat)
     vol_water_ice_content = swrc(ψm; θsat=por)
     state.saturation_water_ice[i, j, k] = vol_water_ice_content / por
     return nothing
@@ -293,7 +289,7 @@ end
     sat = state.saturation_water_ice[i, j, k] # assumed given
     # get inverse of SWRC
     inv_swrc = inv(get_swrc(hydrology))
-    por = porosity(i, j, k, state, strat)
+    por = porosity(i, j, k, state, grid, strat)
     # compute matric pressure head
     ψm = inv_swrc(sat*por; θsat=por)
     # compute elevation pressure head

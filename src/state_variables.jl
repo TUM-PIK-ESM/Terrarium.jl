@@ -173,27 +173,28 @@ end
 function initialize(
     model::AbstractModel{NF};
     clock = Clock(time=zero(NF)),
-    external_variables = (),
+    input_variables = (),
     boundary_conditions = (;),
     fields = (;)
 ) where {NF}
-    vars = Variables(tuplejoin(variables(model), external_variables))
+    vars = Variables(tuplejoin(variables(model), input_variables))
     grid = get_grid(model)
     state = StateVariables(vars, grid, clock; boundary_conditions, fields)
     return state
 end
 
+initialize(::NamedTuple, ::AbstractLandGrid, ::Clock, ::NamedTuple, ::NamedTuple) = (;)
 function initialize(
     vars::NamedTuple{names, <:Tuple{Vararg{AbstractVariable}}},
     grid::AbstractLandGrid,
     clock::Clock,
     boundary_conditions::NamedTuple,
     fields::NamedTuple
-)
+) where {names}
     # initialize or retrieve Fields for each variable in `var`, accumulating the newly created Fields in a named tuple
     return foldl(vars, init=(;)) do nt, var
         # note that we call initialize here with both the current accumualated named tuple of Fields + the context given by 'fields'
-        field = initialize(var, grid, boundary_conditions, merge(nt, fields))
+        field = initialize(var, grid, clock, boundary_conditions, merge(nt, fields))
         merge(nt, (; varname(var) => field))
     end
 end
@@ -205,7 +206,10 @@ function initialize(var::AbstractVariable, grid::AbstractLandGrid, clock::Clock,
         bcs = get(boundary_conditions, varname(var), nothing)
         field = Field(grid, vardims(var), bcs)
         # if field is an input variable and has an init value/function, call set! on the specified initial value
-        isa(field, InputVariable) && !isnothing(field.init) && set!(field, field.init)
+        if isa(field, InputVariable) && !isnothing(field.init)
+            set!(field, field.init)
+        end
+        return field
     end
 end
 

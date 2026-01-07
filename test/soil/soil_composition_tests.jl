@@ -3,13 +3,13 @@ using Test
 
 using Terrarium: porosity, saturation, liquid_fraction, organic_fraction, mineral_texture
 
-@testset "SoilComposition" begin
+@testset "SoilVolume" begin
     let por = 0.3,
         sat = 0.5,
         liq = 0.5,
         org = 0.5,
         texture = SoilTexture(sand=0.5, clay=0.5);
-        soil = SoilComposition(; porosity=por, saturation=sat, liquid=liq, organic=org, texture)
+        soil = SoilVolume(; porosity=por, saturation=sat, liquid=liq, organic=org, texture)
         @test porosity(soil) == por
         @test saturation(soil) == sat
         @test liquid_fraction(soil) == liq
@@ -18,14 +18,14 @@ using Terrarium: porosity, saturation, liquid_fraction, organic_fraction, minera
     end
 
     # check that argument bounds are enforced
-    @test_throws AssertionError SoilComposition(porosity=-1.0)
-    @test_throws AssertionError SoilComposition(porosity=2.0)
-    @test_throws AssertionError SoilComposition(saturation=-1.0)
-    @test_throws AssertionError SoilComposition(saturation=2.0)
-    @test_throws AssertionError SoilComposition(liquid=-1.0)
-    @test_throws AssertionError SoilComposition(liquid=2.0)
-    @test_throws AssertionError SoilComposition(organic=-1.0)
-    @test_throws AssertionError SoilComposition(organic=2.0)
+    @test_throws AssertionError SoilVolume(porosity=-1.0)
+    @test_throws AssertionError SoilVolume(porosity=2.0)
+    @test_throws AssertionError SoilVolume(saturation=-1.0)
+    @test_throws AssertionError SoilVolume(saturation=2.0)
+    @test_throws AssertionError SoilVolume(liquid=-1.0)
+    @test_throws AssertionError SoilVolume(liquid=2.0)
+    @test_throws AssertionError SoilVolume(organic=-1.0)
+    @test_throws AssertionError SoilVolume(organic=2.0)
 end
 
 @testset "volumetric_fractions" begin
@@ -35,7 +35,7 @@ end
         org = 0.5,
         texture = SoilTexture(sand=0.5, clay=0.5),
         solid = MineralOrganic(; organic=org, texture);
-        soil = SoilComposition(; porosity=por, saturation=sat, liquid=liq, solid)
+        soil = SoilVolume(; porosity=por, saturation=sat, liquid=liq, solid)
         fracs = volumetric_fractions(soil)
         @test fracs.water == por*sat*liq
         @test fracs.ice == por*sat*(1-liq)
