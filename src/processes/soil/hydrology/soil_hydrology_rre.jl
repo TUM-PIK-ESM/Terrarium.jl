@@ -23,6 +23,16 @@ function initialize!(state, model, hydrology::SoilHydrology{NF, <:RichardsEq}) w
     return nothing
 end
 
+function compute_auxiliary!(state, model, hydrology::SoilHydrology{NF, <:RichardsEq}) where {NF}
+    grid = get_grid(model)
+    strat = get_soil_stratigraphy(model)
+    energy = get_soil_energy_balance(model)
+    hydrology = get_soil_hydrology(model)
+    bgc = get_soil_biogeochemistry(model)
+    launch!(state, grid, :xyz, compute_hydraulics_kernel!, hydrology, strat, energy, bgc)
+    return nothing
+end
+
 function compute_tendencies!(state, model, hydrology::SoilHydrology{NF, <:RichardsEq}) where {NF}
     grid = get_grid(model)
     strat = get_soil_stratigraphy(model)
@@ -119,23 +129,14 @@ Kernel for computing soil hydraulics and unsaturated hydraulic conductivity.
     i, j, k = @index(Global, NTuple)
     fgrid = get_field_grid(grid)
 
-    @inbounds let soil = soil_volume(i, j, k, state, grid, strat, energy, hydrology, bgc),
-                  θfc = field_capacity(hydrology.hydraulic_properties, soil.solid.texture),
-                  θwp = wilting_point(hydrology.hydraulic_properties, soil.solid.texture);;
-        # compute hydraulic conductivity
-        if k <= 1
-            k = 1
-            state.hydraulic_conductivity[i, j, k] = hydraulic_conductivity(hydrology.hydraulic_properties, soil)
-        elseif k >= fgrid.Nz
-            k = fgrid.Nz
-            state.hydraulic_conductivity[i, j, k] = hhydraulic_conductivity(hydrology.hydraulic_properties, soil)
-            state.hydraulic_conductivity[i, j, k + 1] = state.hydraulic_conductivity[i, j, k]
-        else
-            state.hydraulic_conductivity[i, j, k] = min_zᵃᵃᶠ(i, j, k, fgrid, hydraulic_conductivity, state, hydrology, soil)
-        end
-        # store field capacity and wilting point in state variables
-        state.field_capacity[i, j, k] = θfc
-        state.wilting_point[i, j, k] = θwp
+    # compute hydraulic conductivity
+    @inbounds if k <= 1
+        state.hydraulic_conductivity[i, j, k] = hydraulic_conductivity(i, j, 1, fgrid, state, hydrology, strat, energy, bgc)
+    elseif k >= fgrid.Nz
+        state.hydraulic_conductivity[i, j, k] = hydraulic_conductivity(i, j, fgrid.Nz, fgrid, state, hydrology, strat, energy, bgc)
+        state.hydraulic_conductivity[i, j, k + 1] = state.hydraulic_conductivity[i, j, k]
+    else
+        state.hydraulic_conductivity[i, j, k] = min_zᵃᵃᶠ(i, j, k, fgrid, hydraulic_conductivity, state, hydrology, strat, energy, bgc)
     end
 end
 
@@ -166,6 +167,12 @@ Kernel for computing the tendency of the prognostic `saturation_water_ice` varia
 end
 
 # Kernel functions
+
+# This function is needed for an Oceananigans grid operator
+@inline function hydraulic_conductivity(i, j, k, grid, state, hydrology, strat, energy, bgc)
+    soil = soil_volume(i, j, k, state, grid, strat, energy, hydrology, bgc)
+    return hydraulic_conductivity(hydrology.hydraulic_properties, soil)
+end
 
 @inline function volumetric_water_content_tendency(
     i, j, k, grid, state,
@@ -216,11 +223,11 @@ function closure!(state, model::AbstractSoilModel, ::SaturationPressureClosure)
     z_faces = znodes(get_field_grid(grid), Center(), Center(), Face())
     z_centers = znodes(get_field_grid(grid), Center(), Center(), Center())
     # apply saturation correction
-    launch!(grid, :xy, adjust_saturation_profile!, state, grid, hydrology)
+    launch!(state, grid, :xy, adjust_saturation_profile!, hydrology)
     # update water table
-    launch!(grid, :xy, compute_water_table!, state, grid, hydrology, z_faces)
+    launch!(state, grid, :xy, compute_water_table!, hydrology, z_faces)
     # determine pressure head from saturation
-    launch!(grid, :xyz, saturation_to_pressure!, state, hydrology, strat, z_centers)
+    launch!(state, grid, :xyz, saturation_to_pressure!, hydrology, strat, z_centers)
     return nothing
 end
 
@@ -231,36 +238,36 @@ function invclosure!(state, model::AbstractSoilModel, ::SaturationPressureClosur
     z_faces = znodes(get_field_grid(grid), Center(), Center(), Face())
     z_centers = znodes(get_field_grid(grid), Center(), Center(), Center())
     # determine saturation from pressure
-    launch!(grid, :xyz, pressure_to_saturation!, state, hydrology, strat, z_centers)
+    launch!(state, grid, :xyz, pressure_to_saturation!, hydrology, strat, z_centers)
     # apply saturation correction
-    launch!(grid, :xy, adjust_saturation_profile!, state, grid, hydrology)
+    launch!(state, grid, :xy, adjust_saturation_profile!, hydrology)
     # update water table
-    launch!(grid, :xy, compute_water_table!, state, grid, hydrology, z_faces)
+    launch!(state, grid, :xy, compute_water_table!, hydrology, z_faces)
     return nothing
 end
 
 @kernel function pressure_to_saturation!(
-    state,
+    state, grid,
     hydrology::SoilHydrology{NF, <:RichardsEq},
     strat::AbstractStratigraphy,
     zs
 ) where {NF}
     i, j, k = @index(Global, NTuple)
-    pressure_to_saturation!(i, j, k, state, hydrology, strat, zs)
+    pressure_to_saturation!(i, j, k, state, grid, hydrology, strat, zs)
 end
 
 @kernel function saturation_to_pressure!(
-    state,
+    state, grid,
     hydrology::SoilHydrology{NF, <:RichardsEq},
     strat::AbstractStratigraphy,
     zs
 ) where {NF}
     i, j, k = @index(Global, NTuple)
-    saturation_to_pressure!(i, j, k, state, hydrology, strat, zs)
+    saturation_to_pressure!(i, j, k, state, grid, hydrology, strat, zs)
 end
 
 @inline function pressure_to_saturation!(
-    i, j, k, state,
+    i, j, k, state, grid,
     hydrology::SoilHydrology{NF, <:RichardsEq},
     strat::AbstractStratigraphy,
     zs
@@ -281,7 +288,7 @@ end
 end
 
 @inline function saturation_to_pressure!(
-    i, j, k, state,
+    i, j, k, state, grid,
     hydrology::SoilHydrology{NF, <:RichardsEq},
     strat::AbstractStratigraphy,
     zs
@@ -295,6 +302,7 @@ end
     # compute elevation pressure head
     ψz = zs[k]
     # compute hydrostatic pressure head assuming impermeable lower boundary
+    # TODO: can we generalize this for arbitrary lower boundaries?
     z₀ = state.water_table[i, j, 1]
     ψh = max(0, z₀ - zs[k])
     # compute total pressure head as sum of ψh + ψm + ψz

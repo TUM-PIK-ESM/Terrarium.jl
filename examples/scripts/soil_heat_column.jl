@@ -16,7 +16,7 @@ integrator = initialize(model, ForwardEuler(), boundary_conditions=bcs)
 # test one timestep
 @time timestep!(integrator)
 # run simulation forward for a set period of time
-run!(integrator, period=Day(10))
+@time run!(integrator, period=Day(3))
 
 T = interior(integrator.state.temperature)[1,1,:]
 f = interior(integrator.state.liquid_water_fraction)[1,1,:]

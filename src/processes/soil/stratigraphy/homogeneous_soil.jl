@@ -19,7 +19,9 @@ variables(strat::HomogeneousSoil) = (
     auxiliary(:porosity, XYZ(), domain=UnitInterval(), desc="Bulk porosity (void fraction) of the soil volume"),
 )
 
-@inline initialize!(state, model, strat::HomogeneousSoil) = nothing
+@inline function initialize!(state, model, strat::HomogeneousSoil)
+    compute_auxiliary!(state, model, strat)
+end
 
 function compute_auxiliary!(state, model, strat::HomogeneousSoil)
     grid = get_grid(model)
@@ -47,10 +49,10 @@ porosity(i, j, k, state, grid, ::AbstractStratigraphy) = @inbounds state.porosit
 Compute the porosity of the soil volume at the given indices based on the current state as well as the stratigraphy, and biogeochemistry configurations.
 """
 @inline function compute_porosity(i, j, k, state, grid, strat::HomogeneousSoil, hydrology::AbstractSoilHydrology, bgc::AbstractSoilBiogeochemistry)
-    org = organic_fraction(i, j, k, state, bgc)
+    org = organic_fraction(i, j, k, state, grid, bgc)
     texture = soil_texture(i, j, k, state, grid, strat)
     props = get_hydraulic_properties(hydrology)
-    return (1 - org)*mineral_porosity(props, texture) + org*organic_porosity(i, j, k, state, bgc)
+    return (1 - org)*mineral_porosity(props, texture) + org*organic_porosity(i, j, k, state, grid, bgc)
 end
 
 """
@@ -66,9 +68,20 @@ Construct a `SoilVolume` object summarizing the material composition of the soil
     bgc::AbstractSoilBiogeochemistry
 )
     # get current saturation state and liquid fraction
-    sat = saturation_water_ice(i, j, k, state, hydrology)
-    liq = liquid_water_fraction(i, j, k, state, energy)
+    sat = saturation_water_ice(i, j, k, state, grid, hydrology)
+    liq = liquid_water_fraction(i, j, k, state, grid, energy)
     por = porosity(i, j, k, state, grid, strat)
     solid = @inbounds soil_matrix(i, j, k, state, grid, strat, bgc)
     return SoilVolume(por, sat, liq, solid)
+end
+
+# soil matrix for homogeneous soil stratigraphy
+@inline function soil_matrix(
+    i, j, k, state, grid,
+    strat::HomogeneousSoil,
+    bgc::AbstractSoilBiogeochemistry
+)
+    org = organic_fraction(i, j, k, state, grid, bgc)
+    tex = strat.texture
+    return MineralOrganic(tex, org)
 end

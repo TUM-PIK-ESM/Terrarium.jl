@@ -137,6 +137,6 @@ end
     @test Terrarium.thermalconductivity(thermal_props, SoilVolume(porosity=1.0, saturation=1.0, liquid=1.0)) ≈ thermal_props.cond.water
     @test Terrarium.thermalconductivity(thermal_props, SoilVolume(porosity=1.0, saturation=1.0, liquid=0.0)) ≈ thermal_props.cond.ice
     @test Terrarium.thermalconductivity(thermal_props, SoilVolume(porosity=1.0, saturation=0.0, liquid=0.0)) ≈ thermal_props.cond.air
-    @test Terrarium.thermalconductivity(thermal_props, SoilVolume(porosity=0.0, saturation=0.0, organic=0.0)) ≈ thermal_props.cond.mineral
-    @test Terrarium.thermalconductivity(thermal_props, SoilVolume(porosity=0.0, saturation=0.0, organic=1.0)) ≈ thermal_props.cond.organic
+    @test Terrarium.thermalconductivity(thermal_props, SoilVolume(porosity=0.0, saturation=0.0)) ≈ thermal_props.cond.mineral
+    @test Terrarium.thermalconductivity(thermal_props, SoilVolume(porosity=0.0, saturation=0.0, solid = MineralOrganic(organic = 1.0))) ≈ thermal_props.cond.organic
 end

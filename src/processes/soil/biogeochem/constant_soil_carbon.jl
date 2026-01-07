@@ -27,8 +27,8 @@ variables(::ConstantSoilCarbonDensity) = ()
 
 Get the prescribed natural porosity of organic soil.
 """
-@inline organic_porosity(state, bgc::ConstantSoilCarbonDensity) = bgc.por_org
-@inline organic_porosity(i, j, k, state, bgc::ConstantSoilCarbonDensity) = organic_porosity(state, bgc)
+@inline organic_porosity(bgc::ConstantSoilCarbonDensity) = bgc.por_org
+@inline organic_porosity(i, j, k, state, grid, bgc::ConstantSoilCarbonDensity) = organic_porosity(bgc)
 
 """
     $SIGNATURES
@@ -36,20 +36,8 @@ Get the prescribed natural porosity of organic soil.
 Calculate the organic solid fraction based on the prescribed SOC and natural porosity/density of
 the organic material.
 """
-@inline organic_fraction(state, bgc::ConstantSoilCarbonDensity) = bgc.ρ_soc / ((1 - bgc.por_org)*bgc.ρ_org)
-@inline organic_fraction(i, j, k, state, bgc::ConstantSoilCarbonDensity) = organic_fraction(state, bgc)
-
-# soil matrix for homogeneous soil stratigraphy
-@inline function soil_matrix(
-    state,
-    strat::HomogeneousSoil,
-    bgc::ConstantSoilCarbonDensity
-)
-    org = organic_fraction(state, bgc)
-    tex = strat.texture
-    return MineralOrganic(tex, org)
-end
-@inline @propagate_inbounds soil_matrix(i, j, k, state, grid, strat::HomogeneousSoil, bgc::ConstantSoilCarbonDensity) = soil_matrix(state, strat, bgc)[i, j, k]
+@inline organic_fraction(bgc::ConstantSoilCarbonDensity) = bgc.ρ_soc / ((1 - bgc.por_org)*bgc.ρ_org)
+@inline organic_fraction(i, j, k, state, grid, bgc::ConstantSoilCarbonDensity) = organic_fraction(bgc)
 
 @inline initialize!(state, model, bgc::ConstantSoilCarbonDensity) = nothing
 

@@ -94,7 +94,7 @@ function initialize!(state, model::SoilModel)
     initialize!(state, model, model.initializer)
     # run process initializers
     initialize!(state, model, model.strat)
+    initialize!(state, model, model.biogeochem)
     initialize!(state, model, model.hydrology)
     initialize!(state, model, model.energy)
-    initialize!(state, model, model.biogeochem)
 end

@@ -16,9 +16,12 @@ $TYPEDFIELDS
 """
 @kwdef struct FieldCapacityLimitedPAW{NF} <: AbstractPlantAvailableWater end
 
+FieldCapacityLimitedPAW(::Type{NF} = Float32) where {NF} = FieldCapacityLimitedPAW{NF}()
+
 variables(paw::FieldCapacityLimitedPAW) = (
     auxiliary(:plant_available_water, XYZ(), desc="Fraction of soil water available for plant root water uptake"),
-    auxiliary(:SMLF, XY(), soil_moisture_limiting_factor, paw) # soil moisture limiting factor
+    auxiliary(:SMLF, XY(), soil_moisture_limiting_factor, paw), # soil moisture limiting factor
+    input(:root_fraction, XYZ())
 )
 
 """
@@ -28,7 +31,6 @@ Field constructor for the soil moisture limiting factor. Returns an `Integral` o
 function soil_moisture_limiting_factor(paw::FieldCapacityLimitedPAW, grid, clock, fields)
     return Integral(fields.plant_available_water * fields.root_fraction)
 end
-
 
 function compute_auxiliary!(state, model, paw::FieldCapacityLimitedPAW)
     grid = get_grid(model)
@@ -50,8 +52,8 @@ end
     i, j, k = @index(Global, NTuple)
 
     @inbounds let soil = soil_volume(i, j, k, state, grid, strat, energy, hydrology, bgc),
-                  θfc = field_capacity(hydrology.hydraulic_properties, soil_texture(i, j, k, state, grid, strat)),
-                  θwp = field_capacity(hydrology.hydraulic_properties, soil.solid.texture),
+                  θfc = field_capacity(hydrology.hydraulic_properties, soil.solid.texture),
+                  θwp = wilting_point(hydrology.hydraulic_properties, soil.solid.texture),
                   vol = volumetric_fractions(soil[i, j, k]),
                   θw = vol.water;
         # compute PAW

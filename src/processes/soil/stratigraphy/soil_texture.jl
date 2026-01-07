@@ -20,6 +20,8 @@ end
 
 SoilTexture(::Type{NF}; kwargs...) where {NF} = SoilTexture{NF}(; kwargs...)
 
+Base.eltype(::SoilTexture{NF}) where {NF} = NF
+
 @inline @propagate_inbounds function Base.getindex(texture::SoilTexture{<:AbstractArray}, idx...)
     return SoilTexture(
         texture.sand[idx...],

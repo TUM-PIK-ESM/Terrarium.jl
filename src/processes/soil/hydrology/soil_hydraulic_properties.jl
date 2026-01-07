@@ -170,7 +170,7 @@ function hydraulic_conductivity(
     let fracs = volumetric_fractions(soil),
         θw = fracs.water, # unfrozen water content
         θsat = fracs.water + fracs.ice + fracs.air, # water + ice content at saturation (porosity)
-        K_sat = saturated_hydraulic_conductivity(hydraulics, soil.texture);
+        K_sat = saturated_hydraulic_conductivity(hydraulics, soil.solid.texture);
         K = K_sat * θw / θsat
         return K
     end
@@ -206,7 +206,7 @@ function hydraulic_conductivity(
         f = liquid_fraction(soil),
         Ω = hydraulics.cond_unsat.impedance, # scaling parameter for ice impedance
         I_ice = 10^(-Ω*(1 - f)), # ice impedance factor
-        K_sat = saturated_hydraulic_conductivity(hydraulics, soil.texture);
+        K_sat = saturated_hydraulic_conductivity(hydraulics, soil.solid.texture);
         # We use `complex` types here to permit illegal state values which may occur when using adaptive time steppers.
         K = abs(K_sat*I_ice*sqrt(complex(θw/θsat))*(1 - complex(1 - complex(θw/θsat)^(n/(n+1)))^((n-1)/n))^2)
         return K

@@ -86,8 +86,6 @@ variables(hydrology::SoilHydrology{NF}) where {NF} = (
     variables(hydrology.vertflow)...,
     variables(hydrology.runoff)...,
     variables(hydrology.evapotranspiration)...,
-    auxiliary(:field_capacity, XYZ(), desc="Estimated saturation level after drainage"),
-    auxiliary(:wilting_point, XYZ(), desc="Estimated saturation level below which transpiration ceases")
 )
 
 # Immobile soil water (NoFlow)
@@ -96,44 +94,13 @@ variables(::NoFlow) = (
     auxiliary(:saturation_water_ice, XYZ(), domain=UnitInterval(), desc="Saturation level of water and ice in the pore space"),
 )
 
-@inline saturation_water_ice(i, j, k, state, hydrology::AbstractSoilHydrology) = @inbounds state.saturation_water_ice[i, j, k]
+@inline saturation_water_ice(i, j, k, state, grid, hydrology::AbstractSoilHydrology) = @inbounds state.saturation_water_ice[i, j, k]
 
 @inline initialize!(state, model, hydrology::SoilHydrology) = nothing
 
-function compute_auxiliary!(state, model, hydrology::SoilHydrology)
-    grid = get_grid(model)
-    strat = get_soil_stratigraphy(model)
-    energy = get_soil_energy_balance(model)
-    hydrology = get_soil_hydrology(model)
-    bgc = get_soil_biogeochemistry(model)
-    launch!(state, grid, :xyz, compute_hydraulics_kernel!, hydrology, strat, energy, bgc)
-    return nothing
-end
+@inline compute_auxiliary!(state, model, hydrology::SoilHydrology) = nothing
 
 @inline compute_tendencies!(state, model, hydrology::SoilHydrology{NF, NoFlow}) where {NF} = nothing
-
-# Hydraulics
-
-@kernel function compute_hydraulics_kernel!(
-    state,
-    grid,
-    hydrology::SoilHydrology,
-    strat::AbstractStratigraphy,
-    energy::AbstractSoilEnergyBalance,
-    bgc::AbstractSoilBiogeochemistry
-)
-    i, j, k = @index(Global, NTuple)
-
-    soil = soil_volume(i, j, k, state, grid, strat, energy, hydrology, bgc)
-    
-    @inbounds let θfc = field_capacity(hydrology.hydraulic_properties, soil.solid.texture),
-                  θwp = wilting_point(hydrology.hydraulic_properties, soil.solid.texture);
-                  
-        # store field capacity and wilting point in state variables
-        state.field_capacity[i, j, k] = θfc
-        state.wilting_point[i, j, k] = θwp
-    end
-end
 
 # Runoff
 

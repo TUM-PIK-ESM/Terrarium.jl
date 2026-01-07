@@ -72,12 +72,12 @@ end
 """
 Soil matrix consisting of a simple, homogeneous mixture of mineral and organic material.
 """
-struct MineralOrganic{NF} <: AbstractSoilMatrix{NF}
+@kwdef struct MineralOrganic{NF} <: AbstractSoilMatrix{NF}
     "Mineral soil texture"
-    texture::SoilTexture{NF}
+    texture::SoilTexture{NF} = SoilTexture()
 
     "Organic soil fraction"
-    organic::NF
+    organic::NF = zero(eltype(texture))
 end
 
 """
