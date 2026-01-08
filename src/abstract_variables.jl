@@ -164,12 +164,13 @@ struct InputVariable{
     UT<:Units,
     Var<:Variable{name, VD, UT},
     DT<:AbstractInterval,
-    Init<:Union{Nothing, Function}
+    Def<:Union{Nothing, Number, Function}
 } <: AbstractProcessVariable{name, VD}
     "State variable"
     var::Var
 
-    init::Init
+    "Default value or function initializer"
+    default::Def
 
     "Variable domain"
     domain::DT
@@ -282,6 +283,16 @@ function check_duplicates(vars...)
     end
 end
 
+function Base.merge(varss::Variables...)
+    return Variables(
+        merge(map(vars -> vars.prognostic, varss)...),
+        merge(map(vars -> vars.tendencies, varss)...),
+        merge(map(vars -> vars.auxiliary, varss)...),
+        merge(map(vars -> vars.inputs, varss)...),
+        merge(map(vars -> vars.namespaces, varss)...)
+    )
+end
+
 """
     $SIGNATURES
 
@@ -311,8 +322,8 @@ auxiliary(var::Variable, ctor::Function, params; domain=RealLine(), desc="") = A
 
 Convenience constructor method for `InputVariable`.
 """
-input(name::Symbol, dims::VarDims, init = nothing; units = NoUnits, domain = RealLine(), desc="") = input(var(name, dims, units), init; domain, desc)
-input(var::Variable, init = nothing; domain = RealLine(), desc="") = InputVariable(var, init, domain, desc)
+input(name::Symbol, dims::VarDims; default = nothing, units = NoUnits, domain = RealLine(), desc="") = input(var(name, dims, units); default, domain, desc)
+input(var::Variable; default = nothing, domain = RealLine(), desc="") = InputVariable(var, default, domain, desc)
 
 """
     $SIGNATURES
@@ -334,3 +345,8 @@ namespace(name::Symbol, vars::Tuple) = Namespace(name, Variables(vars...))
 Alias for `Variables(vars...)`
 """
 variables(vars::Union{AbstractVariable, Namespace}...) = Variables(vars)
+
+function Base.NamedTuple(vars::Tuple{Vararg{Union{AbstractVariable, Namespace}}})
+    keys = map(varname, vars)
+    return NamedTuple{keys}(vars)
+end
