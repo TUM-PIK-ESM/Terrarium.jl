@@ -51,7 +51,7 @@ include("vegetation/vegetation_dynamics.jl")
 export PALADYNPhenology
 include("vegetation/phenology.jl")
 
-export PALADYNRootDistribution
+export StaticExponentialRootDistribution
 include("vegetation/root_distribution.jl")
 
 export FieldCapacityLimitedPAW

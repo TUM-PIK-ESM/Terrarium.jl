@@ -185,10 +185,10 @@ end
     field_grid = get_field_grid(grid)
 
     # Compute divergence of water fluxes
-    # ∂θ∂t = ∇⋅K(θ)∇Ψ where Ψ = ψₘ + ψₕ + ψz + forcing (sources and sinks such as ET losses)
+    # ∂θ∂t = ∇⋅K(θ)∇Ψ + forcing, where Ψ = ψₘ + ψₕ + ψz, and "forcing" represents sources and sinks such as ET losses
     ∂θ∂t = (
         - ∂zᵃᵃᶜ(i, j, k, field_grid, darcy_flux, state.pressure_head, state.hydraulic_conductivity)
-        + forcing_ET(i, j, k, field_grid, state, hydrology.evapotranspiration, constants)
+        + forcing(i, j, k, grid, state, hydrology, constants)
     )
     return ∂θ∂t
 end
