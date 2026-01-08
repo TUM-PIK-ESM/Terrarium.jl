@@ -15,10 +15,12 @@ variables(rre::RichardsEq) = (
     prognostic(:saturation_water_ice, XYZ(); closure=rre.closure, domain=UnitInterval(), desc="Saturation level of water and ice in the pore space"),
     prognostic(:surface_excess_water, XY(), units=u"m", desc="Excess water at the soil surface in m³/m²"),
     auxiliary(:water_table, XY(), units=u"m", desc="Elevation of the water table in meters"),
-    auxiliary(:hydraulic_conductivity, XYZ(z=Face()), units=u"m/s", desc="Hydraulic conductivity of soil volumes in m/s")
+    auxiliary(:hydraulic_conductivity, XYZ(z=Face()), units=u"m/s", desc="Hydraulic conductivity of soil volumes in m/s"),
+    input(:liquid_water_fraction, XYZ(), 1, domain=UnitInterval(), desc="Fraction of unfrozen water in the pore space"), 
 )
 
 function initialize!(state, model, hydrology::SoilHydrology{NF, <:RichardsEq}) where {NF}
+    set!(state.liquid_water_fraction, 1)
     closure!(state, model, get_closure(hydrology))
     return nothing
 end
