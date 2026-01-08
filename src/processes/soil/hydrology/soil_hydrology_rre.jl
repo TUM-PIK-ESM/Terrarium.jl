@@ -11,8 +11,8 @@ end
 
 get_closure(hydrology::SoilHydrology{NF, <:RichardsEq}) where {NF} = hydrology.vertflow.closure
 
-variables(::SoilHydrology{NF, <:RichardsEq}) where {NF} = (
-    prognostic(:saturation_water_ice, XYZ(); closure=rre.closure, domain=UnitInterval(), desc="Saturation level of water and ice in the pore space"),
+variables(hydrology::SoilHydrology{NF, <:RichardsEq}) where {NF} = (
+    prognostic(:saturation_water_ice, XYZ(); closure=get_closure(hydrology), domain=UnitInterval(), desc="Saturation level of water and ice in the pore space"),
     prognostic(:surface_excess_water, XY(), units=u"m", desc="Excess water at the soil surface in m³/m²"),
     auxiliary(:water_table, XY(), units=u"m", desc="Elevation of the water table in meters"),
     auxiliary(:hydraulic_conductivity, XYZ(z=Face()), units=u"m/s", desc="Hydraulic conductivity of soil volumes in m/s"),
