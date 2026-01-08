@@ -215,7 +215,7 @@ end
     end
 
     function Terrarium.forcing(i, j, k, state, grid, forcing::TestSoilWaterForcing, hydrology::SoilHydrology, args...)
-        return forcing.valueequation
+        return forcing.value
     end
 
     Nz = 10
