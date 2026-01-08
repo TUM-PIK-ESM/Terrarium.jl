@@ -24,3 +24,7 @@ end
 @testset "Phenology" begin
     include("phenology_tests.jl")
 end
+
+@testset "Plant Available Water" begin
+    include("plant_available_water_tests.jl")
+end

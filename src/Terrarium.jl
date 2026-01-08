@@ -21,7 +21,7 @@ import Oceananigans
 import Oceananigans.AbstractOperations: Average, Integral
 import Oceananigans.Advection: AbstractAdvectionScheme, UpwindBiased
 import Oceananigans.Architectures: AbstractArchitecture, CPU, GPU, architecture, on_architecture, array_type
-import Oceananigans.Fields: Field, FunctionField, AbstractField, Center, Face, set!, interior, xnodes, ynodes, znodes, location
+import Oceananigans.Fields: Field, FunctionField, AbstractField, Center, Face, set!, compute!, interior, xnodes, ynodes, znodes, zspacings, location
 import Oceananigans.Grids as OceananigansGrids
 import Oceananigans.Grids: Periodic, Flat, Bounded
 import Oceananigans.Operators: ∂zᵃᵃᶜ, ∂zᵃᵃᶠ, ℑzᵃᵃᶠ, Δzᵃᵃᶜ
@@ -65,7 +65,7 @@ const BCType = AbstractBoundaryConditionClassification
 # Re-export selected types and methods from Oceananigans
 export Simulation, Field, FieldTimeSeries, CPU, GPU, Clock, Center, Face
 export Value, Flux, Gradient, ValueBoundaryCondition, GradientBoundaryCondition, FluxBoundaryCondition, NoFluxBoundaryCondition
-export run!, time_step!, set!, interior, architecture, on_architecture, xnodes, ynodes, znodes, location
+export run!, time_step!, set!, compute!, interior, architecture, on_architecture, xnodes, ynodes, znodes, zspacings, location
 
 # Re-export common Dates types
 export Year, Month, Day, Hour, Minute, Second

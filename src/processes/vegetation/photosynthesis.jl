@@ -88,7 +88,7 @@ LUEPhotosynthesis(::Type{NF}; kwargs...) where {NF} = LUEPhotosynthesis{NF}(; kw
 variables(::LUEPhotosynthesis{NF}) where {NF} = (
     auxiliary(:Rd, XY()), # Daily leaf respiration [gC/m²/day]
     auxiliary(:GPP, XY()), # Gross Primary Production [kgC/m²/day]
-    input(:SMLF, XY(), NF(1)), # soil moisture limiting factor with default value of 1
+    input(:SMLF, XY(), default=NF(1)), # soil moisture limiting factor with default value of 1
     input(:λc, XY()), # Ratio of leaf-internal and air CO2 concentration [-]
     input(:LAI, XY()), # Leaf Area Index [m²/m²]
 )

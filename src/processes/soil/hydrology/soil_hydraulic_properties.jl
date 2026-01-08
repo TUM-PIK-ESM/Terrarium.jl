@@ -76,7 +76,7 @@ $TYPEDFIELDS
     porosity::NF = 0.49
 
     "Prescribed field capacity [-]"
-    field_capacity::NF = 0.1
+    field_capacity::NF = 0.25
 
     "Prescribed wilting point [-]"
     wilting_point::NF = 0.05
