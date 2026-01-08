@@ -106,6 +106,39 @@ end
     @test iszero(K)
 end
 
+@testset "SoilHydrology: adjust_saturation_profile" begin
+    grid = ColumnGrid(UniformSpacing(Δz=0.1, N=100))
+    swrc = VanGenuchten(α=2.0, n=2.0)
+    hydraulic_properties = ConstantHydraulics(Float64; cond_unsat=UnsatKVanGenuchten(Float64; swrc))
+    hydrology = SoilHydrology(eltype(grid), RichardsEq(); hydraulic_properties)
+    model = SoilModel(grid; hydrology)
+    state = initialize(model)
+    
+    # Case 1: Oversaturation at surface
+    set!(state.saturation_water_ice, (x, z) -> max(1.1 + z, 1.0))
+    ∫sat_excess = Field(Integral(state.saturation_water_ice - 1, dims=3))
+    compute!(∫sat_excess)
+    Terrarium.closure!(state, model)
+    @test all(state.saturation_water_ice .≈ 1)
+    @test all(state.surface_excess_water .≈ ∫sat_excess)
+
+    # Case 2: Undersaturation at surface
+    set!(state.saturation_water_ice, (x, z) -> min(-0.1 - z, 1.0))
+    ∫sat = Field(Integral(state.saturation_water_ice, dims=3))
+    ∫sat_deficit = Field(Integral(state.saturation_water_ice, dims=3, condition=state.saturation_water_ice .< 0))
+    ∫sat₀ = compute!(∫sat)[1,1,1]
+    compute!(∫sat_deficit)
+    Terrarium.closure!(state, model)
+    ∫sat₁ = compute!(∫sat)[1,1,1]
+    @test all(state.saturation_water_ice .>= 0)
+    @test all(∫sat₁ - ∫sat₀ .≈ 0)
+
+    # Case 3: Completely dry with negative saturation near surface
+    set!(state.saturation_water_ice, (x, z) -> min(-0.1 - z, 0.0))
+    Terrarium.closure!(state, model)
+    @test all(state.saturation_water_ice .≈ 0)
+end
+
 @testset "SoilHydrology: Richardson-Richards' equation" begin
     grid = ColumnGrid(UniformSpacing(Δz=0.1, N=100))
     swrc = VanGenuchten(α=2.0, n=2.0)
@@ -176,13 +209,13 @@ end
     @test ∫sat₀[1,1,1] ≈ ∫sat₁[1,1,1] ≈ ∫sat₂[1,1,1]
 end
 
-@testset "Soil moisture forcing" begin
+@testset "Soil moisture forcing (source/sink)" begin
     mutable struct TestSoilWaterForcing{NF} <: Terrarium.AbstractForcing
         value::NF
     end
 
     function Terrarium.forcing(i, j, k, state, grid, forcing::TestSoilWaterForcing, hydrology::SoilHydrology, args...)
-        return forcing.value
+        return forcing.valueequation
     end
 
     Nz = 10

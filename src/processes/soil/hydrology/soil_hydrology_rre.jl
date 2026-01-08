@@ -73,32 +73,32 @@ water is added to the `surface_excess_water` pool.
         if sat[i, j, k] > one(NF)
             # calculate excess saturation
             excess_sat = sat[i, j, k] - one(NF)
-            # subtract excess water and add to layer above
+            # subtract excess water and add to layer above;
+            # note that we need to rescale by the cell thickness to properly conserve mass
             sat[i, j, k] -= excess_sat
-            sat[i, j, k+1] += excess_sat
+            sat[i, j, k+1] += excess_sat * Δzᵃᵃᶜ(i, j, k, field_grid) / Δzᵃᵃᶜ(i, j, k+1, field_grid)
         end
     end
     # then from top to bottom
     @inbounds for k in N:-1:2
-        # TODO: This function might perform badly on GPU....
         if sat[i, j, k] < zero(NF)
             # calculate saturation deficit
             deficit_sat = -sat[i, j, k]
-            # add  back saturation deficit and subtract from layer below
+            # add back saturation deficit and subtract from layer below
             sat[i, j, k] += deficit_sat
-            sat[i, j, k-1] -= deficit_sat
+            sat[i, j, k-1] -= deficit_sat * Δzᵃᵃᶜ(i, j, k, field_grid) / Δzᵃᵃᶜ(i, j, k-1, field_grid)
         end
     end
     @inbounds if sat[i, j, N] > one(NF)
         # If the uppermost (surface) layer is oversaturated, add to excess water pool
         excess_sat = sat[i, j, N] - one(NF)
         sat[i, j, N] -= excess_sat
-        state.surface_excess_water[i, j, 1] += excess_sat*Δzᵃᵃᶜ(i, j, N, field_grid)
+        state.surface_excess_water[i, j, 1] += excess_sat * Δzᵃᵃᶜ(i, j, N, field_grid)
     end
     @inbounds if sat[i, j, 1] < zero(NF)
         # If the uppermost (surface) layer has a deficit, just set to zero.
         # This constitutes a mass balance violation but should not happen under realistic conditions.
-        state.sat[i, j, 1] = zero(NF)
+        sat[i, j, 1] = zero(NF)
     end
 end
 
