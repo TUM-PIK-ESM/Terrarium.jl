@@ -24,7 +24,7 @@ using KernelAbstractions: @kernel, @index
 using Oceananigans.AbstractOperations: Average, Integral
 using Oceananigans.Architectures: Architectures, AbstractArchitecture, CPU, GPU, architecture, on_architecture, array_type
 using Oceananigans.Fields: Field, FunctionField, AbstractField, Center, Face, set!, compute!, interior, xnodes, ynodes, znodes, zspacings, location
-using Oceananigans.Forcings: Forcings, Forcing, ContinuousForcing, DiscreteForcing
+using Oceananigans.Forcings: ContinuousForcing, DiscreteForcing
 using Oceananigans.Grids: Periodic, Flat, Bounded
 using Oceananigans.Operators: ∂zᵃᵃᶜ, ∂zᵃᵃᶠ, ℑzᵃᵃᶠ, Δzᵃᵃᶜ
 using Oceananigans.OutputReaders: FieldTimeSeries
@@ -112,6 +112,9 @@ include("initializers.jl")
 
 export FieldBC, FieldBCs, boundary_conditions
 include("boundary_conditions.jl")
+
+export Forcings
+include("forcings.jl")
 
 # physical processes
 include("processes/processes.jl")
