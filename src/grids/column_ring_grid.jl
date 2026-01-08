@@ -10,7 +10,7 @@ struct ColumnRingGrid{
     RingGrid<:RingGrids.AbstractGrid,
     RectGrid<:OceananigansGrids.RectilinearGrid,
     Mask<:Union{AbstractArray, RingGrids.AbstractField}
-} <: AbstractLandGrid{NF, Arch}
+} <: AbstractColumnGrid{NF, Arch}
     "RingGrid specfying the lateral spatial discretization of the globe"
     rings::RingGrid
 

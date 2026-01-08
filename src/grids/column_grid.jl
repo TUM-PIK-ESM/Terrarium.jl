@@ -1,10 +1,12 @@
+abstract type AbstractColumnGrid{NF, Arch} <: AbstractLandGrid{NF, Arch} end
+
 """
     ColumnGrid{NF, Arch<:AbstractArchitecture, RectGrid<:OceananigansGrids.RectilinearGrid} <: AbstractLandGrid
 
 Represents a set of laterally independent vertical columns with dimensions (x, y, z)
 where `x` is the column dimension, `y=1` is constant, and `z` is the vertical axis.
 """
-struct ColumnGrid{NF, Arch, RectGrid<:OceananigansGrids.RectilinearGrid} <: AbstractLandGrid{NF, Arch}
+struct ColumnGrid{NF, Arch, RectGrid<:OceananigansGrids.RectilinearGrid} <: AbstractColumnGrid{NF, Arch}
     "Underlying Oceananigans rectilinear grid on which `Field`s are defined."
     grid::RectGrid
 
