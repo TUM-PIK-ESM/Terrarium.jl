@@ -1,10 +1,10 @@
 # Convenience dispatches for Oceananigans.launch!
-function launch!(grid::AbstractLandGrid, workspec::Symbol, kernel::Function, args...; kwargs...)
+function Oceananigans.launch!(grid::AbstractLandGrid, workspec::Symbol, kernel::Function, args...; kwargs...)
     fgrid = get_field_grid(grid)
     launch!(fgrid.architecture, fgrid, workspec, kernel, args...; kwargs...)
 end
 
-function launch!(state, grid::AbstractLandGrid, workspec::Symbol, kernel::Function, args...; kwargs...)
+function Oceananigans.launch!(state, grid::AbstractLandGrid, workspec::Symbol, kernel::Function, args...; kwargs...)
     fgrid = get_field_grid(grid)
     launch!(fgrid.architecture, fgrid, workspec, kernel, state, grid, args...; kwargs...)
 end
@@ -26,8 +26,8 @@ end
 
 const RingGridOrField = Union{RingGrids.AbstractGrid, RingGrids.AbstractField}
 
-on_architecture(::GPU, obj::RingGridOrField) = RingGrids.Architectures.on_architecture(RingGrids.Architectures.GPU(), obj)
-on_architecture(::CPU, obj::RingGridOrField) = RingGrids.Architectures.on_architecture(RingGrids.Architectures.CPU(), obj)
+Architectures.on_architecture(::GPU, obj::RingGridOrField) = RingGrids.Architectures.on_architecture(RingGrids.Architectures.GPU(), obj)
+Architectures.on_architecture(::CPU, obj::RingGridOrField) = RingGrids.Architectures.on_architecture(RingGrids.Architectures.CPU(), obj)
 
 # Field construction
 
@@ -44,7 +44,7 @@ Auxiliary constructor for an Oceananigans `Field` on `grid` with the given Terra
 Additional arguments are passed direclty to the `Field` constructor. The location of the `Field`
 is determined by `VarDims` defined on `var`.
 """
-function Field(
+function Oceananigans.Field(
     grid::AbstractLandGrid,
     dims::VarDims,
     boundary_conditions = nothing,
@@ -76,7 +76,7 @@ end
 
 Construct a `FieldTimeSeries` on the given land `grid` with the given `dims` and `times`.
 """
-function FieldTimeSeries(
+function Oceananigans.FieldTimeSeries(
     grid::AbstractLandGrid,
     dims::VarDims,
     times=eltype(grid)[]

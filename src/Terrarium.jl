@@ -2,55 +2,56 @@ module Terrarium
 
 using DocStringExtensions
 
-import Base: @propagate_inbounds
+using Adapt: Adapt, adapt, @adapt_structure
 
-import ConstructionBase: ConstructionBase, getproperties, setproperties
+using Base: @propagate_inbounds
 
-import DataStructures: OrderedDict
+using ConstructionBase: ConstructionBase, getproperties, setproperties
 
-import Dates: Dates, TimeType, Period, Year, Month, Day, Hour, Minute, Second
+using DataStructures: OrderedDict
 
-import DomainSets: RealLine, HalfLine, PositiveRealLine, UnitInterval, AbstractInterval
+using Dates: Dates, TimeType, Period, Year, Month, Day, Hour, Minute, Second
 
-import Flatten: flatten, flattenable, reconstruct
+using DomainSets: RealLine, HalfLine, PositiveRealLine, UnitInterval, AbstractInterval
 
-import Interpolations
+using Flatten: flatten, flattenable, reconstruct
+
+using Interpolations
+
+using KernelAbstractions: @kernel, @index
 
 # Oceananigans numerics
-import Oceananigans
-import Oceananigans.AbstractOperations: Average, Integral
-import Oceananigans.Advection: AbstractAdvectionScheme, UpwindBiased
-import Oceananigans.Architectures: AbstractArchitecture, CPU, GPU, architecture, on_architecture, array_type
-import Oceananigans.Fields: Field, FunctionField, AbstractField, Center, Face, set!, compute!, interior, xnodes, ynodes, znodes, zspacings, location
-import Oceananigans.Grids as OceananigansGrids
-import Oceananigans.Grids: Periodic, Flat, Bounded
-import Oceananigans.Operators: ∂zᵃᵃᶜ, ∂zᵃᵃᶠ, ℑzᵃᵃᶠ, Δzᵃᵃᶜ
-import Oceananigans.OutputReaders: FieldTimeSeries
-import Oceananigans.Simulations: Simulation, run!, timestepper
-import Oceananigans.TimeSteppers: Clock, update_state!, time_step!, tick!, reset!
-import Oceananigans.Units: Time
-import Oceananigans.Utils: launch!
-# Boundary conditions
-import Oceananigans.BoundaryConditions: BoundaryCondition, DefaultBoundaryCondition, FieldBoundaryConditions,
-                                        ValueBoundaryCondition, FluxBoundaryCondition, GradientBoundaryCondition, NoFluxBoundaryCondition,
-                                        ContinuousBoundaryFunction, DiscreteBoundaryFunction,
-                                        AbstractBoundaryConditionClassification, Value, Flux, Gradient, # BC type classifications
-                                        fill_halo_regions!, regularize_field_boundary_conditions, getbc, compute_z_bcs!
+using Oceananigans.AbstractOperations: Average, Integral
+using Oceananigans.Architectures: Architectures, AbstractArchitecture, CPU, GPU, architecture, on_architecture, array_type
+using Oceananigans.Fields: Field, FunctionField, AbstractField, Center, Face, set!, compute!, interior, xnodes, ynodes, znodes, zspacings, location
+using Oceananigans.Forcings: Forcings, Forcing, ContinuousForcing, DiscreteForcing
+using Oceananigans.Grids: Periodic, Flat, Bounded
+using Oceananigans.Operators: ∂zᵃᵃᶜ, ∂zᵃᵃᶠ, ℑzᵃᵃᶠ, Δzᵃᵃᶜ
+using Oceananigans.OutputReaders: FieldTimeSeries
+using Oceananigans.Simulations: Simulation, run!, timestepper
+using Oceananigans.TimeSteppers: Clock, update_state!, time_step!, tick!, reset!
+using Oceananigans.Units: Time
+using Oceananigans.Utils: launch!
 
-# Adapt and KernelAbstractions for GPU parallelization
-import Adapt: Adapt, adapt, @adapt_structure
-import KernelAbstractions: @kernel, @index
+# Boundary conditions
+using Oceananigans.BoundaryConditions: BoundaryConditions, BoundaryCondition, DefaultBoundaryCondition, FieldBoundaryConditions,
+                                       ValueBoundaryCondition, FluxBoundaryCondition, GradientBoundaryCondition, NoFluxBoundaryCondition,
+                                       ContinuousBoundaryFunction, DiscreteBoundaryFunction,
+                                       AbstractBoundaryConditionClassification, Value, Flux, Gradient, # BC type classifications
+                                       fill_halo_regions!, regularize_field_boundary_conditions, getbc, compute_z_bcs!
 
 # Freeze curves for soil energy balance
-import FreezeCurves: FreezeCurves, FreezeCurve, SFCC, SWRC, FreeWater
-
-import RingGrids
+using FreezeCurves: FreezeCurves, FreezeCurve, SFCC, SWRC, FreeWater
 
 # Units (for testing and UI)
 # Unit dimensions for length (𝐋), mass (𝐌), and time (𝐓)
-import Unitful: 𝐋, 𝐌, 𝐓
-import Unitful: Units, Quantity, AbstractQuantity, NoUnits
-import Unitful: @u_str, uconvert, ustrip, upreferred
+using Unitful: 𝐋, 𝐌, 𝐓
+using Unitful: Units, Quantity, AbstractQuantity, NoUnits
+using Unitful: @u_str, uconvert, ustrip, upreferred
+
+# Explicit imports
+import Oceananigans
+import RingGrids
 
 """
 Alias for numeric `Quantity` with type `NF` and units `U`.

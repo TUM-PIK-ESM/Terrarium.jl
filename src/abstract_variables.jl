@@ -14,7 +14,7 @@ Indicator type for variables that should be assigned a 3D field on their associa
 end
 
 # Dispatch for Oceananigans `location` method
-location(dims::XYZ) = (dims.x, dims.y, dims.z)
+Oceananigans.location(dims::XYZ) = (dims.x, dims.y, dims.z)
 
 """
     XY <: VarDims
@@ -26,7 +26,7 @@ Indicator type for variables that should be assigned a 2D (lateral only) field o
     y::LY = Center()
 end
 
-location(dims::XY) = (dims.x, dims.y, nothing)
+Oceananigans.location(dims::XY) = (dims.x, dims.y, nothing)
 
 # TODO: do we need to support state variables not defined on a grid?
 

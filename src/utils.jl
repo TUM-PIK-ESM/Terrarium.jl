@@ -70,7 +70,7 @@ function piecewise_linear(knots::Pair{<:LengthQuantity}...; extrapolation=Interp
     return Interpolations.extrapolate(interp, extrapolation)
 end
 
-function adapt(::Type{NF}, obj) where {NF<:Number}
+function Adapt.adapt(::Type{NF}, obj) where {NF<:Number}
     vals = map(NF, flatten(obj, flattenable, Number))
     return reconstruct(obj, vals, flattenable, Number)
 end

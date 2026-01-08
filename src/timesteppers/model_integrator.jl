@@ -49,17 +49,17 @@ function Base.getproperty(integrator::ModelIntegrator, name::Symbol)
     end
 end
 
-iteration(integrator::ModelIntegrator) = integrator.clock.iteration
+Oceananigans.Solvers.iteration(integrator::ModelIntegrator) = integrator.clock.iteration
 
-architecture(integrator::ModelIntegrator) = architecture(get_grid(integrator.model))
+Oceananigans.Architectures.architecture(integrator::ModelIntegrator) = architecture(get_grid(integrator.model))
 
-timestepper(integrator::ModelIntegrator) = integrator.timestepper
+Oceananigans.TimeSteppers.timestepper(integrator::ModelIntegrator) = integrator.timestepper
 
-update_state!(integrator::ModelIntegrator; compute_tendencies = true) = update_state!(integrator.state, integrator.model, integrator.inputs; compute_tendencies)
+Oceananigans.TimeSteppers.update_state!(integrator::ModelIntegrator; compute_tendencies = true) = update_state!(integrator.state, integrator.model, integrator.inputs; compute_tendencies)
 
 # for now, just forward Oceananigans.time_step! to timestep!
 # consider renaming later...
-time_step!(integrator::ModelIntegrator, Δt; kwargs...) = timestep!(integrator, Δt)
+Oceananigans.TimeSteppers.time_step!(integrator::ModelIntegrator, Δt; kwargs...) = timestep!(integrator, Δt)
 
 """
     $TYPEDEF

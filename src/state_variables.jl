@@ -85,7 +85,7 @@ end
 Update the `state` for the given `model` and `inputs`; this includes calling `update_inputs!` and
 `fill_halo_regions!` followed by `compute_auxiliary!` and `compute_tendencies!`, if `compute_tendencies = true`.
 """
-function update_state!(state::StateVariables, model::AbstractModel, inputs::InputSources; compute_tendencies = true)
+function Oceananigans.TimeSteppers.update_state!(state::StateVariables, model::AbstractModel, inputs::InputSources; compute_tendencies = true)
     reset_tendencies!(state)
     update_inputs!(state, inputs)
     fill_halo_regions!(state)
@@ -98,7 +98,7 @@ end
 """
 Invoke `fill_halo_regions!` for all fields in `state`.
 """
-function fill_halo_regions!(state::StateVariables)
+function Oceananigans.BoundaryConditions.fill_halo_regions!(state::StateVariables)
     # fill_halo_regions! for all prognostic variables
     fastiterate(state.prognostic) do field
         fill_halo_regions!(field, state.clock, state)

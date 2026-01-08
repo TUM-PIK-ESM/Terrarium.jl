@@ -1,12 +1,12 @@
 abstract type AbstractColumnGrid{NF, Arch} <: AbstractLandGrid{NF, Arch} end
 
 """
-    ColumnGrid{NF, Arch<:AbstractArchitecture, RectGrid<:OceananigansGrids.RectilinearGrid} <: AbstractLandGrid
+    ColumnGrid{NF, Arch<:AbstractArchitecture, RectGrid<:Oceananigans.Grids.RectilinearGrid} <: AbstractLandGrid
 
 Represents a set of laterally independent vertical columns with dimensions (x, y, z)
 where `x` is the column dimension, `y=1` is constant, and `z` is the vertical axis.
 """
-struct ColumnGrid{NF, Arch, RectGrid<:OceananigansGrids.RectilinearGrid} <: AbstractColumnGrid{NF, Arch}
+struct ColumnGrid{NF, Arch, RectGrid<:Oceananigans.Grids.RectilinearGrid} <: AbstractColumnGrid{NF, Arch}
     "Underlying Oceananigans rectilinear grid on which `Field`s are defined."
     grid::RectGrid
 
@@ -29,20 +29,20 @@ struct ColumnGrid{NF, Arch, RectGrid<:OceananigansGrids.RectilinearGrid} <: Abst
         # since most or all land computations will be along this axis
         z_thick = get_spacing(vert)
         z_coords = convert.(NF, vcat(-reverse(cumsum(z_thick)), zero(eltype(z_thick))))
-        grid = OceananigansGrids.RectilinearGrid(arch, NF, size=(num_columns, Nz), x=(0, 1), z=z_coords, topology=(Periodic, Flat, Bounded))
+        grid = Oceananigans.Grids.RectilinearGrid(arch, NF, size=(num_columns, Nz), x=(0, 1), z=z_coords, topology=(Periodic, Flat, Bounded))
         return new{NF, typeof(arch), typeof(grid)}(grid)
     end
     # Default constructors
     ColumnGrid(vert::AbstractVerticalSpacing{NF}, num_columns::Int=1) where {NF} = ColumnGrid(CPU(), NF, vert, num_columns)
     ColumnGrid(arch::AbstractArchitecture, vert::AbstractVerticalSpacing{NF}, num_columns::Int=1) where {NF} = ColumnGrid(arch, NF, vert, num_columns)
-    ColumnGrid(grid::OceananigansGrids.RectilinearGrid{NF}) where {NF} = new{NF, typeof(architecture(grid)), typeof(grid)}(grid)
+    ColumnGrid(grid::Oceananigans.Grids.RectilinearGrid{NF}) where {NF} = new{NF, typeof(architecture(grid)), typeof(grid)}(grid)
 end
 
 @adapt_structure ColumnGrid
 
 get_field_grid(grid::ColumnGrid) = grid.grid
 
-architecture(grid::ColumnGrid) = architecture(grid.grid)
+Architectures.architecture(grid::ColumnGrid) = architecture(grid.grid)
 
 function Base.show(io::IO, mime::MIME"text/plain", grid::ColumnGrid{NF}) where {NF}
     println(io, "ColumnGrid{$NF} on $(architecture(grid)) with")
