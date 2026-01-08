@@ -2,6 +2,7 @@
     $TYPEDEF
 
 Base type for `AbstractProcess`es that provide forcing tendencies to other `AbstractProcess`es.
+Subtypes of `AbstractForcing` must provide dispatches for [`forcing`](@ref).
 """
 abstract type AbstractForcing <: AbstractProcess end
 
@@ -32,18 +33,22 @@ a prognostic state variable defined by `target`.
 function forcing end
 
 """
+    forcing(i, j, k, state, grid, target::AbstractProcess, args...)
+
+Convenience dispatch of `forcing` that assumes `target` to be a process with a property `forcing`
+corresponding to an `AbstractForcing` or Oceananigans forcing function.
 """
 @inline function forcing(i, j, k, state, grid, target::AbstractProcess, args...)
-    return forcing(i, j, k, state, grid, f, target.forcings, target, args...)
+    return forcing(i, j, k, state, grid, target.forcing, target, args...)
 end
 
 """
-    forcing(i, j, k, state, grid, forcings::Forcings, target::AbstractProcess, args...)
+    forcing(i, j, k, state, grid, fs::Forcings, target::AbstractProcess, args...)
 
 Invoke and sum the forcing tendencies for all components defined in `forcings`.
 """
-@inline function forcing(i, j, k, state, grid, forcings::Forcings, target::AbstractProcess, args...)
-    return sum(map(f -> forcing(i, j, k, state, grid, f, target, args...), values(forcings.forcings)))
+@inline function forcing(i, j, k, state, grid, fs::Forcings, target::AbstractProcess, args...)
+    return sum(map(f -> forcing(i, j, k, state, grid, f, target, args...), values(fs.forcings)), init=zero(eltype(grid)))
 end
 
 """
@@ -51,7 +56,7 @@ end
 
 Return the value computed by the given `Oceananigans` forcing function, which should be an instance of
 either `DiscreteForcing` or `ContinuousForcing`. Note that `target` and additional `args` are only included
-for interface consistency and are not passed to `forcing`.
+for interface consistency and are not passed through to `forcing`.
 """
 @inline function forcing(i, j, k, state, grid, forcing::OceananigansForcing, target::AbstractProcess, args...)
     return forcing(i, j, k, get_field_grid(grid), state.clock, state)

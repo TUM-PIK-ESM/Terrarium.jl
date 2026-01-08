@@ -1,10 +1,9 @@
 using Terrarium
+using Terrarium: forcing, volumetric_water_content_tendency, hydraulic_conductivity
 using Test
 
 using FreezeCurves
 using Oceananigans
-
-import Terrarium: SurfaceEvaporation, hydraulic_conductivity
 
 @testset "Hydraulic properties (constant)" begin
     # For prescribed hyraulic properties, just check that the returned values
@@ -177,13 +176,21 @@ end
     @test ∫sat₀[1,1,1] ≈ ∫sat₁[1,1,1] ≈ ∫sat₂[1,1,1]
 end
 
-@testset "Soil ET" begin
+@testset "Soil moisture forcing" begin
+    mutable struct TestSoilWaterForcing{NF} <: Terrarium.AbstractForcing
+        value::NF
+    end
+
+    function Terrarium.forcing(i, j, k, state, grid, forcing::TestSoilWaterForcing, hydrology::SoilHydrology, args...)
+        return forcing.value
+    end
+
     Nz = 10
     grid = ColumnGrid(UniformSpacing(Δz=0.1, N=Nz))
     swrc = VanGenuchten(α=2.0, n=2.0)
     hydraulic_properties = ConstantHydraulics(Float64; cond_unsat=UnsatKVanGenuchten(Float64; swrc))
-    evapotranspiration = SurfaceEvaporation()
-    hydrology = SoilHydrology(eltype(grid), RichardsEq(); hydraulic_properties, evapotranspiration)
+    vwc_forcing = TestSoilWaterForcing(0.0)
+    hydrology = SoilHydrology(eltype(grid), RichardsEq(); hydraulic_properties, forcing=vwc_forcing)
     # Variably saturated with water table
     initializer = FieldInitializers(
         temperature = 10.0, # positive soil temperature
@@ -193,20 +200,19 @@ end
     integrator = initialize(model, ForwardEuler())
     state = integrator.state
     # check that forcing_ET is zero when no latent heat flux is supplied
-    @test iszero(Terrarium.forcing_ET(1, 1, Nz, grid.grid, state, evapotranspiration, model.constants))
-    # negative latent heat flux → condensation
-    set!(state.latent_heat_flux, -100.0)
-    ET_flux = Terrarium.forcing_ET(1, 1, Nz, grid.grid, state, evapotranspiration, model.constants)
-    @test ET_flux > 0
-    # positive latent heat flux → evaporation
-    set!(state.latent_heat_flux, 100.0)
-    ET_flux = Terrarium.forcing_ET(1, 1, Nz, grid.grid, state, evapotranspiration, model.constants)
-    @test ET_flux < 0
+    @test iszero(forcing(1, 1, Nz, grid.grid, state, hydrology))
+    # negative ET flux (evaporation)
+    vwc_forcing.value = -0.01
+    @test forcing(1, 1, Nz, grid.grid, state, hydrology) == vwc_forcing.value
+    # positive ET flux (condensation)
+    vwc_forcing.value = 0.01
+    @test forcing(1, 1, Nz, grid.grid, state, hydrology) == vwc_forcing.value
     # check tendency calculation
-    dθdt = Terrarium.volumetric_water_content_tendency(1, 1, Nz, grid, state, hydrology, model.constants)
-    @test dθdt == ET_flux
+    dθdt = volumetric_water_content_tendency(1, 1, Nz, grid, state, hydrology, model.constants)
+    @test dθdt == vwc_forcing.value
     # take one timestep and check that water was evaporated
     dt = 60.0
+    vwc_forcing.value = -1e-5
     timestep!(integrator, dt)
-    @test state.saturation_water_ice[1, 1, Nz] .≈ 1 + ET_flux*dt / hydraulic_properties.porosity
+    @test state.saturation_water_ice[1, 1, Nz] .≈ 1 + vwc_forcing.value*dt / hydraulic_properties.porosity
 end
