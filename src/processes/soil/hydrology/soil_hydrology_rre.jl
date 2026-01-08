@@ -45,8 +45,6 @@ end
 
 # Kernels
 
-# TODO: This is a dirty hack and basically the physical equivalent of money laundering.
-# We should ideally use an implicit timestepping scheme to avoid this.
 """
     adjust_saturation_profile!(
         state,
@@ -68,9 +66,10 @@ water is added to the `surface_excess_water` pool.
     sat = state.saturation_water_ice
     field_grid = get_field_grid(grid)
     N = field_grid.Nz
+    # First iterate over soil layers from bottom to top
+    # TODO: This function might perform badly on GPU....
+    # Can we optimize it somehow?
     @inbounds for k in 1:N-1
-        # TODO: This function might perform badly on GPU....
-        # Can we optimize it somehow?
         if sat[i, j, k] > one(NF)
             # calculate excess saturation
             excess_sat = sat[i, j, k] - one(NF)
@@ -79,11 +78,27 @@ water is added to the `surface_excess_water` pool.
             sat[i, j, k+1] += excess_sat
         end
     end
+    # then from top to bottom
+    @inbounds for k in N:-1:2
+        # TODO: This function might perform badly on GPU....
+        if sat[i, j, k] < zero(NF)
+            # calculate saturation deficit
+            deficit_sat = -sat[i, j, k]
+            # add  back saturation deficit and subtract from layer below
+            sat[i, j, k] += deficit_sat
+            sat[i, j, k-1] -= deficit_sat
+        end
+    end
     @inbounds if sat[i, j, N] > one(NF)
         # If the uppermost (surface) layer is oversaturated, add to excess water pool
         excess_sat = sat[i, j, N] - one(NF)
         sat[i, j, N] -= excess_sat
         state.surface_excess_water[i, j, 1] += excess_sat*Δzᵃᵃᶜ(i, j, N, field_grid)
+    end
+    @inbounds if sat[i, j, 1] < zero(NF)
+        # If the uppermost (surface) layer has a deficit, just set to zero.
+        # This constitutes a mass balance violation but should not happen under realistic conditions.
+        state.sat[i, j, 1] = zero(NF)
     end
 end
 
