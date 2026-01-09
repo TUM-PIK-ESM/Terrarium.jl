@@ -20,23 +20,12 @@ Compute partial pressure of CO2 from surface pressure and CO2 concentration in P
 end
 
 """
-    $SIGNATURES
+    vapor_pressure_to_specific_humidity(e, p, ε)
 
-Computes the vapor pressure deficit from air temperature, specific humidity, and surface pressure.
+Convert the vapor pressure `e` to specific humidity at the given pressure `p` based on the
+molecular weight ratio ε.
 """
-@inline function compute_vpd(T_air::NF, q_air::NF, pres::NF) where NF
-    # Compute Saturation vapor pressure over water [Pa]
-    e_sat_w = NF(6.1094e2) * exp(NF(17.625) * T_air / (NF(243.04) + T_air))
-
-    # Convert air specific humidity to vapor pressure [Pa]
-    q_to_e = q_air * pres / (NF(0.622) + NF(0.378) * q_air)
-
-    # Compute vapor pressure deficit [Pa]
-    # TODO is the max operation needed?
-    vpd = max(e_sat_w - q_to_e, NF(0.1))
-
-    return vpd
-end
+@inline vapor_pressure_to_specific_humidity(e, p, ε) = ε * e / p
 
 """
     relative_to_specific_humidity(r_h, pr, Ts, Tair)
