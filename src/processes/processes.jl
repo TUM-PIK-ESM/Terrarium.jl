@@ -4,14 +4,22 @@ export PhysicalConstants
 include("physical_constants.jl")
 include("physics_utils.jl")
 
+# Abstract types and methods
+
+include("atmosphere/abstract_types.jl")
+include("surface_energy/abstract_types.jl")
+include("surface_hydrology/abstract_types.jl")
+include("soil/abstract_types.jl")
+include("vegetation/abstract_types.jl")
+
 # Atmosphere
 
+export ConstantAerodynamicResistance
+include("atmosphere/aerodynamic_resistance.jl")
 export PrescribedAtmosphere, TwoPhasePrecipitation, LongShortWaveRadiation, TracerGas, TracerGases, AmbientCO2
-include("prescribed_atmosphere.jl")
+include("atmosphere/prescribed_atmosphere.jl")
 
 # Soil
-
-include("soil/abstract_types.jl")
 
 export SoilTexture
 include("soil/stratigraphy/soil_texture.jl")
@@ -40,8 +48,6 @@ include("soil/energy/soil_energy.jl")
 
 # Vegetation
 
-include("vegetation/abstract_types.jl")
-
 export PALADYNCarbonDynamics
 include("vegetation/carbon_dynamics.jl")
 
@@ -67,8 +73,6 @@ export PALADYNAutotrophicRespiration
 include("vegetation/autotrophic_respiration.jl")
 
 # Surface Energy Balance
-
-include("surface_energy/abstract_types.jl")
 
 export PrescribedAlbedo, ConstantAlbedo
 include("surface_energy/albedo.jl")

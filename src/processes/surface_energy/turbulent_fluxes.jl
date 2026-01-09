@@ -1,7 +1,3 @@
-abstract type AbstractAerodynamicResistance end
-
-abstract type AbstractLatentHeatFlux end
-
 """
     $TYPEDEF
 
@@ -25,24 +21,7 @@ latent_heat_flux(i, j, state, ::PrescribedTurbulentFluxes) = state.latent_heat_f
 Represents the standard case where the turbulent (sensible and latent) heat fluxes are diagnosed
 from atmosphere and soil conditions.
 """
-struct DiagnosedTurbulentFluxes{
-    LF<:AbstractLatentHeatFlux,
-    AR<:AbstractAerodynamicResistance
-} <: AbstractTurbulentFluxes
-    "Formulation of the latent heat flux"
-    latent_heat_flux::LF
-
-    "Parameterizations of boundary layer aerodynamics"
-    aerodynamic_resistance::AR
-end
-
-function DiagnosedTurbulentFluxes(
-    ::Type{NF};
-    latent_heat_flux::AbstractLatentHeatFlux = UnlimitedET(),
-    aerodynamic_resistance::AbstractAerodynamicResistance = ConstantAerodynamicResistance(NF)
-) where {NF}
-    return DiagnosedTurbulentFluxes(latent_heat_flux, aerodynamic_resistance)
-end
+struct DiagnosedTurbulentFluxes <: AbstractTurbulentFluxes end
 
 # Process methods
 
@@ -110,7 +89,7 @@ end
     atmos::AbstractAtmosphere,
     constants::PhysicalConstants
 )
-    let L = constants.Lsg, # specific latent heat of vaporization of water
+    let L = constants.Llg, # specific latent heat of vaporization of water
         ρₐ = constants.ρₐ, # density of air
         rₐ = aerodynamic_resistance(i, j, state, tur.aerodynamic_resistance), # aerodynamic resistance
         β = soil_moisture_limiting_factor(i, j, state, tur.latent_heat_flux),
@@ -133,38 +112,11 @@ the skin temperature and atmospheric pressure.
     constants::PhysicalConstants
 )
     let T = skin_temperature(i, j, state, skinT),
-        γ = constants.γ,
+        ε = constants.ε,
         p = air_pressure(i, j, state, atmos),
         e = saturation_vapor_pressure(T);
         # convert saturation vapor pressure to specific humidity
-        q_sat = γ * e / p
+        q_sat = ε * e / p
         return q_sat
     end
 end
-
-# Latent heat flux types
-
-struct UnlimitedET <: AbstractLatentHeatFlux end
-
-# not yet implemented
-struct SoilMoistureLimitedET <: AbstractLatentHeatFlux end
-
-variables(::AbstractLatentHeatFlux) = (
-    auxiliary(:latent_heat_flux, XY(), units=u"W/m^2", desc="Latent heat flux at the surface [W m⁻²]"),
-)
-
-@inline soil_moisture_limiting_factor(i, j, state, ::UnlimitedET) = 1
-
-"""
-    $TYPEDEF
-
-Dummy implementation of the aerodynamic resistance that simply returns a constant value.
-"""
-@kwdef struct ConstantAerodynamicResistance{NF} <: AbstractAerodynamicResistance
-    "Constant aerodynamic resistance [s m⁻¹]"
-    rₐ::NF = 50.0
-end
-
-ConstantAerodynamicResistance(::Type{NF}; kwargs...) where {NF} = ConstantAerodynamicResistance{NF}(; kwargs...)
-
-@inline aerodynamic_resistance(i, j, state, res::ConstantAerodynamicResistance) = res.rₐ
