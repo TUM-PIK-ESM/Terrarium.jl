@@ -1,21 +1,14 @@
-"""
-    $TYPEDEF
-
-Base type for `AbstractProcess`es that provide forcing tendencies to other `AbstractProcess`es.
-Subtypes of `AbstractForcing` must provide dispatches for [`forcing`](@ref).
-"""
-abstract type AbstractForcing <: AbstractProcess end
 
 const OceananigansForcing{P} = Union{DiscreteForcing{P}, ContinuousForcing{LX, LY, LZ, P}} where {LX, LY, LZ}
-const AnyForcing = Union{AbstractForcing, OceananigansForcing}
+const AnyForcing = Union{AbstractProcess, OceananigansForcing}
 
 """
     $TYPEDEF
 
-Container type that wraps a `Dict` of forcings, which may be `AbstractForcing`s (`AbstractProcess`es that implement
+Container type that wraps a `Dict` of forcings, which may be `AbstractProcess`es (`AbstractProcess`es that implement
 the [`forcing`](@ref) method) or `Oceananigans` forcing functions, i.e. `ContinuousForcing` or `DiscreteForcing`.
 """
-struct Forcings <: AbstractForcing
+struct Forcings
     forcings::Dict{Symbol, AnyForcing}
 end
 
@@ -24,13 +17,15 @@ function Forcings(; kwargs...)
 end
 
 """
-    forcing(i, j, k, state, grid, forcing::AbstractForcing, target::AbstractProcess, args...)
+    forcing(i, j, k, state, grid, forcing::AbstractProcess, target::AbstractProcess, args...)
 
 Compute a forcing tendency contribution of `proc` to the `target` process at volume `i, j, k`
 on `grid` given the current `state`. Typically `proc` represents a source/sink that acts on
-a prognostic state variable defined by `target`. 
+a prognostic state variable defined by `target`. Default implementation returns `zero(eltype(grid))`.
 """
-function forcing end
+@inline function forcing(i, j, k, state, grid, forcing::AbstractProcess, target::AbstractProcess, args...)
+    return zero(eltype(grid))
+end
 
 """
     forcing(i, j, k, state, grid, target::AbstractProcess, args...)
