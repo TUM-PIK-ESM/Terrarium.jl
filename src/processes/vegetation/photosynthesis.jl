@@ -86,10 +86,11 @@ end
 LUEPhotosynthesis(::Type{NF}; kwargs...) where {NF} = LUEPhotosynthesis{NF}(; kwargs...)
 
 variables(::LUEPhotosynthesis{NF}) where {NF} = (
+    auxiliary(:An, XY()), # Daily net assimilation (photosynthesis) [gC/m²/day]
     auxiliary(:Rd, XY()), # Daily leaf respiration [gC/m²/day]
     auxiliary(:GPP, XY()), # Gross Primary Production [kgC/m²/day]
     input(:SMLF, XY(), default=NF(1)), # soil moisture limiting factor with default value of 1
-    input(:λc, XY()), # Ratio of leaf-internal and air CO2 concentration [-]
+    input(:λc, XY()), # Ratio of leaf-internal to air CO2 concentration [-]
     input(:LAI, XY()), # Leaf Area Index [m²/m²]
 )
 
@@ -245,24 +246,6 @@ Eqn 2, Haxeltine & Prentice 1996
     return Ag
 end
 
-
-"""
-    $SIGNATURES
-Computes the total daytime net photosynthesis `And` [gC/m²/day],
-Eqn 19, Haxeltine & Prentice 1996 + Eq. 65, PALADYN (Willeit 2016).
-"""
-@inline function compute_And(photo::LUEPhotosynthesis, c_1::NF, c_2::NF, APAR::NF, Vc_max::NF, β::NF, Rd::NF) where NF
-    # Compute Ag, the daily gross photosynthesis 
-    Ag = compute_Ag(photo, c_1, c_2, APAR, Vc_max, β)
-
-    # Compute An, the daily net photosynthesis 
-    An = Ag - Rd
-
-    # Compute And, the total daytime net photosynthesis
-    And = An + (NF(1.0) - photo.day_length / NF(24.0)) * Rd
-    return And
-end
-
 """
     $SIGNATURES
 
@@ -303,9 +286,16 @@ function compute_photosynthesis(photo::LUEPhotosynthesis{NF}, T_air::NF, swdown:
             
             # Compute daily leaf respiration [gC/m²/day]
             Rd = compute_Rd(photo, Vc_max, β)
-            
-            # Compute And, total daytime net photosynthesis [gC/m²/day]
-            And = compute_And(photo, c_1, c_2, APAR, Vc_max, β, Rd)
+
+            # Compute Ag, the daily gross photosynthesis [gC/m²/day]
+            Ag = compute_Ag(photo, c_1, c_2, APAR, Vc_max, β)
+
+            # Compute An, the daily net photosynthesis [gC/m²/day]
+            An = Ag - Rd
+
+            # Compute And, the total daytime net photosynthesis `And` [gC/m²/day],
+            # Eq 19, Haxeltine & Prentice 1996 + Eq. 65, PALADYN (Willeit 2016).
+            And = An + (NF(1.0) - photo.day_length / NF(24.0)) * Rd
 
             # Compute daily GPP [kgC/m²/day]
             GPP = And * NF(1.e-3)
@@ -313,17 +303,19 @@ function compute_photosynthesis(photo::LUEPhotosynthesis{NF}, T_air::NF, swdown:
         else
             # No leaves, no photosynthesis 
             GPP = zero(NF)
+            An = zero(NF)
             # No leaves, no leaf respiration
             Rd = zero(NF)
         end
     else
         # No light, no photosynthesis
         GPP = zero(NF)
+        An = zero(NF)
         # TODO Rd = 0 here?
         Rd = zero(NF)
     end
 
-    return GPP, Rd
+    return GPP, Rd, An
 end
 
 function compute_auxiliary!(state, model, photo::LUEPhotosynthesis)
@@ -350,11 +342,14 @@ end
         LAI = state.LAI[i, j],
         λc = state.λc[i, j];
 
-        # Compute GPP, Gross Primary Production in [kgC/m²/day] and Rd, daily leaf respiration in [gC/m²/day]
-        GPP, Rd = compute_photosynthesis(photo, T_air, swdown, pres, co2, LAI, λc, β)
+        # Compute GPP, Gross Primary Production in [kgC/m²/day],
+        # Rd, daily leaf respiration in [gC/m²/day],
+        # An, daily net photosynthesis
+        GPP, Rd, An = compute_photosynthesis(photo, T_air, swdown, pres, co2, LAI, λc, β)
     
         # Store results
         state.GPP[i, j] = GPP
         state.Rd[i, j] = Rd
+        state.An[i, j] = An
     end
 end
