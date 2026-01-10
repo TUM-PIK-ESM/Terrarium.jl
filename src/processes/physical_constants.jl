@@ -74,7 +74,7 @@ Calcualte the psychrometric constant at the given atmospheric pressure `p`.
 Computes the vapor pressure deficit over a surface at temperature `Ts` from the given surface pressure, specific humidity of air, and air temperature.
 If `Ts` is not provided, it is assumed that the surface has the same temperature as the air.
 """
-@inline function compute_vpd(c::PhysicalConstants, pres, q_air, Tair, Ts = nothing) where NF
+@inline function compute_vpd(c::PhysicalConstants{NF}, pres, q_air, Tair, Ts = nothing) where NF
     # Saturation vapor pressure over water [Pa]
     # e_sat_w = NF(6.1094e2) * exp(NF(17.625) * T_air / (NF(243.04) + T_air))
 

@@ -70,17 +70,7 @@ $TYPEDFIELDS
 
     # TODO check physical meaning of this parameter
     "Shape parameter [-]"
-    θ_r::NF = 0.7 
-
-    # TODO add implementaion for daylength later
-    # For now, consider constant
-    "Day length [h/day]"
-    day_length::NF = 24.0
-
-    # TODO add implementaion for sec_day later
-    # For now, consider constant
-    "Seconds per day [s/day]"
-    sec_day::NF = 8.765813e4
+    θ_r::NF = 0.7
 end
 
 LUEPhotosynthesis(::Type{NF}; kwargs...) where {NF} = LUEPhotosynthesis{NF}(; kwargs...)
@@ -122,16 +112,16 @@ end
 
 """
     $SIGNATURES
-Computes NET Photosynthetically Active Radiation `PAR` [mol/m²/day].
+Computes NET Photosynthetically Active Radiation `PAR` [mol/m²/s].
 """
 @inline function compute_PAR(photo::LUEPhotosynthesis{NF}, swdown::NF) where NF
-    PAR = NF(0.5) * swdown * photo.sec_day * (NF(1.0) - photo.α_leaf) * photo.cq
+    PAR = NF(0.5) * swdown * (NF(1.0) - photo.α_leaf) * photo.cq
     return PAR
 end
 
 """
     $SIGNATURES
-Computes absorbed PAR limited by the fraction of PAR assimilated at ecosystem level `APAR` [mol/m²/day],
+Computes absorbed PAR limited by the fraction of PAR assimilated at ecosystem level `APAR` [mol/m²/s],
 Eq. 62, PALADYN (Willeit 2016).
 """
 @inline function compute_APAR(photo::LUEPhotosynthesis{NF}, swdown::NF, LAI::NF) where NF
@@ -190,41 +180,29 @@ end
 
 """
     $SIGNATURES
-Computes the maximum daily rate of net photosynthesis `Vc_max` [gC/m²/day],
+Computes the maximum rate of net photosynthesis `Vc_max` [gC/m²/s],
 following the coordination hypothesis (acclimation), see Harrison 2021 Box 2.
 Note: this is not the same formula in PALADYN paper, this implementaion is taken from the code
 """
-@inline function compute_Vc_max(photo::LUEPhotosynthesis{NF}, c_1::NF, APAR::NF, Kc::NF, Ko::NF, Γ_star::NF, pres_i::NF, pres_O2::NF) where NF
-    Vc_max = c_1 * APAR * (pres_i + Kc * (NF(1.0) + pres_O2 / Ko)) / (pres_i - Γ_star)
+@inline function compute_Vc_max(photo::LUEPhotosynthesis{NF}, c_1::NF, PAR::NF, Kc::NF, Ko::NF, Γ_star::NF, pres_i::NF, pres_O2::NF) where NF
+    Vc_max = c_1 * PAR * (pres_i + Kc * (NF(1.0) + pres_O2 / Ko)) / (pres_i - Γ_star)
     return Vc_max
 end
 
 """
     $SIGNATURES
-Computes the PAR-limited and the rubisco-activity-limited photosynthesis rates `JE` and `JC` [gC/m²/day],
+Computes the PAR-limited and the rubisco-activity-limited photosynthesis rates `JE` and `JC` [gC/m²/s],
 Eqn 3+5, Haxeltine & Prentice 1996.
 """
 @inline function compute_JE_JC(photo::LUEPhotosynthesis{NF}, c_1::NF, c_2::NF, APAR::NF, Vc_max::NF) where NF
-    JE = c_1 * APAR / photo.day_length
-    JC = c_2 * Vc_max / NF(24.0)
+    JE = c_1 * APAR
+    JC = c_2 * Vc_max
     return JE, JC
 end
 
 """
     $SIGNATURES
-Computes the soil-moisture limiting factor `β`,
-Eq. 66, PALADYN (Willeit 2016).
-"""
-@inline function compute_β(photo::LUEPhotosynthesis{NF}) where NF
-    # TODO add implementaion for β (depends on soil moisture)
-    # For now, set it to 1.0, no soil moisture limitation
-    β = NF(1.0)
-    return β
-end
-
-"""
-    $SIGNATURES
-Computes the daily leaf respiration `Rd` [gC/m²/day],
+Computes the leaf respiration rate `Rd` [gC/m²/s],
 Eqn 10, Haxeltine & Prentice 1996 and Eq. 10 PALADYN (Willeit 2016).
 """
 @inline function compute_Rd(photo::LUEPhotosynthesis, Vc_max, β)
@@ -234,7 +212,7 @@ end
 
 """
     $SIGNATURES
-Computes the daily gross photosynthesis `Ag` [gC/m²/day],
+Computes the gross photosynthesis rate `Ag` [gC/m²/s],
 Eqn 2, Haxeltine & Prentice 1996
 """
 @inline function compute_Ag(photo::LUEPhotosynthesis{NF}, c_1::NF, c_2::NF, APAR::NF, Vc_max::NF, β::NF) where NF
@@ -242,7 +220,7 @@ Eqn 2, Haxeltine & Prentice 1996
     JE, JC = compute_JE_JC(photo, c_1, c_2, APAR, Vc_max)
 
     # TODO photosyntheis downregulation ignored for now
-    Ag = (JE + JC - sqrt((JE + JC)^2 - NF(4.0) * photo.θ_r * JE * JC)) / (NF(2.0) * photo.θ_r) * photo.day_length * β
+    Ag = (JE + JC - sqrt((JE + JC)^2 - NF(4) * photo.θ_r * JE * JC)) / (NF(2) * photo.θ_r) * β
     return Ag
 end
 
@@ -251,14 +229,16 @@ end
 
 Computes Gross Primary Production `GPP`in [kgC/m²/day] and leaf respiration `Rd` in [gC/m²/day]
 """
-function compute_photosynthesis(photo::LUEPhotosynthesis{NF}, T_air::NF, swdown::NF, pres::NF, co2::NF, LAI::NF, λc::NF, β::NF) where NF
+function compute_photosynthesis(
+    photo::LUEPhotosynthesis{NF},
+    T_air::NF, swdown::NF, pres::NF, co2::NF, LAI::NF, λc::NF, β::NF,
+) where NF
     # Compute partial CO2 and O2 pressures in [Pa]
     pres_O2 = partial_pressure_O2(pres)
     pres_a = partial_pressure_CO2(pres, co2)
 
     # TODO check this condition
-    if (photo.day_length > zero(NF)) && (T_air > NF(-3.0))
-        
+    if swdown > zero(NF) && T_air > NF(-3.0)
         # Compute kinetic parameters 
         # TODO check physical meaning of these parameters,  Appendix C in PALADYN paper
         # TODO add units
@@ -271,7 +251,7 @@ function compute_photosynthesis(photo::LUEPhotosynthesis{NF}, T_air::NF, swdown:
         # TODO check for bioclimatic limit ignored for now
         if LAI > zero(NF)
 
-            # Compute absorbed PAR [mol/m²/day]
+            # Compute absorbed PAR [mol/m²/s]
             APAR = compute_APAR(photo, swdown, LAI)
 
             # Compute pres_i, intercellular CO2 partial pressure [Pa]
@@ -281,41 +261,46 @@ function compute_photosynthesis(photo::LUEPhotosynthesis{NF}, T_air::NF, swdown:
             # TODO add units
             c_1, c_2 = compute_c1_c2(photo, T_air, Γ_star, Kc, Ko, pres_i, pres_O2)
 
-            # Compute Vc_max, maximum rate of carboxylation [gC/m²/day]
+            # Compute Vc_max, maximum rate of carboxylation [gC/m²/s]
             Vc_max = compute_Vc_max(photo, c_1, APAR, Kc, Ko, Γ_star, pres_i, pres_O2)
             
-            # Compute daily leaf respiration [gC/m²/day]
+            # Compute leaf respiration rate [gC/m²/s]
             Rd = compute_Rd(photo, Vc_max, β)
 
-            # Compute Ag, the daily gross photosynthesis [gC/m²/day]
+            # Compute Ag, the gross photosynthesis rate [gC/m²/s]
             Ag = compute_Ag(photo, c_1, c_2, APAR, Vc_max, β)
 
-            # Compute An, the daily net photosynthesis [gC/m²/day]
+            # Compute An, the net photosynthesis rate [gC/m²/s]
             An = Ag - Rd
-
-            # Compute And, the total daytime net photosynthesis `And` [gC/m²/day],
-            # Eq 19, Haxeltine & Prentice 1996 + Eq. 65, PALADYN (Willeit 2016).
-            And = An + (NF(1.0) - photo.day_length / NF(24.0)) * Rd
-
-            # Compute daily GPP [kgC/m²/day]
-            GPP = And * NF(1.e-3)
-            
         else
             # No leaves, no photosynthesis 
-            GPP = zero(NF)
             An = zero(NF)
             # No leaves, no leaf respiration
             Rd = zero(NF)
         end
     else
         # No light, no photosynthesis
-        GPP = zero(NF)
         An = zero(NF)
         # TODO Rd = 0 here?
         Rd = zero(NF)
     end
 
-    return GPP, Rd, An
+    return Rd, An
+end
+
+"""
+    $SIGNATURES
+
+Compute the Gross Primary Production [kgC/m²/s].
+"""
+function compute_GPP(::LUEPhotosynthesis{NF}, An::NF) where {NF}
+    # Compute And, the total daytime net photosynthesis `And` [gC/m²/day],
+    # Eq 19, Haxeltine & Prentice 1996 + Eq. 65, PALADYN (Willeit 2016).
+    # And = (An + (NF(1.0) - day_length / NF(24.0)) * Rd) * seconds_per_day(NF)
+
+    # Compute GPP [kgC/m²/s]
+    GPP = An * NF(1.e-3)
+    return GPP
 end
 
 function compute_auxiliary!(state, model, photo::LUEPhotosynthesis)
@@ -337,15 +322,18 @@ end
         T_air = air_temperature(i, j, state, atmos),
         pres = air_pressure(i, j, state, atmos),
         swdown = shortwave_in(i, j, state, atmos),
+        # day_length = daytime_length(i, j, state, atmos),
         co2 = state.CO2[i, j], # no method for this currently...
         β = state.SMLF[i, j],
         LAI = state.LAI[i, j],
         λc = state.λc[i, j];
 
-        # Compute GPP, Gross Primary Production in [kgC/m²/day],
-        # Rd, daily leaf respiration in [gC/m²/day],
-        # An, daily net photosynthesis
-        GPP, Rd, An = compute_photosynthesis(photo, T_air, swdown, pres, co2, LAI, λc, β)
+        # Compute Rd, leaf respiration rate in [gC/m²/s],
+        # An, daily net photosynthesis [gC/m²/s]
+        Rd, An = compute_photosynthesis(photo, T_air, swdown, pres, co2, LAI, λc, β)
+
+        # Compute GPP, Gross Primary Production in [kgC/m²/s]
+        GPP = compute_GPP(photo, An)
     
         # Store results
         state.GPP[i, j] = GPP

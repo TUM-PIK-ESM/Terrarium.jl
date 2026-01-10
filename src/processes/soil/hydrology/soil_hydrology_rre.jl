@@ -122,7 +122,7 @@ Kernel for diagnosing the water table at each grid point given the current soil 
     i, j = @index(Global, NTuple)
     sat = state.saturation_water_ice
     # scan z axis starting from the bottom (index 1) to find first non-saturated grid cell
-    state.water_table[i, j, 1] = findfirst_z((i, j), <(one(NF)), z_faces, sat)
+    @inbounds state.water_table[i, j, 1] = findfirst_z((i, j), <(one(NF)), z_faces, sat)
 end
 
 """
@@ -175,10 +175,10 @@ Kernel for computing the tendency of the prognostic `saturation_water_ice` varia
     constants::PhysicalConstants
 )
     i, j, k = @index(Global, NTuple)
-    # Get porosity
-    por = porosity(i, j, k, state, grid, strat)
     # Compute volumetic water content tendency
     ∂θ∂t = volumetric_water_content_tendency(i, j, k, grid, state, hydrology, constants)
+    # Get porosity
+    por = porosity(i, j, k, state, grid, strat)
     # Rescale by porosity to get saturation tendency
     state.tendencies.saturation_water_ice[i, j, k] +=  ∂θ∂t / por
 end

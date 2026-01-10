@@ -1,6 +1,5 @@
 
 const OceananigansForcing{P} = Union{DiscreteForcing{P}, ContinuousForcing{LX, LY, LZ, P}} where {LX, LY, LZ}
-const AnyForcing = Union{AbstractProcess, OceananigansForcing}
 
 """
     $TYPEDEF
@@ -9,8 +8,10 @@ Container type that wraps a `Dict` of forcings, which may be `AbstractProcess`es
 the [`forcing`](@ref) method) or `Oceananigans` forcing functions, i.e. `ContinuousForcing` or `DiscreteForcing`.
 """
 struct Forcings
-    forcings::Dict{Symbol, AnyForcing}
+    forcings::Dict{Symbol, Union{AbstractProcess, OceananigansForcing}}
 end
+
+const ForcingType = Union{AbstractProcess, OceananigansForcing, Forcings}
 
 function Forcings(; kwargs...)
     return Forcings(Dict(kwargs...))

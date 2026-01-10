@@ -18,7 +18,7 @@ struct SoilHydrology{
     NF,
     VerticalFlow<:AbstractVerticalFlow,
     SoilHydraulics<:AbstractSoilHydraulics{NF},
-    VWCForcing<:AbstractForcing
+    VWCForcing<:ForcingType
 } <: AbstractSoilHydrology{NF}
     "Soil water vertical flow operator"
     vertflow::VerticalFlow
@@ -33,7 +33,7 @@ end
 function SoilHydrology(
     ::Type{NF},
     vertflow::AbstractVerticalFlow = NoFlow();
-    forcing::AbstractForcing = Forcings(),
+    forcing::ForcingType = Forcings(),
     hydraulic_properties::AbstractSoilHydraulics = SoilHydraulicsSURFEX(NF),
 ) where {NF}
     return SoilHydrology(vertflow, hydraulic_properties, forcing)
