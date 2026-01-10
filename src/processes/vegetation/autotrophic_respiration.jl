@@ -25,8 +25,8 @@ end
 PALADYNAutotrophicRespiration(::Type{NF}; kwargs...) where {NF} = PALADYNAutotrophicRespiration{NF}(; kwargs...)
 
 variables(::PALADYNAutotrophicRespiration) = (
-    auxiliary(:GPP, XY()), # Gross Primary Production [kgC/m²/day]
     auxiliary(:Ra, XY()), # Autotrophic respiration [kgC/m²/day]
+    input(:GPP, XY()), # Gross Primary Production [kgC/m²/day]
     input(:Rd, XY()), # Daily leaf respiration [gC/m²/day]
     input(:phen, XY()), # Phenology factor [-]
     input(:ground_temperature, XY(), units=u"°C"), # Ground surface temperature [°C]
