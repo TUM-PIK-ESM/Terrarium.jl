@@ -46,6 +46,7 @@ struct PrescribedAtmosphere{
     Humid<:AbstractHumidity,
     Precip<:AbstractPrecipitation,
     IncomingRad<:AbstractIncomingRadiation,
+    Aerodynamics<:AbstractAerodynamics,
     Tracers<:NamedTuple{tracernames,<:Tuple{Vararg{TracerGas}}}
 } <: AbstractAtmosphere{Precip, IncomingRad, Humid}
     "Surface-relative altitude in meters at which the atmospheric forcings are assumed to be applied"
@@ -85,6 +86,7 @@ variables(atmos::PrescribedAtmosphere) = (
     variables(atmos.humidity)...,
     variables(atmos.precip)...,
     variables(atmos.radiation)...,
+    variables(atmos.aerodynamics)...,
     # splat all tracer variables into one tuple
     tuplejoin(map(variables, atmos.tracers)...)...,
 )
@@ -179,6 +181,7 @@ struct LongShortWaveRadiation <: AbstractIncomingRadiation end
 variables(::LongShortWaveRadiation) = (
     input(:surface_shortwave_down, XY(), units=u"W/m^2", desc="Incoming (downwelling) shortwave solar radiation"),
     input(:surface_longwave_down, XY(), units=u"W/m^2", desc="Incoming (downwelling) longwave thermal radiation"),
+    input(:daytime_length, XY(), default=12, units=u"hr", desc="Number of daytime hours varying with the season and orbital parameters")
 )
 
 """
@@ -194,3 +197,10 @@ shortwave_in(i, j, state, ::AbstractAtmosphere{PR, <:LongShortWaveRadiation}) wh
 Retrieve or compute the incoming/downwelling longwave radiation at the current time step.
 """
 longwave_in(i, j, state, ::AbstractAtmosphere{PR, <:LongShortWaveRadiation}) where {PR} = state.surface_longwave_down[i, j]
+
+"""
+    daytime_length(i, j, state, ::AbstractAtmosphere{PR, <:LongShortWaveRadiation})
+
+Retrieve the length of the day (in hours) at grid cell `i, j`. Defaults to a constant 12 hours if no input is provided.
+"""
+daytime_length(i, j, state, ::AbstractAtmosphere{PR, <:LongShortWaveRadiation}) where {PR} = state.daytime_length[i, j]
