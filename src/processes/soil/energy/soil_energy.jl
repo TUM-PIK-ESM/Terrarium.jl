@@ -59,8 +59,6 @@ variables(energy::SoilEnergyBalance) = (
     auxiliary(:liquid_water_fraction, XYZ(), domain=UnitInterval(), desc="Fraction of unfrozen water in the pore space"),
 )
 
-liquid_water_fraction(i, j, k, state, grid, ::SoilEnergyBalance) = @inline state.liquid_water_fraction[i, j, k]
-
 # evaluate inverse closure (temperature -> energy) on initialize!
 function initialize!(state, model, energy::SoilEnergyBalance)
     invclosure!(state, model, get_closure(energy))
@@ -112,16 +110,16 @@ end
     strat::AbstractStratigraphy,
     bgc::AbstractSoilBiogeochemistry
 )
-    soil = soil_volume(i, j, k, state, grid, strat, energy, hydrology, bgc)
+    soil = soil_volume(i, j, k, state, grid, strat, hydrology, bgc)
     return thermalconductivity(energy.thermal_properties, soil)
 end
 
 # Diffusive heat flux term passed to ∂z operator
-@inline function diffusive_heat_flux(i, j, k, grid, state, energy, hydrology, strat, bgc)
+@inline function diffusive_heat_flux(i, j, k, grid, state, args...)
     # Get temperature field
     T = state.temperature
     # Compute and interpolate conductivity to grid cell faces
-    κ = ℑzᵃᵃᶠ(i, j, k, grid, thermalconductivity, state, energy, hydrology, strat, bgc)
+    κ = ℑzᵃᵃᶠ(i, j, k, grid, thermalconductivity, state, args...)
     # Fourier's law: q = -κ ∂T/∂z
     q = -κ * ∂zᵃᵃᶠ(i, j, k, grid, T)
     return q

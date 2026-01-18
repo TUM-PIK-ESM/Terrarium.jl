@@ -28,10 +28,8 @@ end
 function compute_auxiliary!(state, model, hydrology::SoilHydrology{NF, <:RichardsEq}) where {NF}
     grid = get_grid(model)
     strat = get_soil_stratigraphy(model)
-    energy = get_soil_energy_balance(model)
-    hydrology = get_soil_hydrology(model)
     bgc = get_soil_biogeochemistry(model)
-    launch!(state, grid, :xyz, compute_hydraulics_kernel!, hydrology, strat, energy, bgc)
+    launch!(state, grid, :xyz, compute_hydraulics_kernel!, hydrology, strat, bgc)
     return nothing
 end
 
@@ -140,7 +138,6 @@ Kernel for computing soil hydraulics and unsaturated hydraulic conductivity.
     grid,
     hydrology::SoilHydrology{NF, <:RichardsEq},
     strat::AbstractStratigraphy,
-    energy::AbstractSoilEnergyBalance,
     bgc::AbstractSoilBiogeochemistry
 ) where {NF}
     i, j, k = @index(Global, NTuple)
@@ -148,12 +145,12 @@ Kernel for computing soil hydraulics and unsaturated hydraulic conductivity.
 
     # compute hydraulic conductivity
     @inbounds if k <= 1
-        state.hydraulic_conductivity[i, j, k] = hydraulic_conductivity(i, j, 1, fgrid, state, hydrology, strat, energy, bgc)
+        state.hydraulic_conductivity[i, j, k] = hydraulic_conductivity(i, j, 1, fgrid, state, hydrology, strat, bgc)
     elseif k >= fgrid.Nz
-        state.hydraulic_conductivity[i, j, k] = hydraulic_conductivity(i, j, fgrid.Nz, fgrid, state, hydrology, strat, energy, bgc)
+        state.hydraulic_conductivity[i, j, k] = hydraulic_conductivity(i, j, fgrid.Nz, fgrid, state, hydrology, strat, bgc)
         state.hydraulic_conductivity[i, j, k + 1] = state.hydraulic_conductivity[i, j, k]
     else
-        state.hydraulic_conductivity[i, j, k] = min_zᵃᵃᶠ(i, j, k, fgrid, hydraulic_conductivity, state, hydrology, strat, energy, bgc)
+        state.hydraulic_conductivity[i, j, k] = min_zᵃᵃᶠ(i, j, k, fgrid, hydraulic_conductivity, state, hydrology, strat, bgc)
     end
 end
 
@@ -186,8 +183,8 @@ end
 # Kernel functions
 
 # This function is needed for an Oceananigans grid operator
-@inline function hydraulic_conductivity(i, j, k, grid, state, hydrology, strat, energy, bgc)
-    soil = soil_volume(i, j, k, state, grid, strat, energy, hydrology, bgc)
+@inline function hydraulic_conductivity(i, j, k, grid, state, hydrology, strat, bgc)
+    soil = soil_volume(i, j, k, state, grid, strat, hydrology, bgc)
     return hydraulic_conductivity(hydrology.hydraulic_properties, soil)
 end
 

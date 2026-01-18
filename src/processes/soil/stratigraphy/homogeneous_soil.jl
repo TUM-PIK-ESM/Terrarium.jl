@@ -63,19 +63,18 @@ Construct a `SoilVolume` object summarizing the material composition of the soil
 @inline function soil_volume(
     i, j, k, state, grid,
     strat::HomogeneousSoil,
-    energy::AbstractSoilEnergyBalance,
     hydrology::AbstractSoilHydrology,
     bgc::AbstractSoilBiogeochemistry
 )
     # get current saturation state and liquid fraction
     sat = saturation_water_ice(i, j, k, state, grid, hydrology)
-    liq = liquid_water_fraction(i, j, k, state, grid, energy)
+    liq = liquid_water_fraction(i, j, k, state, grid, hydrology)
     por = porosity(i, j, k, state, grid, strat)
     solid = @inbounds soil_matrix(i, j, k, state, grid, strat, bgc)
     return SoilVolume(por, sat, liq, solid)
 end
 
-# soil matrix for homogeneous soil stratigraphy
+# Soil matrix for homogeneous soil stratigraphy
 @inline function soil_matrix(
     i, j, k, state, grid,
     strat::HomogeneousSoil,

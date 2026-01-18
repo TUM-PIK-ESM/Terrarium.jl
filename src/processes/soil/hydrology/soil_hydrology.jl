@@ -70,9 +70,11 @@ variables(::SoilHydrology{NF}) where {NF} = (
     input(:liquid_water_fraction, XYZ(), default = 1, domain=UnitInterval(), desc="Fraction of unfrozen water in the pore space") 
 )
 
-# Immobile soil water (NoFlow)
+@inline saturation_water_ice(i, j, k, state, grid, ::AbstractSoilHydrology) = @inbounds state.saturation_water_ice[i, j, k]
 
-@inline saturation_water_ice(i, j, k, state, grid, hydrology::AbstractSoilHydrology) = @inbounds state.saturation_water_ice[i, j, k]
+@inline liquid_water_fraction(i, j, k, state, grid, ::AbstractSoilHydrology) = @inbounds state.liquid_water_fraction[i, j, k]
+
+# Immobile soil water (NoFlow)
 
 @inline function initialize!(state, model, hydrology::SoilHydrology)
     set!(state.liquid_water_fraction, 1)

@@ -49,12 +49,11 @@ end
     ::FieldCapacityLimitedPAW{NF},
     hydrology::AbstractSoilHydrology,
     strat::AbstractStratigraphy,
-    energy::AbstractSoilEnergyBalance,
     bgc::AbstractSoilBiogeochemistry
 ) where {NF}
     i, j, k = @index(Global, NTuple)
 
-    @inbounds let soil = soil_volume(i, j, k, state, grid, strat, energy, hydrology, bgc),
+    @inbounds let soil = soil_volume(i, j, k, state, grid, strat, hydrology, bgc),
                   θfc = field_capacity(hydrology.hydraulic_properties, soil.solid.texture),
                   θwp = wilting_point(hydrology.hydraulic_properties, soil.solid.texture),
                   vol = volumetric_fractions(soil),
