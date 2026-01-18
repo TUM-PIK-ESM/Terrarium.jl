@@ -1,13 +1,13 @@
 """
     $TYPEDEF
 
-Dummy implementation of the aerodynamic resistance that simply returns a constant value.
+Dummy implementation of aerodynamics that simply returns constant values for all drag coefficients.
 """
-@kwdef struct ConstantAerodynamicResistance{NF} <: AbstractAerodynamics
-    "Constant aerodynamic resistance [s m⁻¹]"
-    rₐ::NF = 50.0
+@kwdef struct ConstantAerodynamics{NF} <: AbstractAerodynamics
+    "Drag coefficient for heat transfer"
+    Cₕ::NF = 50.0
 end
 
-ConstantAerodynamicResistance(::Type{NF}; kwargs...) where {NF} = ConstantAerodynamicResistance{NF}(; kwargs...)
+ConstantAerodynamics(::Type{NF}; kwargs...) where {NF} = ConstantAerodynamics{NF}(; kwargs...)
 
-@inline aerodynamic_resistance(i, j, state, res::ConstantAerodynamicResistance) = res.rₐ
+@inline drag_coefficient(i, j, state, grid, aero::ConstantAerodynamics) = aero.Cₕ

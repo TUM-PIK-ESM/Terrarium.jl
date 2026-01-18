@@ -237,7 +237,7 @@ function compute_photosynthesis(
     pres_O2 = partial_pressure_O2(pres)
     pres_a = partial_pressure_CO2(pres, co2)
 
-    # TODO check this condition
+    # TODO check this conditiong_min
     if swdown > zero(NF) && T_air > NF(-3.0)
         # Compute kinetic parameters 
         # TODO check physical meaning of these parameters,  Appendix C in PALADYN paper
@@ -319,10 +319,10 @@ end
 
     # Get inputs
     @inbounds let
-        T_air = air_temperature(i, j, state, atmos),
-        pres = air_pressure(i, j, state, atmos),
-        swdown = shortwave_in(i, j, state, atmos),
-        # day_length = daytime_length(i, j, state, atmos),
+        T_air = air_temperature(i, j, state, grid, atmos),
+        pres = air_pressure(i, j, state, grid, atmos),
+        swdown = shortwave_in(i, j, state, grid, atmos),
+        # day_length = daytime_length(i, j, state, grid, atmos),
         co2 = state.CO2[i, j], # no method for this currently...
         β = state.SMLF[i, j],
         LAI = state.LAI[i, j],

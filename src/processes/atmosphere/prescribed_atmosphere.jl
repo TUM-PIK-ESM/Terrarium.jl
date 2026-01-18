@@ -43,17 +43,17 @@ wave lengths representing solar and thermal (infrared) radiation.
 struct PrescribedAtmosphere{
     NF,
     tracernames,
-    Humid<:AbstractHumidity,
+    Humidity<:AbstractHumidity,
     Precip<:AbstractPrecipitation,
     IncomingRad<:AbstractIncomingRadiation,
     Aerodynamics<:AbstractAerodynamics,
     Tracers<:NamedTuple{tracernames,<:Tuple{Vararg{TracerGas}}}
-} <: AbstractAtmosphere{Precip, IncomingRad, Humid}
+} <: AbstractAtmosphere{Precip, IncomingRad, Humidity, Aerodynamics}
     "Surface-relative altitude in meters at which the atmospheric forcings are assumed to be applied"
     altitude::NF
 
     "Specific or relative humidity"
-    humidity::Humid
+    humidity::Humidity
 
     "Precipitation inputs"
     precip::Precip
@@ -136,7 +136,7 @@ Computes the specific humidity (vapor pressure) deficit over a surface at temper
 """
 @inline function compute_humidity_vpd(i, j, atmos::AbstractAtmosphere, c::PhysicalConstants, Ts = nothing)
     let Δe = compute_vpd(i, j, atmos, c, Ts),
-        p = air_pressure(i, j, state, atmos);
+        p = air_pressure(i, j, state, grid, atmos);
         Δq = vapor_pressure_to_specific_humidity(Δe, p, c.ε)
         return Δq
     end
@@ -147,11 +147,12 @@ end
 
 Computes the vapor pressure deficit over a surface at temperature `Ts` from the current atmospheric state.
 """
-@inline function compute_vpd(i, j, atmos::AbstractAtmosphere, c::PhysicalConstants, Ts = nothing) where NF
-    @inbounds let Tair = air_temperature(i, j, state, atmos),
-                  q_air = specific_humidity(i, j, state, atmos),
-                  pres = air_pressure(i, j, state, atmos);
-        return compute_vpd(c, pres, q_air, Tair, Ts)
+@inline function compute_vpd(i, j, atmos::AbstractAtmosphere, c::PhysicalConstants, Ts = nothing)
+    @inbounds let Tair = air_temperature(i, j, state, grid, atmos),
+                  q_air = specific_humidity(i, j, state, grid, atmos),
+                  pres = air_pressure(i, j, state, grid, atmos),
+                  Ts = isnothing(Ts) ? Tair : Ts;
+        return compute_vpd(c, pres, q_air, Ts)
     end
 end
 
@@ -204,3 +205,16 @@ longwave_in(i, j, state, ::AbstractAtmosphere{PR, <:LongShortWaveRadiation}) whe
 Retrieve the length of the day (in hours) at grid cell `i, j`. Defaults to a constant 12 hours if no input is provided.
 """
 daytime_length(i, j, state, ::AbstractAtmosphere{PR, <:LongShortWaveRadiation}) where {PR} = state.daytime_length[i, j]
+
+"""
+    aerodynamic_resistance(i, j, state, grid, atmos::PrescribedAtmosphere)
+
+Compute the aerodynamic resistance (inverse conductance) at grid cell `i, j`.
+"""
+@inline function aerodynamic_resistance(i, j, state, grid, atmos::PrescribedAtmosphere)
+    let C = drag_coefficient(i, j, state, grid, atmos.aerodynamics),
+        Vₐ = windspeed(i, j, state, grid, atmos);
+        rₐ = 1 / (C * Vₐ)
+        return rₐ
+    end
+end

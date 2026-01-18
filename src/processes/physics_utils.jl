@@ -38,11 +38,11 @@ molecular weight ratio ε.
 @inline vapor_pressure_to_specific_humidity(e, p, ε) = ε * e / p
 
 """
-    relative_to_specific_humidity(r_h, pr, Ts, Tair)
+    relative_to_specific_humidity(r_h, pr, Tair)
 
-Derives specific humidity from measured relative humidity, air pressure, and soil/air temperatures.
+Derives specific humidity from measured relative humidity, air pressure, and air temperature.
 """
-@inline relative_to_specific_humidity(r_h, pr, Ts, Tair) = 0.622 * (r_h / 100) * saturation_vapor_pressure(Tair, Ts) / pr
+@inline relative_to_specific_humidity(r_h, pr, T) = 0.622 * (r_h / 100) * saturation_vapor_pressure(Tair) / pr
 
 # saturation vapor pressure
 """
@@ -56,13 +56,13 @@ coefficients a₁, a₂, and a₃.
 """
     saturation_vapor_pressure(T, Ts=T)
 
-Saturation vapor pressure at the given temperature `T` over a surface at temperature `Ts`,
-accounting for both frozen (`Ts < 0°C`) and unfrozen conditions.
+Saturation vapor pressure at the given temperature `T`, accounting for both frozen (`T < 0°C`)
+and unfrozen conditions.
 
 Coefficients taken from Alduchov and Eskridge (1997).
 """
-@inline function saturation_vapor_pressure(T::NF, Ts::NF=T) where {NF}
-    if Ts <= zero(Ts)
+@inline function saturation_vapor_pressure(T::NF) where {NF}
+    if T <= zero(T)
         saturation_vapor_pressure(T, NF(611.0), NF(22.46), NF(272.62))
     else
         saturation_vapor_pressure(T, NF(611.0), NF(17.62), NF(243.12))

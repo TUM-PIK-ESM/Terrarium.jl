@@ -20,16 +20,18 @@ end
 MedlynStomatalConductance(::Type{NF}; kwargs...) where {NF} = MedlynStomatalConductance(; kwargs...)
 
 variables(::MedlynStomatalConductance) = (
-    auxiliary(:gw_can, XY(), units=u"mm/s"), # Canopy conducatance for water vapor
+    auxiliary(:gw_can, XY(), units=u"m/s"), # Canopy conducatance for water vapor
     auxiliary(:λc, XY()), # Ratio of leaf-internal and air CO2 concentration [-]
 )
+
+@inline @propagate_inbounds stomatal_conductance(i, j, state, grid, ::MedlynStomatalConductance) = state.gw_can[i, j]
 
 @inline function compute_gw_can(
     stomcond::MedlynStomatalConductance{NF},
     photo::LUEPhotosynthesis{NF},
     vpd, An, co2, LAI, β
 ) where NF
-    let g_min = stomcond.g_min,
+    let g_min = stomcond.g_min / 1000, # convert mm/s to m/s
         k_ext = photo.k_ext;
         g₀ = g_min * (1 - exp(-k_ext * LAI)) * β
         g_can = g₀ + (1 + g₁ / sqrt(vpd)) * An / co2 * NF(1e6)

@@ -92,4 +92,6 @@ end
 
 @inline skin_temperature(i, j, state, ::AbstractSkinTemperature) = @inbounds state.skin_temperature[i, j]
 
+@inline ground_temperature(i, j, state, ::AbstractSkinTemperature) = @inbounds state.ground_temperature[i, j]
+
 @inline ground_heat_flux(i, j, state, ::AbstractSkinTemperature) = @inbounds state.ground_heat_flux[i, j]

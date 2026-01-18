@@ -15,7 +15,7 @@ include("vegetation/abstract_types.jl")
 # Atmosphere
 
 export ConstantAerodynamicResistance
-include("atmosphere/aerodynamic_resistance.jl")
+include("atmosphere/aerodynamics.jl")
 export PrescribedAtmosphere, TwoPhasePrecipitation, LongShortWaveRadiation, TracerGas, TracerGases, AmbientCO2
 include("atmosphere/prescribed_atmosphere.jl")
 
@@ -88,3 +88,16 @@ include("surface_energy/turbulent_fluxes.jl")
 
 export SurfaceEnergyBalance
 include("surface_energy/surface_energy_balance.jl")
+
+# Suface Hydrology
+
+export GroundEvaporation
+include("surface_hydrology/ground_evaporation.jl")
+
+export CanopyEvapotranspiration
+include("surface_hydrology/canopy_evapotranpsiration.jl")
+
+export CanopyHydrology
+include("surface_hydrology/canopy_hydrology.jl")
+
+include("surface_hydrology/surface_runoff.jl")

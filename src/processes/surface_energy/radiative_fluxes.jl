@@ -71,8 +71,8 @@ end
     # get inputs
     surface_shortwave_up = state.surface_shortwave_up[i, j]
     surface_longwave_up = state.surface_longwave_up[i, j]
-    surface_shortwave_down = shortwave_in(i, j, state, atmos)
-    surface_longwave_down = longwave_in(i, j, state, atmos)
+    surface_shortwave_down = shortwave_in(i, j, state, grid, atmos)
+    surface_longwave_down = longwave_in(i, j, state, grid, atmos)
     Tsurf = skin_temperature(i, j, state, skinT)
     α = albedo(i, j, state, abd)
     ϵ = emissivity(i, j, state, abd)
@@ -88,8 +88,8 @@ end
     # get inputs
     surface_shortwave_up = state.surface_shortwave_up[i, j]
     surface_longwave_up = state.surface_longwave_up[i, j]
-    surface_shortwave_down = shortwave_in(i, j, state, atmos)
-    surface_longwave_down = longwave_in(i, j, state, atmos)
+    surface_shortwave_down = shortwave_in(i, j, state, grid, atmos)
+    surface_longwave_down = longwave_in(i, j, state, grid, atmos)
     
     # compute net radiation
     state.surface_net_radiation[i, j, 1] = surface_net_radiation(rad, surface_shortwave_down, surface_shortwave_up, surface_longwave_down, surface_longwave_up)
