@@ -38,12 +38,12 @@ function compute_auxiliary!(state, model, canopy_hydrology::PALADYNCanopyHydrolo
     grid = get_grid(model)
     atmos = get_atmosphere(model)
     constants = get_constants(model)
-    launch!(grid, :xy, compute_auxiliary_kernel!, state, canopy_hydrology, atmos, constants)
+    launch!(state, grid, :xy, compute_auxiliary_kernel!, canopy_hydrology, atmos, constants)
 end
 
 function compute_tendencies!(state, model, canopy_hydrology::PALADYNCanopyHydrology)
     grid = get_grid(model)
-    launch!(grid, :xy, compute_tendencies_kernel!, state, canopy_hydrology)
+    launch!(state, grid, :xy, compute_tendencies_kernel!, canopy_hydrology)
 end
 
 # Kernels
@@ -87,10 +87,11 @@ end
                   E_can = state.evaporation_canopy[i, j];
 
         # Compute canopy water tendency
-        state.tendencies.w_can[i, j] = w_can_tend = compute_w_can_tend(canopy_hydrology, w_can, I_can, E_can)
+        w_can_tend, R_can = compute_w_can_tend(canopy_hydrology, constants, w_can, I_can, E_can)
+        state.tendencies.w_can[i, j] = w_can_tend
 
         # Compute precipitation reaching the ground
-        state.precip_ground[i, j] = compute_precip_ground(canopy_hydrology, precip, E_can, w_can_tend)
+        state.precip_ground[i, j] = compute_precip_ground(canopy_hydrology, constants, precip, I_can, R_can)
     end
 end
 
@@ -98,7 +99,7 @@ end
 # Kernel functions
 
 """
-    $SIGNATURES
+    $TYPEDSIGNATURES
 
 Compute `I_can`, the canopy rain interception, following Eq. 42, PALADYN (Willeit 2016).
 """
@@ -108,38 +109,47 @@ Compute `I_can`, the canopy rain interception, following Eq. 42, PALADYN (Willei
 end
 
 """
-    $SIGNATURES
+    $TYPEDSIGNATURES
 
 Compute the canopy saturation fraction as `w_can / w_can_max`.
 """
-@inline function compute_canopy_saturation_fraction(canopy_hydrology::PALADYNCanopyHydrology, w_can, LAI, SAI)
+@inline function compute_canopy_saturation_fraction(canopy_hydrology::PALADYNCanopyHydrology{NF}, w_can, LAI, SAI) where NF
     # Compute the wet canopy fraction
-    w_can_max = canopy_hydrology.can_max_w * (LAI + SAI)
-    f_can = w_can / w_can_max
+    w_can_max = canopy_hydrology.w_can_max * (LAI + SAI)
+    f_can = w_can_max > 0 ? w_can / w_can_max : zero(NF)
     return f_can
 end
 
 """
-    $SIGNATURES
-Compute the `w_can` tendency following Eq. 41, PALADYN (Willeit 2016).
+    $TYPEDSIGNATURES
+
+Compute the `w_can` tendency and removal rate following Eq. 41, PALADYN (Willeit 2016).
 """
-@inline function compute_w_can_tend(canopy_hydrology::PALADYNCanopyHydrology{NF}, I_can, E_can, R_can) where NF
-    # Canopy water storage tendency: interception - evaporation - runoff
+@inline function compute_w_can_tend(
+    canopy_hydrology::PALADYNCanopyHydrology{NF},
+    constants::PhysicalConstants{NF},
+    w_can, I_can, E_can
+) where NF
+    # Canopy water storage tendency: interception - evaporation - removal
+    R_can = w_can / constants.ρw / canopy_hydrology.τ_w
     w_can_tend = I_can - E_can - R_can
-    return w_can_tend
+    return w_can_tend, R_can
 end
 
 """
     $SIGNATURES
 
-Compute `precip_ground`, the rate of rain reaching the ground, following Eq. 44, PALADYN (Willeit 2016).
+Compute `precip_ground`, the rate of rain reaching the ground, following a modified version
+of Eq. 44, PALADYN (Willeit 2016). Instead of subtracting the tendency, we just directly subtract
+interception and add the removal rate `R_can`.
 """
 @inline function compute_precip_ground(
     canopy_hydrology::PALADYNCanopyHydrology{NF},
     constants::PhysicalConstants{NF},
-    precip, E_can, w_can_tend
+    precip, I_can, R_can
 ) where NF
-    # Compute the precipitation reaching the ground
-    precip_ground = precip - E_can - w_can_tend / constants.ρw
+    # Compute the precipitation reaching the ground:
+    # precip - interception + removal
+    precip_ground = precip - I_can + R_can
     return precip_ground
 end

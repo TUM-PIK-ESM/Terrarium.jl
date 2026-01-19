@@ -97,7 +97,7 @@ include("surface_hydrology/ground_evaporation.jl")
 export CanopyEvapotranspiration
 include("surface_hydrology/canopy_evapotranpsiration.jl")
 
-export CanopyHydrology
+export PALADYNCanopyHydrology
 include("surface_hydrology/canopy_hydrology.jl")
 
 include("surface_hydrology/surface_runoff.jl")
