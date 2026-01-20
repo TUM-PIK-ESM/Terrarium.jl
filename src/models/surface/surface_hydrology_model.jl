@@ -22,9 +22,6 @@ $TYPEDFIELDS
     "Atmospheric input configuration"
     atmosphere::Atmosphere = PrescribedAtmosphere(eltype(grid))
 
-    "Surface energy balance scheme"
-    surface_energy_balance::SurfaceEnergyBalance = SurfaceEnergyBalance(eltype(grid))
-
     "Canopy hydrology scheme"
     canopy_hydrology::CanopyHydrology = PALADYNCanopyHydrology(eltype(grid))
     
@@ -42,8 +39,6 @@ end
 get_grid(model::SurfaceHydrologyModel) = model.grid
 
 get_atmosphere(model::SurfaceHydrologyModel) = model.atmosphere
-
-get_surface_energy_balance(model::SurfaceHydrologyModel) = model.surface_energy_balance
 
 get_canopy_hydrology(model::SurfaceHydrologyModel) = model.canopy_hydrology
 

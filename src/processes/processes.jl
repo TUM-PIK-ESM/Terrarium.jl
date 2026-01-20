@@ -94,7 +94,7 @@ include("surface_energy/surface_energy_balance.jl")
 export GroundEvaporation
 include("surface_hydrology/ground_evaporation.jl")
 
-export CanopyEvapotranspiration
+export PALADYNCanopyEvapotranspiration
 include("surface_hydrology/canopy_evapotranpsiration.jl")
 
 export PALADYNCanopyHydrology

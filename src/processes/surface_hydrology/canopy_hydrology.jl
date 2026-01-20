@@ -77,7 +77,7 @@ end
 @kernel function compute_tendencies_kernel!(
     state, 
     canopy_hydrology::PALADYNCanopyHydrology{NF},
-    canopy_ET::CanopyEvapotranspiration{NF}
+    canopy_ET::PALADYNCanopyEvapotranspiration{NF}
 ) where NF  
     i, j = @index(Global, NTuple)
 
