@@ -1,7 +1,7 @@
 using Terrarium
 using Terrarium: compute_kinetic_parameters, compute_Γ_star, compute_PAR, compute_APAR, compute_pres_i
-using Terrarium: compute_t_stress, compute_c1_c2, compute_Vc_max, compute_JE_JC, compute_β
-using Terrarium: compute_Rd, compute_Ag, compute_And, compute_photosynthesis
+using Terrarium: compute_t_stress, compute_c1_c2, compute_Vc_max, compute_JE_JC
+using Terrarium: compute_Rd, compute_Ag, compute_photosynthesis
 using Test
 
 
@@ -206,13 +206,6 @@ end
     # TODO JE, JC can be negative?
 end
 
-@testset "β test" begin
-    photo = LUEPhotosynthesis()
-    # For now, test β should be 1
-    β = compute_β(photo)
-    @test β == 1.0
-end
-
 @testset "Rd test" begin
     photo = LUEPhotosynthesis()
     # Test β=0 (Rd should be 0)
@@ -256,19 +249,20 @@ end
     # TODO Ag can be negative?
 end
 
-@testset "And test" begin
-    photo = LUEPhotosynthesis()
-    c_1 = 0.5 # Mock value
-    c_2 = 0.5 # Mock value
-    β = 0.5 # Mock value
-    APAR = 4.0 # Value for swdown = 50 W/m² and LAI = 5
-    Vc_max = 5.0 # Mock value
-    Rd = 0.2 # Value for β = 0.5 and Vc_max = 5
-    And = compute_And(photo, c_1, c_2, APAR, Vc_max, β, Rd)
-    @test isfinite(And)
+# Temporarily disabled since And is no longer computed
+# @testset "And test" begin
+#     photo = LUEPhotosynthesis()
+#     c_1 = 0.5 # Mock value
+#     c_2 = 0.5 # Mock value
+#     β = 0.5 # Mock value
+#     APAR = 4.0 # Value for swdown = 50 W/m² and LAI = 5
+#     Vc_max = 5.0 # Mock value
+#     Rd = 0.2 # Value for β = 0.5 and Vc_max = 5
+#     And = compute_And(photo, c_1, c_2, APAR, Vc_max, β, Rd)
+#     @test isfinite(And)
 
-    # TODO And can be negative?
-end
+#     # TODO And can be negative?
+# end
 
 @testset "Photosynthesis (GPP and Rd) test" begin
     photo = LUEPhotosynthesis()

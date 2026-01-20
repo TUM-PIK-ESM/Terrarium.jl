@@ -43,7 +43,7 @@ end
     constants::PhysicalConstants
 )
     i, j = @index(Global, NTuple)
-    Ts = skin_temperature(i, j, state, skinT)
+    Ts = skin_temperature(i, j, state, grid, skinT)
     rₐ = aerodynamic_resistance(i, j, state, aerodynamic_resistance) # aerodynamic resistance
     β = ground_evaporation_resistance_factor(i, j, state, grid, evap.ground_resistance)
     Δq = compute_humidity_vpd(i, j, state, grid, atmos, constants, Ts)
@@ -62,7 +62,7 @@ end
     constants::PhysicalConstants
 )
     i, j = @index(Global, NTuple)
-    Ts = skin_temperature(i, j, state, skinT)
+    Ts = skin_temperature(i, j, state, grid, skinT)
     rₐ = aerodynamic_resistance(i, j, state, aerodynamic_resistance) # aerodynamic resistance
     β = ground_evaporation_resistance_factor(i, j, state, grid, evap.ground_resistance, soilw, strat, bgc)
     Δq = compute_humidity_vpd(i, j, state, grid, atmos, constants, Ts)

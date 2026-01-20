@@ -82,7 +82,7 @@ surface pressure `pres` and specific humidity of air `q_air`.
     e_sat = saturation_vapor_pressure(T)
 
     # Convert air specific humidity to vapor pressure [Pa]
-    e_air = q_air * pres / (c.ε + (1 - ε) * q_air)
+    e_air = q_air * pres / (c.ε + (1 - c.ε) * q_air)
 
     # Compute vapor pressure deficit [Pa]
     vpd = max(e_sat - e_air, NF(0.1))

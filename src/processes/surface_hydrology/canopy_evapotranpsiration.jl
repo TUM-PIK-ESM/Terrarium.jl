@@ -65,7 +65,7 @@ Compute potential transpiration based on the current skin temperature and .
     atmos::AbstractAtmosphere,
     constants::PhysicalConstants
 )
-    @inbounds let Ts = skin_temperature(i, j, state, skinT), # skin temperature (top of canopy)
+    @inbounds let Ts = skin_temperature(i, j, state, grid, skinT), # skin temperature (top of canopy)
         Δq = compute_humidity_vpd(i, j, state, atmos, constants, Ts), # humidity gradient
         rₐ = aerodynamic_resistance(i, j, state, grid, atmos), # aerodynamic resistance of air
         rₛ = 1 / state.gw_can[i, j]; # stomatal resistance as reciprocal of conductance

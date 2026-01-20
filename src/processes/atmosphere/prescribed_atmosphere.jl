@@ -214,7 +214,7 @@ Compute the aerodynamic resistance (inverse conductance) at grid cell `i, j`.
 """
 @inline function aerodynamic_resistance(i, j, state, grid, atmos::PrescribedAtmosphere)
     let C = drag_coefficient(i, j, state, grid, atmos.aerodynamics),
-        Vₐ = windspeed(i, j, state, grid, atmos);
+        Vₐ = max(windspeed(i, j, state, grid, atmos), 1e-6); # clip windspeed to small value
         rₐ = 1 / (C * Vₐ)
         return rₐ
     end

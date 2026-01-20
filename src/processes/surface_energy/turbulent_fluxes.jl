@@ -11,9 +11,9 @@ variables(::PrescribedTurbulentFluxes) = (
     input(:latent_heat_flux, XY(), units=u"W/m^2", desc="Latent heat flux at the surface [W m⁻²]")
 )
 
-sensible_heat_flux(i, j, state, ::PrescribedTurbulentFluxes) = state.sensible_heat_flux[i, j]
+sensible_heat_flux(i, j, state, grid, ::PrescribedTurbulentFluxes) = state.sensible_heat_flux[i, j]
 
-latent_heat_flux(i, j, state, ::PrescribedTurbulentFluxes) = state.latent_heat_flux[i, j]
+latent_heat_flux(i, j, state, grid, ::PrescribedTurbulentFluxes) = state.latent_heat_flux[i, j]
 
 """
     $TYPEDEF
@@ -21,14 +21,15 @@ latent_heat_flux(i, j, state, ::PrescribedTurbulentFluxes) = state.latent_heat_f
 Represents the standard case where the turbulent (sensible and latent) heat fluxes are diagnosed
 from atmosphere and soil conditions.
 """
-struct DiagnosedTurbulentFluxes <: AbstractTurbulentFluxes end
+struct DiagnosedTurbulentFluxes{NF} <: AbstractTurbulentFluxes end
+
+DiagnosedTurbulentFluxes(::Type{NF}) where {NF} = DiagnosedTurbulentFluxes{NF}()
 
 # Process methods
 
-variables(tur::DiagnosedTurbulentFluxes) = (
+variables(::DiagnosedTurbulentFluxes) = (
     auxiliary(:sensible_heat_flux, XY(), units=u"W/m^2", desc="Sensible heat flux at the surface [W m⁻²]"),
-    variables(tur.latent_heat_flux)...,
-    variables(tur.aerodynamic_resistance)...,
+    auxiliary(:latent_heat_flux, XY(), units=u"W/m^2", desc="Latent heat flux at the surface [W m⁻²]"),
 )
 
 function compute_auxiliary!(state, model, tur::DiagnosedTurbulentFluxes)
@@ -48,8 +49,7 @@ end
 # Kernels
 
 @kernel function compute_turbulent_fluxes!(
-    state,
-    ::AbstractLandGrid,
+    state, grid,
     tur::DiagnosedTurbulentFluxes,
     skinT::AbstractSkinTemperature,
     atmos::AbstractAtmosphere,
@@ -74,7 +74,7 @@ end
     let ρₐ = constants.ρₐ, # density of air
         cₐ = constants.cₐ, # specific heat capacity of air
         rₐ = aerodynamic_resistance(i, j, state, grid, atmos), # aerodynamic resistance
-        Ts = skin_temperature(i, j, state, skinT), # skin temperature
+        Ts = skin_temperature(i, j, state, grid, skinT), # skin temperature
         Tair = air_temperature(i, j, state, grid, atmos); # air temperature
         # Calculate sensible heat flux (positive upwards)
         Hₛ = -ρₐ * cₐ / rₐ * (Tair - Ts)
@@ -91,7 +91,7 @@ end
 )
     let L = constants.Llg, # specific latent heat of vaporization of water
         ρₐ = constants.ρₐ, # density of air
-        Ts = skin_temperature(i, j, state, skinT),
+        Ts = skin_temperature(i, j, state, grid, skinT),
         rₐ = aerodynamic_resistance(i, j, state, grid, atmos), # aerodynamic resistance
         Δq = compute_vpd(i, j, state, grid, atmos, constants, Ts);
         # Calculate latent heat flux (positive upwards)

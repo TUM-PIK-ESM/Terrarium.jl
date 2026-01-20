@@ -210,7 +210,7 @@ end
 end
 
 @testset "Soil moisture forcing (source/sink)" begin
-    mutable struct TestSoilWaterForcing{NF} <: Terrarium.AbstractForcing
+    mutable struct TestSoilWaterForcing{NF} <: Terrarium.AbstractProcess
         value::NF
     end
 
