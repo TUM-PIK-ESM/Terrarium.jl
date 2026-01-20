@@ -74,9 +74,10 @@ function PrescribedAtmosphere(
     humidity::AbstractHumidity = SpecificHumidity(),
     precip::AbstractPrecipitation = TwoPhasePrecipitation(),
     radiation::AbstractIncomingRadiation = LongShortWaveRadiation(),
+    aerodynamics::AbstractAerodynamics = ConstantAerodynamics(),
     tracers::NamedTuple = TracerGases(AmbientCO2()),
 ) where {NF}
-    return PrescribedAtmosphere(altitude, humidity, precip, radiation, tracers)
+    return PrescribedAtmosphere(altitude, humidity, precip, radiation, aerodynamics, tracers)
 end
 
 variables(atmos::PrescribedAtmosphere) = (
@@ -96,25 +97,25 @@ variables(atmos::PrescribedAtmosphere) = (
 @inline compute_tendencies!(state, model, atmos::AbstractAtmosphere) = nothing
 
 """
-    air_temperature(i, j, state, ::AbstractAtmosphere)
+    air_temperature(i, j, state, grid, ::AbstractAtmosphere)
 
 Retrieve or compute the air temperature at the current time step.
 """
-@inline air_temperature(i, j, state, ::AbstractAtmosphere) = state.air_temperature[i, j]
+@inline air_temperature(i, j, state, grid, ::AbstractAtmosphere) = state.air_temperature[i, j]
 
 """
-    air_pressure(i, j, state, ::AbstractAtmosphere)
+    air_pressure(i, j, state, grid, ::AbstractAtmosphere)
 
 Retrieve or compute the air pressure at the current time step.
 """
-@inline air_pressure(i, j, state, ::AbstractAtmosphere) = state.air_pressure[i, j]
+@inline air_pressure(i, j, state, grid, ::AbstractAtmosphere) = state.air_pressure[i, j]
 
 """
     windspeed(i, j, state, ::PrescribedAtmosphere)
 
 Retrieve or compute the windspeed at the current time step.
 """
-@inline windspeed(i, j, state, ::AbstractAtmosphere) = state.windspeed[i, j]
+@inline windspeed(i, j, state, grid, ::AbstractAtmosphere) = state.windspeed[i, j]
 
 struct SpecificHumidity <: AbstractHumidity end
 
@@ -127,15 +128,15 @@ variables(::SpecificHumidity) = (
 
 Retrieve or compute the specific_humidity at the current time step.
 """
-@inline specific_humidity(i, j, state, ::AbstractAtmosphere{PR, IR, <:SpecificHumidity}) where {PR, IR} = state.specific_humidity[i, j]
+@inline specific_humidity(i, j, state, grid, ::AbstractAtmosphere{PR, IR, <:SpecificHumidity}) where {PR, IR} = state.specific_humidity[i, j]
 
 """
     $SIGNATURES
 
 Computes the specific humidity (vapor pressure) deficit over a surface at temperature `Ts` from the current atmospheric state.
 """
-@inline function compute_humidity_vpd(i, j, atmos::AbstractAtmosphere, c::PhysicalConstants, Ts = nothing)
-    let Δe = compute_vpd(i, j, atmos, c, Ts),
+@inline function compute_humidity_vpd(i, j, state, grid, atmos::AbstractAtmosphere, c::PhysicalConstants, Ts = nothing)
+    let Δe = compute_vpd(i, j, state, grid, atmos, c, Ts),
         p = air_pressure(i, j, state, grid, atmos);
         Δq = vapor_pressure_to_specific_humidity(Δe, p, c.ε)
         return Δq
@@ -147,7 +148,7 @@ end
 
 Computes the vapor pressure deficit over a surface at temperature `Ts` from the current atmospheric state.
 """
-@inline function compute_vpd(i, j, atmos::AbstractAtmosphere, c::PhysicalConstants, Ts = nothing)
+@inline function compute_vpd(i, j, state, grid, atmos::AbstractAtmosphere, c::PhysicalConstants, Ts = nothing)
     @inbounds let Tair = air_temperature(i, j, state, grid, atmos),
                   q_air = specific_humidity(i, j, state, grid, atmos),
                   pres = air_pressure(i, j, state, grid, atmos),
@@ -164,18 +165,18 @@ variables(::TwoPhasePrecipitation) = (
 )
 
 """
-    rainfall(i, j, state, ::AbstractAtmosphere{<:TwoPhasePrecipitation})
+    rainfall(i, j, state, grid, ::AbstractAtmosphere{<:TwoPhasePrecipitation})
 
 Retrieve or compute the liquid precipitation (rainfall) at the current time step.
 """
-@inline rainfall(i, j, state, ::AbstractAtmosphere{<:TwoPhasePrecipitation}) = state.rainfall[i, j]
+@inline rainfall(i, j, state, grid, ::AbstractAtmosphere{<:TwoPhasePrecipitation}) = state.rainfall[i, j]
 
 """
-    snowfall(i, j, state, ::AbstractAtmosphere{<:TwoPhasePrecipitation})
+    snowfall(i, j, state, grid, ::AbstractAtmosphere{<:TwoPhasePrecipitation})
 
 Retrieve or compute the frozen precipitation (snowfall) at the current time step.
 """
-@inline snowfall(i, j, state, ::AbstractAtmosphere{<:TwoPhasePrecipitation}) = state.snowfall[i, j]
+@inline snowfall(i, j, state, grid, ::AbstractAtmosphere{<:TwoPhasePrecipitation}) = state.snowfall[i, j]
 
 struct LongShortWaveRadiation <: AbstractIncomingRadiation end
 
@@ -186,25 +187,25 @@ variables(::LongShortWaveRadiation) = (
 )
 
 """
-    shortwave_in(i, j, state, ::AbstractAtmosphere{PR, <:LongShortWaveRadiation})
+    shortwave_in(i, j, state, grid, ::AbstractAtmosphere{PR, <:LongShortWaveRadiation})
 
 Retrieve or compute the incoming/downwelling shortwave radiation at the current time step.
 """
-shortwave_in(i, j, state, ::AbstractAtmosphere{PR, <:LongShortWaveRadiation}) where {PR} = state.surface_shortwave_down[i, j]
+shortwave_in(i, j, state, grid, ::AbstractAtmosphere{PR, <:LongShortWaveRadiation}) where {PR} = state.surface_shortwave_down[i, j]
 
 """
-    longwave_in(i, j, state, ::AbstractAtmosphere{PR, <:LongShortWaveRadiation})
+    longwave_in(i, j, state, grid, ::AbstractAtmosphere{PR, <:LongShortWaveRadiation})
 
 Retrieve or compute the incoming/downwelling longwave radiation at the current time step.
 """
-longwave_in(i, j, state, ::AbstractAtmosphere{PR, <:LongShortWaveRadiation}) where {PR} = state.surface_longwave_down[i, j]
+longwave_in(i, j, state, grid, ::AbstractAtmosphere{PR, <:LongShortWaveRadiation}) where {PR} = state.surface_longwave_down[i, j]
 
 """
-    daytime_length(i, j, state, ::AbstractAtmosphere{PR, <:LongShortWaveRadiation})
+    daytime_length(i, j, state, grid, ::AbstractAtmosphere{PR, <:LongShortWaveRadiation})
 
 Retrieve the length of the day (in hours) at grid cell `i, j`. Defaults to a constant 12 hours if no input is provided.
 """
-daytime_length(i, j, state, ::AbstractAtmosphere{PR, <:LongShortWaveRadiation}) where {PR} = state.daytime_length[i, j]
+daytime_length(i, j, state, grid, ::AbstractAtmosphere{PR, <:LongShortWaveRadiation}) where {PR} = state.daytime_length[i, j]
 
 """
     aerodynamic_resistance(i, j, state, grid, atmos::PrescribedAtmosphere)
