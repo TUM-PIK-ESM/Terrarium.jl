@@ -9,11 +9,33 @@ const NOTEBOOK_DIR = joinpath(dirname(@__DIR__), "examples", "notebooks")
 const EXAMPLE_DIR = joinpath(@__DIR__, "src", "notebooks")
 const EXAMPLE_DIR_RELATIVE = joinpath("notebooks")
 
+s = ArgParseSettings()
+@add_arg_table! s begin
+    "--local", "-l"
+       action = :store_true
+       help = "Local docs build mode"
+    "--draft", "-d"
+       action = :store_true
+       help = "Whether to build docs in draft mode, i.e. skipping execution of examples and doctests"
+end
+parsed_args = parse_args(ARGS, s)
+
+IS_LOCAL = parsed_args["local"] || parse(Bool, get(ENV, "LOCALDOCS", "false"))
+IS_DRAFT = parsed_args["draft"] || parse(Bool, get(ENV, "DRAFTDOCS", "false"))
+BUILD_DOCS_NOTEBOOKS = !IS_DRAFT && parse(Bool, get(ENV, "BUILD_DOCS_NOTEBOOKS", true))
+if haskey(ENV, "GITHUB_ACTIONS")
+    ENV["JULIA_DEBUG"] = "Documenter"
+end
+
 # lookup table for all Pluto notebooks to be included 
-notebook_lookup = Dict(
-    "Model Interface" => "example_model_notebook.md",
-#    "Differentiating Terrarium" => "differentiate-notebook.md",
-)
+notebook_lookup = if BUILD_DOCS_NOTEBOOKS
+    Dict(
+        "Model Interface" => "example_model_notebook.md",
+    #    "Differentiating Terrarium" => "differentiate-notebook.md",
+    )
+else
+    Dict()
+end
 
 # notebooks to be build (.jl files)
 notebooks_files = []
@@ -22,11 +44,9 @@ for (title, name) in notebook_lookup
 end
     
 """
-    build()
-
 Run all Pluto notebooks (".jl" files) in `NOTEBOOK_DIR`.
 """
-function build()
+function build_notebook_doc_pages()
     println("Building notebooks in $NOTEBOOK_DIR and moving them to $EXAMPLE_DIR")
     oopts = OutputOptions(; append_build_context=false)
     output_format = documenter_output
@@ -43,8 +63,8 @@ function build()
 end
 
 # Build the notebooks; defaults to true.
-if get(ENV, "BUILD_DOCS_NOTEBOOKS", "true") == "true"
-    build()
+if BUILD_DOCS_NOTEBOOKS
+    build_notebook_doc_pages()
 end
 
 # Dict for makedocs for notebooks to be included 
@@ -52,23 +72,6 @@ notebook_docpages = Pair{String, String}[]
 push!(notebook_docpages, "Overview" => "notebooks/examples_overview.md")
 for (title, name) in notebook_lookup
     push!(notebook_docpages, title => joinpath(EXAMPLE_DIR_RELATIVE, name))
-end
-
-s = ArgParseSettings()
-@add_arg_table! s begin
-    "--local", "-l"
-       action = :store_true
-       help = "Local docs build mode"
-    "--draft", "-d"
-       action = :store_true
-       help = "Whether to build docs in draft mode, i.e. skipping execution of examples and doctests"
-end
-parsed_args = parse_args(ARGS, s)
-
-IS_LOCAL = parsed_args["local"] || parse(Bool, get(ENV, "LOCALDOCS", "false"))
-IS_DRAFT = parsed_args["draft"] || parse(Bool, get(ENV, "DRAFTDOCS", "false"))
-if haskey(ENV, "GITHUB_ACTIONS")
-    ENV["JULIA_DEBUG"] = "Documenter"
 end
 
 makedocs(
