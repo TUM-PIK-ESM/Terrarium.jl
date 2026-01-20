@@ -57,7 +57,16 @@ get_closure(energy::SoilEnergyBalance) = energy.operator.closure
 variables(energy::SoilEnergyBalance) = (
     prognostic(:internal_energy, XYZ(); closure=get_closure(energy), units=u"J/m^3", desc="Internal energy of the soil volume, including both latent and sensible components"),
     auxiliary(:liquid_water_fraction, XYZ(), domain=UnitInterval(), desc="Fraction of unfrozen water in the pore space"),
+    auxiliary(:ground_temperature, XY(), ground_temperature, energy, units=u"°C", desc="Temperature of the uppermost ground or soil grid cell in °C"),
 )
+
+# Field constructor for ground_temperature that returns a view of the uppermost soil layer
+function ground_temperature(energy::SoilEnergyBalance, grid, clock, fields)
+    fgrid = get_field_grid(grid)
+    # Use uppermost soil layer as ground temperature
+    # TODO: Revisit this if/when we extend the vertical layers to include snow and canopy
+    return @view fields.temperature[:, :, fgrid.Nz]
+end
 
 # evaluate inverse closure (temperature -> energy) on initialize!
 function initialize!(state, model, energy::SoilEnergyBalance)
