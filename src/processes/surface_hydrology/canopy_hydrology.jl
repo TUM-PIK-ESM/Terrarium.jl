@@ -4,7 +4,7 @@
 Canopy interception and storage implementation following PALADYN (Willeit 2016) considering only liquid water (no snow).
 
 Properties:
-$TYPEDFIELDS
+$FIELDS
 """
 @kwdef struct PALADYNCanopyHydrology{NF} <: AbstractCanopyHydrology
     "Canopy water interception factor for tree PFTs"
@@ -26,13 +26,17 @@ PALADYNCanopyHydrology(::Type{NF}; kwargs...) where {NF} = PALADYNCanopyHydrolog
 variables(::PALADYNCanopyHydrology) = (
     prognostic(:canopy_water, XY(); desc="Canopy liquid water", units=u"kg/m^2"), 
     auxiliary(:interception_water_canopy, XY(); desc="Canopy rain interception", units=u"m/s"), 
-    auxiliary(:saturation_water_canopy, XY(); desc="Fraction of the canopy saturated with water"),
+    auxiliary(:saturation_canopy_water, XY(); desc="Fraction of the canopy saturated with water"),
     auxiliary(:precip_ground, XY(); desc="Rainfall rate reaching the ground", units=u"m/s"),
     input(:LAI, XY(); desc="Leaf Area Index", units=u"m^2/m^2"), 
     input(:SAI, XY(); desc="Stem Area Index", units=u"m^2/m^2"),
 )
 
-@inline @propagate_inbounds saturation_water_canopy(i, j, state, grid, ::PALADYNCanopyHydrology) = state.saturation_water_canopy[i, j]
+@inline @propagate_inbounds canopy_water(i, j, state, grid, ::PALADYNCanopyHydrology) = state.canopy_water[i, j]
+
+@inline @propagate_inbounds saturation_canopy_water(i, j, state, grid, ::PALADYNCanopyHydrology) = state.saturation_canopy_water[i, j]
+
+@inline @propagate_inbounds ground_precipitation(i, j, state, grid, ::PALADYNCanopyHydrology) = state.precip_ground[i, j]
 
 function compute_auxiliary!(state, model, canopy_hydrology::PALADYNCanopyHydrology)
     grid = get_grid(model)
@@ -71,7 +75,7 @@ end
 
     # Store results
     state.interception_water_canopy[i, j] = I_can
-    state.saturation_water_canopy[i, j] = f_can
+    state.saturation_canopy_water[i, j] = f_can
 end
 
 @kernel function compute_tendencies_kernel!(

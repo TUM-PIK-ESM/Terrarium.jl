@@ -9,7 +9,7 @@ E = \\beta \\frac{\\Delta q}{r_a}
 where `Δq` is the vapor pressure deficit in terms of specific humidity, `rₐ` is aerodynamic resistance,
 and `β` is an evaporation limiting factor.
 """
-struct GroundEvaporation{NF, GR<:AbstractEvaporationResistance} <: AbstractEvapotranspiration
+struct GroundEvaporation{NF, GR<:AbstractGroundEvaporationResistanceFactor} <: AbstractEvapotranspiration
     "Parameterization for ground resistance to evaporation/sublimation"
     ground_resistance::GR
 end
@@ -72,7 +72,7 @@ end
 
 # Ground resistance to evaporation
 
-@kwdef struct ConstantEvaporationResistanceFactor{NF} <: AbstractEvaporationResistance
+@kwdef struct ConstantEvaporationResistanceFactor{NF} <: AbstractGroundEvaporationResistanceFactor
     "Unit interval factor that determines resistance to evaporation; zero corresponds to no evaporation"
     factor::NF = 1.0
 end
@@ -82,7 +82,7 @@ ConstantEvaporationResistanceFactor(::Type{NF}; kwargs...) where {NF} = Constant
 @inline ground_evaporation_resistance_factor(i, j, state, grid, res::ConstantEvaporationResistanceFactor, args...) = res.factor
 
 """
-    SoilMoistureResistanceFactor <: AbstractEvaporationResistance
+    SoilMoistureResistanceFactor <: AbstractGroundEvaporationResistanceFactor
 
 Implements the soil moisture limiting resistance factor of Lee and Pielke (1992),
 
@@ -93,7 +93,7 @@ Implements the soil moisture limiting resistance factor of Lee and Pielke (1992)
 \\end{cases}
 ```
 """
-struct SoilMoistureResistanceFactor{NF} <: AbstractEvaporationResistance end
+struct SoilMoistureResistanceFactor{NF} <: AbstractGroundEvaporationResistanceFactor end
 
 SoilMoistureResistanceFactor(::Type{NF}) where {NF} = SoilMoistureResistanceFactor{NF}()
 

@@ -11,7 +11,7 @@ E_c &= f_{\\text{can}} \\frac{\\Delta q}{r_a} \\
 T_c &= \\frac{\\Delta q}{r_a + r_s} \\
 ```
 """
-@kwdef struct PALADYNCanopyEvapotranspiration{NF, GR<:AbstractEvaporationResistance} <: AbstractEvapotranspiration
+@kwdef struct PALADYNCanopyEvapotranspiration{NF, GR<:AbstractGroundEvaporationResistanceFactor} <: AbstractEvapotranspiration
     "Drag coefficient for the traansfer of heat and water between the ground and canopy"
     C_can::NF = 0.006
 
@@ -72,7 +72,19 @@ variables(::PALADYNCanopyEvapotranspiration{NF}) where {NF} = (
     input(:gw_can, XY(); default=NF(1), units=u"m/s", desc="Canopy stomatal conductance")
 )
 
-function compute_auxiliary!(state, model, ET::PALADYNCanopyEvapotranspiration)
+function surface_humidity_flux(i, j, state, grid, evtr::PALADYNCanopyEvapotranspiration)
+    @inbounds state.evaporation_canopy[i, j] + state.evaporation_ground[i, j] + state.transpiration[i, j]
+end
+
+function compute_auxiliary!(state, model, evtr::PALADYNCanopyEvapotranspiration)
+    grid = get_grid(model)
+    canopy_hydrology = get_canopy_hydrology(model)
+    atmos = get_atmosphere(model)
+    constants = get_constants(model)
+    launch!(state, grid, :xy, compute_evapotranspiration_kernel!, canopy_hydrology, atmos, constants)
+end
+
+function compute_auxiliary!(state, model::AbstractLandModel, evtr::PALADYNCanopyEvapotranspiration)
     grid = get_grid(model)
     canopy_hydrology = get_canopy_hydrology(model)
     soilw = get_soil_hydrology(model)
@@ -80,20 +92,46 @@ function compute_auxiliary!(state, model, ET::PALADYNCanopyEvapotranspiration)
     bgc = get_soil_biogeochemistry(model)
     atmos = get_atmosphere(model)
     constants = get_constants(model)
-    launch!(state, grid, :xy, compute_evapotranspiration_kernel!, canopy_hydrology, atmos, soilw, strat, bgc, constants)
+    launch!(state, grid, :xy, compute_evapotranspiration_kernel!, canopy_hydrology, atmos, constants, soilw, strat, bgc)
 end
 
 # Kernels
 
+# TODO: Can we somehow refactor this to reduce duplication across dispatches?
 @kernel function compute_evapotranspiration_kernel!(
     state, grid,
-    ET::PALADYNCanopyEvapotranspiration,
+    evtr::PALADYNCanopyEvapotranspiration{NF},
     canopy_hydrology::AbstractCanopyHydrology,
     atmos::AbstractAtmosphere,
+    constants::PhysicalConstants
+) where {NF}
+    i, j = @index(Global, NTuple)
+
+    @inbounds let Ts = state.skin_temperature[i, j], # skin temperature (top of canopy)
+                  Tg = state.ground_temperature[i, j], # ground temeprature (top snow/soil layer)
+                  gw_can = state.gw_can[i, j], # stomatal conductance
+                  Δqs = compute_humidity_vpd(i, j, state, grid, atmos, constants, Ts), # humidity gradient between canopy and atmosphere
+                  Δqg = compute_humidity_vpd(i, j, state, grid, atmos, constants, Tg), # humidity gradient between ground and canopy
+                  rₐ = aerodynamic_resistance(i, j, state, grid, atmos), # aerodynamic resistance
+                  rₑ = aerodynamic_resistance(i, j, state, grid, atmos, evtr), # aerodynamic resistance between ground and canopy
+                  f_can = saturation_canopy_water(i, j, state, grid, canopy_hydrology);
+
+        # Compute and store ET fluxes
+        state.transpiration[i, j, 1] = compute_transpiration(evtr, Δqs, rₐ, gw_can)
+        state.evaporation_ground[i, j, 1] = compute_evaporation_ground(evtr, Δqg, NF(1), rₐ, rₑ)
+        state.evaporation_canopy[i, j, 1] = compute_evaporation_canopy(evtr, Δqs, f_can, rₐ)
+    end
+end
+
+@kernel function compute_evapotranspiration_kernel!(
+    state, grid,
+    evtr::PALADYNCanopyEvapotranspiration,
+    canopy_hydrology::AbstractCanopyHydrology,
+    atmos::AbstractAtmosphere,
+    constants::PhysicalConstants,
     soilw::AbstractSoilHydrology,
     strat::AbstractStratigraphy,
     bgc::AbstractSoilBiogeochemistry,
-    constants::PhysicalConstants
 )
     i, j = @index(Global, NTuple)
 
@@ -103,25 +141,25 @@ end
                   Δqs = compute_humidity_vpd(i, j, state, grid, atmos, constants, Ts), # humidity gradient between canopy and atmosphere
                   Δqg = compute_humidity_vpd(i, j, state, grid, atmos, constants, Tg), # humidity gradient between ground and canopy
                   rₐ = aerodynamic_resistance(i, j, state, grid, atmos), # aerodynamic resistance
-                  rₑ = aerodynamic_resistance(i, j, state, grid, atmos, ET), # aerodynamic resistance between ground and canopy
-                  f_can = saturation_water_canopy(i, j, state, grid, canopy_hydrology),
-                  β = ground_evaporation_resistance_factor(i, j, state, grid, ET.ground_resistance, soilw, strat, bgc);
+                  rₑ = aerodynamic_resistance(i, j, state, grid, atmos, evtr), # aerodynamic resistance between ground and canopy
+                  f_can = saturation_canopy_water(i, j, state, grid, canopy_hydrology),
+                  β = ground_evaporation_resistance_factor(i, j, state, grid, evtr.ground_resistance, soilw, strat, bgc);
 
         # Compute and store ET fluxes
-        state.transpiration[i, j, 1] = compute_transpiration(ET, Δqs, rₐ, gw_can)
-        state.evaporation_ground[i, j, 1] = compute_evaporation_ground(ET, Δqg, β, rₐ, rₑ)
-        state.evaporation_canopy[i, j, 1] = compute_evaporation_canopy(ET, Δqs, f_can, rₐ)
+        state.transpiration[i, j, 1] = compute_transpiration(evtr, Δqs, rₐ, gw_can)
+        state.evaporation_ground[i, j, 1] = compute_evaporation_ground(evtr, Δqg, β, rₐ, rₑ)
+        state.evaporation_canopy[i, j, 1] = compute_evaporation_canopy(evtr, Δqs, f_can, rₐ)
     end
 end
 
 # Kernel functions
 
 """
-    aerodynamic_resistance(i, j, state, atmos::AbstractAtmosphere, ET::PALADYNCanopyEvapotranspiration)
+    aerodynamic_resistance(i, j, state, atmos::AbstractAtmosphere, evtr::PALADYNCanopyEvapotranspiration)
 
 Compute the aerodynamic resistance between the ground and canopy as a function of LAI and SAI.
 """
-@inline function aerodynamic_resistance(i, j, state, grid, atmos::AbstractAtmosphere, ET::PALADYNCanopyEvapotranspiration)
+@inline function aerodynamic_resistance(i, j, state, grid, atmos::AbstractAtmosphere, evtr::PALADYNCanopyEvapotranspiration)
     @inbounds let LAI = state.LAI[i, j],
                   SAI = state.SAT[i, j],
                   Vₐ = windspeed(i, j, state, grid, atmos),
