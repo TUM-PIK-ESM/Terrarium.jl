@@ -48,8 +48,6 @@ function variables(model::CoupledSoilEnergyModel)
         atmos_vars...,
         seb_vars...,
         soil_vars...,
-        # redefine ground temperature as auxiliary variable
-        auxiliary(:ground_temperature, XY(), units=u"°C", desc="Temperature of the uppermost ground or soil grid cell in °C")
     )
 end
 
@@ -63,7 +61,7 @@ function initialize(
     vars = Variables(variables(model)..., external_variables...)
     surface_fluxes = GroundHeatFlux()
     bcs = merge_recursive(boundary_conditions, surface_fluxes)
-    return StateVariables(vars, model.grid, clock, boundary_conditions=bcs)
+    return initialize(vars, model.grid, clock, boundary_conditions=bcs)
 end
 
 function initialize!(state, model::CoupledSoilEnergyModel)

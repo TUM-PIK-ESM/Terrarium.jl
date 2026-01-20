@@ -51,34 +51,6 @@ end
 # Allow reconstruction from properties
 ConstructionBase.constructorof(::Type{StateVariables{NF}}) where {NF} = (args...) -> StateVariables(NF, args...)
 
-function StateVariables(
-    vars::Variables,
-    grid::AbstractLandGrid{NF},
-    clock::Clock;
-    boundary_conditions = (;),
-    fields = (;)
-) where {NF}
-    # Initialize Fields for each variable group, if they are not already given in the user defined `fields`
-    input_fields = initialize(vars.inputs, grid, clock, boundary_conditions, fields)
-    tendency_fields = initialize(vars.tendencies, grid, clock, boundary_conditions, fields)
-    auxiliary_fields = initialize(vars.auxiliary, grid, clock, boundary_conditions, merge(fields, input_fields))
-    prognostic_fields = initialize(vars.prognostic, grid, clock, boundary_conditions, merge(fields, input_fields, auxiliary_fields))
-    # recursively initialize state variables for each namespace
-    namespaces = map(vars.namespaces) do ns
-        StateVariables(ns.vars, grid, clock; boundary_conditions=get(boundary_conditions, varname(ns), (;)), fields=get(fields, varname(ns), (;)))
-    end
-    # construct and return StateVariables
-    return StateVariables(
-        NF,
-        prognostic_fields,
-        tendency_fields,
-        auxiliary_fields,
-        input_fields,
-        namespaces,
-        clock,
-    )
-end
-
 """
     update_state!(state::StateVariables, model::AbstractModel, inputs::InputSources; compute_tendencies = true)
 
@@ -168,7 +140,7 @@ function get_fields(state::StateVariables, queries::Union{Symbol, Pair}...)
     return (; fields...)
 end
 
-# Default initialize dispatch for model types
+# Initialization of StateVariables from models and variable types
 
 function initialize(
     model::AbstractModel{NF};
@@ -179,8 +151,36 @@ function initialize(
 ) where {NF}
     vars = Variables(tuplejoin(variables(model), input_variables))
     grid = get_grid(model)
-    state = StateVariables(vars, grid, clock; boundary_conditions, fields)
+    state = initialize(vars, grid, clock; boundary_conditions, fields)
     return state
+end
+
+function initialize(
+    vars::Variables,
+    grid::AbstractLandGrid{NF},
+    clock::Clock;
+    boundary_conditions = (;),
+    fields = (;)
+) where {NF}
+    # Initialize Fields for each variable group, if they are not already given in the user defined `fields`
+    input_fields = initialize(vars.inputs, grid, clock, boundary_conditions, fields)
+    tendency_fields = initialize(vars.tendencies, grid, clock, boundary_conditions, fields)
+    auxiliary_fields = initialize(vars.auxiliary, grid, clock, boundary_conditions, merge(fields, input_fields))
+    prognostic_fields = initialize(vars.prognostic, grid, clock, boundary_conditions, merge(fields, input_fields, auxiliary_fields))
+    # recursively initialize state variables for each namespace
+    namespaces = map(vars.namespaces) do ns
+        initialize(ns.vars, grid, clock; boundary_conditions=get(boundary_conditions, varname(ns), (;)), fields=get(fields, varname(ns), (;)))
+    end
+    # construct and return StateVariables
+    return StateVariables(
+        NF,
+        prognostic_fields,
+        tendency_fields,
+        auxiliary_fields,
+        input_fields,
+        namespaces,
+        clock,
+    )
 end
 
 initialize(::NamedTuple, ::AbstractLandGrid, ::Clock, ::NamedTuple, ::NamedTuple) = (;)

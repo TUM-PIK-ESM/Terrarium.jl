@@ -17,7 +17,7 @@ using Test
     hydrology = SoilHydrology(eltype(grid); hydraulic_properties)
     model = SoilModel(grid; hydrology)
     allvars = merge(vars, Variables(model))
-    state = StateVariables(allvars, grid, clock)
+    state = initialize(allvars, grid, clock)
     set!(state.temperature, 10.0)
 
     # Soil moisture limiting factor
