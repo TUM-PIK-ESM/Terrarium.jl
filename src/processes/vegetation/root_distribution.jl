@@ -2,11 +2,14 @@
     $TYPEDEF
 
 Static vegetation root distribution implementation in PALADYN (Willeit 2016)
-based on the scheme proposed by Zeng (2001). The root distribution is modeled as:
+based on the scheme proposed by Zeng (2001). The PDF of the root distribution
+is modeled as
 
 ```math
-f()
+\\frac{\\partial R}{\\partial z} = \\frac{1}{2} \\left( d_1 \\exp(d_1 z) + d_2 \\exp(d_2 z) \\right)
 ```
+which is then integrated over the soil column and normalized to sum to unity. Note that
+this is effectively the average of two exponential distributions with rates `d1` and `d2`.
 
 Properties:
 $TYPEDFIELDS
@@ -27,11 +30,14 @@ Returns a `FunctionField` that lazily computes the static root distribution on a
 """
 function root_fraction(roots::StaticExponentialRootDistribution{NF}, grid::AbstractColumnGrid, clock, fields) where {NF}
     fgrid = get_field_grid(grid)
-    Δz = zspacings(fgrid, Center(), Center(), Center())
-    ∂r∂z = FunctionField(fgrid, parameters=roots) do x, z, p
+    # define pdf of root distribution as a continuous function of depth
+    ∂R∂z = FunctionField(fgrid, parameters=roots) do x, z, p
         0.5 * (p.d1 * exp(p.d1 * z) + p.d2 * exp(p.d2 * z))
     end
-    r = ∂r∂z * Δz
-    r_norm = r / sum(r, dims=3)
-    return r_norm
+    # scale by the layer thicknesses
+    Δz = zspacings(fgrid, Center(), Center(), Center())
+    R = ∂R∂z * Δz
+    # and normalize
+    R_norm = R / sum(r, dims=3)
+    return R_norm
 end
