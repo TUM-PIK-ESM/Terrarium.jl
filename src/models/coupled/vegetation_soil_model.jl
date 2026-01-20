@@ -2,6 +2,7 @@
     NF,
     GridType<:AbstractLandGrid{NF},
     Atmosphere<:AbstractAtmosphere,
+    SEB<:AbstractSurfaceEnergyBalance,
     Vegetation<:AbstractVegetationModel{NF, GridType},
     SoilModel<:AbstractSoilModel{NF, GridType},
     Initializer<:AbstractInitializer,
@@ -12,15 +13,20 @@
     "Near-surface atmospheric conditions"
     atmosphere::Atmosphere = PrescribedAtmosphere(eltype(grid))
 
-    "Vegetation surface processes"
-    vegetation::Vegetation = VegetationModel(eltype(grid))
+    "Surface energy balance"
+    surface_energy::SEB = SurfaceEnergyBalance(eltype(grid))
+
+    "Vegetation model"
+    vegetation::Vegetation = VegetationModel(grid)
 
     "Soil model"
-    soil::SoilModel = SoilModel(eltype(grid))
+    soil::SoilModel = SoilModel(grid)
 
     "Initializer for coupled model"
     initializer::Initializer = DefaultInitializer()
 end
+
+get_surface_energy_balance(model::VegetationSoilModel) = model.surface_energy
 
 get_soil_energy_balance(model::VegetationSoilModel) = model.soil.energy
 
@@ -49,7 +55,7 @@ function initialize(
 ) where {NF}
     vars = Variables(variables(model)..., external_variables...)
     # TODO
-    return StateVariables(vars, model.grid, clock)
+    return initialize(vars, model.grid, clock)
 end
 
 function initialize!(state, model::VegetationSoilModel)

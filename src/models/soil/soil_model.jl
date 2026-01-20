@@ -59,7 +59,7 @@ variables(model::SoilModel) = tuplejoin(
     variables(model.biogeochem),
 )
 
-get_processes(model::SoilModel) = (
+processes(model::SoilModel) = (
     model.strat,
     model.energy,
     model.hydrology,

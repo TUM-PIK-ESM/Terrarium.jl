@@ -35,11 +35,11 @@ defined by the model or process.
 function variables end
 
 """
-    get_processes(model::AbstractModel)
+    processes(model::AbstractModel)
 
 Return a tuple of `AbstractProcess` types defiend by this `model`.
 """
-function get_processes end
+function processes end
 
 """
     initialize!(state, model::AbstractModel)
@@ -88,11 +88,11 @@ function compute_tendencies! end
 variables(::Any) = ()
 
 """
-    get_processes(::AbstractModel)
+    processes(::AbstractModel)
 
 Return a tuple of `AbstractProcess`es defind by the given `model`.
 """
-get_processes(::AbstractModel) = ()
+processes(::AbstractModel) = ()
 
 """
     get_grid(model::AbstractModel)::AbstractLandGrid

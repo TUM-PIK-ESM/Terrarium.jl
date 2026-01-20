@@ -59,7 +59,7 @@ variables(model::SurfaceHydrologyModel) = tuplejoin(
     variables(model.surface_runoff),
 )
 
-get_processes(model::SurfaceHydrologyModel) = (
+processes(model::SurfaceHydrologyModel) = (
     model.atmosphere,
     model.surface_energy_balance,
     model.canopy_hydrology,

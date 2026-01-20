@@ -32,11 +32,11 @@ get_soil_biogeochemistry(model::CoupledSoilEnergyModel) = model.soil.biogeochem
 
 get_constants(model::CoupledSoilEnergyModel) = model.soil.constants
 
-function get_processes(model::CoupledSoilEnergyModel)
+function processes(model::CoupledSoilEnergyModel)
     return (
         model.atmosphere,
         model.surface_energy_balance,
-        get_processes(model.soil)...,
+        processes(model.soil)...,
     )
 end
 

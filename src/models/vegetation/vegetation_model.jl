@@ -80,7 +80,7 @@ variables(model::VegetationModel) = tuplejoin(
     variables(model.vegetation_dynamics),
 )
 
-get_processes(model::VegetationModel) = (
+processes(model::VegetationModel) = (
     model.atmosphere,
     model.photosynthesis,
     model.stomatal_conductance,
