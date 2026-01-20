@@ -251,9 +251,11 @@ function Variables(vars::Tuple{Vararg{Union{AbstractProcessVariable, Namespace}}
     namespaces = merge_duplicates(filter(var -> isa(var, Namespace), vars))
     # get tendencies from prognostic variables
     tendency_vars = map(var -> var.tendency, prognostic_vars)
-    # create closure variables and add to auxiliary variables
+    # create closure variables and prepend to tuple of auxiliary variables;
+    # the order matters for auxiliary Field constructors for which closure variables
+    # should be available since they are basically extensions of prognostic variables
     closure_vars = map(var -> closurevar(var.closure), filter(hasclosure, prognostic_vars))
-    auxiliary_vars = merge_duplicates(tuplejoin(auxiliary_vars, closure_vars))
+    auxiliary_vars = merge_duplicates(tuplejoin(closure_vars, auxiliary_vars))
     # drop inputs with matching prognostic or auxiliary variables
     input_vars = filter(var -> var ∉ prognostic_vars && var ∉ auxiliary_vars, input_vars)
     # check for duplicates
