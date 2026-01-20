@@ -24,3 +24,11 @@ Implementation of `Oceananigans.BoundaryConditions.getbc` for variable placehold
     field = getproperty(state, name)
     return @inbounds field[i, j]
 end
+
+"""
+Convenience alias for `Oceananigans.BoundaryConditions.compute_z_bcs!` that adds flux BCs for `progvar`
+to its corresponding `tendency`.
+"""
+@inline function BoundaryConditions.compute_z_bcs!(tendency, progvar, grid::AbstractLandGrid, state)
+    compute_z_bcs!(tendency, progvar, architecture(grid), state.clock, state)
+end
