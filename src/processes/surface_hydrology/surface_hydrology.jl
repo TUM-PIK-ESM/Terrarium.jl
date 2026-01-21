@@ -15,10 +15,10 @@
     surface_runoff::SurfaceRunoff = PALADYNSurfaceRunoff(eltype(grid))
 end
 
-processes(hydrology::SurfaceHydrology) = (
-    hydrology.canopy_hydrology,
-    hydrology.evapotranpsiration,
-    hydrology.surface_runoff
+variables(hydrology::SurfaceHydrology) = tuplejoin(
+    variables(hydrology.canopy_hydrology),
+    variables(hydrology.evapotranpsiration),
+    variables(hydrology.surface_runoff)
 )
 
 function compute_auxiliary!(state, model, hydrology::SurfaceHydrology)

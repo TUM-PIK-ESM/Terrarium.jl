@@ -31,8 +31,6 @@ function SurfaceEnergyModel(
     return SurfaceEnergyModel(grid, atmosphere, surface_energy_balance, constants, initializer)
 end
 
-variables(model::SurfaceEnergyModel) = tuplejoin(variables(model.atmosphere), variables(model.surface_energy_balance))
-
 processes(model::SurfaceEnergyModel) = (model.atmosphere, model.surface_energy_balance)
 
 function compute_auxiliary!(state, model::SurfaceEnergyModel)

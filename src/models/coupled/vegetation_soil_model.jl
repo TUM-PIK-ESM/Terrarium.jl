@@ -45,12 +45,13 @@ get_soil_biogeochemistry(model::VegetationSoilModel) = model.soil.biogeochem
 # just ignore that these are duplicated in veg model for now...
 get_constants(model::VegetationSoilModel) = model.soil.constants
 
-function processes(model::VegetationSoilModel)
-    atmos_vars = processes(model.atmosphere)
-    veg_vars = processes(model.vegetation)
-    soil_vars = processes(model.soil)
-    return tuplejoin(atmos_vars, veg_vars, soil_vars)    
-end
+processes(model::VegetationSoilModel) = (
+    model.atmosphere,
+    model.surface_energy_balance,
+    model.surface_hydrology,
+    processes(model.vegetation)...,
+    processes(model.soil)...
+)
 
 function initialize(
     model::VegetationSoilModel{NF};

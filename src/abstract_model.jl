@@ -86,6 +86,8 @@ function compute_tendencies! end
 
 # allow variables to be defined on any type
 variables(::Any) = ()
+# automatically invoke `variables` on all defined processes
+variables(process::AbstractModel) = mapreduce(variables, tuplejoin, processes(process))
 
 """
     processes(::AbstractModel)
@@ -140,8 +142,6 @@ end
 # Default implementation for processes, also allowing for dispatches on `nothing`
 # TODO: Is this a good idea? Should we force users to *always* define these methods?
 initialize!(state, model, ::Union{Nothing, AbstractProcess}) = nothing
-
-variables(process::AbstractProcess) = mapreduce(variables, tuplejoin, processes(process))
 
 compute_auxiliary!(state, model, ::Union{Nothing, AbstractProcess}) = nothing
 
