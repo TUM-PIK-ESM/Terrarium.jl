@@ -67,6 +67,9 @@ function initialize(
     ground_heat_flux_bc = GroundHeatFlux(ground_heat_flux)
     infiltration_bc = InfiltrationFlux(infiltration)
     bcs = merge_recursive(boundary_conditions, ground_heat_flux_bc, infiltration_bc)
+    # register ET as forcing on soil hydrology
+    model.soil.hydrology.forcing["ET"] = model.surface_hydrology.evapotranpsiration
+    # pass preconstructed fields to initialize
     fields = merge(fields, (; ground_heat_flux, infiltration))
     return initialize(vars, model.grid, clock, bcs, fields)z
 end
@@ -80,16 +83,13 @@ function initialize!(state, model::VegetationSoilModel)
 end
 
 function compute_auxiliary!(state, model::VegetationSoilModel)
-    atmos = get_atmosphere(model)
-    seb = get_surface_energy_balance(model)
-    surface_hydrology = get_surface_hydrology(model)
-    compute_auxiliary!(state, model, atmos)
+    compute_auxiliary!(state, model, model.atmosphere)
     compute_auxiliary!(state, model.soil)
-    compute_auxiliary(state, seb)
+    compute_auxiliary(state, model.surface_energy_balance)
     compute_auxiliary!(state, model, model.vegetation)
     compute_auxiliary!(state, model, surface_hydrology)
     # recompute surface energy fluxes
-    compute_surface_energy_fluxes!(state, model, seb)
+    compute_surface_energy_fluxes!(state, model, model.surface_energy_balance)
 end
 
 function compute_tendencies!(state, model::VegetationSoilModel)
