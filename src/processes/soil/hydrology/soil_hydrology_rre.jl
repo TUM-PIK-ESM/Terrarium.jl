@@ -14,8 +14,8 @@ get_closure(hydrology::SoilHydrology{NF, <:RichardsEq}) where {NF} = hydrology.v
 variables(hydrology::SoilHydrology{NF, <:RichardsEq}) where {NF} = (
     prognostic(:saturation_water_ice, XYZ(); closure=get_closure(hydrology), domain=UnitInterval(), desc="Saturation level of water and ice in the pore space"),
     prognostic(:surface_excess_water, XY(), units=u"m", desc="Excess water at the soil surface in m³/m²"),
-    auxiliary(:water_table, XY(), units=u"m", desc="Elevation of the water table in meters"),
     auxiliary(:hydraulic_conductivity, XYZ(z=Face()), units=u"m/s", desc="Hydraulic conductivity of soil volumes in m/s"),
+    auxiliary(:water_table, XY(), water_table, hydrology, units=u"m", desc="Elevation of the water table in meters"),
     input(:liquid_water_fraction, XYZ(), default=NF(1), domain=UnitInterval(), desc="Fraction of unfrozen water in the pore space"), 
 )
 
@@ -98,29 +98,6 @@ water is added to the `surface_excess_water` pool.
         # This constitutes a mass balance violation but should not happen under realistic conditions.
         sat[i, j, 1] = zero(NF)
     end
-end
-
-"""
-    compute_water_table!(
-        state,
-        grid,
-        ::SoilHydrology{NF},
-        z_faces
-    ) where {NF}
-
-Kernel for diagnosing the water table at each grid point given the current soil saturation state. The argument
-`z_faces` should be the z-coordinates of the grid on the layer faces.
-"""
-@kernel function compute_water_table!(
-    state,
-    grid,
-    ::SoilHydrology{NF},
-    z_faces
-) where {NF}
-    i, j = @index(Global, NTuple)
-    sat = state.saturation_water_ice
-    # scan z axis starting from the bottom (index 1) to find first non-saturated grid cell
-    @inbounds state.water_table[i, j, 1] = findfirst_z((i, j), <(one(NF)), z_faces, sat)
 end
 
 """
@@ -234,12 +211,11 @@ function closure!(state, model::AbstractSoilModel, ::SaturationPressureClosure)
     grid = get_grid(model)
     hydrology = get_soil_hydrology(model)
     strat = get_soil_stratigraphy(model)
-    z_faces = znodes(get_field_grid(grid), Center(), Center(), Face())
     z_centers = znodes(get_field_grid(grid), Center(), Center(), Center())
     # apply saturation correction
     launch!(state, grid, :xy, adjust_saturation_profile!, hydrology)
     # update water table
-    launch!(state, grid, :xy, compute_water_table!, hydrology, z_faces)
+    compute!(state.water_table)
     # determine pressure head from saturation
     launch!(state, grid, :xyz, saturation_to_pressure!, hydrology, strat, z_centers)
     return nothing
@@ -249,14 +225,13 @@ function invclosure!(state, model::AbstractSoilModel, ::SaturationPressureClosur
     grid = get_grid(model)
     hydrology = get_soil_hydrology(model)
     strat = get_soil_stratigraphy(model)
-    z_faces = znodes(get_field_grid(grid), Center(), Center(), Face())
     z_centers = znodes(get_field_grid(grid), Center(), Center(), Center())
     # determine saturation from pressure
     launch!(state, grid, :xyz, pressure_to_saturation!, hydrology, strat, z_centers)
     # apply saturation correction
     launch!(state, grid, :xy, adjust_saturation_profile!, hydrology)
     # update water table
-    launch!(state, grid, :xy, compute_water_table!, hydrology, z_faces)
+    compute!(state.water_table)
     return nothing
 end
 

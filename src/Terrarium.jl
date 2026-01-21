@@ -21,7 +21,7 @@ using Interpolations
 using KernelAbstractions: @kernel, @index
 
 # Oceananigans numerics
-using Oceananigans.AbstractOperations: Average, Integral
+using Oceananigans.AbstractOperations: Average, Integral, ConditionalOperation
 using Oceananigans.Architectures: Architectures, AbstractArchitecture, CPU, GPU, architecture, on_architecture, array_type
 using Oceananigans.Fields: Field, FunctionField, AbstractField, Center, Face, set!, compute!, interior, xnodes, ynodes, znodes, zspacings, location
 using Oceananigans.Forcings: ContinuousForcing, DiscreteForcing

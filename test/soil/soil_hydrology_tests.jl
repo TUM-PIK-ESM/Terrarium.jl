@@ -153,9 +153,9 @@ end
     integrator = initialize(model, ForwardEuler())
     state = integrator.state
     # check that initial water table depth is correctly calculated from initial condition
-    @test all(iszero.(state.water_table))
+    @test all(isapprox.(state.water_table, 0, atol=1e-12))
     # also check that pressure head is zero everywhere
-    @test all(iszero.(state.pressure_head))
+    @test all(isapprox.(state.pressure_head, 0, atol=1e-12))
     compute_auxiliary!(state, model)
     # check that all hydraulic conductivities are finite and equal to K_sat
     @test all(isfinite.(state.hydraulic_conductivity))
