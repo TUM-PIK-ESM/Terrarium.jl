@@ -25,7 +25,8 @@ PALADYNCanopyHydrology(::Type{NF}; kwargs...) where {NF} = PALADYNCanopyHydrolog
 
 variables(::PALADYNCanopyHydrology) = (
     prognostic(:canopy_water, XY(); desc="Canopy liquid water", units=u"kg/m^2"), 
-    auxiliary(:interception_water_canopy, XY(); desc="Canopy rain interception", units=u"m/s"), 
+    auxiliary(:canopy_water_interception, XY(); desc="Canopy rain interception rate", units=u"m/s"), 
+    auxiliary(:canopy_water_removal, XY(); desc="Canopy water removal rate", units=u"m/s"),
     auxiliary(:saturation_canopy_water, XY(); desc="Fraction of the canopy saturated with water"),
     auxiliary(:precip_ground, XY(); desc="Rainfall rate reaching the ground", units=u"m/s"),
     input(:LAI, XY(); desc="Leaf Area Index", units=u"m^2/m^2"), 
@@ -73,8 +74,12 @@ end
     # Compute canopy rain interception
     I_can = compute_canopy_interception(canopy_hydrology, precip, LAI, SAI)
 
+    # Compute canopy water removal
+    R_can = compute_canopy_removal(canopy_hydrology, constants, w_can)
+
     # Store results
-    state.interception_water_canopy[i, j] = I_can
+    state.canopy_water_interception[i, j] = I_can
+    state.canopy_water_removal[i, j] = R_can
     state.saturation_canopy_water[i, j] = f_can
 end
 
@@ -86,13 +91,12 @@ end
     i, j = @index(Global, NTuple)
 
     # Get inputs
-    @inbounds let w_can = state.canopy_water[i, j],
-                  I_can = state.interception_water_canopy[i, j],
-                  E_can = state.evaporation_canopy[i, j];
+    @inbounds let I_can = state.canopy_water_interception[i, j],
+                  E_can = state.evaporation_canopy[i, j],
+                  R_can = state.canopy_water_removal;
 
         # Compute canopy water tendency
-        w_can_tend, R_can = compute_w_can_tend(canopy_hydrology, constants, w_can, I_can, E_can)
-        state.tendencies.w_can[i, j] = w_can_tend
+        state.tendencies.w_can[i, j] = compute_w_can_tend(canopy_hydrology, I_can, E_can, R_can)
 
         # Compute precipitation reaching the ground
         state.precip_ground[i, j] = compute_precip_ground(canopy_hydrology, precip, I_can, R_can)
@@ -127,15 +131,28 @@ end
 """
     $TYPEDSIGNATURES
 
+Compute the canopy water removal rate as `w_can / ρw / τw`.
+"""
+@inline function compute_canopy_water_removal(
+   canopy_hydrology::PALADYNCanopyHydrology{NF},
+   constants::PhysicalConstants{NF},
+   w_can
+) where {NF}
+    # Canopy water storage tendency: interception - evaporation - removal
+    R_can = w_can / constants.ρw / canopy_hydrology.τ_w
+    return R_can
+end
+
+"""
+    $TYPEDSIGNATURES
+
 Compute the `w_can` tendency and removal rate following Eq. 41, PALADYN (Willeit 2016).
 """
 @inline function compute_w_can_tend(
-    canopy_hydrology::PALADYNCanopyHydrology{NF},
-    constants::PhysicalConstants{NF},
-    w_can, I_can, E_can
+    ::PALADYNCanopyHydrology{NF},
+    I_can, E_can, R_can
 ) where NF
     # Canopy water storage tendency: interception - evaporation - removal
-    R_can = w_can / constants.ρw / canopy_hydrology.τ_w
     w_can_tend = I_can - E_can - R_can
     return w_can_tend, R_can
 end
