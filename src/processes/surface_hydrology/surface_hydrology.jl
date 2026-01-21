@@ -12,7 +12,7 @@
     evapotranpsiration::Evapotranspiration = PALADYNCanopyEvapotranspiration(eltype(grid))
     
     "Surface runoff scheme"
-    surface_runoff::SurfaceRunoff = PALADYNSurfaceRunoff(eltype(grid))
+    surface_runoff::SurfaceRunoff = DirectSurfaceRunoff(eltype(grid))
 end
 
 variables(hydrology::SurfaceHydrology) = tuplejoin(

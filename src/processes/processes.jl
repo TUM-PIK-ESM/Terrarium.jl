@@ -100,7 +100,7 @@ include("surface_hydrology/canopy_evapotranpsiration.jl")
 export PALADYNCanopyHydrology
 include("surface_hydrology/canopy_hydrology.jl")
 
-export PALADYNSurfaceRunoff
+export DirectSurfaceRunoff
 include("surface_hydrology/surface_runoff.jl")
 
 export SurfaceHydrology

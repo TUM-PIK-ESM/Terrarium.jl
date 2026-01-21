@@ -29,7 +29,7 @@ $TYPEDFIELDS
     evapotranpsiration::CanopyET = PALADYNCanopyEvapotranspiration(eltype(grid))
     
     "Surface runoff scheme"
-    surface_runoff::SurfaceRunoff = PALADYNSurfaceRunoff(eltype(grid))
+    surface_runoff::SurfaceRunoff = DirectSurfaceRunoff(eltype(grid))
 
     "Physical constants"
     constants::Constants = PhysicalConstants(eltype(grid))
