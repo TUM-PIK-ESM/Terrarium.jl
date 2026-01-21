@@ -60,13 +60,12 @@ end
 
 @testset "compute_precip_ground" begin
     canopy_hydrology = PALADYNCanopyHydrology()
-    constants = PhysicalConstants()
-    precip_ground = compute_precip_ground(canopy_hydrology, constants, 0, 0, 0)
+    precip_ground = compute_precip_ground(canopy_hydrology, 0, 0, 0)
     @test iszero(precip_ground)
     # Test calculation of precip_ground
     P = 1e-8
     I_can = P / 2
     R_can = 1e-6
-    precip_ground = compute_precip_ground(canopy_hydrology, constants, P, I_can, R_can)
+    precip_ground = compute_precip_ground(canopy_hydrology, P, I_can, R_can)
     @test precip_ground == P - I_can + R_can
 end

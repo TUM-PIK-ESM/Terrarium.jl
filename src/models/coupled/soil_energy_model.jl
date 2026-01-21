@@ -58,9 +58,11 @@ function initialize(
     fields = (;),
     external_variables = ()
 ) where {NF}
+    grid = get_grid(model)
     vars = Variables(variables(model)..., external_variables...)
-    surface_fluxes = GroundHeatFlux()
-    bcs = merge_recursive(boundary_conditions, surface_fluxes)
+    ground_heat_flux = initialize(vars.auxiliary.ground_heat_flux, grid, clock)
+    ground_heat_flux_bc = GroundHeatFlux(ground_heat_flux)
+    bcs = merge_recursive(boundary_conditions, ground_heat_flux_bc)
     return initialize(vars, model.grid, clock, boundary_conditions=bcs)
 end
 

@@ -41,7 +41,12 @@ function surface_humidity_flux end
 """
 Base type for surface runoff processes.
 """
-abstract type AbstractRunoff <: AbstractProcess end
+abstract type AbstractSurfaceRunoff <: AbstractProcess end
+
+"""
+Base type for coupled surface hydrology processes.
+"""
+abstract type AbstractSurfaceHydrology <: AbstractProcess end
 
 # Parameterizations
 

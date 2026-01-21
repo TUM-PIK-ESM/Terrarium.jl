@@ -10,7 +10,6 @@ $TYPEDFIELDS
     NF,
     GridType<:AbstractLandGrid{NF},
     Atmosphere<:AbstractAtmosphere,
-    SurfaceEnergyBalance<:AbstractSurfaceEnergyBalance,
     CanopyHydrology<:AbstractCanopyHydrology,
     CanopyET<:AbstractEvapotranspiration,
     SurfaceRunoff<:AbstractSurfaceRunoff,
@@ -44,11 +43,11 @@ get_grid(model::SurfaceHydrologyModel) = model.grid
 
 get_atmosphere(model::SurfaceHydrologyModel) = model.atmosphere
 
-get_canopy_hydrology(model::SurfaceHydrologyModel) = model.canopy_hydrology
-
-get_evapotranspiration(model::SurfaceHydrologyModel) = model.evapotranpsiration
-
-get_surface_runoff(model::SurfaceHydrologyModel) = model.surface_runoff
+get_surface_hydrology(model::SurfaceHydrologyModel) = SurfaceHydrology(
+    model.canopy_hydrology,
+    model.evapotranpsiration,
+    model.surface_runoff
+)
 
 get_constants(model::SurfaceHydrologyModel) = model.constants
 

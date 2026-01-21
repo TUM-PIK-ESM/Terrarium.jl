@@ -140,9 +140,15 @@ end
 # Default implementation for processes, also allowing for dispatches on `nothing`
 # TODO: Is this a good idea? Should we force users to *always* define these methods?
 initialize!(state, model, ::Union{Nothing, AbstractProcess}) = nothing
+
+variables(process::AbstractProcess) = mapreduce(variables, tuplejoin, processes(process))
+
 compute_auxiliary!(state, model, ::Union{Nothing, AbstractProcess}) = nothing
+
 compute_tendencies!(state, model, ::Union{Nothing, AbstractProcess}) = nothing
+
 closure!(state, model, ::Union{Nothing, AbstractProcess}) = nothing
+
 invclosure!(state, model, ::Union{Nothing, AbstractProcess}) = nothing
 
 # AbstractModel subtypes

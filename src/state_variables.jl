@@ -165,8 +165,8 @@ function initialize(
     # Initialize Fields for each variable group, if they are not already given in the user defined `fields`
     input_fields = initialize(vars.inputs, grid, clock, boundary_conditions, fields)
     tendency_fields = initialize(vars.tendencies, grid, clock, boundary_conditions, fields)
-    auxiliary_fields = initialize(vars.auxiliary, grid, clock, boundary_conditions, merge(fields, input_fields))
-    prognostic_fields = initialize(vars.prognostic, grid, clock, boundary_conditions, merge(fields, input_fields, auxiliary_fields))
+    prognostic_fields = initialize(vars.prognostic, grid, clock, boundary_conditions, merge(fields, input_fields))
+    auxiliary_fields = initialize(vars.auxiliary, grid, clock, boundary_conditions, merge(fields, input_fields, prognostic_fields))
     # recursively initialize state variables for each namespace
     namespaces = map(vars.namespaces) do ns
         initialize(ns.vars, grid, clock; boundary_conditions=get(boundary_conditions, varname(ns), (;)), fields=get(fields, varname(ns), (;)))

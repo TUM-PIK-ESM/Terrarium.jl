@@ -73,26 +73,32 @@ variables(::PALADYNCanopyEvapotranspiration{NF}) where {NF} = (
 )
 
 function surface_humidity_flux(i, j, state, grid, evtr::PALADYNCanopyEvapotranspiration)
-    @inbounds state.evaporation_canopy[i, j] + state.evaporation_ground[i, j] + state.transpiration[i, j]
+    @inbounds let E_gnd = state.evaporation_ground[i, j]
+                  E_can = state.evaporation_canopy[i, j],
+                  T_can = state.transpiration[i, j];
+        return E_gnd + E_can + T_can
+    end
 end
 
 function compute_auxiliary!(state, model, evtr::PALADYNCanopyEvapotranspiration)
     grid = get_grid(model)
-    canopy_hydrology = get_canopy_hydrology(model)
+    surface_hydrology = get_surface_hydrology(model)
     atmos = get_atmosphere(model)
     constants = get_constants(model)
-    launch!(state, grid, :xy, compute_evapotranspiration_kernel!, canopy_hydrology, atmos, constants)
+    launch!(state, grid, :xy, compute_evapotranspiration_kernel!,
+            surface_hydrology.canopy_hydrology, atmos, constants)
 end
 
 function compute_auxiliary!(state, model::AbstractLandModel, evtr::PALADYNCanopyEvapotranspiration)
     grid = get_grid(model)
-    canopy_hydrology = get_canopy_hydrology(model)
+    surface_hydrology = get_surface_hydrology(model)
     soilw = get_soil_hydrology(model)
     strat = get_soil_stratigraphy(model)
     bgc = get_soil_biogeochemistry(model)
     atmos = get_atmosphere(model)
     constants = get_constants(model)
-    launch!(state, grid, :xy, compute_evapotranspiration_kernel!, canopy_hydrology, atmos, constants, soilw, strat, bgc)
+    launch!(state, grid, :xy, compute_evapotranspiration_kernel!,
+            surface_hydrology.canopy_hydrology, atmos, constants, soilw, strat, bgc)
 end
 
 # Kernels

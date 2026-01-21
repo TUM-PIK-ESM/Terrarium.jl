@@ -95,7 +95,7 @@ end
         state.tendencies.w_can[i, j] = w_can_tend
 
         # Compute precipitation reaching the ground
-        state.precip_ground[i, j] = compute_precip_ground(canopy_hydrology, constants, precip, I_can, R_can)
+        state.precip_ground[i, j] = compute_precip_ground(canopy_hydrology, precip, I_can, R_can)
     end
 end
 
@@ -148,8 +148,7 @@ of Eq. 44, PALADYN (Willeit 2016). Instead of subtracting the tendency, we just 
 interception and add the removal rate `R_can`.
 """
 @inline function compute_precip_ground(
-    canopy_hydrology::PALADYNCanopyHydrology{NF},
-    constants::PhysicalConstants{NF},
+    ::PALADYNCanopyHydrology{NF},
     precip, I_can, R_can
 ) where NF
     # Compute the precipitation reaching the ground:

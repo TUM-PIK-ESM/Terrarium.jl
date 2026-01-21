@@ -3,7 +3,7 @@ struct LandModel{
     NF,
     GridType<:AbstractLandGrid,
     Atmosphere<:AbstractAtmosphere,
-    SEB<:SurfaceEnergyBalance,
+    SEB<:AbstractSurfaceEnergyBalance,
     GroundModel<:AbstractGroundModel,
     SnowModel<:AbstractSnowModel,
     VegetationModel<:AbstractVegetationModel,

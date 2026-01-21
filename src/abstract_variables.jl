@@ -216,7 +216,7 @@ hasclosure(var::PrognosticVariable) = !isnothing(var.closure)
 """
     $TYPEDEF
 
-Container for abstract state variable definitions. Automatically sorts and merges all variables
+Container for abstract state variable definitions. Automatically collates and merges all variables
 and namespaces passed into the constructor.
 """
 struct Variables{ProgVars, TendVars, AuxVars, InputVars, Namespaces}
@@ -252,8 +252,8 @@ function Variables(vars::Tuple{Vararg{Union{AbstractProcessVariable, Namespace}}
     # get tendencies from prognostic variables
     tendency_vars = map(var -> var.tendency, prognostic_vars)
     # create closure variables and prepend to tuple of auxiliary variables;
-    # the order matters for auxiliary Field constructors for which closure variables
-    # should be available since they are basically extensions of prognostic variables
+    # note that the order matters here since Field constructors will be called in the order
+    # that they appear in the var tuples.
     closure_vars = map(var -> closurevar(var.closure), filter(hasclosure, prognostic_vars))
     auxiliary_vars = merge_duplicates(tuplejoin(closure_vars, auxiliary_vars))
     # drop inputs with matching prognostic or auxiliary variables
@@ -275,7 +275,10 @@ function Variables(vars::Tuple{Vararg{Union{AbstractProcessVariable, Namespace}}
     )
 end
 
-function check_duplicates(vars...)
+"""
+Check for variables/namespaces with duplicate names and raise an error if duplicates are detected.
+"""
+function check_duplicates(vars::Union{AbstractVariable, Namespace}...)
     names = unique(map(varname, vars))
     groups = Dict(map(n -> n => filter(==(n) ∘ varname, vars), names)...)
     for key in keys(groups)
@@ -285,14 +288,19 @@ function check_duplicates(vars...)
     end
 end
 
+"""
+Merges all of the given `Variables` containers into a single container.
+"""
 function Base.merge(varss::Variables...)
-    return Variables(
-        merge(map(vars -> vars.prognostic, varss)...),
-        merge(map(vars -> vars.tendencies, varss)...),
-        merge(map(vars -> vars.auxiliary, varss)...),
-        merge(map(vars -> vars.inputs, varss)...),
-        merge(map(vars -> vars.namespaces, varss)...)
-    )
+    allvars = map(varss) do vars
+        tuplejoin(
+            values(vars.prognostic),
+            values(vars.auxiliary),
+            values(vars.inputs),
+            values(vars.namespaces)
+        )
+    end
+    return Variables(reduce(tuplejoin, allvars))
 end
 
 """
