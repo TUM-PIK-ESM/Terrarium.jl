@@ -2,6 +2,7 @@ using Terrarium
 using Terrarium:
     compute_canopy_interception,
     compute_canopy_saturation_fraction,
+    compute_canopy_water_removal,
     compute_w_can_tend,
     compute_precip_ground
 using Test
@@ -37,25 +38,35 @@ end
     @test f_can2 < f_can
 end
 
+@testset "compute_canopy_water_removal" begin
+    canopy_hydrology = PALADYNCanopyHydrology()
+    constants = PhysicalConstants()
+    # Test flux is zero when there is no stored water
+    ∂w∂t = compute_canopy_water_removal(canopy_hydrology, constants, 0.0)
+    @test iszero(∂w∂t)
+    # Test that flux is still zero when there is negative water (mass balance violation)
+    ∂w∂t = compute_canopy_water_removal(canopy_hydrology, constants, -1.0)
+    @test iszero(∂w∂t)
+    # Test flux is positive when there is water
+    ∂w∂t = compute_canopy_water_removal(canopy_hydrology, constants, 1.0)
+    @test ∂w∂t > 0
+end
+
 @testset "compute_w_can_tend" begin
     canopy_hydrology = PALADYNCanopyHydrology()
     constants = PhysicalConstants()
-    # Test tendency is zero when there is no water present or incoming
-    ∂w∂t, R_can = compute_w_can_tend(canopy_hydrology, constants, 0.0, 0.0, 0.0)
+    # Test tendency is zero when all flux terms are zero
+    ∂w∂t = compute_w_can_tend(canopy_hydrology, 0.0, 0.0, 0.0)
     @test iszero(∂w∂t)
-    @test iszero(R_can)
-    # Test tendency is negative when water is present but no evaporation or interception
-    w_can = 0.1
-    ∂w∂t, R_can = compute_w_can_tend(canopy_hydrology, constants, w_can, 0.0, 0.0)
-    @test ∂w∂t == -R_can
+    # Test tendency is negative when removal is positive
+    ∂w∂t = compute_w_can_tend(canopy_hydrology, 0.0, 0.0, 1.0)
     @test ∂w∂t < 0
-    # Test interception and evaporation cancel 
-    ∂w∂t, R_can = compute_w_can_tend(canopy_hydrology, constants, 0.0, 1e-6, 1e-6)
+    # Test that interception and evaporation cancel 
+    ∂w∂t = compute_w_can_tend(canopy_hydrology, 1e-6, 1e-6, 0.0)
     @test iszero(∂w∂t)
-    @test iszero(R_can)
     # Test positive with incoming interception
-    ∂w∂t, R_can = compute_w_can_tend(canopy_hydrology, constants, 0.0, 1e-6, 1e-7)
-    @test ∂w∂t > 0
+    ∂w∂t = compute_w_can_tend(canopy_hydrology, 1e-6, 1e-7, 1e-7)
+    @test ∂w∂t ≈ 1e-6 - 2e-7
 end
 
 @testset "compute_precip_ground" begin

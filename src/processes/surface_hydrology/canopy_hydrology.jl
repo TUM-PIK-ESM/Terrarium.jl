@@ -139,7 +139,7 @@ Compute the canopy water removal rate as `w_can / ρw / τw`.
    w_can
 ) where {NF}
     # Canopy water storage tendency: interception - evaporation - removal
-    R_can = w_can / constants.ρw / canopy_hydrology.τ_w
+    R_can = max(w_can, zero(NF)) / constants.ρw / canopy_hydrology.τ_w
     return R_can
 end
 
@@ -154,7 +154,7 @@ Compute the `w_can` tendency and removal rate following Eq. 41, PALADYN (Willeit
 ) where NF
     # Canopy water storage tendency: interception - evaporation - removal
     w_can_tend = I_can - E_can - R_can
-    return w_can_tend, R_can
+    return w_can_tend
 end
 
 """
