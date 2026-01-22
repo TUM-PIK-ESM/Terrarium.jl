@@ -126,7 +126,7 @@ end
         ρₐ = constants.ρₐ, # density of air
         Qh = surface_humidity_flux(i, j, state, grid, evtr);
         # Calculate latent heat flux (positive upwards)
-        Hₗ = -L * ρₐ * Qh
+        Hₗ = L * ρₐ * Qh
         return Hₗ
     end
 end

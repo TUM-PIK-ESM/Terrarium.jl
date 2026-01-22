@@ -16,12 +16,14 @@ T_c &= \\frac{\\Delta q}{r_a + r_s} \\
     C_can::NF = 0.006
 
     "Parameterization for ground resistance to evaporation/sublimation"
-    ground_resistance::GR = ConstantEvaporationResistance(typeof(C_can))
+    ground_resistance::GR = ConstantEvaporationResistanceFactor(typeof(C_can))
 end
 
 # TODO: The following ET functions all have the same basic functional form and can be generalized to a function
 # that takes the humidity gradient/difference and an arbitrary number of resistance terms. We could consider
-# making such an abstraction, but we should first consider what the main benefits would be.
+# making such an abstraction, but we should first consider what exactly the benefits would be since it also
+# obfuscates that actual calculations, and the equations are quite simple. Perhaps one benefit would be reduced
+# unit testing overhead?
 
 """
     $TYPEDSIGNATURES
@@ -31,8 +33,8 @@ Compute potential transpiration from the given humidity gradient, aerodynamic re
 @inline function compute_transpiration(::PALADYNCanopyEvapotranspiration{NF}, Δq, rₐ, gw_can) where {NF}
     let rₛ = 1 / max(gw_can, sqrt(eps(NF))); # stomatal resistance as reciprocal of conductance
         # Calculate transpriation flux in m/s (positive upwards)
-        E_tr = Δq / (rₐ + rₛ)
-        return E_tr
+        E_trp = Δq / (rₐ + rₛ)
+        return E_trp
     end
 end
 
@@ -76,7 +78,7 @@ function surface_humidity_flux(i, j, state, grid, evtr::PALADYNCanopyEvapotransp
     @inbounds let E_gnd = state.evaporation_ground[i, j]
                   E_can = state.evaporation_canopy[i, j],
                   T_can = state.transpiration[i, j];
-        return E_gnd + E_can + T_can
+        return -E_gnd - E_can - T_can
     end
 end
 
@@ -86,7 +88,7 @@ function compute_auxiliary!(state, model, evtr::PALADYNCanopyEvapotranspiration)
     atmos = get_atmosphere(model)
     constants = get_constants(model)
     launch!(state, grid, :xy, compute_evapotranspiration_kernel!,
-            surface_hydrology.canopy_hydrology, atmos, constants)
+            evtr, surface_hydrology.canopy_hydrology, atmos, constants)
 end
 
 function compute_auxiliary!(state, model::AbstractLandModel, evtr::PALADYNCanopyEvapotranspiration)
@@ -98,7 +100,7 @@ function compute_auxiliary!(state, model::AbstractLandModel, evtr::PALADYNCanopy
     atmos = get_atmosphere(model)
     constants = get_constants(model)
     launch!(state, grid, :xy, compute_evapotranspiration_kernel!,
-            surface_hydrology.canopy_hydrology, atmos, constants, soilw, strat, bgc)
+            evtr, surface_hydrology.canopy_hydrology, atmos, constants, soilw, strat, bgc)
 end
 
 # Kernels
