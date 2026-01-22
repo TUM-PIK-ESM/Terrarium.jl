@@ -33,78 +33,11 @@ variables(::PALADYNCanopyHydrology) = (
     input(:SAI, XY(); desc="Stem Area Index", units=u"m^2/m^2"),
 )
 
-@inline @propagate_inbounds canopy_water(i, j, state, grid, ::PALADYNCanopyHydrology) = state.canopy_water[i, j]
+@propagate_inbounds canopy_water(i, j, state, grid, ::PALADYNCanopyHydrology) = state.canopy_water[i, j]
 
-@inline @propagate_inbounds saturation_canopy_water(i, j, state, grid, ::PALADYNCanopyHydrology) = state.saturation_canopy_water[i, j]
+@propagate_inbounds saturation_canopy_water(i, j, state, grid, ::PALADYNCanopyHydrology) = state.saturation_canopy_water[i, j]
 
-@inline @propagate_inbounds ground_precipitation(i, j, state, grid, ::PALADYNCanopyHydrology) = state.precip_ground[i, j]
-
-function compute_auxiliary!(state, model, canopy_hydrology::PALADYNCanopyHydrology)
-    grid = get_grid(model)
-    atmos = get_atmosphere(model)
-    constants = get_constants(model)
-    launch!(state, grid, :xy, compute_auxiliary_kernel!, canopy_hydrology, atmos, constants)
-end
-
-function compute_tendencies!(state, model, canopy_hydrology::PALADYNCanopyHydrology)
-    grid = get_grid(model)
-    launch!(state, grid, :xy, compute_tendencies_kernel!, canopy_hydrology)
-end
-
-# Kernels
-
-@kernel function compute_auxiliary_kernel!(
-    state, 
-    canopy_hydrology::PALADYNCanopyHydrology{NF},
-    atmos::AbstractAtmosphere,
-    constants::PhysicalConstants
-) where NF
-    
-    i, j = @index(Global, NTuple)
-
-    # Get inputs 
-    precip = rainfall(i, j, state, grid, atmos)
-    LAI = state.LAI[i, j]
-    SAI = state.SAI[i, j]
-    w_can = state.canopy_water[i, j]
-
-    # Compute canopy saturation faction
-    f_can = compute_canopy_saturation_fraction(canopy_hydrology, w_can, LAI, SAI)
-
-    # Compute canopy rain interception
-    I_can = compute_canopy_interception(canopy_hydrology, precip, LAI, SAI)
-
-    # Compute canopy water removal
-    R_can = compute_canopy_removal(canopy_hydrology, constants, w_can)
-
-    # Store results
-    state.canopy_water_interception[i, j] = I_can
-    state.canopy_water_removal[i, j] = R_can
-    state.saturation_canopy_water[i, j] = f_can
-end
-
-@kernel function compute_tendencies_kernel!(
-    state, 
-    canopy_hydrology::PALADYNCanopyHydrology{NF},
-    canopy_ET::PALADYNCanopyEvapotranspiration{NF}
-) where NF  
-    i, j = @index(Global, NTuple)
-
-    # Get inputs
-    @inbounds let I_can = state.canopy_water_interception[i, j],
-                  E_can = state.evaporation_canopy[i, j],
-                  R_can = state.canopy_water_removal;
-
-        # Compute canopy water tendency
-        state.tendencies.w_can[i, j] = compute_w_can_tend(canopy_hydrology, I_can, E_can, R_can)
-
-        # Compute precipitation reaching the ground
-        state.precip_ground[i, j] = compute_precip_ground(canopy_hydrology, precip, I_can, R_can)
-    end
-end
-
-
-# Kernel functions
+@propagate_inbounds ground_precipitation(i, j, state, grid, ::PALADYNCanopyHydrology) = state.precip_ground[i, j]
 
 """
     $TYPEDSIGNATURES
@@ -172,4 +105,71 @@ interception and add the removal rate `R_can`.
     # precip - interception + removal
     precip_ground = precip - I_can + R_can
     return precip_ground
+end
+
+# Process methods
+
+function compute_auxiliary!(state, model, canopy_hydrology::PALADYNCanopyHydrology)
+    grid = get_grid(model)
+    atmos = get_atmosphere(model)
+    constants = get_constants(model)
+    launch!(state, grid, :xy, compute_auxiliary_kernel!, canopy_hydrology, atmos, constants)
+end
+
+function compute_tendencies!(state, model, canopy_hydrology::PALADYNCanopyHydrology)
+    grid = get_grid(model)
+    launch!(state, grid, :xy, compute_tendencies_kernel!, canopy_hydrology)
+end
+
+# Kernels
+
+@kernel inbounds=true function compute_auxiliary_kernel!(
+    state, 
+    canopy_hydrology::PALADYNCanopyHydrology{NF},
+    atmos::AbstractAtmosphere,
+    constants::PhysicalConstants
+) where NF
+    
+    i, j = @index(Global, NTuple)
+
+    # Get inputs 
+    precip = rainfall(i, j, state, grid, atmos)
+    LAI = state.LAI[i, j]
+    SAI = state.SAI[i, j]
+    w_can = state.canopy_water[i, j]
+
+    # Compute canopy saturation faction
+    f_can = compute_canopy_saturation_fraction(canopy_hydrology, w_can, LAI, SAI)
+
+    # Compute canopy rain interception
+    I_can = compute_canopy_interception(canopy_hydrology, precip, LAI, SAI)
+
+    # Compute canopy water removal
+    R_can = compute_canopy_removal(canopy_hydrology, constants, w_can)
+
+    # Compute precipitation reaching the ground
+    precip_ground = compute_precip_ground(canopy_hydrology, precip, I_can, R_can)
+
+    # Store results
+    state.canopy_water_interception[i, j] = I_can
+    state.canopy_water_removal[i, j] = R_can
+    state.saturation_canopy_water[i, j] = f_can
+    state.precip_ground[i, j] = precip_ground
+end
+
+@kernel function compute_tendencies_kernel!(
+    state, 
+    canopy_hydrology::PALADYNCanopyHydrology{NF},
+    canopy_ET::PALADYNCanopyEvapotranspiration{NF}
+) where NF  
+    i, j = @index(Global, NTuple)
+
+    # Get inputs
+    @inbounds let I_can = state.canopy_water_interception[i, j],
+                  E_can = state.evaporation_canopy[i, j],
+                  R_can = state.canopy_water_removal;
+
+        # Compute canopy water tendency
+        state.tendencies.w_can[i, j] = compute_w_can_tend(canopy_hydrology, I_can, E_can, R_can)
+    end
 end
