@@ -44,7 +44,7 @@ if MAIN_TESTS
         include("surface_energy/seb_tests.jl")
     end
 
-    @testset "Surface hydrology tests" begin
-        include("surface_hydrology/canopy_hydrology_tests.jl")
+    @testset "Surface hydrology" begin
+        include("surface_hydrology/surface_hydrology_tests.jl")
     end
 end 
