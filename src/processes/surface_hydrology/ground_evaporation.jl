@@ -19,6 +19,8 @@ GroundEvaporation(
     ground_resistance::GR = ConstantEvaporationResistanceFactor(one(NF))
 ) where {NF, GR} = GroundEvaporation{NF, GR}(; ground_resistance)
 
+@propagate_inbounds surface_humidity_flux(i, j, state, grid, evtr::GroundEvaporation) = state.evaporation_ground[i, j]
+
 # Process methods
 
 variables(::GroundEvaporation) = (
@@ -118,13 +120,16 @@ end
 
 # Forcing interface for soil hydrology
 
-@inline function forcing(i, j, k, state, grid, ::GroundEvaporation, ::AbstractSoilHydrology, constants::PhysicalConstants)
-    if k == grid.Nz # only nonzero at the surface
-        let ρw = constants.ρw, # density of water
-            Δz = Δzᵃᵃᶜ(i, j, k, grid),
-            E = state.evaporation[i, j];
-            ∂θ∂t = -E / Δz # rescale by layer thickness to get water content flux
-            return ∂θ∂t
-        end
+"""
+    forcing(i, j, k, state, grid, evtr::AbstractEvapotranspiration, ::AbstractSoilHydrology)
+
+Compute and return the evapotranspiration forcing for soil moisture at the given indices `i, j, k`.
+The ET forcing is just the `surface_humidity_flux` rescaled by the thickness of layer `k`.
+"""
+@inline function forcing(i, j, k, state, grid, evtr::AbstractEvapotranspiration, ::AbstractSoilHydrology)
+    let Δz = Δzᵃᵃᶜ(i, j, k, grid),
+        Qh = surface_humidity_flux(i, j, state, grid, evtr);
+        ∂θ∂t = -Qh / Δz # rescale by layer thickness to get water content flux
+        return ∂θ∂t * (k == grid.Nz)
     end
 end

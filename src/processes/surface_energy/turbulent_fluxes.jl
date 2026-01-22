@@ -111,7 +111,7 @@ end
         rₐ = aerodynamic_resistance(i, j, state, grid, atmos), # aerodynamic resistance
         Δq = compute_vpd(i, j, state, grid, atmos, constants, Ts);
         # Calculate latent heat flux (positive upwards)
-        Hₗ = -L * ρₐ * Δq / rₐ
+        Hₗ = L * ρₐ * Δq / rₐ
         return Hₗ
     end
 end

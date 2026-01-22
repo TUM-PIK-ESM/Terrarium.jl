@@ -18,7 +18,7 @@ struct SoilHydrology{
     NF,
     VerticalFlow<:AbstractVerticalFlow,
     SoilHydraulics<:AbstractSoilHydraulics{NF},
-    VWCForcing<:ForcingType
+    VWCForcing<:Union{Nothing, AbstractForcing}
 } <: AbstractSoilHydrology{NF}
     "Soil water vertical flow operator"
     vertflow::VerticalFlow
@@ -27,16 +27,16 @@ struct SoilHydrology{
     hydraulic_properties::SoilHydraulics
 
     "Forcing for soil moisture (volumetric water content)"
-    forcing::VWCForcing
+    vwc_forcing::VWCForcing
 end
 
 function SoilHydrology(
     ::Type{NF},
     vertflow::AbstractVerticalFlow = NoFlow();
-    forcing::ForcingType = Forcings(),
+    vwc_forcing::Union{Nothing, AbstractForcing} = nothing,
     hydraulic_properties::AbstractSoilHydraulics = SoilHydraulicsSURFEX(NF),
 ) where {NF}
-    return SoilHydrology(vertflow, hydraulic_properties, forcing)
+    return SoilHydrology(vertflow, hydraulic_properties, vwc_forcing)
 end
 
 """
@@ -68,23 +68,30 @@ State variables for `SoilHydrology` processes.
 variables(hydrology::SoilHydrology{NF}) where {NF} = (
     auxiliary(:saturation_water_ice, XYZ(), domain=UnitInterval(), desc="Saturation level of water and ice in the pore space"),
     auxiliary(:water_table, XY(), water_table, hydrology, units=u"m", desc="Elevation of the water table in meters"),
+    auxiliary(:hydraulic_conductivity, XYZ(z=Face()), units=u"m/s", desc="Hydraulic conductivity of soil volumes in m/s"),
     input(:liquid_water_fraction, XYZ(), default = 1, domain=UnitInterval(), desc="Fraction of unfrozen water in the pore space"),
 )
 
-@inline saturation_water_ice(i, j, k, state, grid, ::AbstractSoilHydrology) = @inbounds state.saturation_water_ice[i, j, k]
+@inline @propagate_inbounds saturation_water_ice(i, j, k, state, grid, ::AbstractSoilHydrology) = state.saturation_water_ice[i, j, k]
 
-@inline liquid_water_fraction(i, j, k, state, grid, ::AbstractSoilHydrology) = @inbounds state.liquid_water_fraction[i, j, k]
+@inline @propagate_inbounds hydraulic_conductivity(i, j, k, state, grid, ::AbstractSoilHydrology) = state.hydraulic_conductivity[i, j, k]
+
+@inline @propagate_inbounds liquid_water_fraction(i, j, k, state, grid, ::AbstractSoilHydrology) = state.liquid_water_fraction[i, j, k]
+
+@inline @propagate_inbounds water_table(i, j, state, grid, ::AbstractSoilHydrology) = state.water_table[i, j, 1]
 
 """
 Return a computed `Field` that derives the water table from the current `saturation_water_ice` state.
 """
 function water_table(hydrology::SoilHydrology{NF}, grid, clock, fields) where {NF}
-    is_saturated(i, j, k, grid, op) = @inbounds op.operand[i, j, k] == one(eltype(grid))
-    z_faces = znodes(get_field_grid(grid), Center(), Center(), Face())
+    # get grid face positions
+    z_faces = on_architecture(CPU(), znodes(get_field_grid(grid), Center(), Center(), Face()))
     # get height of soil column
+    # TODO: this assumes that the coordinates do not change
     hz = abs(z_faces[1] - z_faces[end])
-    # get total water + ice content in m³/m² by integrating saturation_water_ice
-    sat = ConditionalOperation(fields.saturation_water_ice, condition = is_saturated)
+    # get total water + ice content in m³/m² by integrating saturation_water_ice;
+    at_or_below_water_table(i, j, k, grid, op) = @inbounds op.operand[i, j, k-1] == one(eltype(grid))
+    sat = ConditionalOperation(fields.saturation_water_ice, condition = at_or_below_water_table)
     hw = Field(Integral(sat, dims=3))
     # take difference to get the water table elevation
     return hw - hz

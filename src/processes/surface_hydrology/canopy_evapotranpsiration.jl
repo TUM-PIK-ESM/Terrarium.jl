@@ -78,7 +78,7 @@ function surface_humidity_flux(i, j, state, grid, evtr::PALADYNCanopyEvapotransp
     @inbounds let E_gnd = state.evaporation_ground[i, j]
                   E_can = state.evaporation_canopy[i, j],
                   T_can = state.transpiration[i, j];
-        return -E_gnd - E_can - T_can
+        return E_gnd + E_can + T_can
     end
 end
 

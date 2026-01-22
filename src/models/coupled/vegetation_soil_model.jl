@@ -67,8 +67,6 @@ function initialize(
     ground_heat_flux_bc = GroundHeatFlux(ground_heat_flux)
     infiltration_bc = InfiltrationFlux(infiltration)
     bcs = merge_recursive(boundary_conditions, ground_heat_flux_bc, infiltration_bc)
-    # register ET as forcing on soil hydrology
-    model.soil.hydrology.forcing["ET"] = model.surface_hydrology.evapotranpsiration
     # pass preconstructed fields to initialize
     fields = merge(fields, (; ground_heat_flux, infiltration))
     return initialize(vars, model.grid, clock, bcs, fields)z

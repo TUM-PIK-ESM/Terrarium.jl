@@ -41,6 +41,15 @@ function compute_tendencies!(state, model, hydrology::SoilHydrology{NF, <:Richar
     return nothing
 end
 
+function compute_tendencies!(state, model::AbstractLandModel, hydrology::SoilHydrology{NF, <:RichardsEq}) where {NF}
+    grid = get_grid(model)
+    strat = get_soil_stratigraphy(model)
+    evapotranspiration = get_evapotranspiration(model)
+    constants = get_constants(model)
+    launch!(state, grid, :xyz, compute_saturation_tendency!, hydrology, strat, constants, evapotranspiration)
+    return nothing
+end
+
 # Kernels
 
 """
@@ -146,11 +155,12 @@ Kernel for computing the tendency of the prognostic `saturation_water_ice` varia
     grid,
     hydrology::SoilHydrology,
     strat::AbstractStratigraphy,
-    constants::PhysicalConstants
+    constants::PhysicalConstants,
+    evapotranspiration::Union{Nothing, AbstractEvapotranspiration}
 )
     i, j, k = @index(Global, NTuple)
     # Compute volumetic water content tendency
-    ∂θ∂t = volumetric_water_content_tendency(i, j, k, grid, state, hydrology, constants)
+    ∂θ∂t = volumetric_water_content_tendency(i, j, k, grid, state, hydrology, constants, evapotranspiration)
     # Get porosity
     por = porosity(i, j, k, state, grid, strat)
     # Rescale by porosity to get saturation tendency
@@ -168,7 +178,8 @@ end
 @inline function volumetric_water_content_tendency(
     i, j, k, grid, state,
     hydrology::SoilHydrology{NF, <:RichardsEq},
-    constants::PhysicalConstants
+    constants::PhysicalConstants,
+    evapotranspiration::Union{Nothing, AbstractEvapotranspiration}
 ) where {NF}
     # Operators require the underlying Oceananigans grid
     field_grid = get_field_grid(grid)
@@ -177,7 +188,8 @@ end
     # ∂θ∂t = ∇⋅K(θ)∇Ψ + forcing, where Ψ = ψₘ + ψₕ + ψz, and "forcing" represents sources and sinks such as ET losses
     ∂θ∂t = (
         - ∂zᵃᵃᶜ(i, j, k, field_grid, darcy_flux, state.pressure_head, state.hydraulic_conductivity)
-        + forcing(i, j, k, grid, state, hydrology, constants)
+        + forcing(i, j, k, grid, state, evapotranspiration, hydrology, constants)
+        + forcing(i, j, k, grid, state, hydrology.forcing, hydrology)
     )
     return ∂θ∂t
 end
