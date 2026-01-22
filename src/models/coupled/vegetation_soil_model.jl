@@ -65,8 +65,10 @@ function initialize(
     ground_heat_flux = initialize(vars.auxiliary.ground_heat_flux, grid, clock)
     infiltration = initialize(vars.auxiliary.infiltration, grid, clock)
     ground_heat_flux_bc = GroundHeatFlux(ground_heat_flux)
-    infiltration_bc = InfiltrationFlux(infiltration)
-    bcs = merge_recursive(boundary_conditions, ground_heat_flux_bc, infiltration_bc)
+    # note that the hydrology module computes infiltration as positive so we need to negate it here
+    # since fluxes are by convention positive upwards
+    infiltration_bc = InfiltrationFlux(-infiltration)
+    bcs = merge_boundary_conditions(boundary_conditions, ground_heat_flux_bc, infiltration_bc)
     # pass preconstructed fields to initialize
     fields = merge(fields, (; ground_heat_flux, infiltration))
     return initialize(vars, model.grid, clock, bcs, fields)z
