@@ -8,6 +8,7 @@ using InteractiveUtils
 begin
     import Pkg
     Pkg.activate(".")
+    Pkg.develop(Pkg.PackageSpec(path="../.."))
     Pkg.instantiate()
 end
 
@@ -49,7 +50,7 @@ When we follow the advised naming notations of `grid` and `initializer` we inher
 
 ## What is a "grid"? 
 
-The `grid` defines the spatial discretization. Our grids are based on those of Oceananigans.jl (and SpeedyWeather.jl/RingGrids.jl) in order to take advantage of their capabilities for device-agnostic parallelization.
+The `grid` defines the spatial discretization. Our grids are based on those of [Oceananigans.jl](https://github.com/CliMA/Oceananigans.jl) (and [SpeedyWeather.jl](https://github.com/SpeedyWeather/SpeedyWeather.jl)/[RingGrids.jl](https://github.com/SpeedyWeather/SpeedyWeather.jl/tree/main/RingGrids)) in order to take advantage of their capabilities for device-agnostic parallelization.
 
 Terrarium currently provides two grid types: 
 
@@ -196,7 +197,7 @@ initializer = FieldInitializers(u = 1.0)
 
 # ╔═╡ f2d02218-76f6-4b3a-84ca-38772f55d428
 md"""
-Then, we define our forcing. For that, our time-dependent forcing is loaded in from a `Oceananigans.FieldTimeSeries`. If you want to load the forcing from e.g. a netCDF file you can use the `RasterInputSource` that is based on `Rasters.jl`. In the concrete case, we'll just generate a random forcing: 
+Then, we define our forcing. For that, our time-dependent forcing is loaded in from a `Oceananigans.FieldTimeSeries`. If you want to load the forcing from e.g. a netCDF file you can use the `RasterInputSource` that is based on [Rasters.jl](https://github.com/rafaqz/Rasters.jl). In the concrete case, we'll just generate a random forcing: 
 """
 
 # ╔═╡ 252af6a1-73c8-4abe-8100-690564641b0d
@@ -227,7 +228,7 @@ to `initialize` along with a suitable timestepper and our input/forcing data, wh
 """
 
 # ╔═╡ 7e38132b-d406-4863-b88f-90efe2a1bfa2
-integrator = initialize(model, ForwardEuler(Δt = 1.0), input)
+integrator = initialize(model, Heun(Δt=1.0), input)
 
 # ╔═╡ ab442662-9975-42e5-b5c7-48687f8cbe12
 md"""
@@ -283,20 +284,15 @@ begin
         overwrite_existing = true,
         schedule = TimeInterval(10seconds)
     )
+
+	# Run the simulation
+	run!(sim)
 end
 
 # ╔═╡ 081d0b29-927c-4a03-a3dd-4dcac043dcc1
 md"""
-We can then add an output writer to the simulation,
+We can then add an output writer to the simulation and finally `run!` it!
 """
-
-# ╔═╡ 09118f2e-6c41-49e3-abf2-92b70976d755
-md"""
-and finally `run!` it!
-"""
-
-# ╔═╡ 4d416eb0-fbbc-4fec-939c-5c3909b2cef2
-run!(sim)
 
 # ╔═╡ 0f607788-53e7-4a55-95f0-3690e9867099
 md"""
@@ -352,8 +348,6 @@ Well that's it. We defined and ran a simple exponential model with external forc
 # ╠═95f479e2-2ffa-4e15-8952-421465eab2ee
 # ╟─081d0b29-927c-4a03-a3dd-4dcac043dcc1
 # ╠═26000a4e-77cb-4c04-aeb2-ba5b0e14112a
-# ╟─09118f2e-6c41-49e3-abf2-92b70976d755
-# ╠═4d416eb0-fbbc-4fec-939c-5c3909b2cef2
 # ╟─eeb283fa-5360-4bab-83cf-dcbc0bee7949
 # ╟─0f607788-53e7-4a55-95f0-3690e9867099
 # ╠═dbe8d0fa-893f-4c05-9e46-220ab41636f3
