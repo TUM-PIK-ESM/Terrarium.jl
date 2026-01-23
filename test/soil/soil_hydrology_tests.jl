@@ -210,20 +210,19 @@ end
 end
 
 @testset "Soil moisture forcing (source/sink)" begin
-    mutable struct TestSoilWaterForcing{NF} <: Terrarium.AbstractProcess
+    mutable struct ForcingValue{NF}
         value::NF
-    end
-
-    function Terrarium.forcing(i, j, k, state, grid, forcing::TestSoilWaterForcing, hydrology::SoilHydrology, args...)
-        return forcing.value
     end
 
     Nz = 10
     grid = ColumnGrid(UniformSpacing(Δz=0.1, N=Nz))
     swrc = VanGenuchten(α=2.0, n=2.0)
     hydraulic_properties = ConstantHydraulics(Float64; cond_unsat=UnsatKVanGenuchten(Float64; swrc))
-    vwc_forcing = TestSoilWaterForcing(0.0)
-    hydrology = SoilHydrology(eltype(grid), RichardsEq(); hydraulic_properties, forcing=vwc_forcing)
+    forcing_value = ForcingValue(0.0)
+    vwc_forcing = Forcing(parameters=forcing_value, discrete_form=true) do i, j, k, grid, clock, fields, params
+        params.value
+    end
+    hydrology = SoilHydrology(eltype(grid), RichardsEq(); hydraulic_properties, vwc_forcing)
     # Variably saturated with water table
     initializer = FieldInitializers(
         temperature = 10.0, # positive soil temperature
@@ -233,19 +232,19 @@ end
     integrator = initialize(model, ForwardEuler())
     state = integrator.state
     # check that forcing_ET is zero when no latent heat flux is supplied
-    @test iszero(forcing(1, 1, Nz, grid.grid, state, hydrology))
-    # negative ET flux (evaporation)
-    vwc_forcing.value = -0.01
-    @test forcing(1, 1, Nz, grid.grid, state, hydrology) == vwc_forcing.value
-    # positive ET flux (condensation)
-    vwc_forcing.value = 0.01
-    @test forcing(1, 1, Nz, grid.grid, state, hydrology) == vwc_forcing.value
+    @test iszero(forcing(1, 1, Nz, state, grid, vwc_forcing, hydrology))
+    # negative flux
+    forcing_value.value = -0.01
+    @test forcing(1, 1, Nz, state, grid, vwc_forcing, hydrology) == forcing_value.value
+    # positive flux
+    forcing_value.value = 0.01
+    @test forcing(1, 1, Nz, state, grid, vwc_forcing, hydrology) == forcing_value.value
     # check tendency calculation
-    dθdt = volumetric_water_content_tendency(1, 1, Nz, grid, state, hydrology, model.constants)
-    @test dθdt == vwc_forcing.value
-    # take one timestep and check that water was evaporated
+    dθdt = volumetric_water_content_tendency(1, 1, Nz, grid, state, hydrology, model.constants, nothing)
+    @test dθdt == forcing_value.value
+    # take one timestep and check that water was removed
     dt = 60.0
-    vwc_forcing.value = -1e-5
+    forcing_value.value = -1e-5
     timestep!(integrator, dt)
-    @test state.saturation_water_ice[1, 1, Nz] .≈ 1 + vwc_forcing.value*dt / hydraulic_properties.porosity
+    @test state.saturation_water_ice[1, 1, Nz] .≈ 1 + forcing_value.value*dt / hydraulic_properties.porosity
 end
