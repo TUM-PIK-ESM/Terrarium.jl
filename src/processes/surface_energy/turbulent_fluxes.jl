@@ -34,16 +34,8 @@ variables(::DiagnosedTurbulentFluxes) = (
 
 function compute_auxiliary!(state, model, tur::DiagnosedTurbulentFluxes)
     (; grid, surface_energy_balance, atmosphere, constants) = model
-    launch!(
-        state,
-        grid,
-        :xy,
-        compute_turbulent_fluxes!,
-        tur,
-        surface_energy_balance.skin_temperature,
-        atmosphere,
-        constants,
-    )
+    launch!(state, grid, :xy, compute_turbulent_fluxes!,
+        tur, surface_energy_balance.skin_temperature, atmosphere, constants)
 end
 
 # Kernels
@@ -109,7 +101,7 @@ end
         ρₐ = constants.ρₐ, # density of air
         Ts = skin_temperature(i, j, state, grid, skinT),
         rₐ = aerodynamic_resistance(i, j, state, grid, atmos), # aerodynamic resistance
-        Δq = compute_vpd(i, j, state, grid, atmos, constants, Ts);
+        Δq = compute_humidity_vpd(i, j, state, grid, atmos, constants, Ts);
         # Calculate latent heat flux (positive upwards)
         Hₗ = L * ρₐ * Δq / rₐ
         return Hₗ
