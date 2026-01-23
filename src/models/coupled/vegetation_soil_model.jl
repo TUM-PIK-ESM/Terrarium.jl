@@ -5,6 +5,7 @@
     SEB<:AbstractSurfaceEnergyBalance,
     Hydrology<:AbstractSurfaceHydrology,
     Vegetation<:AbstractVegetationModel{NF, GridType},
+    PAW<:AbstractPlantAvailableWater,
     SoilModel<:AbstractSoilModel{NF, GridType},
     Initializer<:AbstractInitializer,
 } <: AbstractLandModel{NF, GridType}
@@ -22,6 +23,9 @@
 
     "Vegetation model"
     vegetation::Vegetation = VegetationModel(grid; atmosphere)
+
+    "Plant available water"
+    plant_available_water::PAW = FieldCapacityLimitedPAW(eltype(grid))
 
     "Soil model"
     soil::SoilModel = SoilModel(grid)
@@ -50,6 +54,7 @@ processes(model::VegetationSoilModel) = (
     model.surface_energy_balance,
     model.surface_hydrology,
     processes(model.vegetation)...,
+    model.plant_available_water,
     processes(model.soil)...
 )
 
@@ -62,8 +67,8 @@ function initialize(
 ) where {NF}
     grid = get_grid(model)
     vars = Variables(variables(model)..., external_variables...)
-    ground_heat_flux = initialize(vars.auxiliary.ground_heat_flux, grid, clock)
-    infiltration = initialize(vars.auxiliary.infiltration, grid, clock)
+    ground_heat_flux = initialize(vars.auxiliary.ground_heat_flux, grid, clock, boundary_conditions, fields)
+    infiltration = initialize(vars.auxiliary.infiltration, grid, clock, boundary_conditions, fields)
     ground_heat_flux_bc = GroundHeatFlux(ground_heat_flux)
     # note that the hydrology module computes infiltration as positive so we need to negate it here
     # since fluxes are by convention positive upwards
@@ -71,7 +76,7 @@ function initialize(
     bcs = merge_boundary_conditions(boundary_conditions, ground_heat_flux_bc, infiltration_bc)
     # pass preconstructed fields to initialize
     fields = merge(fields, (; ground_heat_flux, infiltration))
-    return initialize(vars, model.grid, clock, bcs, fields)z
+    return initialize(vars, model.grid, clock; boundary_conditions=bcs, fields)
 end
 
 function initialize!(state, model::VegetationSoilModel)
@@ -86,6 +91,7 @@ function compute_auxiliary!(state, model::VegetationSoilModel)
     compute_auxiliary!(state, model, model.atmosphere)
     compute_auxiliary!(state, model.soil)
     compute_auxiliary(state, model.surface_energy_balance)
+    compute_auxliiary!(state, model.plant_available_water)
     compute_auxiliary!(state, model, model.vegetation)
     compute_auxiliary!(state, model, surface_hydrology)
     # recompute surface energy fluxes
