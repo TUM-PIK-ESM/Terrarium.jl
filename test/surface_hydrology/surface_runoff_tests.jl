@@ -6,7 +6,7 @@ using Terrarium:
 using Test
 
 @testset "compute_surface_drainage" begin
-    runoff = DirectSurfaceRunoff()
+    runoff = DirectSurfaceRunoff(Float64)
     # Test drainage is zero when there is no excess water
     ∂S∂t = compute_surface_drainage(runoff, 0.0)
     @test iszero(∂S∂t)
@@ -24,7 +24,7 @@ using Test
 end
 
 @testset "compute_infiltration" begin
-    runoff = DirectSurfaceRunoff()
+    runoff = DirectSurfaceRunoff(Float64)
     # Test that infiltration is zero when there is no flux
     sat_top = 0.5
     max_infil = 1e-5
@@ -45,7 +45,7 @@ end
 end
 
 @testset "compute_surface_runoff" begin
-    runoff = DirectSurfaceRunoff()
+    runoff = DirectSurfaceRunoff(Float64)
     # Check that surface runoff is zero when all terms are zero
     R = compute_surface_runoff(runoff, 0, 0, 0)
     @test iszero(R)

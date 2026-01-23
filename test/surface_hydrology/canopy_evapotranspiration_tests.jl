@@ -6,7 +6,7 @@ using Terrarium:
 using Test
 
 @testset "compute_transpiration" begin
-    canopy_ET = PALADYNCanopyEvapotranspiration()
+    canopy_ET = PALADYNCanopyEvapotranspiration(Float64)
     # Test transpiration is zero when there is no VPD
     rₐ = 100
     gw_can = 0.1
@@ -30,7 +30,7 @@ using Test
 end
 
 @testset "compute_evaporation_ground" begin
-    canopy_ET = PALADYNCanopyEvapotranspiration()
+    canopy_ET = PALADYNCanopyEvapotranspiration(Float64)
     # Test evaporation is zero when there is no VPD
     rₐ = 50
     rₑ = 100
@@ -70,7 +70,7 @@ end
 end
 
 @testset "compute_evaporation_canopy" begin
-    canopy_ET = PALADYNCanopyEvapotranspiration()
+    canopy_ET = PALADYNCanopyEvapotranspiration(Float64)
     # Test evaporation is zero when there is no VPD
     rₐ = 50
     Δq = 0.0
