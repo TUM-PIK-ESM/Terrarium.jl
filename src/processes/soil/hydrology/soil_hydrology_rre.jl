@@ -37,7 +37,7 @@ function compute_tendencies!(state, model, hydrology::SoilHydrology{NF, <:Richar
     grid = get_grid(model)
     strat = get_soil_stratigraphy(model)
     constants = get_constants(model)
-    launch!(state, grid, :xyz, compute_saturation_tendency!, hydrology, strat, constants)
+    launch!(state, grid, :xyz, compute_saturation_tendency!, hydrology, strat, constants, nothing)
     return nothing
 end
 
@@ -188,8 +188,8 @@ end
     # ∂θ∂t = ∇⋅K(θ)∇Ψ + forcing, where Ψ = ψₘ + ψₕ + ψz, and "forcing" represents sources and sinks such as ET losses
     ∂θ∂t = (
         - ∂zᵃᵃᶜ(i, j, k, field_grid, darcy_flux, state.pressure_head, state.hydraulic_conductivity)
-        + forcing(i, j, k, grid, state, evapotranspiration, hydrology, constants)
-        + forcing(i, j, k, grid, state, hydrology.forcing, hydrology)
+        + forcing(i, j, k, state, grid, evapotranspiration, hydrology, constants)
+        + forcing(i, j, k, state, grid, hydrology.vwc_forcing, hydrology)
     )
     return ∂θ∂t
 end
