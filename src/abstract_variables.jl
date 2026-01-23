@@ -246,6 +246,7 @@ function Variables(vars::Tuple{Vararg{Union{AbstractProcessVariable, Namespace}}
     # partition variables into prognostic, auxiliary, input, and namespace groups;
     # duplicates within each group are automatically merged
     varinfo(var::AbstractVariable) = (varname(var), vardims(var), varunits(var))
+    varinfo(ns::Namespace) = varname(ns)
     prognostic_vars = merge_duplicates(varinfo, filter(var -> isa(var, PrognosticVariable), vars))
     auxiliary_vars = merge_duplicates(varinfo, filter(var -> isa(var, AuxiliaryVariable), vars))
     input_vars = merge_duplicates(varinfo, filter(var -> isa(var, InputVariable), vars))
