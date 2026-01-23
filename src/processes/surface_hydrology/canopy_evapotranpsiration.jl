@@ -2,7 +2,7 @@
     $TYPEDEF
 
 Canopy evapotranspiration scheme from PALADYN (Willeit 2016) that includes a canopy
-re-evaporation term based on the saturation fraction of canopy water defined by the
+evaporation term based on the saturation fraction of canopy water defined by the
 canopy hydrology scheme.
 
 ```math
@@ -57,11 +57,11 @@ end
 """
     $TYPEDSIGNATURES
 
-Compute re-evaporation of water intercepted by the canopy from humidity gradient `Δq`, canopy saturation fraction
+Compute evaporation of water intercepted by the canopy from humidity gradient `Δq`, canopy saturation fraction
 `f_can`, and aerodynamic resistance `rₐ`.
 """
 @inline function compute_evaporation_canopy(::PALADYNCanopyEvapotranspiration, Δq, f_can, rₐ)
-    # Calculate canopy re-evaporation flux in m/s (positive upwards)
+    # Calculate canopy evaporation flux in m/s (positive upwards)
     E_can = f_can * Δq / rₐ
     return E_can
 end
@@ -69,7 +69,7 @@ end
 # Process methods
 
 variables(::PALADYNCanopyEvapotranspiration{NF}) where {NF} = (
-    auxiliary(:evaporation_canopy, XY(); desc="Canopy re-evaporation contribution to surface humidity flux", units=u"m/s"),
+    auxiliary(:evaporation_canopy, XY(); desc="Canopy evaporation contribution to surface humidity flux", units=u"m/s"),
     auxiliary(:evaporation_ground, XY(), units=u"m/s", desc="Ground evaporation contribution to surface humidity flux"),
     auxiliary(:transpiration, XY(), units=u"m/s", desc="Transpiration contribution to surface humidity flux"),
     input(:skin_temperature, XY(); units=u"°C", desc="Skin temperature"),
