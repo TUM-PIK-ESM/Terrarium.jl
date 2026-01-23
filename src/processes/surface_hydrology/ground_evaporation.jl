@@ -99,6 +99,9 @@ struct SoilMoistureResistanceFactor{NF} <: AbstractGroundEvaporationResistanceFa
 
 SoilMoistureResistanceFactor(::Type{NF}) where {NF} = SoilMoistureResistanceFactor{NF}()
 
+# Fallback implementation for interface consistency
+ground_evaporation_resistance_factor(i, j, state, grid, ::SoilMoistureResistanceFactor{NF}, args...) where {NF} = one(NF)
+
 @inline function ground_evaporation_resistance_factor(
     i, j, state, grid,
     ::SoilMoistureResistanceFactor{NF},
