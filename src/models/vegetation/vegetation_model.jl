@@ -16,6 +16,7 @@ $TYPEDFIELDS
     Phenology<:AbstractPhenology,
     CarbonDynamics<:AbstractVegetationCarbonDynamics,
     VegetationDynamics<:AbstractVegetationDynamics,
+    RootDistribution<:AbstractRootDistribution,
     Atmosphere<:AbstractAtmosphere,
     GridType<:AbstractLandGrid{NF},
     Constants<:PhysicalConstants{NF},
@@ -45,6 +46,9 @@ $TYPEDFIELDS
     "Vegetation population density or coverage fraction dynamics"
     vegetation_dynamics::VegetationDynamics =  PALADYNVegetationDynamics(eltype(grid)) # prognostic
 
+    "Vegetation root distribution"
+    root_distribution::RootDistribution = StaticExponentialRootDistribution(eltype(grid))
+
     "Physical constants"
     constants::Constants = PhysicalConstants(eltype(grid))
 
@@ -67,6 +71,8 @@ get_vegetation_carbon_dynamics(model::VegetationModel) = model.carbon_dynamics
 
 get_vegetation_dynamics(model::VegetationModel) = model.vegetation_dynamics
 
+get_root_distribution(model::VegetationModel) = model.root_distribution
+
 get_constants(model::VegetationModel) = model.constants
 
 # Model interface methods
@@ -78,6 +84,7 @@ variables(model::VegetationModel) = tuplejoin(
     variables(model.phenology),
     variables(model.carbon_dynamics),
     variables(model.vegetation_dynamics),
+    variables(model.root_distribution)
 )
 
 processes(model::VegetationModel) = (
