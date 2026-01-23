@@ -26,7 +26,7 @@ $TYPEDFIELDS
     grid::GridType
 
     "Atmospheric input configuration"
-    atmosphere::Atmosphere
+    atmosphere::Atmosphere = PrescribedAtmosphere(eltype(grid))
 
     "Photosynthesis scheme"
     photosynthesis::Photosynthesis = LUEPhotosynthesis(eltype(grid)) # not prognostic

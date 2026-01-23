@@ -21,7 +21,7 @@ FieldCapacityLimitedPAW(::Type{NF} = Float32) where {NF} = FieldCapacityLimitedP
 variables(paw::FieldCapacityLimitedPAW{NF}) where {NF} = (
     auxiliary(:plant_available_water, XYZ(), desc="Fraction of soil water available for plant root water uptake"),
     auxiliary(:SMLF, XY(), soil_moisture_limiting_factor, paw), # soil moisture limiting factor
-    input(:root_fraction, XYZ())
+    input(:root_fraction, XYZ(), desc="Fraction of roots in each soil layer")
 )
 
 """

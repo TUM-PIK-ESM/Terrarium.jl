@@ -59,12 +59,21 @@ get_closures(model::VegetationSoilModel) = (
     get_closures(model.vegetation)...,
 )
 
+variables(model::VegetationSoilModel) = tuplejoin(
+    variables(model.atmosphere),
+    variables(model.surface_energy_balance),
+    variables(model.surface_hydrology),
+    variables(model.vegetation),
+    variables(model.soil),
+    variables(model.plant_available_water)
+)
+
 processes(model::VegetationSoilModel) = (
     model.atmosphere,
     model.surface_energy_balance,
     model.surface_hydrology,
-    processes(model.vegetation)...,
     model.plant_available_water,
+    processes(model.vegetation)...,
     processes(model.soil)...
 )
 
