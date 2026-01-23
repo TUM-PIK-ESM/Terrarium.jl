@@ -14,12 +14,20 @@ T_c &= \\frac{\\Delta q}{r_a + r_s} \\
 Properties:
 $FIELDS
 """
-@kwdef struct PALADYNCanopyEvapotranspiration{NF, GR<:AbstractGroundEvaporationResistanceFactor} <: AbstractEvapotranspiration
+struct PALADYNCanopyEvapotranspiration{NF, GR<:AbstractGroundEvaporationResistanceFactor} <: AbstractEvapotranspiration
     "Drag coefficient for the traansfer of heat and water between the ground and canopy"
-    C_can::NF = 0.006
+    C_can::NF
 
     "Parameterization for ground resistance to evaporation/sublimation"
-    ground_resistance::GR = ConstantEvaporationResistanceFactor(typeof(C_can))
+    ground_resistance::GR
+end
+
+function PALADYNCanopyEvapotranspiration(
+    ::Type{NF};
+    C_can::NF = 0.006,
+    ground_resistance = ConstantEvaporationResistanceFactor(typeof(C_can))
+) where {NF}
+    return PALADYNCanopyEvapotranspiration{NF, typeof(ground_resistance)}(C_can, ground_resistance)
 end
 
 # TODO: The following ET functions all have the same basic functional form and can be generalized to a function
