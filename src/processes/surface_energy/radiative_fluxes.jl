@@ -16,8 +16,8 @@ R_{\\text{net}} = S_{\\uparrow} - S_{\\downarrow} + L_{\\uparrow} - L_{\\downarr
 struct PrescribedRadiativeFluxes <: AbstractRadiativeFluxes end
 
 variables(::PrescribedRadiativeFluxes) = (
-    input(:surface_shortwave_up, XY(), units=u"W/m^2", desc="Outoing (upwelling) shortwave radiation"),
-    input(:surface_longwave_up, XY(), units=u"W/m^2", desc="Outoing (upwelling) longwave radiation"),
+    input(:surface_shortwave_up, XY(), units=u"W/m^2", desc="Outgoing (upwelling) shortwave radiation"),
+    input(:surface_longwave_up, XY(), units=u"W/m^2", desc="Outgoing (upwelling) longwave radiation"),
     auxiliary(:surface_net_radiation, XY(), units=u"W/m^2", desc="Net outgoing (positive up) radiation"),
 )
 
@@ -35,8 +35,8 @@ schemes for the albedo, skin temperature, and atmospheric inputs.
 struct DiagnosedRadiativeFluxes <: AbstractRadiativeFluxes end
 
 variables(::DiagnosedRadiativeFluxes) = (
-    auxiliary(:surface_shortwave_up, XY(), units=u"W/m^2", desc="Outoing (upwelling) shortwave radiation"),
-    auxiliary(:surface_longwave_up, XY(), units=u"W/m^2", desc="Outoing (upwelling) longwave radiation"),
+    auxiliary(:surface_shortwave_up, XY(), units=u"W/m^2", desc="Outgoing (upwelling) shortwave radiation"),
+    auxiliary(:surface_longwave_up, XY(), units=u"W/m^2", desc="Outgoing (upwelling) longwave radiation"),
     auxiliary(:surface_net_radiation, XY(), units=u"W/m^2", desc="Net radiation budget"),
 )
 
@@ -59,7 +59,7 @@ end
 
 @kernel function compute_radiative_fluxes!(
     state,
-    ::AbstractLandGrid,
+    grid::AbstractLandGrid,
     rad::AbstractRadiativeFluxes,
     atmos::AbstractAtmosphere,
     skinT::AbstractSkinTemperature,
@@ -71,11 +71,11 @@ end
     # get inputs
     surface_shortwave_up = state.surface_shortwave_up[i, j]
     surface_longwave_up = state.surface_longwave_up[i, j]
-    surface_shortwave_down = shortwave_in(i, j, state, atmos)
-    surface_longwave_down = longwave_in(i, j, state, atmos)
-    Tsurf = skin_temperature(i, j, state, skinT)
-    α = albedo(i, j, state, abd)
-    ϵ = emissivity(i, j, state, abd)
+    surface_shortwave_down = shortwave_in(i, j, state, grid, atmos)
+    surface_longwave_down = longwave_in(i, j, state, grid, atmos)
+    Tsurf = skin_temperature(i, j, state, grid, skinT)
+    α = albedo(i, j, state, grid, abd)
+    ϵ = emissivity(i, j, state, grid, abd)
 
     # compute outputs
     state.surface_shortwave_up[i, j, 1] = surface_shortwave_up = shortwave_out(rad, surface_shortwave_down, α)
@@ -83,13 +83,13 @@ end
     state.surface_net_radiation[i, j, 1] = surface_net_radiation(rad, surface_shortwave_down, surface_shortwave_up, surface_longwave_down, surface_longwave_up)
 end
 
-@kernel function compute_net_radiation!(state, ::AbstractLandGrid, rad::AbstractRadiativeFluxes, atmos::AbstractAtmosphere)
+@kernel function compute_net_radiation!(state, grid::AbstractLandGrid, rad::AbstractRadiativeFluxes, atmos::AbstractAtmosphere)
     i, j = @index(Global, NTuple)
     # get inputs
     surface_shortwave_up = state.surface_shortwave_up[i, j]
     surface_longwave_up = state.surface_longwave_up[i, j]
-    surface_shortwave_down = shortwave_in(i, j, state, atmos)
-    surface_longwave_down = longwave_in(i, j, state, atmos)
+    surface_shortwave_down = shortwave_in(i, j, state, grid, atmos)
+    surface_longwave_down = longwave_in(i, j, state, grid, atmos)
     
     # compute net radiation
     state.surface_net_radiation[i, j, 1] = surface_net_radiation(rad, surface_shortwave_down, surface_shortwave_up, surface_longwave_down, surface_longwave_up)

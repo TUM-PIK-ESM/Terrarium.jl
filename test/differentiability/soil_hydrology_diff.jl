@@ -28,6 +28,7 @@ end
     swrc_inv = inv(swrc) # ψₘ(θ)
     integrator = initialize(model, ForwardEuler())
     state = integrator.state
+    compute_auxiliary!(state, model)
     dstate = make_zero(state)
     set!(state.saturation_water_ice, sat)
     set!(dstate.pressure_head, 1.0) # seed pressure head (output)
@@ -41,6 +42,7 @@ end
     @test all(dstate.saturation_water_ice .≈ por / swrc(FreezeCurves.derivative, ψm; θsat=por))
 
     # now check inverse pressure -> saturation
+    compute_auxiliary!(state, model)
     dstate = make_zero(state)
     set!(dstate.saturation_water_ice, 1.0) # seed saturation (output)
     Enzyme.autodiff(set_runtime_activity(Reverse), Terrarium.invclosure!, Const, Duplicated(state, dstate), Const(model), Const(closure))
@@ -58,7 +60,7 @@ end
     hydraulic_properties = ConstantHydraulics(Float64; porosity=por, cond_unsat)
     # wrapper function for evaluating hydraulic conductivity
     function eval_hydraulic_cond((por, sat, liq))
-        soil = SoilComposition(porosity=por, saturation=sat, liquid=liq, organic=0.0, texture=SoilTexture())
+        soil = SoilVolume(porosity=por, saturation=sat, liquid=liq, solid=MineralOrganic())
         return Terrarium.hydraulic_conductivity(hydraulic_properties, soil)
     end
 
@@ -74,8 +76,11 @@ end
     model = build_soil_energy_hydrology_model(CPU(), Float64; hydraulic_properties)
     integrator = initialize(model, ForwardEuler())
     state = integrator.state
+    # first run compute_auxiliary! for the full model (needed to compute hydraulic properties)
+    compute_auxiliary!(state, model)
     dstate = make_zero(state)
     set!(dstate.hydraulic_conductivity, 1.0) # seed hydraulic cond
+    # then test gradient only on hydrology auxilairy variables
     Enzyme.autodiff(set_runtime_activity(Reverse), compute_auxiliary!, Const, Duplicated(state, dstate), Const(model), Const(model.hydrology))
     @test all(isfinite.(dstate.saturation_water_ice))
     @test all(isfinite.(dstate.temperature))
@@ -86,7 +91,7 @@ end
     model = build_soil_energy_hydrology_model(CPU(), Float64; hydraulic_properties)
     integrator = initialize(model, ForwardEuler())
     state = integrator.state
-    # first run compute_auxiliary! for the full model (needed to compute hydraulic conductivities)
+    # first run compute_auxiliary! for the full model (needed to compute hydraulic properties)
     compute_auxiliary!(state, model)
     dstate = make_zero(state)
     set!(dstate.tendencies.saturation_water_ice, 1.0) # seed tendencies

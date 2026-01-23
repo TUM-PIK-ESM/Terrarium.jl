@@ -1,7 +1,7 @@
 """
     SoilTexture{NF}
 
-Represents soil texture as a fractional mixture of sand, silt, and clay.
+Represents soil texture as a fractional mixture of sand, silt, and clay. Accepts values 
 """
 @kwdef struct SoilTexture{NF}
     sand::NF = 1.0
@@ -9,7 +9,7 @@ Represents soil texture as a fractional mixture of sand, silt, and clay.
     silt::NF = 1 - sand - clay
 
     SoilTexture(sand, silt, clay) = SoilTexture{promote_type(typeof(sand), typeof(silt), typeof(clay))}(sand, silt, clay)
-    function SoilTexture{NF}(sand, silt, clay) where {NF}
+    function SoilTexture{NF}(sand, silt, clay) where {NF<:Number}
         @assert zero(sand) <= sand <= one(sand)
         @assert zero(silt) <= silt <= one(silt)
         @assert zero(clay) <= clay <= one(clay)
@@ -19,6 +19,16 @@ Represents soil texture as a fractional mixture of sand, silt, and clay.
 end
 
 SoilTexture(::Type{NF}; kwargs...) where {NF} = SoilTexture{NF}(; kwargs...)
+
+Base.eltype(::SoilTexture{NF}) where {NF} = NF
+
+@inline @propagate_inbounds function Base.getindex(texture::SoilTexture{<:AbstractArray}, idx...)
+    return SoilTexture(
+        texture.sand[idx...],
+        texture.silt[idx...],
+        texture.clay[idx...]
+    )
+end
 
 function Base.convert(::SoilTexture{NewType}, texture::SoilTexture) where {NewType}
     return SoilTexture(

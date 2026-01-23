@@ -23,19 +23,21 @@ ConstantSoilCarbonDensity(::Type{NF}; kwargs...) where {NF} = ConstantSoilCarbon
 variables(::ConstantSoilCarbonDensity) = ()
 
 """
-    organic_porosity(i, j, k, state, bgc::ConstantSoilCarbonDensity)
+    $SIGNATURES
 
 Get the prescribed natural porosity of organic soil.
 """
-@inline organic_porosity(i, j, k, state, bgc::ConstantSoilCarbonDensity) = bgc.por_org
+@inline organic_porosity(bgc::ConstantSoilCarbonDensity) = bgc.por_org
+@inline organic_porosity(i, j, k, state, grid, bgc::ConstantSoilCarbonDensity) = organic_porosity(bgc)
 
 """
-    organic_fraction(i, j, k, state, bgc::ConstantSoilCarbonDensity)
+    $SIGNATURES
 
-Calculate the organic solid fraction at the given indices based on the prescribed SOC and natural porosity/density of
+Calculate the organic solid fraction based on the prescribed SOC and natural porosity/density of
 the organic material.
 """
-@inline organic_fraction(i, j, k, state, bgc::ConstantSoilCarbonDensity) = bgc.ρ_soc / ((1 - bgc.por_org)*bgc.ρ_org)
+@inline organic_fraction(bgc::ConstantSoilCarbonDensity) = bgc.ρ_soc / ((1 - bgc.por_org)*bgc.ρ_org)
+@inline organic_fraction(i, j, k, state, grid, bgc::ConstantSoilCarbonDensity) = organic_fraction(bgc)
 
 @inline initialize!(state, model, bgc::ConstantSoilCarbonDensity) = nothing
 

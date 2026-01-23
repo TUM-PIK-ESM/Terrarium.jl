@@ -76,7 +76,7 @@ $TYPEDFIELDS
     porosity::NF = 0.49
 
     "Prescribed field capacity [-]"
-    field_capacity::NF = 0.1
+    field_capacity::NF = 0.25
 
     "Prescribed wilting point [-]"
     wilting_point::NF = 0.05
@@ -165,12 +165,12 @@ UnsatKLinear(::Type{NF}; swrc=FreezeCurves.BrooksCorey()) where {NF} = UnsatKLin
 
 function hydraulic_conductivity(
     hydraulics::AbstractSoilHydraulics{NF, <:UnsatKLinear},
-    soil::SoilComposition
+    soil::SoilVolume
 ) where {NF}
     let fracs = volumetric_fractions(soil),
         θw = fracs.water, # unfrozen water content
         θsat = fracs.water + fracs.ice + fracs.air, # water + ice content at saturation (porosity)
-        K_sat = saturated_hydraulic_conductivity(hydraulics, soil.texture);
+        K_sat = saturated_hydraulic_conductivity(hydraulics, soil.solid.texture);
         K = K_sat * θw / θsat
         return K
     end
@@ -196,7 +196,7 @@ UnsatKVanGenuchten(::Type{NF}; impedance::NF = NF(7), swrc=FreezeCurves.VanGenuc
 
 function hydraulic_conductivity(
     hydraulics::AbstractSoilHydraulics{NF, <:UnsatKVanGenuchten},
-    soil::SoilComposition,
+    soil::SoilVolume,
 ) where {NF}
     let n = hydraulics.cond_unsat.swrc.n, # van Genuchten parameter `n`
         fracs = volumetric_fractions(soil),
@@ -206,7 +206,7 @@ function hydraulic_conductivity(
         f = liquid_fraction(soil),
         Ω = hydraulics.cond_unsat.impedance, # scaling parameter for ice impedance
         I_ice = 10^(-Ω*(1 - f)), # ice impedance factor
-        K_sat = saturated_hydraulic_conductivity(hydraulics, soil.texture);
+        K_sat = saturated_hydraulic_conductivity(hydraulics, soil.solid.texture);
         # We use `complex` types here to permit illegal state values which may occur when using adaptive time steppers.
         K = abs(K_sat*I_ice*sqrt(complex(θw/θsat))*(1 - complex(1 - complex(θw/θsat)^(n/(n+1)))^((n-1)/n))^2)
         return K

@@ -36,11 +36,19 @@ if MAIN_TESTS
         include("soil/soil_model_tests.jl")
     end
 
-    @testset "Vegetation processes" begin
+    @testset "Vegetation model and processes" begin
         include("vegetation/vegetation_model_tests.jl")
+    end
+
+    @testset "Coupled vegetation-soil model" begin
+        include("vegetation_soil/vegetation_soil_model_tests.jl")
     end
 
     @testset "Surface energy balance" begin
         include("surface_energy/seb_tests.jl")
+    end
+
+    @testset "Surface hydrology" begin
+        include("surface_hydrology/surface_hydrology_tests.jl")
     end
 end 

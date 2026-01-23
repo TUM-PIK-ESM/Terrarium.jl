@@ -11,11 +11,6 @@ export SoilInitializer
 export ConstantInitialSoilTemperature, QuasiThermalSteadyState, PiecewiseLinearInitialSoilTemperature
 include("soil/soil_model_init.jl")
 
-# Soil-atmosphere
-
-export CoupledSoilAtmosphereModel
-include("soil/soil_atmosphere_model.jl")
-
 # Vegetation
 
 export VegetationModel
@@ -26,7 +21,13 @@ include("vegetation/vegetation_model.jl")
 export SurfaceEnergyModel
 include("surface/surface_energy_model.jl")
 
-# Coupled Land
+# Coupled models
+
+export CoupledSoilEnergyModel
+include("coupled/soil_energy_model.jl")
+
+export VegetationSoilModel
+include("coupled/vegetation_soil_model.jl")
 
 export LandModel
-include("land/land_model.jl")
+include("coupled/land_model.jl")

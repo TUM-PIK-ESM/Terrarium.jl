@@ -1,0 +1,110 @@
+"""
+    $TYPEDEF
+
+Simple surface runoff scheme that computes runoff as
+
+```math
+R = P + D - I
+```
+where `P` is precipitation reaching the ground, `D` is drainage from accumualted excess
+water at the surface, and `I` is infiltration into the soil.
+
+Properties:
+$FIELDS
+"""
+@kwdef struct DirectSurfaceRunoff{NF} <: AbstractSurfaceRunoff
+    "Surface water removal timescale"
+    τ_r::NF = 3600.0
+end
+
+DirectSurfaceRunoff(::Type{NF}; kwargs...) where {NF} = DirectSurfaceRunoff{NF}(; kwargs...)
+
+"""
+    $TYPEDSIGNATURES
+
+Compute surface drainage flux from the current `surface_excess_water` resevoir state.
+"""
+@inline function compute_surface_drainage(runoff::DirectSurfaceRunoff{NF}, surface_excess_water) where {NF}
+    let S = max(surface_excess_water, zero(NF)),
+        τ = runoff.τ_r;
+        ∂S∂t = S / τ
+        return ∂S∂t
+    end
+end
+
+"""
+    $TYPEDSIGNATURES
+
+Compute infiltration from the given `influx` (water available for infiltration), saturation of the uppermost
+soil layer `sat_top`, and the maximum allowed infiltration `max_infil`.
+"""
+@inline function compute_infiltration(runoff::DirectSurfaceRunoff{NF}, influx, sat_top, max_infil) where {NF}
+    let is_unsaturated = sat_top < one(NF);
+        # Infiltration is min of 
+        infil = min(influx, max_infil) * is_unsaturated
+        return infil
+    end
+end
+
+"""
+    $TYPEDSIGNATURES
+
+Compute surface runoff as `precipitation + surface_drainage - infiltration`.
+"""
+@inline function compute_surface_runoff(runoff::DirectSurfaceRunoff, precip_ground, surface_drainage, infil)
+    let P = precip_ground,
+        ∂S∂t = surface_drainage,
+        I = infil;
+        # Compute runoff as residual of precipitation + drainage - infiltration
+        surface_runoff = P + ∂S∂t - I
+        return surface_runoff
+    end
+end
+
+# Process methods
+
+variables(::DirectSurfaceRunoff) = (
+    auxiliary(:surface_runoff, XY(), units=u"m/s", desc="Total surface runoff"),
+    auxiliary(:infiltration, XY(), units=u"m/s", desc="Infiltration flux"),
+)
+
+function compute_auxiliary!(state, model, runoff::DirectSurfaceRunoff)
+    grid = get_grid(model)
+    soil_hydrology = get_soil_hydrology(model)
+    surface_hydrology = get_surface_hydrology(model)
+    launch!(state, grid, :xy, compute_auxiliary_kernel!, runoff, surface_hydrology.canopy_hydrology, soil_hydrology)
+end
+
+# Kernels
+
+@kernel inbounds=true function compute_auxiliary_kernel!(
+    state, grid,
+    runoff::DirectSurfaceRunoff{NF},
+    canopy_hydrology::AbstractCanopyHydrology,
+    soil_hydrology::AbstractSoilHydrology
+) where {NF}
+    i, j = @index(Global, NTuple)
+    fgrid = get_field_grid(grid)
+
+    # Get inputs
+    precip_ground = ground_precipitation(i, j, state, grid, canopy_hydrology)
+    excess_water = surface_excess_water(i, j, state, grid, soil_hydrology)
+    k_unsat = hydraulic_conductivity(i, j, fgrid.Nz, state, grid, soil_hydrology)
+    sat_top = saturation_water_ice(i, j, fgrid.Nz, state, grid, soil_hydrology)
+
+    # Case 1: Excess water present at the surface -> precipitation adds to excess water
+    # and we set the infiltration rate to the min of hydraulic conductivity and surface_excess_water
+    if excess_water > zero(NF)
+        # Compute rate of excess water removal (surface drainage)
+        surface_drainage = compute_surface_drainage(runoff, excess_water)
+        # Calculate infiltration
+        infil = state.infiltration[i, j, 1] = compute_infiltration(runoff, surface_drainage, sat_top, k_unsat)
+    # Case 2: No excess water -> rainfall is routed directly to infiltration
+    else
+        surface_drainage = zero(NF)
+        infil = state.infiltration[i, j, 1] = compute_infiltration(runoff, precip_ground, sat_top, k_unsat)
+    end
+
+    # Compute surface runoff
+    state.surface_runoff[i, j, 1] = compute_surface_runoff(runoff, precip_ground, surface_drainage, infil)
+end

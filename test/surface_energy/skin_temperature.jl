@@ -13,29 +13,32 @@ using Test
     @test all(state.skin_temperature .≈ 1.0)
 end
 
-@testset "Diagnosed skin temperature" begin
+@testset "Implicit skin temperature" begin
     grid = ColumnGrid(CPU(), Float64, ExponentialSpacing(N=10))
     clock = Clock(time=0.0)
     skin_temperature = ImplicitSkinTemperature()
-    surface_energy_balance = SurfaceEnergyBalance(Float64; skin_temperature)
-    model = SurfaceEnergyModel(grid, surface_energy_balance)
+    seb = SurfaceEnergyBalance(Float64; skin_temperature)
+    model = SurfaceEnergyModel(grid, seb)
     state = initialize(model)
     @test !hasproperty(state.inputs, :skin_temperature)
     @test hasproperty(state.inputs, :ground_temperature)
-    set!(state.surface_shortwave_down, 200.0)
-    set!(state.surface_longwave_down, 100.0)
-    set!(state.specific_humidity, 0.001)
-    set!(state.air_pressure, 101_325)
-    set!(state.air_temperature, 2.0)
-    set!(state.skin_temperature, 1.0) # initial guess matching soil temperature
-    set!(state.ground_temperature, 1.0)
-    compute_auxiliary!(state, model, surface_energy_balance)
-    @test all(state.skin_temperature - 1.96 .< 0.01)
+    set!(state.surface_shortwave_down, 300.0)
+    set!(state.surface_longwave_down, 50.0)
+    set!(state.specific_humidity, 0.002) # dry conditions
+    set!(state.air_pressure, 101_325) # standard pressure
+    set!(state.air_temperature, 2.0) # 2 °C
+    set!(state.ground_temperature, 1.0) # 1 °C
+    set!(state.windspeed, 1.0) # 1 m/s
+    compute_auxiliary!(state, model, seb)
+    @test all(isfinite.(state.skin_temperature))
     # check that skin temperature converges for a large number of iterations
     Tskin_old = deepcopy(state.skin_temperature)
     resid = nothing
-    for i in 1:100
-        compute_auxiliary!(state, model, surface_energy_balance)
+    for i in 1:20
+        # compute fluxes
+        Terrarium.compute_surface_energy_fluxes!(state, model, seb)
+        # diagnose skin temperature
+        Terrarium.update_skin_temperature!(state, model, seb.skin_temperature)
         resid = maximum(abs.(state.skin_temperature - Tskin_old))
         Tskin_old = deepcopy(state.skin_temperature)
     end

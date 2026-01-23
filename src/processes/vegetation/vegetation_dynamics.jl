@@ -18,8 +18,12 @@ $TYPEDFIELDS
     γv_min::NF = 0.002 
 end
 
+PALADYNVegetationDynamics(::Type{NF}; kwargs...) where {NF} = PALADYNVegetationDynamics(; kwargs...)
+
 variables(::PALADYNVegetationDynamics) = (
     prognostic(:ν, XY()), # PFT fractional area coverage [-]
+    input(:LAI_b, XY()),
+    input(:C_veg, XY()),
 )
 
 """
@@ -78,11 +82,11 @@ end
 
 function compute_tendencies!(state, model, veg_dynamics::PALADYNVegetationDynamics)
     grid = get_grid(model)
-    launch!(grid, :xy, compute_tendencies_kernel!, state, veg_dynamics, get_carbon_dynamics(model))
+    launch!(state, grid, :xy, compute_tendencies_kernel!, veg_dynamics, get_vegetation_carbon_dynamics(model))
 end
 
 @kernel function compute_tendencies_kernel!(
-    state,
+    state, grid,
     veg_dynamics::PALADYNVegetationDynamics{NF},
     vegcarbon_dynamics::PALADYNCarbonDynamics{NF}
 ) where NF
@@ -91,6 +95,8 @@ end
     # Get inputs
     LAI_b = state.LAI_b[i, j]
     C_veg = state.C_veg[i, j]
+
+    # Current state
     ν = state.ν[i, j]
 
     # Compute the vegetation fraction tendency

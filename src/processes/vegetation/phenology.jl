@@ -13,9 +13,12 @@ $TYPEDFIELDS
     # TODO add phenology parameters
 end
 
+PALADYNPhenology(::Type{NF}; kwargs...) where {NF} = PALADYNPhenology{NF}(; kwargs...)
+
 variables(::PALADYNPhenology) = (
     auxiliary(:phen, XY()), # Phenology factor [-]
     auxiliary(:LAI, XY()), # Leaf Area Index [m²/m²]
+    input(:LAI_b, XY()), # Balanced Leaf Area Index [m²/m²]
 )
 
 """
@@ -64,10 +67,10 @@ end
 
 function compute_auxiliary!(state, model, phenol::PALADYNPhenology)
     grid = get_grid(model)
-    launch!(grid, :xy, compute_auxiliary_kernel!, state, phenol)
+    launch!(state, grid, :xy, compute_auxiliary_kernel!, phenol)
 end
 
-@kernel function compute_auxiliary_kernel!(state, phenol::PALADYNPhenology)
+@kernel function compute_auxiliary_kernel!(state, grid, phenol::PALADYNPhenology)
     i, j = @index(Global, NTuple)
 
     # Get input

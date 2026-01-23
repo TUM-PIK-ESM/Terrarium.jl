@@ -14,6 +14,7 @@ Terrarium.closurevar(closure::TestClosure) = Terrarium.auxiliary(closure.varname
     @test default_dt(euler) == Δt
     # set up grid and fields
     grid = ColumnGrid(CPU(), Float64, ExponentialSpacing(N=10))
+    clock = Clock(time=0.0)
     # here we mock the structure of a `StateVariables` object
     # for a model with prognostic variables at the top level and
     # in a nested namespace.
@@ -32,8 +33,10 @@ Terrarium.closurevar(closure::TestClosure) = Terrarium.auxiliary(closure.varname
                     x = Field(grid, XYZ()),
                 ),
                 namespaces = (;),
+                clock = clock
             ),
-        )
+        ),
+        clock = clock
     )
     dxdt = 0.1
     dydt = 0.2

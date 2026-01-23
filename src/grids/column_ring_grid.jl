@@ -8,9 +8,9 @@ struct ColumnRingGrid{
     NF,
     Arch,
     RingGrid<:RingGrids.AbstractGrid,
-    RectGrid<:OceananigansGrids.RectilinearGrid,
+    RectGrid<:Oceananigans.Grids.RectilinearGrid,
     Mask<:Union{AbstractArray, RingGrids.AbstractField}
-} <: AbstractLandGrid{NF, Arch}
+} <: AbstractColumnGrid{NF, Arch}
     "RingGrid specfying the lateral spatial discretization of the globe"
     rings::RingGrid
 
@@ -23,7 +23,7 @@ struct ColumnRingGrid{
     function ColumnRingGrid(
         rings::RingGrids.AbstractGrid,
         mask::AbstractArray,
-        grid::OceananigansGrids.RectilinearGrid
+        grid::Oceananigans.Grids.RectilinearGrid
     )
         arch = architecture(grid)
         new{eltype(grid), typeof(arch), typeof(rings), typeof(grid), typeof(mask)}(rings, mask, grid)
@@ -51,7 +51,7 @@ struct ColumnRingGrid{
         # since most or all land computations will be along this axis
         z_thick = get_spacing(vert)
         z_coords = convert.(NF, vcat(-reverse(cumsum(z_thick)), zero(eltype(z_thick))))
-        grid = OceananigansGrids.RectilinearGrid(arch, NF, size=(Nh, Nz), x=(1, Nh), z=z_coords, topology=(Periodic, Flat, Bounded))
+        grid = Oceananigans.Grids.RectilinearGrid(arch, NF, size=(Nh, Nz), x=(1, Nh), z=z_coords, topology=(Periodic, Flat, Bounded))
         # adapt ring grid and mask
         rings = on_architecture(arch, rings)
         mask = on_architecture(arch, mask)
@@ -115,7 +115,7 @@ function RingGrids.Field(arch::AbstractArchitecture, field::AbstractVecOrMat, gr
     return ring_field
 end
 
-function on_architecture(arch::AbstractArchitecture, grid::ColumnRingGrid)
+function Architectures.on_architecture(arch::AbstractArchitecture, grid::ColumnRingGrid)
     return ColumnRingGrid(
         on_architecture(arch, grid.rings),
         on_architecture(arch, grid.mask),

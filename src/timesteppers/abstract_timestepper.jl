@@ -57,6 +57,8 @@ can be defined to implement more specialized time-stepping schemes.
 function explicit_step!(state, grid::AbstractLandGrid, timestepper::AbstractTimeStepper, Δt)
     @assert is_initialized(timestepper)
     fastiterate(keys(state.prognostic)) do name
+        # apply flux BCs, if present
+        compute_z_bcs!(state.tendencies[name], state.prognostic[name], grid, state)
         # update prognostic state variable
         explicit_step!(state.prognostic[name], state.tendencies[name], grid, timestepper, Δt)
     end

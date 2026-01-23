@@ -32,7 +32,7 @@ struct ModelIntegrator{
     timestepper::TimeStepper
 end
 
-# Oceananigans.AbstractModel interface
+# Oceananigans model interface
 
 Base.time(integrator::ModelIntegrator) = integrator.clock.time
 
@@ -49,17 +49,39 @@ function Base.getproperty(integrator::ModelIntegrator, name::Symbol)
     end
 end
 
-iteration(integrator::ModelIntegrator) = integrator.clock.iteration
+Oceananigans.Solvers.iteration(integrator::ModelIntegrator) = integrator.clock.iteration
 
-architecture(integrator::ModelIntegrator) = architecture(get_grid(integrator.model))
+Oceananigans.Architectures.architecture(integrator::ModelIntegrator) = architecture(get_grid(integrator.model))
 
-timestepper(integrator::ModelIntegrator) = integrator.timestepper
-
-update_state!(integrator::ModelIntegrator; compute_tendencies = true) = update_state!(integrator.state, integrator.model, integrator.inputs; compute_tendencies)
+Oceananigans.TimeSteppers.update_state!(integrator::ModelIntegrator; compute_tendencies = true) = update_state!(integrator.state, integrator.model, integrator.inputs; compute_tendencies)
 
 # for now, just forward Oceananigans.time_step! to timestep!
 # consider renaming later...
-time_step!(integrator::ModelIntegrator, Δt; kwargs...) = timestep!(integrator, Δt)
+Oceananigans.TimeSteppers.time_step!(integrator::ModelIntegrator, Δt; kwargs...) = timestep!(integrator, Δt)
+
+Oceananigans.Simulations.timestepper(integrator::ModelIntegrator) = integrator.timestepper
+"""
+    $SIGNATURES
+
+Run the simulation for `steps` or a given time `period` with timestep size `Δt` (in seconds or Dates.Period).
+"""
+function Oceananigans.Simulations.run!(
+    integrator::ModelIntegrator;
+    steps::Union{Int, Nothing} = nothing,
+    period::Union{Period, Nothing} = nothing,
+    Δt = default_dt(timestepper(integrator))
+)
+    Δt = convert_dt(Δt)
+    steps = get_steps(steps, period, Δt)
+
+    for _ in 1:steps
+        timestep!(integrator, Δt, finalize=false)
+    end
+
+    # Update auxiliary variables for final timestep
+    compute_auxiliary!(integrator.state, integrator.model)
+    return integrator 
+end
 
 """
     $TYPEDEF
@@ -101,29 +123,6 @@ function timestep!(integrator::ModelIntegrator, Δt; finalize = true)
 end
 
 """
-    $SIGNATURES
-
-Run the simulation for `steps` or a given time `period` with timestep size `Δt` (in seconds or Dates.Period).
-"""
-function run!(
-    integrator::ModelIntegrator;
-    steps::Union{Int, Nothing} = nothing,
-    period::Union{Period, Nothing} = nothing,
-    Δt = default_dt(timestepper(integrator))
-)
-    Δt = convert_dt(Δt)
-    steps = get_steps(steps, period, Δt)
-
-    for _ in 1:steps
-        timestep!(integrator, Δt, finalize=false)
-    end
-
-    # Update auxiliary variables for final timestep
-    compute_auxiliary!(integrator.state, integrator.model)
-    return integrator 
-end
-
-"""
     $TYPEDEF
 
 Creates and initializes a `ModelIntegrator` for the given `model` with the given `clock` state.
@@ -140,7 +139,7 @@ function initialize(
 ) where {NF}
     inputs = InputSources(inputs...)
     input_vars = variables(inputs)
-    state = initialize(model; clock, boundary_conditions, fields, external_variables=input_vars)
+    state = initialize(model; clock, boundary_conditions, fields, input_variables=input_vars)
     initialized_timestepper = initialize(timestepper, model, state)
     integrator = ModelIntegrator(clock, model, inputs, state, initialized_timestepper)
     initialize!(integrator)

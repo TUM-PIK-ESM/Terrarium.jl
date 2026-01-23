@@ -20,7 +20,15 @@ merge_boundary_conditions(bcs::FieldBCs...) = merge_recursive(bcs...)
 Implementation of `Oceananigans.BoundaryConditions.getbc` for variable placeholders that retrieves the input `Field` from
 `state` and returns the value at the given index.
 """
-@inline function getbc(::Variable{name}, i::Integer, j::Integer, grid::OceananigansGrids.AbstractGrid, clock, state::StateVariables) where {name}
+@inline function BoundaryConditions.getbc(::Variable{name}, i::Integer, j::Integer, grid::Oceananigans.Grids.AbstractGrid, clock, state::StateVariables) where {name}
     field = getproperty(state, name)
     return @inbounds field[i, j]
+end
+
+"""
+Convenience alias for `Oceananigans.BoundaryConditions.compute_z_bcs!` that adds flux BCs for `progvar`
+to its corresponding `tendency`.
+"""
+@inline function BoundaryConditions.compute_z_bcs!(tendency, progvar, grid::AbstractLandGrid, state)
+    compute_z_bcs!(tendency, progvar, architecture(grid), state.clock, state)
 end

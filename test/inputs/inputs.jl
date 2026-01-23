@@ -17,7 +17,7 @@ using Unitful
     @test variables(field_input) == (Terrarium.input(:X1, XY()), Terrarium.input(:X2, XY()))
     ## check state variables are allocated
     clock = Clock(time=0)
-    state = Terrarium.StateVariables(Variables(field_input), grid, clock)
+    state = initialize(Variables(field_input), grid, clock)
     @test hasproperty(state.inputs, :X1)
     @test hasproperty(state.inputs, :X2)
 

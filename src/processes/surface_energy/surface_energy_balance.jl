@@ -27,12 +27,19 @@ function SurfaceEnergyBalance(
     return SurfaceEnergyBalance(albedo, skin_temperature, radiative_fluxes, turbulent_fluxes)
 end
 
-variables(seb::SurfaceEnergyBalance) = (
-    variables(seb.albedo)...,
-    variables(seb.skin_temperature)...,
-    variables(seb.radiative_fluxes)...,
-    variables(seb.turbulent_fluxes)...,
+variables(seb::SurfaceEnergyBalance) = tuplejoin(
+    variables(seb.albedo),
+    variables(seb.skin_temperature),
+    variables(seb.radiative_fluxes),
+    variables(seb.turbulent_fluxes)
 )
+
+function initialize!(state, model, seb::SurfaceEnergyBalance)
+    initialize!(state, model, seb.albedo)
+    initialize!(state, model, seb.skin_temperature)
+    initialize!(state, model, seb.radiative_fluxes)
+    initialize!(state, model, seb.turbulent_fluxes)
+end
 
 function compute_auxiliary!(state, model, seb::SurfaceEnergyBalance)
     compute_auxiliary!(state, model, seb.albedo)

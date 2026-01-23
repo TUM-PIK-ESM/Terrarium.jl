@@ -3,7 +3,7 @@ struct LandModel{
     NF,
     GridType<:AbstractLandGrid,
     Atmosphere<:AbstractAtmosphere,
-    SEB<:SurfaceEnergyBalance,
+    SEB<:AbstractSurfaceEnergyBalance,
     GroundModel<:AbstractGroundModel,
     SnowModel<:AbstractSnowModel,
     VegetationModel<:AbstractVegetationModel,
@@ -35,8 +35,15 @@ struct LandModel{
     initializer::Initializer
 end
 
-# TODO
 variables(::LandModel) = ()
+
+processes(model::LandModel) = (
+    model.atmosphere,
+    model.surface_energy_balance,
+    processes(model.ground)...,
+    processes(model.snow)...,
+    processes(model.hydrology)...,
+)
 
 function compute_auxiliary!(state, ::LandModel)
     # TODO

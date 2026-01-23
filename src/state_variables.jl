@@ -51,47 +51,13 @@ end
 # Allow reconstruction from properties
 ConstructionBase.constructorof(::Type{StateVariables{NF}}) where {NF} = (args...) -> StateVariables(NF, args...)
 
-function StateVariables(
-    vars::Variables,
-    grid::AbstractLandGrid{NF},
-    clock::Clock;
-    boundary_conditions = (;),
-    fields = (;)
-) where {NF}
-    # Initialize Fields for each variable group, if they are not already given in the user defined `fields`
-    input_fields = map(var -> get(fields, varname(var), Field(grid, vardims(var))), vars.inputs)
-    tendency_fields =  map(var -> get(fields, varname(var), Field(grid, vardims(var))), vars.tendencies)
-    auxiliary_fields = map(vars.auxiliary) do var
-        bcs = get(boundary_conditions, varname(var), nothing)
-        get(fields, varname(var), Field(grid, vardims(var), bcs))
-    end
-    prognostic_fields = map(vars.prognostic) do var
-        bcs = get(boundary_conditions, varname(var), nothing)
-        get(fields, varname(var), Field(grid, vardims(var), bcs))
-    end
-    # recursively initialize state variables for each namespace
-    namespaces = map(vars.namespaces) do ns
-        StateVariables(ns.vars, grid, clock; boundary_conditions=get(boundary_conditions, varname(ns), (;)), fields=get(fields, varname(ns), (;)))
-    end
-    # construct and return StateVariables
-    return StateVariables(
-        NF,
-        prognostic_fields,
-        tendency_fields,
-        auxiliary_fields,
-        input_fields,
-        namespaces,
-        clock,
-    )
-end
-
 """
     update_state!(state::StateVariables, model::AbstractModel, inputs::InputSources; compute_tendencies = true)
 
 Update the `state` for the given `model` and `inputs`; this includes calling `update_inputs!` and
 `fill_halo_regions!` followed by `compute_auxiliary!` and `compute_tendencies!`, if `compute_tendencies = true`.
 """
-function update_state!(state::StateVariables, model::AbstractModel, inputs::InputSources; compute_tendencies = true)
+function Oceananigans.TimeSteppers.update_state!(state::StateVariables, model::AbstractModel, inputs::InputSources; compute_tendencies = true)
     reset_tendencies!(state)
     update_inputs!(state, inputs)
     fill_halo_regions!(state)
@@ -104,17 +70,17 @@ end
 """
 Invoke `fill_halo_regions!` for all fields in `state`.
 """
-function fill_halo_regions!(state::StateVariables)
+function Oceananigans.BoundaryConditions.fill_halo_regions!(state::StateVariables)
     # fill_halo_regions! for all prognostic variables
-    fastiterate(state.prognostic) do field
+    for field in state.prognostic
         fill_halo_regions!(field, state.clock, state)
     end
     # fill_halo_regions! for all auxiliary variables
-    fastiterate(state.auxiliary) do field
+    for field in state.auxiliary
         fill_halo_regions!(field, state.clock, state)
     end
     # recurse over namespaces
-    fastiterate(state.namespaces) do ns
+    for ns in state.namespaces
         fill_halo_regions!(ns)
     end
 end
@@ -174,19 +140,90 @@ function get_fields(state::StateVariables, queries::Union{Symbol, Pair}...)
     return (; fields...)
 end
 
-# Default initialize dispatch for model types
+# Initialization of StateVariables from models and variable types
 
 function initialize(
     model::AbstractModel{NF};
     clock = Clock(time=zero(NF)),
-    external_variables = (),
+    input_variables = (),
     boundary_conditions = (;),
     fields = (;)
 ) where {NF}
-    vars = Variables(tuplejoin(variables(model), external_variables))
+    vars = Variables(tuplejoin(variables(model), input_variables))
     grid = get_grid(model)
-    state = StateVariables(vars, grid, clock; boundary_conditions, fields)
+    state = initialize(vars, grid, clock; boundary_conditions, fields)
     return state
+end
+
+function initialize(
+    vars::Variables,
+    grid::AbstractLandGrid{NF},
+    clock::Clock = Clock(time=0.0);
+    boundary_conditions = (;),
+    fields = (;)
+) where {NF}
+    # Initialize Fields for each variable group, if they are not already given in the user defined `fields`
+    input_fields = initialize(vars.inputs, grid, clock, boundary_conditions, fields)
+    tendency_fields = initialize(vars.tendencies, grid, clock, boundary_conditions, fields)
+    prognostic_fields = initialize(vars.prognostic, grid, clock, boundary_conditions, merge(fields, input_fields))
+    auxiliary_fields = initialize(vars.auxiliary, grid, clock, boundary_conditions, merge(fields, input_fields, prognostic_fields))
+    # recursively initialize state variables for each namespace
+    namespaces = map(vars.namespaces) do ns
+        initialize(ns.vars, grid, clock; boundary_conditions=get(boundary_conditions, varname(ns), (;)), fields=get(fields, varname(ns), (;)))
+    end
+    # construct and return StateVariables
+    return StateVariables(
+        NF,
+        prognostic_fields,
+        tendency_fields,
+        auxiliary_fields,
+        input_fields,
+        namespaces,
+        clock,
+    )
+end
+
+initialize(::NamedTuple, ::AbstractLandGrid, ::Clock, ::NamedTuple, ::NamedTuple) = (;)
+function initialize(
+    vars::NamedTuple{names, <:Tuple{Vararg{AbstractVariable}}},
+    grid::AbstractLandGrid,
+    clock::Clock,
+    boundary_conditions::NamedTuple,
+    fields::NamedTuple
+) where {names}
+    # initialize or retrieve Fields for each variable in `var`, accumulating the newly created Fields in a named tuple
+    return foldl(vars, init=(;)) do nt, var
+        # note that we call initialize here with both the current accumualated named tuple of Fields + the context given by 'fields'
+        field = initialize(var, grid, clock, boundary_conditions, merge(nt, fields))
+        merge(nt, (; varname(var) => field))
+    end
+end
+
+function initialize(var::AbstractVariable, grid::AbstractLandGrid, clock::Clock, boundary_conditions::NamedTuple, fields::NamedTuple)
+    if hasproperty(fields, varname(var))
+        return getproperty(fields, varname(var))
+    else
+        bcs = get(boundary_conditions, varname(var), nothing)
+        field = Field(grid, vardims(var), bcs)
+        # if field is an input variable and has a default value/initializer, call set! on it
+        if isa(var, InputVariable) && !isnothing(var.default)
+            set!(field, var.default)
+        end
+        return field
+    end
+end
+
+function initialize(var::AuxiliaryVariable, grid::AbstractLandGrid, clock::Clock, boundary_conditions::NamedTuple, fields::NamedTuple)
+    if hasproperty(fields, varname(var))
+        return getproperty(fields, varname(var))
+    elseif isnothing(var.ctor)
+        # retrieve boundary condition (if any) and create Field
+        bcs = get(boundary_conditions, varname(var), nothing)
+        return Field(grid, vardims(var), bcs)
+    else
+        # invoke field constructor if specified
+        return var.ctor(grid, clock, fields)
+    end
 end
 
 # Base overrides

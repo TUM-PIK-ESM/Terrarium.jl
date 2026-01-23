@@ -1,10 +1,9 @@
 using Terrarium
+using Terrarium: forcing, volumetric_water_content_tendency, hydraulic_conductivity
 using Test
 
 using FreezeCurves
 using Oceananigans
-
-import Terrarium: SurfaceEvaporation, hydraulic_conductivity
 
 @testset "Hydraulic properties (constant)" begin
     # For prescribed hyraulic properties, just check that the returned values
@@ -63,22 +62,22 @@ end
     hydraulics = ConstantHydraulics(Float64; cond_unsat=UnsatKLinear(Float32))
 
     # saturated case
-    soil = SoilComposition()
+    soil = SoilVolume()
     K = hydraulic_conductivity(hydraulics, soil)
     @test K ≈ hydraulics.cond_sat
 
     # unsaturated
-    soil = SoilComposition(saturation=0.5);
+    soil = SoilVolume(saturation=0.5);
     K = hydraulic_conductivity(hydraulics, soil)
     @test 0 < K < hydraulics.cond_sat
 
     # dry
-    soil = SoilComposition(saturation=0.0);
+    soil = SoilVolume(saturation=0.0);
     K = hydraulic_conductivity(hydraulics, soil)
     @test iszero(K)
 
     # frozen
-    soil = SoilComposition(liquid=0.0);
+    soil = SoilVolume(liquid=0.0);
     K = hydraulic_conductivity(hydraulics, soil)
     @test iszero(K)
 end
@@ -87,24 +86,57 @@ end
     hydraulics = ConstantHydraulics(Float64; cond_unsat=UnsatKVanGenuchten(Float64))
 
     # saturated case
-    soil = SoilComposition()
+    soil = SoilVolume()
     K = hydraulic_conductivity(hydraulics, soil)
     @test K ≈ hydraulics.cond_sat
 
     # unsaturated
-    soil = SoilComposition(saturation=0.5);
+    soil = SoilVolume(saturation=0.5);
     K = hydraulic_conductivity(hydraulics, soil)
     @test 0 < K < hydraulics.cond_sat
 
     # dry
-    soil = SoilComposition(saturation=0.0);
+    soil = SoilVolume(saturation=0.0);
     K = hydraulic_conductivity(hydraulics, soil)
     @test iszero(K)
 
     # frozen
-    soil = SoilComposition(liquid=0.0);
+    soil = SoilVolume(liquid=0.0);
     K = hydraulic_conductivity(hydraulics, soil)
     @test iszero(K)
+end
+
+@testset "SoilHydrology: adjust_saturation_profile" begin
+    grid = ColumnGrid(UniformSpacing(Δz=0.1, N=100))
+    swrc = VanGenuchten(α=2.0, n=2.0)
+    hydraulic_properties = ConstantHydraulics(Float64; cond_unsat=UnsatKVanGenuchten(Float64; swrc))
+    hydrology = SoilHydrology(eltype(grid), RichardsEq(); hydraulic_properties)
+    model = SoilModel(grid; hydrology)
+    state = initialize(model)
+    
+    # Case 1: Oversaturation at surface
+    set!(state.saturation_water_ice, (x, z) -> max(1.1 + z, 1.0))
+    ∫sat_excess = Field(Integral(state.saturation_water_ice - 1, dims=3))
+    compute!(∫sat_excess)
+    Terrarium.closure!(state, model)
+    @test all(state.saturation_water_ice .≈ 1)
+    @test all(state.surface_excess_water .≈ ∫sat_excess)
+
+    # Case 2: Undersaturation at surface
+    set!(state.saturation_water_ice, (x, z) -> min(-0.1 - z, 1.0))
+    ∫sat = Field(Integral(state.saturation_water_ice, dims=3))
+    ∫sat_deficit = Field(Integral(state.saturation_water_ice, dims=3, condition=state.saturation_water_ice .< 0))
+    ∫sat₀ = compute!(∫sat)[1,1,1]
+    compute!(∫sat_deficit)
+    Terrarium.closure!(state, model)
+    ∫sat₁ = compute!(∫sat)[1,1,1]
+    @test all(state.saturation_water_ice .>= 0)
+    @test all(∫sat₁ - ∫sat₀ .≈ 0)
+
+    # Case 3: Completely dry with negative saturation near surface
+    set!(state.saturation_water_ice, (x, z) -> min(-0.1 - z, 0.0))
+    Terrarium.closure!(state, model)
+    @test all(state.saturation_water_ice .≈ 0)
 end
 
 @testset "SoilHydrology: Richardson-Richards' equation" begin
@@ -121,9 +153,9 @@ end
     integrator = initialize(model, ForwardEuler())
     state = integrator.state
     # check that initial water table depth is correctly calculated from initial condition
-    @test all(iszero.(state.water_table))
+    @test all(isapprox.(state.water_table, 0, atol=1e-12))
     # also check that pressure head is zero everywhere
-    @test all(iszero.(state.pressure_head))
+    @test all(isapprox.(state.pressure_head, 0, atol=1e-12))
     compute_auxiliary!(state, model)
     # check that all hydraulic conductivities are finite and equal to K_sat
     @test all(isfinite.(state.hydraulic_conductivity))
@@ -177,13 +209,20 @@ end
     @test ∫sat₀[1,1,1] ≈ ∫sat₁[1,1,1] ≈ ∫sat₂[1,1,1]
 end
 
-@testset "Soil ET" begin
+@testset "Soil moisture forcing (source/sink)" begin
+    mutable struct ForcingValue{NF}
+        value::NF
+    end
+
     Nz = 10
     grid = ColumnGrid(UniformSpacing(Δz=0.1, N=Nz))
     swrc = VanGenuchten(α=2.0, n=2.0)
     hydraulic_properties = ConstantHydraulics(Float64; cond_unsat=UnsatKVanGenuchten(Float64; swrc))
-    evapotranspiration = SurfaceEvaporation()
-    hydrology = SoilHydrology(eltype(grid), RichardsEq(); hydraulic_properties, evapotranspiration)
+    forcing_value = ForcingValue(0.0)
+    vwc_forcing = Forcing(parameters=forcing_value, discrete_form=true) do i, j, k, grid, clock, fields, params
+        params.value
+    end
+    hydrology = SoilHydrology(eltype(grid), RichardsEq(); hydraulic_properties, vwc_forcing)
     # Variably saturated with water table
     initializer = FieldInitializers(
         temperature = 10.0, # positive soil temperature
@@ -193,20 +232,19 @@ end
     integrator = initialize(model, ForwardEuler())
     state = integrator.state
     # check that forcing_ET is zero when no latent heat flux is supplied
-    @test iszero(Terrarium.forcing_ET(1, 1, Nz, grid.grid, state, evapotranspiration, model.constants))
-    # negative latent heat flux → condensation
-    set!(state.latent_heat_flux, -100.0)
-    ET_flux = Terrarium.forcing_ET(1, 1, Nz, grid.grid, state, evapotranspiration, model.constants)
-    @test ET_flux > 0
-    # positive latent heat flux → evaporation
-    set!(state.latent_heat_flux, 100.0)
-    ET_flux = Terrarium.forcing_ET(1, 1, Nz, grid.grid, state, evapotranspiration, model.constants)
-    @test ET_flux < 0
+    @test iszero(forcing(1, 1, Nz, state, grid, vwc_forcing, hydrology))
+    # negative flux
+    forcing_value.value = -0.01
+    @test forcing(1, 1, Nz, state, grid, vwc_forcing, hydrology) == forcing_value.value
+    # positive flux
+    forcing_value.value = 0.01
+    @test forcing(1, 1, Nz, state, grid, vwc_forcing, hydrology) == forcing_value.value
     # check tendency calculation
-    dθdt = Terrarium.volumetric_water_content_tendency(1, 1, Nz, grid, state, hydrology, model.constants)
-    @test dθdt == ET_flux
-    # take one timestep and check that water was evaporated
+    dθdt = volumetric_water_content_tendency(1, 1, Nz, grid, state, hydrology, model.constants, nothing)
+    @test dθdt == forcing_value.value
+    # take one timestep and check that water was removed
     dt = 60.0
+    forcing_value.value = -1e-5
     timestep!(integrator, dt)
-    @test state.saturation_water_ice[1, 1, Nz] .≈ 1 + ET_flux*dt / hydraulic_properties.porosity
+    @test state.saturation_water_ice[1, 1, Nz] .≈ 1 + forcing_value.value*dt / hydraulic_properties.porosity
 end

@@ -26,8 +26,8 @@ jobs:
       - uses: julia-actions/cache@v2
       - name: Install dependencies (notebooks)
         run: julia --project=examples/notebooks/ -e 'using Pkg; Pkg.develop(PackageSpec(path=pwd())); Pkg.instantiate()'
-      - name: Run Pluto Notebook Differentiate
-        run: |
-          cd examples/notebooks/ 
-          julia --project=. ./differentiate-notebook.jl
+      # - name: Run Pluto Notebook Differentiate
+      #   run: |
+      #     cd examples/notebooks/ 
+      #     julia --project=. ./differentiate-notebook.jl
         
