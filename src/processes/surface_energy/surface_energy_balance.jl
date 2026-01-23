@@ -34,6 +34,13 @@ variables(seb::SurfaceEnergyBalance) = tuplejoin(
     variables(seb.turbulent_fluxes)
 )
 
+function initialize!(state, model, seb::SurfaceEnergyBalance)
+    initialize!(state, model, seb.albedo)
+    initialize!(state, model, seb.skin_temperature)
+    initialize!(state, model, seb.radiative_fluxes)
+    initialize!(state, model, seb.turbulent_fluxes)
+end
+
 function compute_auxiliary!(state, model, seb::SurfaceEnergyBalance)
     compute_auxiliary!(state, model, seb.albedo)
     compute_auxiliary!(state, model, seb.skin_temperature)

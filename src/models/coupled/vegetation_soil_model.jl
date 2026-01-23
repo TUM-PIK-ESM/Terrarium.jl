@@ -63,10 +63,10 @@ function initialize(
     clock = Clock(time=zero(NF)),
     boundary_conditions = (;),
     fields = (;),
-    external_variables = ()
+    input_variables = ()
 ) where {NF}
     grid = get_grid(model)
-    vars = Variables(variables(model)..., external_variables...)
+    vars = Variables(variables(model)..., input_variables...)
     ground_heat_flux = initialize(vars.auxiliary.ground_heat_flux, grid, clock, boundary_conditions, fields)
     infiltration = initialize(vars.auxiliary.infiltration, grid, clock, boundary_conditions, fields)
     ground_heat_flux_bc = GroundHeatFlux(ground_heat_flux)
@@ -81,8 +81,9 @@ end
 
 function initialize!(state, model::VegetationSoilModel)
     initialize!(state, model, model.initializer)
-    initialize!(state, model.surface_energy_balance)
-    initialize!(state, model.surface_hydrology)
+    initialize!(state, model, model.surface_energy_balance)
+    initialize!(state, model, model.surface_hydrology)
+    # TODO: change when refactoring model/process types
     initialize!(state, model.vegetation)
     initialize!(state, model.soil)
 end

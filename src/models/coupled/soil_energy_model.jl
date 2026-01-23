@@ -56,10 +56,10 @@ function initialize(
     clock = Clock(time=zero(NF)),
     boundary_conditions = (;),
     fields = (;),
-    external_variables = ()
+    input_variables = ()
 ) where {NF}
     grid = get_grid(model)
-    vars = Variables(variables(model)..., external_variables...)
+    vars = Variables(variables(model)..., input_variables...)
     ground_heat_flux = initialize(vars.auxiliary.ground_heat_flux, grid, clock)
     ground_heat_flux_bc = GroundHeatFlux(ground_heat_flux)
     bcs = merge_recursive(boundary_conditions, ground_heat_flux_bc)
