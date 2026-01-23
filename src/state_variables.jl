@@ -206,8 +206,8 @@ function initialize(var::AbstractVariable, grid::AbstractLandGrid, clock::Clock,
         bcs = get(boundary_conditions, varname(var), nothing)
         field = Field(grid, vardims(var), bcs)
         # if field is an input variable and has a default value/initializer, call set! on it
-        if isa(field, InputVariable) && !isnothing(field.default)
-            set!(field, field.default)
+        if isa(var, InputVariable) && !isnothing(var.default)
+            set!(field, var.default)
         end
         return field
     end

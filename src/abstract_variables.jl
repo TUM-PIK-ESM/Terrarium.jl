@@ -257,7 +257,7 @@ function Variables(vars::Tuple{Vararg{Union{AbstractProcessVariable, Namespace}}
     # note that the order matters here since Field constructors will be called in the order
     # that they appear in the var tuples.
     closure_vars = map(var -> closurevar(var.closure), filter(hasclosure, prognostic_vars))
-    auxiliary_vars = merge_duplicates(tuplejoin(closure_vars, auxiliary_vars))
+    auxiliary_vars = merge_duplicates(varinfo, tuplejoin(closure_vars, auxiliary_vars))
     # drop inputs with matching prognostic or auxiliary variables
     input_vars = filter(var -> var ∉ prognostic_vars && var ∉ auxiliary_vars, input_vars)
     # check for duplicates
