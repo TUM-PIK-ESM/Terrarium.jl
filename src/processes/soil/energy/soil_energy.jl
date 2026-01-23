@@ -154,7 +154,7 @@ struct EnergyTemperatureClosure <: AbstractClosureRelation end
 
 closurevar(::EnergyTemperatureClosure) = auxiliary(:temperature, XYZ(), units=u"°C", desc="Temperature of the soil volume in °C")
 
-function closure!(state, model::AbstractSoilModel, ::EnergyTemperatureClosure)
+function closure!(state, model, ::EnergyTemperatureClosure)
     grid = get_grid(model)
     energy = get_soil_energy_balance(model)
     hydrology = get_soil_hydrology(model)
@@ -165,7 +165,7 @@ function closure!(state, model::AbstractSoilModel, ::EnergyTemperatureClosure)
     return nothing
 end
 
-function invclosure!(state, model::AbstractSoilModel, ::EnergyTemperatureClosure)
+function invclosure!(state, model, ::EnergyTemperatureClosure)
     grid = get_grid(model)
     energy = get_soil_energy_balance(model)
     hydrology = get_soil_hydrology(model)

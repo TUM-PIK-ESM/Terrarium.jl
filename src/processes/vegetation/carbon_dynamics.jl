@@ -107,10 +107,10 @@ end
 
 function compute_auxiliary!(state, model, vegcarbon_dynamics::PALADYNCarbonDynamics)
     grid = get_grid(model)
-    launch!(grid, :xy, compute_auxiliary_kernel!, state, vegcarbon_dynamics)
+    launch!(state, grid, :xy, compute_auxiliary_kernel!, vegcarbon_dynamics)
 end
 
-@kernel function compute_auxiliary_kernel!(state, vegcarbon_dynamics::PALADYNCarbonDynamics{NF}) where NF
+@kernel function compute_auxiliary_kernel!(state, grid, vegcarbon_dynamics::PALADYNCarbonDynamics{NF}) where NF
     i, j = @index(Global, NTuple)
 
     # Compute balanced Leaf Area Index 
@@ -122,7 +122,7 @@ function compute_tendencies!(state, model, vegcarbon_dynamics::PALADYNCarbonDyna
     launch!(grid, :xy, compute_tendencies_kernel!, state, vegcarbon_dynamics)
 end
 
-@kernel function compute_tendencies_kernel!(state, vegcarbon_dynamics::PALADYNCarbonDynamics{NF}) where NF  
+@kernel function compute_tendencies_kernel!(state, grid, vegcarbon_dynamics::PALADYNCarbonDynamics{NF}) where NF  
     i, j = @index(Global, NTuple)
 
     # Get inputs

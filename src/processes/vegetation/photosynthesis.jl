@@ -306,11 +306,11 @@ end
 function compute_auxiliary!(state, model, photo::LUEPhotosynthesis)
     grid = get_grid(model)
     atmos = get_atmosphere(model)
-    launch!(grid, :xy, compute_photosynthesis_kernel!, state, photo, atmos)
+    launch!(state, grid, :xy, compute_photosynthesis_kernel!, photo, atmos)
 end
 
-@kernel function compute_photosynthesis_kernel!(
-    state,
+@kernel inbounds=true function compute_photosynthesis_kernel!(
+    state, grid,
     photo::LUEPhotosynthesis{NF},
     atmos::AbstractAtmosphere
 ) where NF
@@ -318,26 +318,24 @@ end
     i, j = @index(Global, NTuple)
 
     # Get inputs
-    @inbounds let
-        T_air = air_temperature(i, j, state, grid, atmos),
-        pres = air_pressure(i, j, state, grid, atmos),
-        swdown = shortwave_in(i, j, state, grid, atmos),
-        # day_length = daytime_length(i, j, state, grid, atmos),
-        co2 = state.CO2[i, j], # no method for this currently...
-        β = state.SMLF[i, j],
-        LAI = state.LAI[i, j],
-        λc = state.λc[i, j];
+    T_air = air_temperature(i, j, state, grid, atmos)
+    pres = air_pressure(i, j, state, grid, atmos)
+    swdown = shortwave_in(i, j, state, grid, atmos)
+    # day_length = daytime_length(i, j, state, grid, atmos)
+    co2 = state.CO2[i, j] # no method for this currently...
+    β = state.SMLF[i, j]
+    LAI = state.LAI[i, j]
+    λc = state.λc[i, j]
 
-        # Compute Rd, leaf respiration rate in [gC/m²/s],
-        # An, daily net photosynthesis [gC/m²/s]
-        Rd, An = compute_photosynthesis(photo, T_air, swdown, pres, co2, LAI, λc, β)
+    # Compute Rd, leaf respiration rate in [gC/m²/s],
+    # An, daily net photosynthesis [gC/m²/s]
+    Rd, An = compute_photosynthesis(photo, T_air, swdown, pres, co2, LAI, λc, β)
 
-        # Compute GPP, Gross Primary Production in [kgC/m²/s]
-        GPP = compute_GPP(photo, An)
-    
-        # Store results
-        state.GPP[i, j] = GPP
-        state.Rd[i, j] = Rd
-        state.An[i, j] = An
-    end
+    # Compute GPP, Gross Primary Production in [kgC/m²/s]
+    GPP = compute_GPP(photo, An)
+
+    # Store results
+    state.GPP[i, j] = GPP
+    state.Rd[i, j] = Rd
+    state.An[i, j] = An
 end

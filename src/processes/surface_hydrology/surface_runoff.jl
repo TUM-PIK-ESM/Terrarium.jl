@@ -88,15 +88,15 @@ end
 
     # Get inputs
     precip_ground = ground_precipitation(i, j, state, grid, canopy_hydrology)
-    surface_excess_water = surface_excess_water(i, j, state, grid, soil_hydrology)
+    excess_water = surface_excess_water(i, j, state, grid, soil_hydrology)
     k_unsat = hydraulic_conductivity(i, j, fgrid.Nz, state, grid, soil_hydrology)
     sat_top = saturation_water_ice(i, j, fgrid.Nz, state, grid, soil_hydrology)
 
     # Case 1: Excess water present at the surface -> precipitation adds to excess water
     # and we set the infiltration rate to the min of hydraulic conductivity and surface_excess_water
-    if surface_excess_water > zero(NF)
+    if excess_water > zero(NF)
         # Compute rate of excess water removal (surface drainage)
-        surface_drainage = compute_surface_drainage(runoff, surface_excess_water)
+        surface_drainage = compute_surface_drainage(runoff, excess_water)
         # Calculate infiltration
         infil = state.infiltration[i, j, 1] = compute_infiltration(runoff, surface_drainage, sat_top, k_unsat)
     # Case 2: No excess water -> rainfall is routed directly to infiltration

@@ -124,7 +124,7 @@ end
 # Kernels
 
 @kernel inbounds=true function compute_auxiliary_kernel!(
-    state, 
+    state, grid,
     canopy_hydrology::PALADYNCanopyHydrology{NF},
     atmos::AbstractAtmosphere,
     constants::PhysicalConstants
@@ -145,7 +145,7 @@ end
     I_can = compute_canopy_interception(canopy_hydrology, precip, LAI, SAI)
 
     # Compute canopy water removal
-    R_can = compute_canopy_removal(canopy_hydrology, constants, w_can)
+    R_can = compute_canopy_water_removal(canopy_hydrology, constants, w_can)
 
     # Compute precipitation reaching the ground
     precip_ground = compute_precip_ground(canopy_hydrology, precip, I_can, R_can)
@@ -158,7 +158,7 @@ end
 end
 
 @kernel function compute_tendencies_kernel!(
-    state, 
+    state, grid,
     canopy_hydrology::PALADYNCanopyHydrology{NF},
     canopy_ET::PALADYNCanopyEvapotranspiration{NF}
 ) where NF  

@@ -78,7 +78,7 @@ variables(hydrology::SoilHydrology{NF}) where {NF} = (
 
 @propagate_inbounds liquid_water_fraction(i, j, k, state, grid, ::AbstractSoilHydrology) = state.liquid_water_fraction[i, j, k]
 
-@propagate_inbounds water_table(i, j, state, grid, ::AbstractSoilHydrology) = state.water_table[i, j, 1]
+@propagate_inbounds water_table(i, j, state, grid, ::AbstractSoilHydrology) = state.water_table[i, j]
 
 @inline function compute_water_table!(state, grid, hydrology::AbstractSoilHydrology)
     zs = znodes(get_field_grid(grid), Center(), Center(), Face())

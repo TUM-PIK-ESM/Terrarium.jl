@@ -129,9 +129,9 @@ end
     i, j = @index(Global, NTuple)
 
     # Get inputs
-    Ts = state.skin_temperature[i, j], # skin temperature (top of canopy)
-    Tg = state.ground_temperature[i, j], # ground temeprature (top snow/soil layer)
-    gw_can = state.gw_can[i, j], # stomatal conductance
+    Ts = state.skin_temperature[i, j] # skin temperature (top of canopy)
+    Tg = state.ground_temperature[i, j] # ground temeprature (top snow/soil layer)
+    gw_can = state.gw_can[i, j] # stomatal conductance
 
     # Compute VPD and resistance terms
     Δqs = compute_humidity_vpd(i, j, state, grid, atmos, constants, Ts) # humidity gradient between canopy and atmosphere
@@ -156,9 +156,9 @@ Compute the aerodynamic resistance between the ground and canopy as a function o
 """
 @inline function aerodynamic_resistance(i, j, state, grid, atmos::AbstractAtmosphere, evtr::PALADYNCanopyEvapotranspiration)
     @inbounds let LAI = state.LAI[i, j],
-                  SAI = state.SAT[i, j],
+                  SAI = state.SAI[i, j],
                   Vₐ = windspeed(i, j, state, grid, atmos),
-                  C = ET.C_can; # drag coefficient for the canopy
+                  C = evtr.C_can; # drag coefficient for the canopy
         rₙ = (1 - exp(-LAI - SAI)) / (C * Vₐ)
         return rₙ
     end

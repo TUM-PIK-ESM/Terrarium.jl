@@ -30,9 +30,14 @@
     "Soil model"
     soil::SoilModel = SoilModel(grid)
 
+    "Physical constants"
+    constants::PhysicalConstants{NF} = PhysicalConstants(eltype(grid))
+
     "Initializer for coupled model"
     initializer::Initializer = DefaultInitializer()
 end
+
+get_atmosphere(model::VegetationSoilModel) = model.atmosphere
 
 get_surface_energy_balance(model::VegetationSoilModel) = model.surface_energy
 
@@ -48,6 +53,11 @@ get_soil_biogeochemistry(model::VegetationSoilModel) = model.soil.biogeochem
 
 # just ignore that these are duplicated in veg model for now...
 get_constants(model::VegetationSoilModel) = model.soil.constants
+
+get_closures(model::VegetationSoilModel) = (
+    get_closures(model.soil)...,
+    get_closures(model.vegetation)...,
+)
 
 processes(model::VegetationSoilModel) = (
     model.atmosphere,
@@ -91,17 +101,15 @@ end
 function compute_auxiliary!(state, model::VegetationSoilModel)
     compute_auxiliary!(state, model, model.atmosphere)
     compute_auxiliary!(state, model.soil)
-    compute_auxiliary(state, model.surface_energy_balance)
-    compute_auxliiary!(state, model.plant_available_water)
-    compute_auxiliary!(state, model, model.vegetation)
-    compute_auxiliary!(state, model, surface_hydrology)
+    compute_auxiliary!(state, model, model.surface_energy_balance)
+    compute_auxiliary!(state, model, model.plant_available_water)
+    compute_auxiliary!(state, model.vegetation)
+    compute_auxiliary!(state, model, model.surface_hydrology)
     # recompute surface energy fluxes
     compute_surface_energy_fluxes!(state, model, model.surface_energy_balance)
 end
 
 function compute_tendencies!(state, model::VegetationSoilModel)
-    compute_tendencies!(state, model, model.atmosphere)
-    compute_tendencies!(state, model.surface_energy_balance)
     compute_tendencies!(state, model, model.surface_hydrology)
     compute_tendencies!(state, model.soil)
     compute_tendencies!(state, model, model.vegetation)

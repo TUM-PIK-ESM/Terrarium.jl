@@ -52,6 +52,9 @@ struct PrescribedAtmosphere{
     "Surface-relative altitude in meters at which the atmospheric forcings are assumed to be applied"
     altitude::NF
 
+    "Minimum windspeed"
+    min_windspeed::NF
+
     "Specific or relative humidity"
     humidity::Humidity
 
@@ -71,19 +74,20 @@ end
 function PrescribedAtmosphere(
     ::Type{NF};
     altitude::NF = NF(10), # Default to 10 m
+    min_windspeed::NF = NF(0.01), # Default to 0.01 m/s
     humidity::AbstractHumidity = SpecificHumidity(),
     precip::AbstractPrecipitation = TwoPhasePrecipitation(),
     radiation::AbstractIncomingRadiation = LongShortWaveRadiation(),
     aerodynamics::AbstractAerodynamics = ConstantAerodynamics(),
     tracers::NamedTuple = TracerGases(AmbientCO2()),
 ) where {NF}
-    return PrescribedAtmosphere(altitude, humidity, precip, radiation, aerodynamics, tracers)
+    return PrescribedAtmosphere(altitude, min_windspeed, humidity, precip, radiation, aerodynamics, tracers)
 end
 
-variables(atmos::PrescribedAtmosphere) = (
-    input(:air_temperature, XY(), units=u"°C", desc="Near-surface air temperature in °C"),
-    input(:air_pressure, XY(), units=u"Pa", desc="Atmospheric pressure at the surface in Pa"),
-    input(:windspeed, XY(), units=u"m/s", desc="Wind speed in m/s"),
+variables(atmos::PrescribedAtmosphere{NF}) where {NF} = (
+    input(:air_temperature, XY(), default=NF(10), units=u"°C", desc="Near-surface air temperature in °C"),
+    input(:air_pressure, XY(), default=NF(101_325), units=u"Pa", desc="Atmospheric pressure at the surface in Pa"),
+    input(:windspeed, XY(), default=NF(0.1), units=u"m/s", desc="Wind speed in m/s"),
     variables(atmos.humidity)...,
     variables(atmos.precip)...,
     variables(atmos.radiation)...,
@@ -92,30 +96,43 @@ variables(atmos::PrescribedAtmosphere) = (
     tuplejoin(map(variables, atmos.tracers)...)...,
 )
 
-@inline compute_auxiliary!(state, model, atmos::AbstractAtmosphere) = nothing
+@inline compute_auxiliary!(state, model, atmos::PrescribedAtmosphere) = nothing
 
-@inline compute_tendencies!(state, model, atmos::AbstractAtmosphere) = nothing
+@inline compute_tendencies!(state, model, atmos::PrescribedAtmosphere) = nothing
 
 """
-    air_temperature(i, j, state, grid, ::AbstractAtmosphere)
+    aerodynamic_resistance(i, j, state, grid, atmos::PrescribedAtmosphere)
+
+Compute the aerodynamic resistance (inverse conductance) at grid cell `i, j`.
+"""
+@inline function aerodynamic_resistance(i, j, state, grid, atmos::PrescribedAtmosphere)
+    let C = drag_coefficient(i, j, state, grid, atmos.aerodynamics),
+        Vₐ = max(windspeed(i, j, state, grid, atmos), 1e-6); # clip windspeed to small value
+        rₐ = 1 / (C * Vₐ)
+        return rₐ
+    end
+end
+
+"""
+    air_temperature(i, j, state, grid, ::PrescribedAtmosphere)
 
 Retrieve or compute the air temperature at the current time step.
 """
-@inline air_temperature(i, j, state, grid, ::AbstractAtmosphere) = state.air_temperature[i, j]
+@propagate_inbounds air_temperature(i, j, state, grid, ::PrescribedAtmosphere) = state.air_temperature[i, j]
 
 """
-    air_pressure(i, j, state, grid, ::AbstractAtmosphere)
+    air_pressure(i, j, state, grid, ::PrescribedAtmosphere)
 
 Retrieve or compute the air pressure at the current time step.
 """
-@inline air_pressure(i, j, state, grid, ::AbstractAtmosphere) = state.air_pressure[i, j]
+@propagate_inbounds air_pressure(i, j, state, grid, ::PrescribedAtmosphere) = state.air_pressure[i, j]
 
 """
     windspeed(i, j, state, ::PrescribedAtmosphere)
 
 Retrieve or compute the windspeed at the current time step.
 """
-@inline windspeed(i, j, state, grid, ::AbstractAtmosphere) = state.windspeed[i, j]
+@propagate_inbounds windspeed(i, j, state, grid, atmos::PrescribedAtmosphere) = max(state.windspeed[i, j], atmos.min_windspeed)
 
 struct SpecificHumidity <: AbstractHumidity end
 
@@ -128,14 +145,14 @@ variables(::SpecificHumidity) = (
 
 Retrieve or compute the specific_humidity at the current time step.
 """
-@inline specific_humidity(i, j, state, grid, ::AbstractAtmosphere{PR, IR, <:SpecificHumidity}) where {PR, IR} = state.specific_humidity[i, j]
+@propagate_inbounds specific_humidity(i, j, state, grid, ::PrescribedAtmosphere{PR, IR, <:SpecificHumidity}) where {PR, IR} = state.specific_humidity[i, j]
 
 """
-    $SIGNATURES
+    $TYPEDSIGNATURES
 
 Computes the specific humidity (vapor pressure) deficit over a surface at temperature `Ts` from the current atmospheric state.
 """
-@inline function compute_humidity_vpd(i, j, state, grid, atmos::AbstractAtmosphere, c::PhysicalConstants, Ts = nothing)
+@propagate_inbounds function compute_humidity_vpd(i, j, state, grid, atmos::AbstractAtmosphere, c::PhysicalConstants, Ts = nothing)
     let Δe = compute_vpd(i, j, state, grid, atmos, c, Ts),
         p = air_pressure(i, j, state, grid, atmos);
         Δq = vapor_pressure_to_specific_humidity(Δe, p, c.ε)
@@ -144,17 +161,16 @@ Computes the specific humidity (vapor pressure) deficit over a surface at temper
 end
 
 """
-    $SIGNATURES
+    $TYPEDSIGNATURES
 
 Computes the vapor pressure deficit over a surface at temperature `Ts` from the current atmospheric state.
 """
-@inline function compute_vpd(i, j, state, grid, atmos::AbstractAtmosphere, c::PhysicalConstants, Ts = nothing)
-    @inbounds let Tair = air_temperature(i, j, state, grid, atmos),
-                  q_air = specific_humidity(i, j, state, grid, atmos),
-                  pres = air_pressure(i, j, state, grid, atmos),
-                  Ts = isnothing(Ts) ? Tair : Ts;
-        return compute_vpd(c, pres, q_air, Ts)
-    end
+@propagate_inbounds function compute_vpd(i, j, state, grid, atmos::AbstractAtmosphere, c::PhysicalConstants, Ts = nothing)
+    Tair = air_temperature(i, j, state, grid, atmos)
+    q_air = specific_humidity(i, j, state, grid, atmos)
+    pres = air_pressure(i, j, state, grid, atmos)
+    Ts = isnothing(Ts) ? Tair : Ts
+    return compute_vpd(c, pres, q_air, Ts)
 end
 
 struct TwoPhasePrecipitation <: AbstractPrecipitation end
@@ -206,16 +222,3 @@ longwave_in(i, j, state, grid, ::AbstractAtmosphere{PR, <:LongShortWaveRadiation
 Retrieve the length of the day (in hours) at grid cell `i, j`. Defaults to a constant 12 hours if no input is provided.
 """
 daytime_length(i, j, state, grid, ::AbstractAtmosphere{PR, <:LongShortWaveRadiation}) where {PR} = state.daytime_length[i, j]
-
-"""
-    aerodynamic_resistance(i, j, state, grid, atmos::PrescribedAtmosphere)
-
-Compute the aerodynamic resistance (inverse conductance) at grid cell `i, j`.
-"""
-@inline function aerodynamic_resistance(i, j, state, grid, atmos::PrescribedAtmosphere)
-    let C = drag_coefficient(i, j, state, grid, atmos.aerodynamics),
-        Vₐ = max(windspeed(i, j, state, grid, atmos), 1e-6); # clip windspeed to small value
-        rₐ = 1 / (C * Vₐ)
-        return rₐ
-    end
-end

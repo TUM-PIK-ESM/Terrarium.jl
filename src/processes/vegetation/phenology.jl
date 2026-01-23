@@ -67,10 +67,10 @@ end
 
 function compute_auxiliary!(state, model, phenol::PALADYNPhenology)
     grid = get_grid(model)
-    launch!(grid, :xy, compute_auxiliary_kernel!, state, phenol)
+    launch!(state, grid, :xy, compute_auxiliary_kernel!, phenol)
 end
 
-@kernel function compute_auxiliary_kernel!(state, phenol::PALADYNPhenology)
+@kernel function compute_auxiliary_kernel!(state, grid, phenol::PALADYNPhenology)
     i, j = @index(Global, NTuple)
 
     # Get input

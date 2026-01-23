@@ -158,7 +158,7 @@ end
 function initialize(
     vars::Variables,
     grid::AbstractLandGrid{NF},
-    clock::Clock;
+    clock::Clock = Clock(time=0.0);
     boundary_conditions = (;),
     fields = (;)
 ) where {NF}
@@ -222,7 +222,7 @@ function initialize(var::AuxiliaryVariable, grid::AbstractLandGrid, clock::Clock
         return Field(grid, vardims(var), bcs)
     else
         # invoke field constructor if specified
-        return Field(var.ctor(grid, clock, fields))
+        return var.ctor(grid, clock, fields)
     end
 end
 

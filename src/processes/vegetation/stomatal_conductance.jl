@@ -32,6 +32,7 @@ variables(::MedlynStomatalConductance) = (
     vpd, An, co2, LAI, β
 ) where NF
     let g_min = stomcond.g_min / 1000, # convert mm/s to m/s
+        g₁ = stomcond.g₁,
         k_ext = photo.k_ext;
         g₀ = g_min * (1 - exp(-k_ext * LAI)) * β
         g_can = g₀ + (1 + g₁ / sqrt(vpd)) * An / co2 * NF(1e6)
@@ -55,11 +56,12 @@ function compute_auxiliary!(state, model, stomcond::MedlynStomatalConductance)
     grid = get_grid(model)
     atmos = get_atmosphere(model)
     constants = get_constants(model)
-    launch!(grid, :xy, compute_auxiliary_kernel!, state, stomcond, atmos, constants)
+    photo = get_photosynthesis(model)
+    launch!(state, grid, :xy, compute_auxiliary_kernel!, stomcond, photo, atmos, constants)
 end
 
 @kernel function compute_auxiliary_kernel!(
-    state,
+    state, grid,
     stomcond::MedlynStomatalConductance{NF},
     photo::LUEPhotosynthesis{NF},
     atmos::AbstractAtmosphere,
@@ -73,7 +75,7 @@ end
                   β = state.SMLF[i, j];
                 
         # Compute vpd [Pa]
-        vpd = compute_vpd(i, j, atmos, constants)
+        vpd = compute_vpd(i, j, state, grid, atmos, constants)
 
         # Compute conducatance
         gw_can = compute_gw_can(stomcond, photo, vpd, An, CO2, LAI, β)

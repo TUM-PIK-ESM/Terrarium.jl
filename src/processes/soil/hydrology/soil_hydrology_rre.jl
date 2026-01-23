@@ -19,6 +19,8 @@ variables(hydrology::SoilHydrology{NF, <:RichardsEq}) where {NF} = (
     input(:liquid_water_fraction, XYZ(), default=NF(1), domain=UnitInterval(), desc="Fraction of unfrozen water in the pore space"), 
 )
 
+@propagate_inbounds surface_excess_water(i, j, state, grid, ::SoilHydrology{NF, <:RichardsEq}) where {NF} = state.surface_excess_water[i, j]
+
 function initialize!(state, model, hydrology::SoilHydrology{NF, <:RichardsEq}) where {NF}
     set!(state.liquid_water_fraction, 1)
     closure!(state, model, get_closure(hydrology))
@@ -219,7 +221,7 @@ end
 
 closurevar(::SaturationPressureClosure) = auxiliary(:pressure_head, XYZ(), units=u"m", desc="Total hydraulic pressure head in m water displaced at standard pressure")
 
-function closure!(state, model::AbstractSoilModel, ::SaturationPressureClosure)
+function closure!(state, model, ::SaturationPressureClosure)
     grid = get_grid(model)
     hydrology = get_soil_hydrology(model)
     strat = get_soil_stratigraphy(model)
@@ -233,7 +235,7 @@ function closure!(state, model::AbstractSoilModel, ::SaturationPressureClosure)
     return nothing
 end
 
-function invclosure!(state, model::AbstractSoilModel, ::SaturationPressureClosure)
+function invclosure!(state, model, ::SaturationPressureClosure)
     grid = get_grid(model)
     hydrology = get_soil_hydrology(model)
     strat = get_soil_stratigraphy(model)

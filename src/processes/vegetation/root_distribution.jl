@@ -42,6 +42,6 @@ function root_fraction(roots::StaticExponentialRootDistribution{NF}, grid::Abstr
     Δz = zspacings(fgrid, Center(), Center(), Center())
     R = ∂R∂z * Δz
     # and normalize
-    R_norm = R / sum(r, dims=3)
+    R_norm = R / sum(R, dims=3)
     return R_norm
 end
