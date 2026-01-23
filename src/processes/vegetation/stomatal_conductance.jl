@@ -24,7 +24,7 @@ variables(::MedlynStomatalConductance) = (
     auxiliary(:λc, XY()), # Ratio of leaf-internal and air CO2 concentration [-]
 )
 
-@inline @propagate_inbounds stomatal_conductance(i, j, state, grid, ::MedlynStomatalConductance) = state.gw_can[i, j]
+@inline @propagate_inbounds stomatal_conductance(i, j, grid, state, ::MedlynStomatalConductance) = state.gw_can[i, j]
 
 @inline function compute_gw_can(
     stomcond::MedlynStomatalConductance{NF},
@@ -57,7 +57,7 @@ function compute_auxiliary!(state, model, stomcond::MedlynStomatalConductance)
     atmos = get_atmosphere(model)
     constants = get_constants(model)
     photo = get_photosynthesis(model)
-    launch!(state, grid, :xy, compute_auxiliary_kernel!, stomcond, photo, atmos, constants)
+    launch!(grid, state, :xy, compute_auxiliary_kernel!, stomcond, photo, atmos, constants)
 end
 
 @kernel function compute_auxiliary_kernel!(
@@ -75,7 +75,7 @@ end
                   β = state.SMLF[i, j];
                 
         # Compute vpd [Pa]
-        vpd = compute_vpd(i, j, state, grid, atmos, constants)
+        vpd = compute_vpd(i, j, grid, state, atmos, constants)
 
         # Compute conducatance
         gw_can = compute_gw_can(stomcond, photo, vpd, An, CO2, LAI, β)

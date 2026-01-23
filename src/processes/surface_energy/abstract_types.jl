@@ -6,14 +6,14 @@ Base type for surface albedo and emissivity process implementations.
 abstract type AbstractAlbedo <: AbstractProcess end
 
 """
-    albedo(i, j, state, grid, ::AbstractAlbedo)
+    albedo(i, j, grid, state, ::AbstractAlbedo)
 
 Return the current albedo at the given indices.
 """
 function albedo end
 
 """
-    emissivity(i, j, state, grid, ::AbstractAlbedo)
+    emissivity(i, j, grid, state, ::AbstractAlbedo)
 
 Return the current emissivity at the given indices.
 """
@@ -25,7 +25,7 @@ Base type for radiation budget schemes.
 abstract type AbstractRadiativeFluxes <: AbstractProcess end
 
 """
-    surface_net_radiation(i, j, state, grid, ::AbstractRadiativeFluxes)
+    surface_net_radiation(i, j, grid, state, ::AbstractRadiativeFluxes)
 
 Return the current net radiation at the given indices.
 """
@@ -37,14 +37,14 @@ Base type for turbulent (latent and sensible) heat fluxes at the surface.
 abstract type AbstractTurbulentFluxes <: AbstractProcess end
 
 """
-    sensible_heat_flux(i, j, state, grid, ::AbstractTurbulentFluxes)
+    sensible_heat_flux(i, j, grid, state, ::AbstractTurbulentFluxes)
 
 Return the current sensible heat flux at the given indices.
 """
 function sensible_heat_flux end
 
 """
-    latent_heat_flux(i, j, state, grid, ::AbstractTurbulentFluxes)
+    latent_heat_flux(i, j, grid, state, ::AbstractTurbulentFluxes)
 
 Return the current latent heat flux at the given indices.
 """
@@ -56,7 +56,7 @@ Base type for skin temperature and ground heat flux schemes.
 abstract type AbstractSkinTemperature <: AbstractProcess end
 
 """
-    skin_temperature(i, j, state, grid, ::AbstractSkinTemperature)
+    skin_temperature(i, j, grid, state, ::AbstractSkinTemperature)
 
 Return the current skin temperature at the given indices.
 """

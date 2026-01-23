@@ -72,13 +72,13 @@ variables(hydrology::SoilHydrology{NF}) where {NF} = (
     input(:liquid_water_fraction, XYZ(), default = 1, domain=UnitInterval(), desc="Fraction of unfrozen water in the pore space"),
 )
 
-@propagate_inbounds saturation_water_ice(i, j, k, state, grid, ::AbstractSoilHydrology) = state.saturation_water_ice[i, j, k]
+@propagate_inbounds saturation_water_ice(i, j, k, grid, state, ::AbstractSoilHydrology) = state.saturation_water_ice[i, j, k]
 
-@propagate_inbounds hydraulic_conductivity(i, j, k, state, grid, ::AbstractSoilHydrology) = state.hydraulic_conductivity[i, j, k]
+@propagate_inbounds hydraulic_conductivity(i, j, k, grid, state, ::AbstractSoilHydrology) = state.hydraulic_conductivity[i, j, k]
 
-@propagate_inbounds liquid_water_fraction(i, j, k, state, grid, ::AbstractSoilHydrology) = state.liquid_water_fraction[i, j, k]
+@propagate_inbounds liquid_water_fraction(i, j, k, grid, state, ::AbstractSoilHydrology) = state.liquid_water_fraction[i, j, k]
 
-@propagate_inbounds water_table(i, j, state, grid, ::AbstractSoilHydrology) = state.water_table[i, j]
+@propagate_inbounds water_table(i, j, grid, state, ::AbstractSoilHydrology) = state.water_table[i, j]
 
 @inline function compute_water_table!(state, grid, hydrology::AbstractSoilHydrology)
     zs = znodes(get_field_grid(grid), Center(), Center(), Face())
@@ -98,7 +98,7 @@ end
 
 @inline function compute_tendencies!(state, model, hydrology::SoilHydrology{NF, NoFlow, HP, <:AbstractForcing}) where {NF, HP}
     forcing_kernel = KernelFunctionOperation{Center, Center, Center}(get_grid(model)) do i, j, k, grid
-        forcing(i, j, k, state, grid, hydrology.vwc_forcing, hydrology)
+        forcing(i, j, k, grid, state, hydrology.vwc_forcing, hydrology)
     end
     # apply forcing
     set!(state.saturation_water_ice, forcing_kernel)

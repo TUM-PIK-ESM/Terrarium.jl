@@ -43,11 +43,13 @@ function compute_auxiliary!(state, model, skinT::AbstractSkinTemperature)
 end
 
 function compute_ground_heat_flux!(state, model, skinT::AbstractSkinTemperature)
-    launch!(state, model.grid, :xy, compute_ground_heat_flux_kernel!, skinT)
+    grid = get_grid(model)
+    launch!(grid, state, :xy, compute_ground_heat_flux_kernel!, skinT)
 end
 
 function update_skin_temperature!(state, model, skinT::AbstractSkinTemperature)
-    launch!(state, model.grid, :xy, update_skin_temperature_kernel!, skinT)
+    grid = get_grid(model)
+    launch!(grid, state, :xy, update_skin_temperature_kernel!, skinT)
 end
 
 # Kernels
@@ -82,16 +84,16 @@ Diagnose the skin temperature implied by the current `ground_heat_flux` and `gro
     # get ground temperature
     Tₛ = state.ground_temperature[i, j]
     # compute new skin temperature T₀ by setting G equal to the half-cell heat flux
-    κₛ = skin_thermal_conductivity(i, j, state, skinT)
+    κₛ = skin_thermal_conductivity(i, j, grid, state, skinT)
     state.skin_temperature[i, j, 1] = Tₛ - G * Δz₁ / (2*κₛ)
 end
 
 # Kernel functions
 
-@inline skin_thermal_conductivity(i, j, state, skinT::ImplicitSkinTemperature) = skinT.κₛ
+@inline skin_thermal_conductivity(i, j, grid, state, skinT::ImplicitSkinTemperature) = skinT.κₛ
 
-@inline skin_temperature(i, j, state, grid, ::AbstractSkinTemperature) = @inbounds state.skin_temperature[i, j]
+@inline skin_temperature(i, j, grid, state, ::AbstractSkinTemperature) = @inbounds state.skin_temperature[i, j]
 
-@inline ground_temperature(i, j, state, ::AbstractSkinTemperature) = @inbounds state.ground_temperature[i, j]
+@inline ground_temperature(i, j, grid, state, ::AbstractSkinTemperature) = @inbounds state.ground_temperature[i, j]
 
-@inline ground_heat_flux(i, j, state, ::AbstractSkinTemperature) = @inbounds state.ground_heat_flux[i, j]
+@inline ground_heat_flux(i, j, grid, state, ::AbstractSkinTemperature) = @inbounds state.ground_heat_flux[i, j]

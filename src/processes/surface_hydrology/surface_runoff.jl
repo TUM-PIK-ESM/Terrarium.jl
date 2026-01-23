@@ -72,7 +72,7 @@ function compute_auxiliary!(state, model, runoff::DirectSurfaceRunoff)
     grid = get_grid(model)
     soil_hydrology = get_soil_hydrology(model)
     surface_hydrology = get_surface_hydrology(model)
-    launch!(state, grid, :xy, compute_auxiliary_kernel!, runoff, surface_hydrology.canopy_hydrology, soil_hydrology)
+    launch!(grid, state, :xy, compute_auxiliary_kernel!, runoff, surface_hydrology.canopy_hydrology, soil_hydrology)
 end
 
 # Kernels
@@ -87,10 +87,10 @@ end
     fgrid = get_field_grid(grid)
 
     # Get inputs
-    precip_ground = ground_precipitation(i, j, state, grid, canopy_hydrology)
-    excess_water = surface_excess_water(i, j, state, grid, soil_hydrology)
-    k_unsat = hydraulic_conductivity(i, j, fgrid.Nz, state, grid, soil_hydrology)
-    sat_top = saturation_water_ice(i, j, fgrid.Nz, state, grid, soil_hydrology)
+    precip_ground = ground_precipitation(i, j, grid, state, canopy_hydrology)
+    excess_water = surface_excess_water(i, j, grid, state, soil_hydrology)
+    k_unsat = hydraulic_conductivity(i, j, fgrid.Nz, grid, state, soil_hydrology)
+    sat_top = saturation_water_ice(i, j, fgrid.Nz, grid, state, soil_hydrology)
 
     # Case 1: Excess water present at the surface -> precipitation adds to excess water
     # and we set the infiltration rate to the min of hydraulic conductivity and surface_excess_water

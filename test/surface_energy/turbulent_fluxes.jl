@@ -11,8 +11,8 @@ using Test
     @test hasproperty(state.inputs, :latent_heat_flux)
     set!(state.sensible_heat_flux, 10.0)
     set!(state.latent_heat_flux, 5.0)
-    @test Terrarium.sensible_heat_flux(1, 1, state, grid, turbulent_fluxes) == 10.0
-    @test Terrarium.latent_heat_flux(1, 1, state, grid, turbulent_fluxes) == 5.0    
+    @test Terrarium.sensible_heat_flux(1, 1, grid, state, turbulent_fluxes) == 10.0
+    @test Terrarium.latent_heat_flux(1, 1, grid, state, turbulent_fluxes) == 5.0    
 end
 
 @testset "Diagnosed turbulent fluxes" begin

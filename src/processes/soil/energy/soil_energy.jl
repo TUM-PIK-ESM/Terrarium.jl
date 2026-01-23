@@ -81,24 +81,23 @@ function compute_tendencies!(state, model, energy::SoilEnergyBalance)
     hydrology = get_soil_hydrology(model)
     strat = get_soil_stratigraphy(model)
     bgc = get_soil_biogeochemistry(model)
-    launch!(state, grid, :xyz, compute_energy_tendency!, energy, hydrology, strat, bgc)
+    launch!(grid, state, :xyz, compute_energy_tendency!, energy, hydrology, strat, bgc)
     return nothing
 end
 
 @kernel function compute_energy_tendency!(
-    state,
-    grid,
+    state, grid,
     energy::SoilEnergyBalance,
     hydrology::AbstractSoilHydrology,
     strat::AbstractStratigraphy,
     bgc::AbstractSoilBiogeochemistry,
 )
     i, j, k = @index(Global, NTuple)
-    state.tendencies.internal_energy[i, j, k] += energy_tendency(i, j, k, state, grid, energy, hydrology, strat, bgc)
+    state.tendencies.internal_energy[i, j, k] += energy_tendency(i, j, k, grid, state, energy, hydrology, strat, bgc)
 end
 
 @inline function energy_tendency(
-    i, j, k, state, grid,
+    i, j, k, grid, state,
     energy::SoilEnergyBalance{NF, <:ExplicitTwoPhaseHeatConduction},
     hydrology::AbstractSoilHydrology,
     strat::AbstractStratigraphy,
@@ -119,7 +118,7 @@ end
     strat::AbstractStratigraphy,
     bgc::AbstractSoilBiogeochemistry
 )
-    soil = soil_volume(i, j, k, state, grid, strat, hydrology, bgc)
+    soil = soil_volume(i, j, k, grid, state, strat, hydrology, bgc)
     return thermalconductivity(energy.thermal_properties, soil)
 end
 
@@ -161,7 +160,7 @@ function closure!(state, model, ::EnergyTemperatureClosure)
     strat = get_soil_stratigraphy(model)
     bgc = get_soil_biogeochemistry(model)
     constants = get_constants(model)
-    launch!(state, grid, :xyz, energy_to_temperature!, energy, hydrology, strat, bgc, constants)
+    launch!(grid, state, :xyz, energy_to_temperature!, energy, hydrology, strat, bgc, constants)
     return nothing
 end
 
@@ -172,7 +171,7 @@ function invclosure!(state, model, ::EnergyTemperatureClosure)
     strat = get_soil_stratigraphy(model)
     bgc = get_soil_biogeochemistry(model)
     constants = get_constants(model)
-    launch!(state, grid, :xyz, temperature_to_energy!, energy, hydrology, strat, bgc, constants)
+    launch!(grid, state, :xyz, temperature_to_energy!, energy, hydrology, strat, bgc, constants)
     return nothing
 end
 
@@ -186,7 +185,7 @@ end
 )
     i, j, k = @index(Global, NTuple)
     fc = freezecurve(energy, hydrology)
-    temperature_to_energy!(i, j, k, state, grid, fc, energy, hydrology, strat, bgc, constants)
+    temperature_to_energy!(i, j, k, grid, state, fc, energy, hydrology, strat, bgc, constants)
 end
 
 @kernel function energy_to_temperature!(
@@ -199,11 +198,11 @@ end
 )
     i, j, k = @index(Global, NTuple)
     fc = freezecurve(energy, hydrology)
-    energy_to_temperature!(i, j, k, state, grid, fc, energy, hydrology, strat, bgc, constants)
+    energy_to_temperature!(i, j, k, grid, state, fc, energy, hydrology, strat, bgc, constants)
 end
 
 @inline function temperature_to_energy!(
-    i, j, k, state, grid,
+    i, j, k, grid, state,
     ::FreeWater,
     energy::SoilEnergyBalance,
     hydrology::AbstractSoilHydrology,
@@ -213,8 +212,8 @@ end
 )
     T = @inbounds state.temperature[i, j, k] # assumed given
     L = constants.ρw*constants.Lsl
-    por = porosity(i, j, k, state, grid, strat)
-    sat = saturation_water_ice(i, j, k, state, grid, hydrology)
+    por = porosity(i, j, k, grid, state, strat)
+    sat = saturation_water_ice(i, j, k, grid, state, hydrology)
     # calculate unfrozen water content from temperature
     # N.B. For the free water freeze curve, the mapping from temperature to unfrozen water content
     # within the phase change region is indeterminate since it is assumed that T = 0. As such, we
@@ -226,7 +225,7 @@ end
         one(sat),
         zero(sat),
     )
-    solid = soil_matrix(i, j, k, state, grid, strat, bgc)
+    solid = soil_matrix(i, j, k, grid, state, strat, bgc)
     soil = SoilVolume(por, sat, liq, solid)
     C = heatcapacity(energy.thermal_properties, soil)
     # compute energy from temperature, heat capacity, and ice fraction
@@ -235,7 +234,7 @@ end
 end
 
 @inline function energy_to_temperature!(
-    i, j, k, state, grid,
+    i, j, k, grid, state,
     fc::FreeWater,
     energy::SoilEnergyBalance{NF},
     hydrology::AbstractSoilHydrology,
@@ -246,12 +245,12 @@ end
 
     U = state.internal_energy[i, j, k] # assumed given
     L = constants.ρw*constants.Lsl
-    por = porosity(i, j, k, state, grid, strat)
-    sat = saturation_water_ice(i, j, k, state, grid, hydrology)
+    por = porosity(i, j, k, grid, state, strat)
+    sat = saturation_water_ice(i, j, k, grid, state, hydrology)
     Lθ = L*sat*por
     # calculate unfrozen water content
     liq = state.liquid_water_fraction[i, j, k] = liquid_water_fraction(fc, U, Lθ, sat)
-    solid = soil_matrix(i, j, k, state, grid, strat, bgc)
+    solid = soil_matrix(i, j, k, grid, state, strat, bgc)
     soil = SoilVolume(por, sat, liq, solid)
     C = heatcapacity(energy.thermal_properties, soil)
     # calculate temperature from internal energy and liquid water fraction
