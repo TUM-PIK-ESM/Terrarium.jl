@@ -37,7 +37,6 @@ variables(::PALADYNAutotrophicRespiration) = (
 
 Computes temperature factors `f_temp_air` and `f_temp_soil` for autotrophic respiration.
 """
-
 @inline function compute_f_temp(
     autoresp::PALADYNAutotrophicRespiration{NF},
     T_air::NF,
