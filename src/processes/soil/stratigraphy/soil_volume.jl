@@ -9,7 +9,10 @@ mineral_texture(solid::AbstractSoilMatrix) = solid.texture
 
 Represents the material composition of an elementary volume of soil.
 The volume is decomposed into the key constitutents of water, ice, air,
-and a mixture of organic and mineral solid material. 
+and a mixture of organic and mineral solid material.
+
+Properties:
+$FIELDS
 """
 @kwdef struct SoilVolume{NF, Solid<:AbstractSoilMatrix{NF}}
     "Natural porosity or void space of the soil"
@@ -21,7 +24,7 @@ and a mixture of organic and mineral solid material.
     "Liquid (unfrozen) fraction of pore water"
     liquid::NF = 1.0
 
-    "Parmaeterization of the solid phase (matrix) of the soil"
+    "Parameterization of the solid phase (matrix) of the soil"
     solid::Solid = MineralOrganic(texture = SoilTexture(), organic = 0.0)
 
     # Scalar constructor
@@ -46,7 +49,7 @@ organic_fraction(soil::SoilVolume) = organic_fraction(soil.solid)
 mineral_texture(soil::SoilVolume) = mineral_texture(soil.solid)
 
 """
-    $SIGNATURES
+    $TYPEDSIGNATURES
 
 Calculates the volumetric fractions of all constituents in the given soil volume
 and returns them as a named tuple of the form `(; water, ice, air, solids...)`, where
@@ -70,7 +73,12 @@ and returns them as a named tuple of the form `(; water, ice, air, solids...)`, 
 end
 
 """
+    $TYPEDEF
+
 Soil matrix consisting of a simple, homogeneous mixture of mineral and organic material.
+
+Properties:
+$TYPEDFIELDS
 """
 @kwdef struct MineralOrganic{NF} <: AbstractSoilMatrix{NF}
     "Mineral soil texture"
@@ -85,6 +93,12 @@ Alias for `SoilVolume{T, MineralOrganic{T}}`
 """
 const MineralOrganicSoil{NF} = SoilVolume{NF, MineralOrganic{NF}}
 
+"""
+    $TYPEDSIGNATURES
+
+Compute the volumetric fractions of the solid phase scaled by the overall solid fraction
+of the soil `solid_frac`.
+"""
 @inline function volumetric_fractions(solid::MineralOrganic{NF}, solid_frac::NF) where {NF}
     organic = solid_frac * solid.organic
     mineral = solid_frac * (1 - solid.organic)

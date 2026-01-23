@@ -10,6 +10,9 @@ E_g &= \\beta \\frac{\\Delta q}{r_a} \\
 E_c &= f_{\\text{can}} \\frac{\\Delta q}{r_a} \\
 T_c &= \\frac{\\Delta q}{r_a + r_s} \\
 ```
+
+Properties:
+$FIELDS
 """
 @kwdef struct PALADYNCanopyEvapotranspiration{NF, GR<:AbstractGroundEvaporationResistanceFactor} <: AbstractEvapotranspiration
     "Drag coefficient for the traansfer of heat and water between the ground and canopy"
