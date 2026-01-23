@@ -5,7 +5,7 @@ Dummy implementation of aerodynamics that simply returns constant values for all
 """
 @kwdef struct ConstantAerodynamics{NF} <: AbstractAerodynamics
     "Drag coefficient for heat transfer"
-    Cₕ::NF = 50.0
+    Cₕ::NF = 1.2e-3
 end
 
 ConstantAerodynamics(::Type{NF}; kwargs...) where {NF} = ConstantAerodynamics{NF}(; kwargs...)
