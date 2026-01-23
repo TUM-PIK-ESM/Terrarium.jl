@@ -245,10 +245,11 @@ Variables(vars::Union{AbstractProcessVariable, Namespace}...) = Variables(vars)
 function Variables(vars::Tuple{Vararg{Union{AbstractProcessVariable, Namespace}}})
     # partition variables into prognostic, auxiliary, input, and namespace groups;
     # duplicates within each group are automatically merged
-    prognostic_vars = merge_duplicates(filter(var -> isa(var, PrognosticVariable), vars))
-    auxiliary_vars = merge_duplicates(filter(var -> isa(var, AuxiliaryVariable), vars))
-    input_vars = merge_duplicates(filter(var -> isa(var, InputVariable), vars))
-    namespaces = merge_duplicates(filter(var -> isa(var, Namespace), vars))
+    varinfo(var::AbstractVariable) = (varname(var), vardims(var), varunits(var))
+    prognostic_vars = merge_duplicates(varinfo, filter(var -> isa(var, PrognosticVariable), vars))
+    auxiliary_vars = merge_duplicates(varinfo, filter(var -> isa(var, AuxiliaryVariable), vars))
+    input_vars = merge_duplicates(varinfo, filter(var -> isa(var, InputVariable), vars))
+    namespaces = merge_duplicates(varinfo, filter(var -> isa(var, Namespace), vars))
     # get tendencies from prognostic variables
     tendency_vars = map(var -> var.tendency, prognostic_vars)
     # create closure variables and prepend to tuple of auxiliary variables;
