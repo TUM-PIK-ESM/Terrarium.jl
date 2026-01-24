@@ -39,7 +39,7 @@ function compute_tendencies!(state, model, hydrology::SoilHydrology{NF, <:Richar
     grid = get_grid(model)
     strat = get_soil_stratigraphy(model)
     constants = get_constants(model)
-    launch!(grid, XYZ, compute_saturation_tendency!, state, hydrology, strat, constants, nothing)
+    launch!(grid, XYZ, compute_saturation_tendency_kernel!, state, hydrology, strat, constants, nothing)
     return nothing
 end
 
@@ -48,7 +48,7 @@ function compute_tendencies!(state, model::AbstractLandModel, hydrology::SoilHyd
     strat = get_soil_stratigraphy(model)
     evapotranspiration = get_evapotranspiration(model)
     constants = get_constants(model)
-    launch!(grid, XYZ, compute_saturation_tendency!, state, hydrology, strat, constants, evapotranspiration)
+    launch!(grid, XYZ, compute_saturation_tendency_kernel!, state, hydrology, strat, constants, evapotranspiration)
     return nothing
 end
 
@@ -134,7 +134,7 @@ Kernel for computing soil hydraulics and unsaturated hydraulic conductivity.
 end
 
 """
-    compute_saturation_tendency!(
+    compute_saturation_tendency_kernel!(
         state,
         grid,
         hydrology::SoilHydrology,
@@ -143,7 +143,7 @@ end
 
 Kernel for computing the tendency of the prognostic `saturation_water_ice` variable in all grid cells and soil layers.
 """
-@kernel function compute_saturation_tendency!(
+@kernel function compute_saturation_tendency_kernel!(
     state, grid,
     hydrology::SoilHydrology,
     strat::AbstractStratigraphy,
@@ -161,12 +161,12 @@ end
 
 # Kernel functions
 
-# This function is needed for an Oceananigans grid operator
-@inline function hydraulic_conductivity(i, j, k, grid, state, hydrology, strat, bgc)
-    soil = soil_volume(i, j, k, grid, state, strat, hydrology, bgc)
-    return hydraulic_conductivity(hydrology.hydraulic_properties, soil)
-end
+"""
+    $SIGNATURES
 
+Compute the volumetric water content (VWC) tendency at grid cell `i, j k`. Note that the
+VWC tendency is not scaled by the porosity and is thus not a saturation tendency.
+"""
 @inline function volumetric_water_content_tendency(
     i, j, k, grid, state,
     hydrology::SoilHydrology{NF, <:RichardsEq},
@@ -203,6 +203,16 @@ conductivity `K`.
     ## for in the computation of ψ, so we do need any additional terms.
     q = -Kₖ*∇ψ
     return q
+end
+
+"""
+    $SIGNATURES
+
+Compute the hydraulic conductivity at the center of the grid cell `i, j, k`.
+"""
+@inline function hydraulic_conductivity(i, j, k, grid, state, hydrology, strat, bgc)
+    soil = soil_volume(i, j, k, grid, state, strat, hydrology, bgc)
+    return hydraulic_conductivity(hydrology.hydraulic_properties, soil)
 end
 
 # Matric potential <--> saturation closure relation
