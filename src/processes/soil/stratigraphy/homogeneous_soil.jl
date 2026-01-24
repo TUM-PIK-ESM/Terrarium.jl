@@ -27,14 +27,14 @@ function compute_auxiliary!(state, model, strat::HomogeneousSoil)
     grid = get_grid(model)
     hydrology = get_soil_hydrology(model)
     bgc = get_soil_biogeochemistry(model)
-    launch!(grid, XYZ, compute_porosity!, state, strat, hydrology, bgc)
+    launch!(grid, XYZ, compute_porosity_kernel!, state, strat, hydrology, bgc)
 end
 
 @inline compute_tendencies!(state, model, strat::HomogeneousSoil) = nothing
 
 # Kernels
 
-@kernel function compute_porosity!(state, grid, strat::HomogeneousSoil, hydrology::AbstractSoilHydrology, bgc::AbstractSoilBiogeochemistry)
+@kernel function compute_porosity_kernel!(state, grid, strat::HomogeneousSoil, hydrology::AbstractSoilHydrology, bgc::AbstractSoilBiogeochemistry)
     i, j, k = @index(Global, NTuple)
     state.porosity[i, j, k] = compute_porosity(i, j, k, grid, state, strat, hydrology, bgc)
 end

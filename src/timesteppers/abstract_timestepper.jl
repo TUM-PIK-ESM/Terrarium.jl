@@ -80,7 +80,7 @@ function explicit_step!(
     Δt,
     args...
 ) where {LX, LY, LZ}
-    launch!(grid, XYZ, explicit_step_kernel_3D!,
+    launch!(grid, XYZ, explicit_step_xyz_kernel!,
             field, tendency, timestepper, Δt, args...)
 end
 
@@ -92,11 +92,11 @@ function explicit_step!(
     Δt,
     args...
 ) where {LX, LY}
-    launch!(grid, XY, explicit_step_kernel_2D!,
+    launch!(grid, XY, explicit_step_xy_kernel!,
             field, tendency, timestepper, Δt, args...)
 end
 
-@kernel function explicit_step_kernel_3D!(
+@kernel function explicit_step_xyz_kernel!(
     field,
     grid,
     tendency,
@@ -111,7 +111,7 @@ end
     end
 end
 
-@kernel function explicit_step_kernel_2D!(
+@kernel function explicit_step_xy_kernel!(
     field,
     grid,
     tendency,

@@ -81,11 +81,11 @@ function compute_tendencies!(state, model, energy::SoilEnergyBalance)
     hydrology = get_soil_hydrology(model)
     strat = get_soil_stratigraphy(model)
     bgc = get_soil_biogeochemistry(model)
-    launch!(grid, XYZ, compute_energy_tendency!, state, energy, hydrology, strat, bgc)
+    launch!(grid, XYZ, compute_energy_tendency_kernel!, state, energy, hydrology, strat, bgc)
     return nothing
 end
 
-@kernel function compute_energy_tendency!(
+@kernel function compute_energy_tendency_kernel!(
     state, grid,
     energy::SoilEnergyBalance,
     hydrology::AbstractSoilHydrology,
@@ -160,7 +160,7 @@ function closure!(state, model, ::EnergyTemperatureClosure)
     strat = get_soil_stratigraphy(model)
     bgc = get_soil_biogeochemistry(model)
     constants = get_constants(model)
-    launch!(grid, XYZ, energy_to_temperature!, state, energy, hydrology, strat, bgc, constants)
+    launch!(grid, XYZ, energy_to_temperature_kernel!, state, energy, hydrology, strat, bgc, constants)
     return nothing
 end
 
@@ -171,11 +171,11 @@ function invclosure!(state, model, ::EnergyTemperatureClosure)
     strat = get_soil_stratigraphy(model)
     bgc = get_soil_biogeochemistry(model)
     constants = get_constants(model)
-    launch!(grid, XYZ, temperature_to_energy!, state, energy, hydrology, strat, bgc, constants)
+    launch!(grid, XYZ, temperature_to_energy_kernel!, state, energy, hydrology, strat, bgc, constants)
     return nothing
 end
 
-@kernel function temperature_to_energy!(
+@kernel function temperature_to_energy_kernel!(
     state, grid,
     energy::SoilEnergyBalance,
     hydrology::AbstractSoilHydrology,
@@ -188,7 +188,7 @@ end
     temperature_to_energy!(i, j, k, grid, state, fc, energy, hydrology, strat, bgc, constants)
 end
 
-@kernel function energy_to_temperature!(
+@kernel function energy_to_temperature_kernel!(
     state, grid,
     energy::SoilEnergyBalance,
     hydrology::AbstractSoilHydrology,

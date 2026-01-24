@@ -55,14 +55,14 @@ end
 # Kernels
 
 """
-    adjust_saturation_profile!(state, grid, ::SoilHydrology{NF}) where {NF}
+    adjust_saturation_profile_kernel!(state, grid, ::SoilHydrology{NF}) where {NF}
 
 Kernel for adjusting saturation profiles to account for oversaturation due to numerical error.
 This implementation scans over the saturation profiles at each lateral grid cell and redistributes
 excess water upward layer-by-layer until reaching the topmost layer, where any remaining excess
 water is added to the `surface_excess_water` pool.
 """
-@kernel function adjust_saturation_profile!(state, grid, ::SoilHydrology{NF}) where {NF}
+@kernel function adjust_saturation_profile_kernel!(state, grid, ::SoilHydrology{NF}) where {NF}
     i, j = @index(Global, NTuple)
     sat = state.saturation_water_ice
     field_grid = get_field_grid(grid)
@@ -217,11 +217,11 @@ function closure!(state, model, ::SaturationPressureClosure)
     strat = get_soil_stratigraphy(model)
     z_centers = znodes(get_field_grid(grid), Center(), Center(), Center())
     # apply saturation correction
-    launch!(grid, XY, adjust_saturation_profile!, state, hydrology)
+    launch!(grid, XY, adjust_saturation_profile_kernel!, state, hydrology)
     # update water table
     compute_water_table!(state, grid, hydrology)
     # determine pressure head from saturation
-    launch!(grid, XYZ, saturation_to_pressure!, state, hydrology, strat, z_centers)
+    launch!(grid, XYZ, saturation_to_pressure_kernel!, state, hydrology, strat, z_centers)
     return nothing
 end
 
@@ -231,15 +231,15 @@ function invclosure!(state, model, ::SaturationPressureClosure)
     strat = get_soil_stratigraphy(model)
     z_centers = znodes(get_field_grid(grid), Center(), Center(), Center())
     # determine saturation from pressure
-    launch!(grid, XYZ, pressure_to_saturation!, state, hydrology, strat, z_centers)
+    launch!(grid, XYZ, pressure_to_saturation_kernel!, state, hydrology, strat, z_centers)
     # apply saturation correction
-    launch!(grid, XY, adjust_saturation_profile!, state, hydrology)
+    launch!(grid, XY, adjust_saturation_profile_kernel!, state, hydrology)
     # update water table
     compute_water_table!(state, grid, hydrology)
     return nothing
 end
 
-@kernel function pressure_to_saturation!(
+@kernel function pressure_to_saturation_kernel!(
     state, grid,
     hydrology::SoilHydrology{NF, <:RichardsEq},
     strat::AbstractStratigraphy,
@@ -249,7 +249,7 @@ end
     pressure_to_saturation!(i, j, k, grid, state, hydrology, strat, zs)
 end
 
-@kernel function saturation_to_pressure!(
+@kernel function saturation_to_pressure_kernel!(
     state, grid,
     hydrology::SoilHydrology{NF, <:RichardsEq},
     strat::AbstractStratigraphy,

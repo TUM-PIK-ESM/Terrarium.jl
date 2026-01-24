@@ -34,13 +34,13 @@ variables(::DiagnosedTurbulentFluxes) = (
 
 function compute_auxiliary!(state, model, tur::DiagnosedTurbulentFluxes)
     (; grid, surface_energy_balance, atmosphere, constants) = model
-    launch!(grid, XY, compute_turbulent_fluxes!, state,
+    launch!(grid, XY, compute_turbulent_fluxes_kernel!, state,
             tur, surface_energy_balance.skin_temperature, atmosphere, constants)
 end
 
 # Kernels
 
-@kernel function compute_turbulent_fluxes!(
+@kernel function compute_turbulent_fluxes_kernel!(
     state, grid,
     tur::DiagnosedTurbulentFluxes,
     skinT::AbstractSkinTemperature,
@@ -54,7 +54,7 @@ end
     state.latent_heat_flux[i, j, 1] = latent_heat_flux(i, j, grid, state, tur, skinT, atmos, constants)
 end
 
-@kernel function compute_turbulent_fluxes!(
+@kernel function compute_turbulent_fluxes_kernel!(
     state, grid,
     tur::DiagnosedTurbulentFluxes,
     skinT::AbstractSkinTemperature,

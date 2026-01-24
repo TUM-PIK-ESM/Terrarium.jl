@@ -25,7 +25,7 @@ variables(::PrescribedRadiativeFluxes) = (
 
 function compute_auxiliary!(state, model, rad::PrescribedRadiativeFluxes)
     (; grid, atmosphere) = model
-    launch!(grid, XY, compute_net_radiation!, state, rad, atmosphere)
+    launch!(grid, XY, compute_net_radiation_kernel!, state, rad, atmosphere)
 end
 
 """
@@ -80,7 +80,7 @@ variables(::DiagnosedRadiativeFluxes) = (
 function compute_auxiliary!(state, model, rad::DiagnosedRadiativeFluxes)
     (; grid, surface_energy_balance, atmosphere, constants) = model
     launch!(
-        grid, state, :xy, compute_radiative_fluxes!,
+        grid, state, :xy, compute_radiative_fluxes_kernel!,
         rad,
         atmosphere,
         surface_energy_balance.skin_temperature,
@@ -91,7 +91,7 @@ end
 
 # Kernels
 
-@kernel function compute_radiative_fluxes!(
+@kernel function compute_radiative_fluxes_kernel!(
     state, grid,
     rad::AbstractRadiativeFluxes,
     atmos::AbstractAtmosphere,
@@ -116,7 +116,7 @@ end
     state.surface_net_radiation[i, j, 1] = compute_surface_net_radiation(rad, surface_shortwave_down, surface_shortwave_up, surface_longwave_down, surface_longwave_up)
 end
 
-@kernel function compute_net_radiation!(state, grid, rad::AbstractRadiativeFluxes, atmos::AbstractAtmosphere)
+@kernel function compute_net_radiation_kernel!(state, grid, rad::AbstractRadiativeFluxes, atmos::AbstractAtmosphere)
     i, j = @index(Global, NTuple)
     # get inputs
     surface_shortwave_up = state.surface_shortwave_up[i, j]
