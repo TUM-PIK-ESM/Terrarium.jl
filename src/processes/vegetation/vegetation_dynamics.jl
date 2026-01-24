@@ -103,5 +103,5 @@ end
     ν_tendency = compute_ν_tend(veg_dynamics, vegcarbon_dynamics, LAI_b, C_veg, ν)
     
     # Store result
-    state.tendencies.ν[i, j] = ν_tendency
+    state.tendencies.ν[i, j, 1] = ν_tendency
 end

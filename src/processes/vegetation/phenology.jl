@@ -83,7 +83,7 @@ end
     LAI = compute_LAI(phenol, LAI_b)
 
     # Store results
-    state.phen[i, j] = phen
-    state.LAI[i, j] = LAI
+    state.phen[i, j, 1] = phen
+    state.LAI[i, j, 1] = LAI
 end
    

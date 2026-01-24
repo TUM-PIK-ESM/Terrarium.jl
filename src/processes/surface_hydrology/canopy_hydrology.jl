@@ -151,13 +151,13 @@ end
     precip_ground = compute_precip_ground(canopy_hydrology, precip, I_can, R_can)
 
     # Store results
-    state.canopy_water_interception[i, j] = I_can
-    state.canopy_water_removal[i, j] = R_can
-    state.saturation_canopy_water[i, j] = f_can
-    state.precip_ground[i, j] = precip_ground
+    state.canopy_water_interception[i, j, 1] = I_can
+    state.canopy_water_removal[i, j, 1] = R_can
+    state.saturation_canopy_water[i, j, 1] = f_can
+    state.precip_ground[i, j, 1] = precip_ground
 end
 
-@kernel function compute_tendencies_kernel!(
+@kernel inbounds=true function compute_tendencies_kernel!(
     state, grid,
     canopy_hydrology::PALADYNCanopyHydrology{NF},
     canopy_ET::PALADYNCanopyEvapotranspiration{NF}
@@ -165,11 +165,10 @@ end
     i, j = @index(Global, NTuple)
 
     # Get inputs
-    @inbounds let I_can = state.canopy_water_interception[i, j],
-                  E_can = state.evaporation_canopy[i, j],
-                  R_can = state.canopy_water_removal;
+    I_can = state.canopy_water_interception[i, j]
+    E_can = state.evaporation_canopy[i, j]
+    R_can = state.canopy_water_removal
 
-        # Compute canopy water tendency
-        state.tendencies.w_can[i, j] = compute_w_can_tend(canopy_hydrology, I_can, E_can, R_can)
-    end
+    # Compute canopy water tendency
+    state.tendencies.w_can[i, j, 1] = compute_w_can_tend(canopy_hydrology, I_can, E_can, R_can)
 end

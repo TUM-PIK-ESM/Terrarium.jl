@@ -84,7 +84,7 @@ end
         λc = compute_λc(stomcond, vpd)
 
         # Store result
-        state.gw_can[i, j] = gw_can
-        state.λc[i, j] = λc
+        state.gw_can[i, j, 1] = gw_can
+        state.λc[i, j, 1] = λc
     end
 end

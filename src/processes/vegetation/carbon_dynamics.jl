@@ -114,7 +114,7 @@ end
     i, j = @index(Global, NTuple)
 
     # Compute balanced Leaf Area Index 
-    state.LAI_b[i, j] = compute_LAI_b(vegcarbon_dynamics, state.C_veg[i, j])
+    state.LAI_b[i, j, 1] = compute_LAI_b(vegcarbon_dynamics, state.C_veg[i, j])
 end
 
 function compute_tendencies!(state, model, vegcarbon_dynamics::PALADYNCarbonDynamics)
@@ -133,5 +133,5 @@ end
     C_veg_tendency = compute_C_veg_tend(vegcarbon_dynamics, LAI_b, NPP)
 
     # Store result
-    state.tendencies.C_veg[i, j] = C_veg_tendency
+    state.tendencies.C_veg[i, j, 1] = C_veg_tendency
 end

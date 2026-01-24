@@ -178,8 +178,8 @@ end
         NPP = compute_NPP(autoresp, GPP, Ra)
 
         # Store results
-        state.Ra[i, j] = Ra
-        state.NPP[i, j] = NPP
+        state.Ra[i, j, 1] = Ra
+        state.NPP[i, j, 1] = NPP
     end
 end
 

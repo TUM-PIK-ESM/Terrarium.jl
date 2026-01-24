@@ -335,7 +335,7 @@ end
     GPP = compute_GPP(photo, An)
 
     # Store results
-    state.GPP[i, j] = GPP
-    state.Rd[i, j] = Rd
-    state.An[i, j] = An
+    state.GPP[i, j, 1] = GPP
+    state.Rd[i, j, 1] = Rd
+    state.An[i, j, 1] = An
 end
