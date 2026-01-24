@@ -24,17 +24,6 @@ Evaluates `x / (y + eps(NF))` if and only if `y != zero(y)`; returns `Inf` other
 """
 safediv(x::NF, y::NF) where {NF} = ifelse(iszero(y), Inf, x / (y + eps(NF)))
 
-"""
-    Adapt.adapt(::Type{NF}, obj) where {NF<:Number}
-
-Pirating dispatch for `adapt` that allows arbitrary data structures to be reconstructed
-with all numeric values converted to the specified number format `NF`.
-"""
-function Adapt.adapt(::Type{NF}, obj) where {NF<:Number}
-    vals = map(NF, flatten(obj, flattenable, Number))
-    return reconstruct(obj, vals, flattenable, Number)
-end
-
 # fastmap and fastiterate
 
 # Note that fastmap and fastiterate are borrowed (with self permission!) from CryoGrid.jl:
@@ -91,3 +80,4 @@ fastiterate(f!::F, iters::NamedTuple) where {F} = fastiterate(f!, values(iters))
 include("tuple_utils.jl")
 include("interpolation_utils.jl")
 include("kernel_utils.jl")
+include("adaptors.jl")

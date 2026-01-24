@@ -161,7 +161,7 @@ struct UnsatKLinear{RetentionCurve<:SWRC} <: AbstractUnsatK
     swrc::RetentionCurve
 end
 
-UnsatKLinear(::Type{NF}; swrc=FreezeCurves.BrooksCorey()) where {NF} = UnsatKLinear(adapt(NF, ustrip(swrc)))
+UnsatKLinear(::Type{NF}; swrc=FreezeCurves.BrooksCorey()) where {NF} = UnsatKLinear(adapt(NumberFormatAdaptor{NF}(), ustrip(swrc)))
 
 function hydraulic_conductivity(
     hydraulics::AbstractSoilHydraulics{NF, <:UnsatKLinear},
@@ -192,7 +192,7 @@ struct UnsatKVanGenuchten{NF, RetentionCurve<:FreezeCurves.VanGenuchten} <: Abst
     swrc::RetentionCurve
 end
 
-UnsatKVanGenuchten(::Type{NF}; impedance::NF = NF(7), swrc=FreezeCurves.VanGenuchten()) where {NF} = UnsatKVanGenuchten(NF(impedance), adapt(NF, ustrip(swrc)))
+UnsatKVanGenuchten(::Type{NF}; impedance::NF = NF(7), swrc=FreezeCurves.VanGenuchten()) where {NF} = UnsatKVanGenuchten(NF(impedance), adapt(NumberFormatAdaptor{NF}(), ustrip(swrc)))
 
 function hydraulic_conductivity(
     hydraulics::AbstractSoilHydraulics{NF, <:UnsatKVanGenuchten},
