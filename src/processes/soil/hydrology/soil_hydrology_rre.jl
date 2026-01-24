@@ -31,7 +31,7 @@ function compute_auxiliary!(state, model, hydrology::SoilHydrology{NF, <:Richard
     grid = get_grid(model)
     strat = get_soil_stratigraphy(model)
     bgc = get_soil_biogeochemistry(model)
-    launch!(grid, state, :xyz, compute_hydraulics_kernel!, hydrology, strat, bgc)
+    launch!(grid, XYZ, compute_hydraulics_kernel!, state, hydrology, strat, bgc)
     return nothing
 end
 
@@ -39,7 +39,7 @@ function compute_tendencies!(state, model, hydrology::SoilHydrology{NF, <:Richar
     grid = get_grid(model)
     strat = get_soil_stratigraphy(model)
     constants = get_constants(model)
-    launch!(grid, state, :xyz, compute_saturation_tendency!, hydrology, strat, constants, nothing)
+    launch!(grid, XYZ, compute_saturation_tendency!, state, hydrology, strat, constants, nothing)
     return nothing
 end
 
@@ -48,7 +48,7 @@ function compute_tendencies!(state, model::AbstractLandModel, hydrology::SoilHyd
     strat = get_soil_stratigraphy(model)
     evapotranspiration = get_evapotranspiration(model)
     constants = get_constants(model)
-    launch!(grid, state, :xyz, compute_saturation_tendency!, hydrology, strat, constants, evapotranspiration)
+    launch!(grid, XYZ, compute_saturation_tendency!, state, hydrology, strat, constants, evapotranspiration)
     return nothing
 end
 
@@ -217,11 +217,11 @@ function closure!(state, model, ::SaturationPressureClosure)
     strat = get_soil_stratigraphy(model)
     z_centers = znodes(get_field_grid(grid), Center(), Center(), Center())
     # apply saturation correction
-    launch!(grid, state, :xy, adjust_saturation_profile!, hydrology)
+    launch!(grid, XY, adjust_saturation_profile!, state, hydrology)
     # update water table
     compute_water_table!(state, grid, hydrology)
     # determine pressure head from saturation
-    launch!(grid, state, :xyz, saturation_to_pressure!, hydrology, strat, z_centers)
+    launch!(grid, XYZ, saturation_to_pressure!, state, hydrology, strat, z_centers)
     return nothing
 end
 
@@ -231,9 +231,9 @@ function invclosure!(state, model, ::SaturationPressureClosure)
     strat = get_soil_stratigraphy(model)
     z_centers = znodes(get_field_grid(grid), Center(), Center(), Center())
     # determine saturation from pressure
-    launch!(grid, state, :xyz, pressure_to_saturation!, hydrology, strat, z_centers)
+    launch!(grid, XYZ, pressure_to_saturation!, state, hydrology, strat, z_centers)
     # apply saturation correction
-    launch!(grid, state, :xy, adjust_saturation_profile!, hydrology)
+    launch!(grid, XY, adjust_saturation_profile!, state, hydrology)
     # update water table
     compute_water_table!(state, grid, hydrology)
     return nothing

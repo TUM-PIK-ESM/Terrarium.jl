@@ -44,12 +44,12 @@ end
 
 function compute_ground_heat_flux!(state, model, skinT::AbstractSkinTemperature)
     grid = get_grid(model)
-    launch!(grid, state, :xy, compute_ground_heat_flux_kernel!, skinT)
+    launch!(grid, XY, compute_ground_heat_flux_kernel!, state, skinT)
 end
 
 function update_skin_temperature!(state, model, skinT::AbstractSkinTemperature)
     grid = get_grid(model)
-    launch!(grid, state, :xy, update_skin_temperature_kernel!, skinT)
+    launch!(grid, XY, update_skin_temperature_kernel!, state, skinT)
 end
 
 # Kernels

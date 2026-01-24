@@ -32,7 +32,7 @@ function compute_auxiliary!(state, model, evap::GroundEvaporation)
     atmos = get_atmosphere(model)
     seb = get_surface_energy_balance(model)
     constants = get_constants(model)
-    launch!(grid, state, :xy, compute_evaporation_kernel!, evap, seb.skin_temperature, atmos, constants)
+    launch!(grid, XY, compute_evaporation_kernel!, state, evap, seb.skin_temperature, atmos, constants)
 end
 
 # Kernels

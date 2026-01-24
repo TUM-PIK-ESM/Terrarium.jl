@@ -34,8 +34,8 @@ variables(::DiagnosedTurbulentFluxes) = (
 
 function compute_auxiliary!(state, model, tur::DiagnosedTurbulentFluxes)
     (; grid, surface_energy_balance, atmosphere, constants) = model
-    launch!(grid, state, :xy, compute_turbulent_fluxes!,
-        tur, surface_energy_balance.skin_temperature, atmosphere, constants)
+    launch!(grid, XY, compute_turbulent_fluxes!, state,
+            tur, surface_energy_balance.skin_temperature, atmosphere, constants)
 end
 
 # Kernels

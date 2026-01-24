@@ -57,7 +57,7 @@ function compute_auxiliary!(state, model, stomcond::MedlynStomatalConductance)
     atmos = get_atmosphere(model)
     constants = get_constants(model)
     photo = get_photosynthesis(model)
-    launch!(grid, state, :xy, compute_auxiliary_kernel!, stomcond, photo, atmos, constants)
+    launch!(grid, XY, compute_auxiliary_kernel!, state, stomcond, photo, atmos, constants)
 end
 
 @kernel function compute_auxiliary_kernel!(

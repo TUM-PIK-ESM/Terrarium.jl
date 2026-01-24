@@ -306,7 +306,7 @@ end
 function compute_auxiliary!(state, model, photo::LUEPhotosynthesis)
     grid = get_grid(model)
     atmos = get_atmosphere(model)
-    launch!(grid, state, :xy, compute_photosynthesis_kernel!, photo, atmos)
+    launch!(grid, XY, compute_photosynthesis_kernel!, state, photo, atmos)
 end
 
 @kernel inbounds=true function compute_photosynthesis_kernel!(

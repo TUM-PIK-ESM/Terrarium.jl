@@ -67,7 +67,7 @@ end
 
 function compute_auxiliary!(state, model, phenol::PALADYNPhenology)
     grid = get_grid(model)
-    launch!(grid, state, :xy, compute_auxiliary_kernel!, phenol)
+    launch!(grid, XY, compute_auxiliary_kernel!, state, phenol)
 end
 
 @kernel function compute_auxiliary_kernel!(state, grid, phenol::PALADYNPhenology)

@@ -113,12 +113,12 @@ function compute_auxiliary!(state, model, canopy_hydrology::PALADYNCanopyHydrolo
     grid = get_grid(model)
     atmos = get_atmosphere(model)
     constants = get_constants(model)
-    launch!(grid, state, :xy, compute_auxiliary_kernel!, canopy_hydrology, atmos, constants)
+    launch!(grid, XY, compute_auxiliary_kernel!, state, canopy_hydrology, atmos, constants)
 end
 
 function compute_tendencies!(state, model, canopy_hydrology::PALADYNCanopyHydrology)
     grid = get_grid(model)
-    launch!(grid, state, :xy, compute_tendencies_kernel!, canopy_hydrology)
+    launch!(grid, XY, compute_tendencies_kernel!, state, canopy_hydrology)
 end
 
 # Kernels

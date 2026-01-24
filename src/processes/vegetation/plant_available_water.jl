@@ -39,7 +39,7 @@ function compute_auxiliary!(state, model, paw::FieldCapacityLimitedPAW)
     hydrology = get_soil_hydrology(model)
     strat = get_soil_stratigraphy(model)
     bgc = get_soil_biogeochemistry(model)
-    launch!(grid, state, :xyz, compute_paw_kernel!, paw, hydrology, strat, bgc)
+    launch!(grid, XYZ, compute_paw_kernel!, state, paw, hydrology, strat, bgc)
     # compute the derived soil moisture limiting factor field
     compute!(state.SMLF)
 end

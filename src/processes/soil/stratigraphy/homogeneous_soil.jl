@@ -27,7 +27,7 @@ function compute_auxiliary!(state, model, strat::HomogeneousSoil)
     grid = get_grid(model)
     hydrology = get_soil_hydrology(model)
     bgc = get_soil_biogeochemistry(model)
-    launch!(grid, state, :xyz, compute_porosity!, strat, hydrology, bgc)
+    launch!(grid, XYZ, compute_porosity!, state, strat, hydrology, bgc)
 end
 
 @inline compute_tendencies!(state, model, strat::HomogeneousSoil) = nothing

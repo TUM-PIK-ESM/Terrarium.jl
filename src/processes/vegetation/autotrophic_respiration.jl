@@ -152,7 +152,7 @@ function compute_auxiliary!(state, model, autoresp::PALADYNAutotrophicRespiratio
     grid = get_grid(model)
     atmos = get_atmosphere(model)
     carbon = get_vegetation_carbon_dynamics(model)
-    launch!(grid, state, :xy, compute_auxiliary_kernel!, autoresp, carbon, atmos)
+    launch!(grid, XY, compute_auxiliary_kernel!, state, autoresp, carbon, atmos)
 end
 
 @kernel function compute_auxiliary_kernel!(

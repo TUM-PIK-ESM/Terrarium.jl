@@ -25,7 +25,7 @@ variables(::PrescribedRadiativeFluxes) = (
 
 function compute_auxiliary!(state, model, rad::PrescribedRadiativeFluxes)
     (; grid, atmosphere) = model
-    launch!(grid, state, :xy, compute_net_radiation!, rad, atmosphere)
+    launch!(grid, XY, compute_net_radiation!, state, rad, atmosphere)
 end
 
 """

@@ -107,7 +107,7 @@ end
 
 function compute_auxiliary!(state, model, vegcarbon_dynamics::PALADYNCarbonDynamics)
     grid = get_grid(model)
-    launch!(grid, state, :xy, compute_auxiliary_kernel!, vegcarbon_dynamics)
+    launch!(grid, XY, compute_auxiliary_kernel!, state, vegcarbon_dynamics)
 end
 
 @kernel function compute_auxiliary_kernel!(state, grid, vegcarbon_dynamics::PALADYNCarbonDynamics{NF}) where NF

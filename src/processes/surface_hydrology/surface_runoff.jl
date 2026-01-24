@@ -72,7 +72,7 @@ function compute_auxiliary!(state, model, runoff::DirectSurfaceRunoff)
     grid = get_grid(model)
     soil_hydrology = get_soil_hydrology(model)
     surface_hydrology = get_surface_hydrology(model)
-    launch!(grid, state, :xy, compute_auxiliary_kernel!, runoff, surface_hydrology.canopy_hydrology, soil_hydrology)
+    launch!(grid, XY, compute_auxiliary_kernel!, state, runoff, surface_hydrology.canopy_hydrology, soil_hydrology)
 end
 
 # Kernels

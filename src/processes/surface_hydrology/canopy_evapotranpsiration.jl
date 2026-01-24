@@ -98,7 +98,7 @@ function compute_auxiliary!(state, model, evtr::PALADYNCanopyEvapotranspiration)
     surface_hydrology = get_surface_hydrology(model)
     atmos = get_atmosphere(model)
     constants = get_constants(model)
-    launch!(grid, state, :xy, compute_evapotranspiration_kernel!,
+    launch!(grid, XY, compute_evapotranspiration_kernel!, state,
             evtr, surface_hydrology.canopy_hydrology, atmos, constants)
 end
 
@@ -110,7 +110,7 @@ function compute_auxiliary!(state, model::AbstractLandModel, evtr::PALADYNCanopy
     bgc = get_soil_biogeochemistry(model)
     atmos = get_atmosphere(model)
     constants = get_constants(model)
-    launch!(grid, state, :xy, compute_evapotranspiration_kernel!,
+    launch!(grid, XY, compute_evapotranspiration_kernel!, state,
             evtr, surface_hydrology.canopy_hydrology, atmos, constants, soilw, strat, bgc)
 end
 
