@@ -81,8 +81,7 @@ variables(hydrology::SoilHydrology{NF}) where {NF} = (
 @propagate_inbounds water_table(i, j, grid, state, ::AbstractSoilHydrology) = state.water_table[i, j]
 
 @inline function compute_water_table!(state, grid, hydrology::AbstractSoilHydrology)
-    zs = znodes(get_field_grid(grid), Center(), Center(), Face())
-    launch!(grid, :xy, compute_water_table_kernel!, state.water_table, state.saturation_water_ice, zs, hydrology)
+    launch!(grid, XY, compute_water_table_kernel!, state.water_table, state.saturation_water_ice, zs, hydrology)
 end
 
 # Immobile soil water (NoFlow)
@@ -112,8 +111,9 @@ end
 Kernel for diagnosing the water table at each grid point given the current soil saturation profile.
 The argument `z_faces` should be the z-coordinates of the grid on the layer faces.
 """
-@kernel function compute_water_table_kernel!(water_table, sat, z_faces, ::SoilHydrology{NF}) where {NF}
+@kernel function compute_water_table_kernel!(water_table, grid, sat, ::SoilHydrology{NF}) where {NF}
     i, j = @index(Global, NTuple)
+    zs = znodes(get_field_grid(grid), Center(), Center(), Face())
     # scan z axis starting from the bottom (index 1) to find first non-saturated grid cell
-    water_table[i, j, 1] = findfirst_z((i, j), <(one(NF)), z_faces, sat)
+    water_table[i, j, 1] = findfirst_z(i, j, <(one(NF)), zs, sat)
 end

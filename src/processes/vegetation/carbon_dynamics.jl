@@ -119,7 +119,7 @@ end
 
 function compute_tendencies!(state, model, vegcarbon_dynamics::PALADYNCarbonDynamics)
     grid = get_grid(model)
-    launch!(grid, :xy, compute_tendencies_kernel!, state, vegcarbon_dynamics)
+    launch!(grid, XY, compute_tendencies_kernel!, state, vegcarbon_dynamics)
 end
 
 @kernel function compute_tendencies_kernel!(state, grid, vegcarbon_dynamics::PALADYNCarbonDynamics{NF}) where NF  
