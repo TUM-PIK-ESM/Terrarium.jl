@@ -40,7 +40,7 @@ state = initialize(model, ForwardEuler(), boundary_conditions=bc)
 @time run!(state, period=Day(1), Δt=900.0)
 
 using Oceananigans.OutputWriters: JLD2Writer, AveragedTimeInterval
-using Oceananigans.Utils: days
+using Oceananigans.Units: days
 
 # set up and run an Oceananigans Simulation
 sim = Simulation(state; Δt=900.0, stop_iteration=100)
