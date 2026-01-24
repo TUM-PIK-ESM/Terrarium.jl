@@ -79,14 +79,8 @@ variables(::DiagnosedRadiativeFluxes) = (
 
 function compute_auxiliary!(state, model, rad::DiagnosedRadiativeFluxes)
     (; grid, surface_energy_balance, atmosphere, constants) = model
-    launch!(
-        grid, state, :xy, compute_radiative_fluxes_kernel!,
-        rad,
-        atmosphere,
-        surface_energy_balance.skin_temperature,
-        surface_energy_balance.albedo,
-        constants
-    )
+    launch!(grid, XY, compute_radiative_fluxes_kernel!, state,
+            rad, atmosphere, surface_energy_balance.skin_temperature, surface_energy_balance.albedo, constants)
 end
 
 # Kernels
