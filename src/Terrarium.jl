@@ -23,9 +23,9 @@ using KernelAbstractions: @kernel, @index
 # Oceananigans numerics
 using Oceananigans.AbstractOperations: Average, Integral, ConditionalOperation
 using Oceananigans.Architectures: Architectures, AbstractArchitecture, CPU, GPU, architecture, on_architecture, array_type
-using Oceananigans.Fields: Field, FunctionField, AbstractField, Center, Face, set!, compute!, interior, xnodes, ynodes, znodes, zspacings, location
+using Oceananigans.Fields: Field, FunctionField, AbstractField, Center, Face, set!, compute!, interior, location
 using Oceananigans.Forcings: Forcing, ContinuousForcing, DiscreteForcing
-using Oceananigans.Grids: Periodic, Flat, Bounded
+using Oceananigans.Grids: Periodic, Flat, Bounded, xnodes, ynodes, znodes, zspacings
 using Oceananigans.Operators: ∂zᵃᵃᶜ, ∂zᵃᵃᶠ, ℑzᵃᵃᶠ, Δzᵃᵃᶜ
 using Oceananigans.OutputReaders: FieldTimeSeries
 using Oceananigans.Simulations: Simulation, run!, timestepper
