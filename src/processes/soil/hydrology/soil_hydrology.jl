@@ -81,7 +81,7 @@ variables(hydrology::SoilHydrology{NF}) where {NF} = (
 @propagate_inbounds water_table(i, j, grid, state, ::AbstractSoilHydrology) = state.water_table[i, j]
 
 @inline function compute_water_table!(state, grid, hydrology::AbstractSoilHydrology)
-    launch!(grid, XY, compute_water_table_kernel!, state.water_table, state.saturation_water_ice, zs, hydrology)
+    launch!(grid, XY, compute_water_table_kernel!, state.water_table, state.saturation_water_ice, hydrology)
 end
 
 # Immobile soil water (NoFlow)
