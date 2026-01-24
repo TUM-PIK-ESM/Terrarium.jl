@@ -5,7 +5,6 @@
 This implementation performs a linear scan over the z-axis and thus has time complexity O(N_z).
 """
 @inline function findfirst_z(i, j, condition_func, z_nodes, field)
-    i, j = idx
     n = length(z_nodes)
     idx = -1
     for k in 1:n
