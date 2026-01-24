@@ -4,43 +4,10 @@ Alias for `Type{Val{x}}`
 const TypeVal{x} = Type{Val{x}} where {x}
 
 """
-    $SIGNATURES
-
-Concatenate one or more tuples together.
+Alias for `Union{Nothing, T}` indicating that an argument or field of type `T` is optional and
+can be replaced with `nothing`.
 """
-tuplejoin() = tuple()
-tuplejoin(x) = x
-tuplejoin(x, y) = (x..., y...)
-tuplejoin(x, y, z...) = (x..., tuplejoin(y, z...)...)
-
-"""
-    $SIGNATURES
-    
-Filter out duplicates from the given tuple. Note that this method is not type stable or allocation-free!
-"""
-merge_duplicates(values::Tuple) = Tuple(unique(values))
-merge_duplicates(f, values::Tuple) = Tuple(unique(f, values))
-
-"""
-    merge_recursive(nt1::NamedTuple, nt2::NamedTuple)
-
-Recursively merge two nested named tuples. This implementation is loosely based on the one in
-[NamedTupleTools](https://github.com/JeffreySarnoff/NamedTupleTools.jl) authored by Jeffrey Sarnoff.
-"""
-merge_recursive(nt1::NamedTuple, nt2::NamedTuple, nts...) = merge_recursive(merge_recursive(nt1, nt2), nts...)
-function merge_recursive(nt1::NamedTuple, nt2::NamedTuple)
-    keys_union = keys(nt1) ∪ keys(nt2)
-    pairs = map(Tuple(keys_union)) do key
-        v1 = get(nt1, key, nothing)
-        v2 = get(nt2, key, nothing)
-        key => merge_recursive(v1, v2)
-    end
-    return (; pairs...)
-end
-# Recursive merge cases
-merge_recursive(val, ::Nothing) = val
-merge_recursive(::Nothing, val) = val
-merge_recursive(_, val) = val # select second value to match behavior of merge
+const Optional{T} = Union{Nothing, T}
 
 """
     $SIGNATURES
@@ -58,19 +25,11 @@ Evaluates `x / (y + eps(NF))` if and only if `y != zero(y)`; returns `Inf` other
 safediv(x::NF, y::NF) where {NF} = ifelse(iszero(y), Inf, x / (y + eps(NF)))
 
 """
-    $SIGNATURES
+    Adapt.adapt(::Type{NF}, obj) where {NF<:Number}
 
-Return a function `f(z)` that linearly interpolates between the given `knots`.
+Pirating dispatch for `adapt` that allows arbitrary data structures to be reconstructed
+with all numeric values converted to the specified number format `NF`.
 """
-function piecewise_linear(knots::Pair{<:LengthQuantity}...; extrapolation=Interpolations.Flat())
-    # extract coordinates and strip units
-    zs = collect(map(ustrip ∘ first, knots))
-    ys = collect(map(last, knots))
-    @assert issorted(zs, rev=true) "depths must be sorted in descending order"
-    interp = Interpolations.interpolate((reverse(zs),), reverse(ys), Interpolations.Gridded(Interpolations.Linear()))
-    return Interpolations.extrapolate(interp, extrapolation)
-end
-
 function Adapt.adapt(::Type{NF}, obj) where {NF<:Number}
     vals = map(NF, flatten(obj, flattenable, Number))
     return reconstruct(obj, vals, flattenable, Number)
@@ -129,22 +88,6 @@ Same as `fastmap` but simply invokes `f!` on each argument set without construct
 end
 fastiterate(f!::F, iters::NamedTuple) where {F} = fastiterate(f!, values(iters))
 
-# Kernels
-
-"""
-    findfirst_z(idx, condition_func, z_nodes, field)
-
-2D kernel function that finds the first coordinate in `z_nodes` where `condition_func(field[i, j, k])`.
-This implementation performs a linear scan over the z-axis and thus has time complexity O(N_z).
-"""
-@inline function findfirst_z(idx, condition_func, z_nodes, field)
-    i, j = idx
-    n = length(z_nodes)
-    idx = -1
-    for k in 1:n
-        if idx < 0 && condition_func(field[i, j, k])
-            idx = k
-        end
-    end
-    return idx > 0 ? z_nodes[idx] : z_nodes[n]
-end
+include("tuple_utils.jl")
+include("interpolation_utils.jl")
+include("kernel_utils.jl")

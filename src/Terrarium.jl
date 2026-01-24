@@ -77,8 +77,8 @@ export @u_str, uconvert, ustrip
 # Re-export adapt
 export adapt
 
-# internal utilities
-include("utils.jl")
+# internal utility types and methods
+include("utils/utils.jl")
 
 export PrognosticVariable, AuxiliaryVariable, InputVariable, Input, XY, XYZ
 include("abstract_variables.jl")
