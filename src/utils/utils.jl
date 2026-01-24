@@ -1,7 +1,7 @@
 """
 Alias for `Type{Val{x}}`
 """
-const TypeVal{x} = Type{Val{x}} where {x}
+const ValType{x} = Type{Val{x}} where {x}
 
 """
 Alias for `Union{Nothing, T}` indicating that an argument or field of type `T` is optional and
