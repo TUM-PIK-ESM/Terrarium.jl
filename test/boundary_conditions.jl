@@ -21,7 +21,7 @@ using Test
     merged_bcs = merge_boundary_conditions(bc1, bc2)
     @test hasproperty(merged_bcs, :x)
     @test hasproperty(merged_bcs, :y)
-    state = initialize(vars, grid, clock; boundary_conditions = merged_bcs)
+    state = initialize(vars, grid; clock, boundary_conditions = merged_bcs)
     # check that we can set the input variable to modify the boundary condition
     set!(state.c, 1.0)
     fill_halo_regions!(state)

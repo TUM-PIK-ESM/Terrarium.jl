@@ -85,17 +85,20 @@ function initialize(
     input_variables = ()
 ) where {NF}
     grid = get_grid(model)
+    # Create ground heat flux field for coupling
     vars = Variables(variables(model)..., input_variables...)
+    # Initialize BC fields for coupling
     ground_heat_flux = initialize(vars.auxiliary.ground_heat_flux, grid, clock, boundary_conditions, fields)
     infiltration = initialize(vars.auxiliary.infiltration, grid, clock, boundary_conditions, fields)
     ground_heat_flux_bc = GroundHeatFlux(ground_heat_flux)
-    # note that the hydrology module computes infiltration as positive so we need to negate it here
+    # Note that the hydrology module computes infiltration as positive so we need to negate it here
     # since fluxes are by convention positive upwards
     infiltration_bc = InfiltrationFlux(-infiltration)
     bcs = merge_boundary_conditions(boundary_conditions, ground_heat_flux_bc, infiltration_bc)
-    # pass preconstructed fields to initialize
-    fields = merge(fields, (; ground_heat_flux, infiltration))
-    return initialize(vars, model.grid, clock; boundary_conditions=bcs, fields)
+    # Merge user-defined fields with BC fields
+    fields = merge((; ground_heat_flux, infiltration), fields)
+    # Return the initialized model state
+    return initialize(vars, grid; clock, boundary_conditions=bcs, fields)
 end
 
 function initialize!(state, model::VegetationSoilModel)

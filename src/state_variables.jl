@@ -140,8 +140,22 @@ function get_fields(state::StateVariables, queries::Union{Symbol, Pair}...)
     return (; fields...)
 end
 
-# Initialization of StateVariables from models and variable types
+# Initialization of StateVariables from models and processes
 
+"""
+    initialize(
+        process::AbstractProcess,
+        grid::AbstractLandGrid{NF};
+        clock = Clock(time=zero(NF)),
+        input_variables = (),
+        boundary_conditions = (;),
+        fields = (;)
+    ) where {NF}
+
+Initialize a `StateVariables` data structure containing `Field`s for all variables defined by `model`,
+initialized on its associated `grid`. Any predefined `boundary_conditions` and `fields` will be passed
+through to `initialize` for each variable.
+"""
 function initialize(
     model::AbstractModel{NF};
     clock = Clock(time=zero(NF)),
@@ -150,15 +164,56 @@ function initialize(
     fields = (;)
 ) where {NF}
     vars = Variables(tuplejoin(variables(model), input_variables))
-    grid = get_grid(model)
-    state = initialize(vars, grid, clock; boundary_conditions, fields)
+    state = initialize(vars, model.grid; clock, boundary_conditions, fields)
     return state
 end
 
+"""
+    initialize(
+        process::AbstractProcess,
+        grid::AbstractLandGrid{NF};
+        clock = Clock(time=zero(NF)),
+        input_variables = (),
+        boundary_conditions = (;),
+        fields = (;)
+    ) where {NF}
+
+Initialize a `StateVariables` data structure containing `Field`s defined on the given `grid`
+for all variables defined by `process`. Any predefined `boundary_conditions` and `fields` will be passed through to `initialize`
+for each variable.
+"""
+function initialize(
+    process::AbstractProcess,
+    grid::AbstractLandGrid{NF};
+    clock = Clock(time=zero(NF)),
+    input_variables = (),
+    boundary_conditions = (;),
+    fields = (;)
+) where {NF}
+    vars = Variables(tuplejoin(variables(process), input_variables))
+    state = initialize(vars, grid; clock, boundary_conditions, fields)
+    return state
+end
+
+# Initialization from variable metadata
+
+"""
+    initialize(
+        vars::Variables,
+        grid::AbstractLandGrid{NF};
+        clock::Clock = Clock(time=0.0),
+        boundary_conditions = (;),
+        fields = (;)
+    ) where {NF}
+
+Initialize a `StateVariables` data structure containing `Field`s defined on the given `grid`
+for all variables in `vars`. Any predefined `boundary_conditions` and `fields` will be passed through to `initialize`
+for each variable.
+"""
 function initialize(
     vars::Variables,
-    grid::AbstractLandGrid{NF},
-    clock::Clock = Clock(time=0.0);
+    grid::AbstractLandGrid{NF};
+    clock::Clock = Clock(time=0.0),
     boundary_conditions = (;),
     fields = (;)
 ) where {NF}
@@ -169,7 +224,9 @@ function initialize(
     auxiliary_fields = initialize(vars.auxiliary, grid, clock, boundary_conditions, merge(fields, input_fields, prognostic_fields))
     # recursively initialize state variables for each namespace
     namespaces = map(vars.namespaces) do ns
-        initialize(ns.vars, grid, clock; boundary_conditions=get(boundary_conditions, varname(ns), (;)), fields=get(fields, varname(ns), (;)))
+        ns_bcs = get(boundary_conditions, varname(ns), (;))
+        ns_fields = get(fields, varname(ns), (;))
+        initialize(ns.vars, grid, clock; boundary_conditions=ns_bcs, fields=ns_fields)
     end
     # construct and return StateVariables
     return StateVariables(
@@ -183,7 +240,22 @@ function initialize(
     )
 end
 
-initialize(::NamedTuple, ::AbstractLandGrid, ::Clock, ::NamedTuple, ::NamedTuple) = (;)
+# Base case: empty named tuples
+initialize(::NamedTuple{(), Tuple{}}, ::AbstractLandGrid, ::Clock, ::NamedTuple, ::NamedTuple) = (;)
+
+"""
+    initialize(
+        vars::NamedTuple{names, <:Tuple{Vararg{AbstractVariable}}},
+        grid::AbstractLandGrid,
+        clock::Clock,
+        boundary_conditions::NamedTuple,
+        fields::NamedTuple
+    ) where {names}
+
+Initialize `Field`s on `grid` for each of the variables in the given named tuple `vars`.
+Any predefined `boundary_conditions` and `fields` will be passed through to `initialize`
+for each variable.
+"""
 function initialize(
     vars::NamedTuple{names, <:Tuple{Vararg{AbstractVariable}}},
     grid::AbstractLandGrid,
@@ -191,7 +263,9 @@ function initialize(
     boundary_conditions::NamedTuple,
     fields::NamedTuple
 ) where {names}
-    # initialize or retrieve Fields for each variable in `var`, accumulating the newly created Fields in a named tuple
+    # Initialize or retrieve Fields for each variable in `var`, accumulating the newly created Fields in a named tuple;
+    # Note that one major caveat to this approach is that the Fields visible to each constructor are dependent on the order
+    # in which the variables were declared :/
     return foldl(vars, init=(;)) do nt, var
         # note that we call initialize here with both the current accumualated named tuple of Fields + the context given by 'fields'
         field = initialize(var, grid, clock, boundary_conditions, merge(nt, fields))
@@ -199,6 +273,14 @@ function initialize(
     end
 end
 
+"""
+    initialize(var::AbstractVariable, grid::AbstractLandGrid, clock::Clock, boundary_conditions::NamedTuple, fields::NamedTuple)
+
+Initialize a `Field` on `grid` based on the given `var` metadata. The named tuple of `boundary_conditions` should follow the standard convention of
+`(var1 = (; top, bottom, ...), var2 = (; top, bottom, ...))`. If `fields` contains a `Field` matching the name of `var`, this field
+will be directly returned. Otherwise, the new `Field` is constructed using the given `boundary_conditions` with the other `fields` being
+made available to the constructor for auxiliary variables.
+"""
 function initialize(var::AbstractVariable, grid::AbstractLandGrid, clock::Clock, boundary_conditions::NamedTuple, fields::NamedTuple)
     if hasproperty(fields, varname(var))
         return getproperty(fields, varname(var))
@@ -213,6 +295,7 @@ function initialize(var::AbstractVariable, grid::AbstractLandGrid, clock::Clock,
     end
 end
 
+# Intialization for auxiliary variables that may define custom Field constructors
 function initialize(var::AuxiliaryVariable, grid::AbstractLandGrid, clock::Clock, boundary_conditions::NamedTuple, fields::NamedTuple)
     if hasproperty(fields, varname(var))
         return getproperty(fields, varname(var))

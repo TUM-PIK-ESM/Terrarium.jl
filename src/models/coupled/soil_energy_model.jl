@@ -58,12 +58,17 @@ function initialize(
     fields = (;),
     input_variables = ()
 ) where {NF}
-    grid = get_grid(model)
+    grid = model.grid
+    # Collect all model variables
     vars = Variables(variables(model)..., input_variables...)
+    # Create ground heat flux field for coupling
     ground_heat_flux = initialize(vars.auxiliary.ground_heat_flux, grid, clock)
     ground_heat_flux_bc = GroundHeatFlux(ground_heat_flux)
-    bcs = merge_recursive(boundary_conditions, ground_heat_flux_bc)
-    return initialize(vars, model.grid, clock, boundary_conditions=bcs)
+    # Merge with user-specified BCs and fields
+    boundary_conditions = merge_boundary_conditions(boundary_conditions, ground_heat_flux_bc)
+    fields = (; ground_heat_flux, fields...)
+    # Return the initialized model state
+    return initialize(vars, grid; clock, boundary_conditions, fields)
 end
 
 function initialize!(state, model::CoupledSoilEnergyModel)
