@@ -16,8 +16,6 @@ using DomainSets: RealLine, HalfLine, PositiveRealLine, UnitInterval, AbstractIn
 
 using Flatten: flatten, flattenable, reconstruct
 
-using Interpolations
-
 using KernelAbstractions: @kernel, @index
 
 # Oceananigans numerics
@@ -50,6 +48,7 @@ using Unitful: Units, Quantity, AbstractQuantity, NoUnits
 using Unitful: @u_str, uconvert, ustrip, upreferred
 
 # Explicit imports
+import Interpolations
 import Oceananigans
 import RingGrids
 
@@ -102,7 +101,7 @@ export timestep!, default_dt, is_adaptive
 include("timesteppers/abstract_timestepper.jl")
 
 # process/model interface
-export get_grid, get_initializer, variables, compute_auxiliary!, compute_tendencies!
+export get_grid, get_initializer, variables, processes, compute_auxiliary!, compute_tendencies!
 include("abstract_model.jl")
 
 # state variables
@@ -113,11 +112,16 @@ include("state_variables.jl")
 export FieldInitializers, DefaultInitializer
 include("initializers.jl")
 
+# boundary condition helper functions
 export FieldBC, FieldBCs, boundary_conditions
 include("boundary_conditions.jl")
 
+# forcing helper functions
 export Forcings
 include("forcings.jl")
+
+# abstract model types
+include("models/abstract_types.jl")
 
 # physical processes
 include("processes/processes.jl")

@@ -1,5 +1,5 @@
 """
-    AbstractProcess
+    $TYPEDEF
 
 Base type for all "processes". Implementations of `AbstractProcess` define equations,
 state variables, and parameterizations which characterize the dynamics of a system at
@@ -12,34 +12,43 @@ more other process types.
 """
 abstract type AbstractProcess end
 
-# AbstractModel interface
+"""
+    $TYPEDEF
+
+Base type for sets of coupled `AbstractProcess`es. Coupled process types aggregate
+together two or more sub-processes and define any 
+"""
+abstract type AbstractCoupledProcesses <: AbstractProcess end
 
 """
     $TYPEDEF
 
-Base type for all Terrarium "models". Models are collections of one or more processes
-that additionally define
+Base type for all Terrarium "models". Models are standalone representations of a system
+that consist of
 
-(i) a spatial `grid` characterizing the model domain, and
-(ii) an `AbstractInitializer` responsible for defining the initial state of the model.
+(i) a spatial `grid` characterizing the model domain,
+(ii) zero or more `AbstractProcess`es defining the dynamics, and
+(iii) an `AbstractInitializer` responsible for defining the initial state of the model.
+
+Implementations of `AbstractModel` are required to implement, at minimum, three methods:
+- [`variables`](@ref) which declares the state variables requried by the model,
+- [`compute_auxiliary!`](@ref) which is responsible for computing all auxiliary (non-prognostic) variables,
+- [`compute_tendencies!`](@ref) which is responsible for computing the tendencies of all prognostic variables.
+
+Note that a default implementation of `variables` is provided which automatically collects all
+variables declared by `AbstractProcess`es defined as fields (properties) of `struct`s that subtype `AbstractModel`.
 """
-abstract type AbstractModel{NF, Grid<:AbstractLandGrid{NF}} <: AbstractProcess end
+abstract type AbstractModel{NF, Grid<:AbstractLandGrid{NF}}  end
+
+# Method interface for AbstractModel and AbstractProcess
 
 """
-    variables(model::AbstractModel)
     variables(model::AbstractModel)
 
 Return a `Tuple` of `AbstractVariable`s (i.e. `PrognosticVariable`, `AuxiliaryVariable`, etc.)
 defined by the model or process.
 """
 function variables end
-
-"""
-    processes(model::AbstractModel)
-
-Return a tuple of `AbstractProcess` types defiend by this `model`.
-"""
-function processes end
 
 """
     initialize!(state, model::AbstractModel)
@@ -52,7 +61,7 @@ calling `initialize!(state, model, get_initializer(model))`.
 Initialize the model state variables using the corresponding `initializer`. This method only needs to be
 implemented if initialization routines are necessary in addition to direct field/variable initializers.
 
-    initialize!(state, model::AbstractModel, process::AbstractProcess)
+    initialize!(state, grid, process::AbstractProcess)
 
 Initialize all state variables associated with the given `process` defined on `model`. This method is
 typically defined by the corresponding `AbstractProcess` types.
@@ -64,9 +73,10 @@ function initialize! end
 
 Compute updates to all auxiliary variables based on the current prognostic state of the `model`.
 
-    compute_auxiliary!(state, model::AbstractModel, process:AbstractProcess)
+    compute_auxiliary!(state, grid, process:AbstractProcess, args...)
 
-Compute updates to auxiliary variables for the given `process` defined on `model`.
+Compute all auxiliary state variables for the given `process` on `grid`.
+The number and type of `args...` are permitted to vary for different process interfaces.
 """
 function compute_auxiliary! end
 
@@ -76,25 +86,36 @@ function compute_auxiliary! end
 Compute tendencies for all prognostic state variables for `model` stored in the given `state`.
 This method should be called after `compute_tendencies!`.
 
-    compute_tendencies!(state, model::AbstractModel, process:AbstractProcess)
+    compute_tendencies!(state, grid, process:AbstractProcess, args...)
 
-Compute tendencies of all prognostic state variables for the given `process` defined on `model`.
+Compute the tendencies of all prognostic state variables for the given `process` on `grid`.
+The number and type of `args...` are permitted to vary for different process interfaces.
 """
 function compute_tendencies! end
 
-# Default implementations of `AbstractModel` methods
+# Default method implementations
 
-# allow variables to be defined on any type
+# Allow variables to be defined on any type, defaulting to an empty tuple
 variables(::Any) = ()
-# automatically invoke `variables` on all defined processes
-variables(process::AbstractModel) = mapreduce(variables, tuplejoin, processes(process))
+# For AbstractCoupledProcesses and AbstractModel types, default to collecting variables on all processes contained therein
+variables(obj::Union{AbstractCoupledProcesses, AbstractModel}) = mapreduce(variables, tuplejoin, processes(obj))
 
 """
-    processes(::AbstractModel)
+    $TYPEDSIGNATURES
 
-Return a tuple of `AbstractProcess`es defind by the given `model`.
+Return a tuple of `AbstractProces`es contained in the given model or coupled processes type.
+Note that this is a type-stable, `@generated` function that is compiled for each argument type.
 """
-processes(::AbstractModel) = ()
+@generated function processes(obj::Union{AbstractCoupledProcesses, AbstractModel})
+    names = fieldnames(obj)
+    types = fieldtypes(obj)
+    procfields = filter(Tuple(zip(names, types))) do (name, type)
+        type <: AbstractProcess
+    end
+    procnames = map(first, procfields)
+    accessors = map(name -> :(obj.$name), procnames)
+    return :(tuple($(accessors...)))
+end
 
 """
     get_grid(model::AbstractModel)::AbstractLandGrid
@@ -111,98 +132,30 @@ Returns the initializer associated with this `model`.
 get_initializer(model::AbstractModel) = model.initializer
 
 """
-    get_closures(model::AbstractModel)
-
-Return all closure relations defined for the given `model`.
-"""
-get_closures(model::AbstractModel) = ()
-
-"""
     closure!(state, model::AbstractModel)
+    closure!(state, grid, process::AbstractProcess)
 
-Apply each closure relation defined for the given `model`.
+Apply all closure relations defined for the given `model` or `process`.
 """
+closure!(state, grid, ::AbstractProcess) = nothing
 function closure!(state, model::AbstractModel)
-    for closure in get_closures(model)
-        closure!(state, model, closure)
+    for process in processes(model)
+        closure!(state, get_grid(model), process)
     end
 end
 
 """
     invclosure!(state, model::AbstractModel)
+    invclosure!(state, grid, process::AbstractProcess)
 
-Apply the inverse of each closure relation defined for the given `model`.
+Apply the inverse of all closure relations defined for the given `model`.
 """
+invclosure!(state, grid, ::AbstractProcess) = nothing
 function invclosure!(state, model::AbstractModel)
-    for closure in get_closures(model)
-        invclosure!(state, model, closure)
+    for process in processes(model)
+        invclosure!(state, get_grid(model), process)
     end
 end
-
-# Default implementation for processes, also allowing for dispatches on `nothing`
-# TODO: Is this a good idea? Should we force users to *always* define these methods?
-initialize!(state, model, ::Union{Nothing, AbstractProcess}) = nothing
-
-compute_auxiliary!(state, model, ::Union{Nothing, AbstractProcess}) = nothing
-
-compute_tendencies!(state, model, ::Union{Nothing, AbstractProcess}) = nothing
-
-closure!(state, model, ::Union{Nothing, AbstractProcess}) = nothing
-
-invclosure!(state, model, ::Union{Nothing, AbstractProcess}) = nothing
-
-# AbstractModel subtypes
-
-# TODO: define general method interfaces (as needed) for all model types
-
-"""
-    $TYPEDEF
-    
-Base type for ground (e.g. soil and rock) models.
-"""
-abstract type AbstractGroundModel{NF, GR} <: AbstractModel{NF, GR} end
-
-"""
-    $TYPEDEF
-
-Base type for soil ground models.
-"""
-abstract type AbstractSoilModel{NF, GR} <: AbstractGroundModel{NF, GR} end
-
-"""
-    $TYPEDEF
-
-Base type for land-atmosphere energy exchange models.
-"""
-abstract type AbstractSurfaceEnergyModel{NF, GR} <: AbstractModel{NF, GR} end
-
-"""
-    $TYPEDEF
-
-Base type for snow models.
-"""
-abstract type AbstractSnowModel{NF, GR} <: AbstractModel{NF, GR} end
-
-"""
-    $TYPEDEF
-
-Base type for vegetation models.
-"""
-abstract type AbstractVegetationModel{NF, GR} <: AbstractModel{NF, GR} end
-
-"""
-    $TYPEDEF
-
-Base type for surface hydrology models.
-"""
-abstract type AbstractHydrologyModel{NF, GR} <: AbstractModel{NF, GR} end
-
-"""
-    AbstractLandModel <: AbstractModel
-
-Base type for full land models which couple together multiple component models.
-"""
-abstract type AbstractLandModel{NF, GR} <: AbstractModel{NF, GR} end
 
 """
 Convenience constructor for all `AbstractModel` types that allows the `grid` to be passed

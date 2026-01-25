@@ -66,11 +66,6 @@ processes(model::SoilModel) = (
     model.biogeochem
 )
 
-get_closures(model::SoilModel) = (
-    get_closure(model.hydrology),
-    get_closure(model.energy)
-)
-
 function compute_auxiliary!(state, model::SoilModel)
     compute_auxiliary!(state, model, model.biogeochem)
     compute_auxiliary!(state, model, model.strat)
@@ -97,4 +92,14 @@ function initialize!(state, model::SoilModel)
     initialize!(state, model, model.biogeochem)
     initialize!(state, model, model.hydrology)
     initialize!(state, model, model.energy)
+end
+
+function closure!(state, model::SoilModel)
+    closure!(state, model.grid, model.hydrology)
+    closure!(state, model.grid, model.energy)
+end
+
+function invclosure!(state, model::SoilModel)
+    invclosure!(state, model.grid, model.hydrology)
+    invclosure!(state, model.grid, model.energy)
 end

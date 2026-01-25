@@ -54,11 +54,6 @@ get_soil_biogeochemistry(model::VegetationSoilModel) = model.soil.biogeochem
 # just ignore that these are duplicated in veg model for now...
 get_constants(model::VegetationSoilModel) = model.soil.constants
 
-get_closures(model::VegetationSoilModel) = (
-    get_closures(model.soil)...,
-    get_closures(model.vegetation)...,
-)
-
 variables(model::VegetationSoilModel) = tuplejoin(
     variables(model.atmosphere),
     variables(model.surface_energy_balance),
@@ -125,4 +120,12 @@ function compute_tendencies!(state, model::VegetationSoilModel)
     compute_tendencies!(state, model, model.surface_hydrology)
     compute_tendencies!(state, model.soil)
     compute_tendencies!(state, model, model.vegetation)
+end
+
+function closure!(state, model::VegetationSoilModel)
+    closure!(state, model.soil)
+end
+
+function invclosure!(state, model::VegetationSoilModel)
+    invclosure!(state, model.soil)
 end

@@ -70,22 +70,22 @@ abstract type AbstractVariable{name, VD} end
 Retrieve the name of the given variable or closure. For closure relations, `varname`
 should return the name of the variable returned by the closure relation.
 """
-varname(::AbstractVariable{name}) where {name} = name
-varname(namespace::Pair{Symbol}) = first(namespace)
+@inline varname(::AbstractVariable{name}) where {name} = name
+@inline varname(namespace::Pair{Symbol}) = first(namespace)
 
 """
     $SIGNATURES
 
 Retrieve the grid dimensions on which this variable is defined.
 """
-vardims(var::AbstractVariable) = var.dims
+@inline vardims(var::AbstractVariable) = var.dims
 
 """
     $SIGNATURES
 
 Retrieve the physical units for the given variable.
 """
-varunits(var::AbstractVariable) = var.units
+@inline varunits(var::AbstractVariable) = var.units
 
 # Test equality between variables by their names, dimensions, and physical units
 Base.:(==)(var1::AbstractVariable, var2::AbstractVariable) =
@@ -113,8 +113,8 @@ Baste type for process state variables with specific intents, e.g. `prognostic`,
 """
 abstract type AbstractProcessVariable{name, VD} <: AbstractVariable{name, VD} end
 
-vardims(pv::AbstractProcessVariable) = vardims(pv.var)
-varunits(pv::AbstractProcessVariable) = varunits(pv.var)
+@inline vardims(pv::AbstractProcessVariable) = vardims(pv.var)
+@inline varunits(pv::AbstractProcessVariable) = varunits(pv.var)
 
 function Base.show(io::IO, ::MIME"text/plain", var::AbstractVariable)
     units = varunits(var)
@@ -238,7 +238,7 @@ struct Namespace{name, Vars}
     Namespace(name::Symbol, vars::Variables) = new{name, typeof(vars)}(vars)
 end
 
-varname(::Namespace{name}) where {name} = name
+@inline varname(::Namespace{name}) where {name} = name
 
 Variables(obj) = Variables(variables(obj))
 Variables(vars::Union{AbstractProcessVariable, Namespace}...) = Variables(vars)
@@ -310,32 +310,32 @@ end
 
 Convenience constructor for `Variable`.
 """
-var(name::Symbol, dims::VarDims, units::Units = NoUnits) = Variable(name, dims, units)
+@inline var(name::Symbol, dims::VarDims, units::Units = NoUnits) = Variable(name, dims, units)
 
 """
     $SIGNATURES
 
 Convenience constructors for `PrognosticVariable`.
 """
-prognostic(name::Symbol, dims::VarDims; units=NoUnits, closure=nothing, domain=RealLine(), desc="") = prognostic(var(name, dims, units); closure, domain, desc)
-prognostic(var::Variable; closure=nothing, domain=RealLine(), desc="") = PrognosticVariable(var, closure, tendency(var), domain, desc)
+@inline prognostic(name::Symbol, dims::VarDims; units=NoUnits, closure=nothing, domain=RealLine(), desc="") = prognostic(var(name, dims, units); closure, domain, desc)
+@inline prognostic(var::Variable; closure=nothing, domain=RealLine(), desc="") = PrognosticVariable(var, closure, tendency(var), domain, desc)
 
 """
     $SIGNATURES
 
 Convenience constructor method for `AuxiliaryVariable`.
 """
-auxiliary(name::Symbol, dims::VarDims, ctor = nothing, params = nothing; units = NoUnits, domain = RealLine(), desc = "") = auxiliary(var(name, dims, units), ctor, params; domain, desc)
-auxiliary(var::Variable, ::Nothing, ::Nothing; domain=RealLine(), desc="") = AuxiliaryVariable(var, nothing, domain, desc)
-auxiliary(var::Variable, ctor::Function, params; domain=RealLine(), desc="") = AuxiliaryVariable(var, (args...) -> ctor(params, args...), domain, desc)
+@inline auxiliary(name::Symbol, dims::VarDims, ctor = nothing, params = nothing; units = NoUnits, domain = RealLine(), desc = "") = auxiliary(var(name, dims, units), ctor, params; domain, desc)
+@inline auxiliary(var::Variable, ::Nothing, ::Nothing; domain=RealLine(), desc="") = AuxiliaryVariable(var, nothing, domain, desc)
+@inline auxiliary(var::Variable, ctor::Function, params; domain=RealLine(), desc="") = AuxiliaryVariable(var, (args...) -> ctor(params, args...), domain, desc)
 
 """
     $SIGNATURES
 
 Convenience constructor method for `InputVariable`.
 """
-input(name::Symbol, dims::VarDims; default = nothing, units = NoUnits, domain = RealLine(), desc="") = input(var(name, dims, units); default, domain, desc)
-input(var::Variable; default = nothing, domain = RealLine(), desc="") = InputVariable(var, default, domain, desc)
+@inline input(name::Symbol, dims::VarDims; default = nothing, units = NoUnits, domain = RealLine(), desc="") = input(var(name, dims, units); default, domain, desc)
+@inline input(var::Variable; default = nothing, domain = RealLine(), desc="") = InputVariable(var, default, domain, desc)
 
 """
     $SIGNATURES
@@ -343,20 +343,20 @@ input(var::Variable; default = nothing, domain = RealLine(), desc="") = InputVar
 Creates an `AuxiliaryVariable` for the tendency of a prognostic variable with the given name, dimensions, and physical units.
 This constructor is primarily used internally by other constructors and does not usually need to be called by implementations of `variables`.
 """
-tendency(var::Variable) = auxiliary(varname(var), vardims(var), units=upreferred(varunits(var))/u"s")
+@inline tendency(var::Variable) = auxiliary(varname(var), vardims(var), units=upreferred(varunits(var))/u"s")
 
 """
     $SIGNATURES
 
 Convenience constructor method for variable `Namespace`s.
 """
-namespace(name::Symbol, vars::Variables) = Namespace(name, vars)
-namespace(name::Symbol, vars::Tuple) = Namespace(name, Variables(vars...))
+@inline namespace(name::Symbol, vars::Variables) = Namespace(name, vars)
+@inline namespace(name::Symbol, vars::Tuple) = Namespace(name, Variables(vars...))
 
 """
 Alias for `Variables(vars...)`
 """
-variables(vars::Union{AbstractVariable, Namespace}...) = Variables(vars)
+@inline variables(vars::Union{AbstractVariable, Namespace}...) = Variables(vars)
 
 function Base.NamedTuple(vars::Tuple{Vararg{Union{AbstractVariable, Namespace}}})
     keys = map(varname, vars)
