@@ -43,8 +43,9 @@ include("soil/hydrology/soil_hydrology_rre.jl")
 export SoilThermalConductivities, SoilHeatCapacities, SoilThermalProperties, InverseQuadratic
 include("soil/energy/soil_thermal_properties.jl")
 
-export SoilEnergyBalance, EnergyTemperatureClosure
+export SoilEnergyBalance, FreeWaterEnergyClosure
 include("soil/energy/soil_energy.jl")
+include("soil/energy/soil_energy_closures.jl")
 
 # Vegetation
 
