@@ -41,7 +41,7 @@ using Oceananigans.BoundaryConditions: BoundaryConditions, BoundaryCondition, De
                                        fill_halo_regions!, regularize_field_boundary_conditions, getbc, compute_z_bcs!
 
 # Freeze curves for soil energy balance
-using FreezeCurves: FreezeCurves, FreezeCurve, SFCC, SWRC, FreeWater
+using FreezeCurves: FreezeCurves, FreezeCurve, SFCC, SWRC, FreeWater, VanGenuchten, BrooksCorey
 
 # Units (for testing and UI)
 # Unit dimensions for length (𝐋), mass (𝐌), and time (𝐓)
@@ -67,6 +67,9 @@ const BCType = AbstractBoundaryConditionClassification
 export Simulation, Field, FieldTimeSeries, CPU, GPU, Clock, Center, Face
 export Value, Flux, Gradient, ValueBoundaryCondition, GradientBoundaryCondition, FluxBoundaryCondition, NoFluxBoundaryCondition
 export run!, time_step!, set!, compute!, interior, architecture, on_architecture, xnodes, ynodes, znodes, zspacings, location
+
+# Re-export selected types from FreezeCurves
+export SFCC, SWRC, FreeWater, VanGenuchten, BrooksCorey
 
 # Re-export common Dates types
 export Year, Month, Day, Hour, Minute, Second
