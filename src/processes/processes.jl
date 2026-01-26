@@ -39,11 +39,14 @@ export SoilHydrology, NoFlow
 include("soil/hydrology/soil_hydrology.jl")
 export RichardsEq
 include("soil/hydrology/soil_hydrology_rre.jl")
+export SaturationPressureClosure
+include("soil/hydrology/soil_hydraulic_closures.jl")
 
 export SoilThermalConductivities, SoilHeatCapacities, SoilThermalProperties, InverseQuadratic
+export thermal_conductivity, heat_capacity
 include("soil/energy/soil_thermal_properties.jl")
 
-export SoilEnergyBalance, FreeWaterEnergyClosure
+export SoilEnergyBalance, EnergyTemperatureClosure
 include("soil/energy/soil_energy.jl")
 include("soil/energy/soil_energy_closures.jl")
 
