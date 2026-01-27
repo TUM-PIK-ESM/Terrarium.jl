@@ -67,7 +67,7 @@ end
 
 function compute_auxiliary!(state, model, phenol::PALADYNPhenology)
     grid = get_grid(model)
-    launch!(state, grid, :xy, compute_auxiliary_kernel!, phenol)
+    launch!(grid, XY, compute_auxiliary_kernel!, state, phenol)
 end
 
 @kernel function compute_auxiliary_kernel!(state, grid, phenol::PALADYNPhenology)
@@ -83,7 +83,7 @@ end
     LAI = compute_LAI(phenol, LAI_b)
 
     # Store results
-    state.phen[i, j] = phen
-    state.LAI[i, j] = LAI
+    state.phen[i, j, 1] = phen
+    state.LAI[i, j, 1] = LAI
 end
    

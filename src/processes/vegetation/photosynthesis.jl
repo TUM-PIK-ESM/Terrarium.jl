@@ -306,7 +306,7 @@ end
 function compute_auxiliary!(state, model, photo::LUEPhotosynthesis)
     grid = get_grid(model)
     atmos = get_atmosphere(model)
-    launch!(state, grid, :xy, compute_photosynthesis_kernel!, photo, atmos)
+    launch!(grid, XY, compute_photosynthesis_kernel!, state, photo, atmos)
 end
 
 @kernel inbounds=true function compute_photosynthesis_kernel!(
@@ -318,10 +318,10 @@ end
     i, j = @index(Global, NTuple)
 
     # Get inputs
-    T_air = air_temperature(i, j, state, grid, atmos)
-    pres = air_pressure(i, j, state, grid, atmos)
-    swdown = shortwave_in(i, j, state, grid, atmos)
-    # day_length = daytime_length(i, j, state, grid, atmos)
+    T_air = air_temperature(i, j, grid, state, atmos)
+    pres = air_pressure(i, j, grid, state, atmos)
+    swdown = shortwave_in(i, j, grid, state, atmos)
+    # day_length = daytime_length(i, j, grid, state, atmos)
     co2 = state.CO2[i, j] # no method for this currently...
     β = state.SMLF[i, j]
     LAI = state.LAI[i, j]
@@ -335,7 +335,7 @@ end
     GPP = compute_GPP(photo, An)
 
     # Store results
-    state.GPP[i, j] = GPP
-    state.Rd[i, j] = Rd
-    state.An[i, j] = An
+    state.GPP[i, j, 1] = GPP
+    state.Rd[i, j, 1] = Rd
+    state.An[i, j, 1] = An
 end

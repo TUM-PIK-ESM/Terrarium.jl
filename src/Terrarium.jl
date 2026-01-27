@@ -23,9 +23,9 @@ using KernelAbstractions: @kernel, @index
 # Oceananigans numerics
 using Oceananigans.AbstractOperations: Average, Integral, ConditionalOperation
 using Oceananigans.Architectures: Architectures, AbstractArchitecture, CPU, GPU, architecture, on_architecture, array_type
-using Oceananigans.Fields: Field, FunctionField, AbstractField, Center, Face, set!, compute!, interior, xnodes, ynodes, znodes, zspacings, location
+using Oceananigans.Fields: Field, FunctionField, AbstractField, Center, Face, set!, compute!, interior, location
 using Oceananigans.Forcings: Forcing, ContinuousForcing, DiscreteForcing
-using Oceananigans.Grids: Periodic, Flat, Bounded
+using Oceananigans.Grids: Periodic, Flat, Bounded, xnodes, ynodes, znodes, zspacings
 using Oceananigans.Operators: ∂zᵃᵃᶜ, ∂zᵃᵃᶠ, ℑzᵃᵃᶠ, Δzᵃᵃᶜ
 using Oceananigans.OutputReaders: FieldTimeSeries
 using Oceananigans.Simulations: Simulation, run!, timestepper
@@ -41,7 +41,7 @@ using Oceananigans.BoundaryConditions: BoundaryConditions, BoundaryCondition, De
                                        fill_halo_regions!, regularize_field_boundary_conditions, getbc, compute_z_bcs!
 
 # Freeze curves for soil energy balance
-using FreezeCurves: FreezeCurves, FreezeCurve, SFCC, SWRC, FreeWater
+using FreezeCurves: FreezeCurves, FreezeCurve, SFCC, SWRC, FreeWater, VanGenuchten, BrooksCorey
 
 # Units (for testing and UI)
 # Unit dimensions for length (𝐋), mass (𝐌), and time (𝐓)
@@ -68,6 +68,9 @@ export Simulation, Field, FieldTimeSeries, CPU, GPU, Clock, Center, Face
 export Value, Flux, Gradient, ValueBoundaryCondition, GradientBoundaryCondition, FluxBoundaryCondition, NoFluxBoundaryCondition
 export run!, time_step!, set!, compute!, interior, architecture, on_architecture, xnodes, ynodes, znodes, zspacings, location
 
+# Re-export selected types from FreezeCurves
+export SFCC, SWRC, FreeWater, VanGenuchten, BrooksCorey
+
 # Re-export common Dates types
 export Year, Month, Day, Hour, Minute, Second
 
@@ -77,8 +80,8 @@ export @u_str, uconvert, ustrip
 # Re-export adapt
 export adapt
 
-# internal utilities
-include("utils.jl")
+# internal utility types and methods
+include("utils/utils.jl")
 
 export PrognosticVariable, AuxiliaryVariable, InputVariable, Input, XY, XYZ
 include("abstract_variables.jl")

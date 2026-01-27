@@ -81,25 +81,24 @@ We start by defining a `struct` for our model that inherits from `AbstractModel`
 """
 
 # ╔═╡ 407786db-607f-4508-b697-fe75b3ce0b25
-begin
-    @kwdef struct LinearDynamics{NF} <: Terrarium.AbstractProcess
-        "Exponential growth rate"
-        alpha::NF = 0.01
+@kwdef struct LinearDynamics{NF} <: Terrarium.AbstractProcess
+	"Exponential growth rate"
+	alpha::NF = 0.01
 
-        "Constant offset for exponential growth"
-        c::NF = 0.1
-    end
+	"Constant offset for exponential growth"
+	c::NF = 0.1
+end
 
-    @kwdef struct ExpModel{NF, Grid <: Terrarium.AbstractLandGrid{NF}, Dyn, Init} <: Terrarium.AbstractModel{NF, Grid}
-        "Spatial grid on which state variables are discretized"
-        grid::Grid
+# ╔═╡ ecd92bff-a116-493d-9ce0-a2eb7d161dc6
+@kwdef struct ExpModel{NF, Grid <: Terrarium.AbstractLandGrid{NF}, Dyn, Init} <: Terrarium.AbstractModel{NF, Grid}
+	"Spatial grid on which state variables are discretized"
+	grid::Grid
 
-        "Linear dynamics resulting in exponential growth/decay"
-        dynamics::Dyn = LinearDynamics()
+	"Linear dynamics resulting in exponential growth/decay"
+	dynamics::Dyn = LinearDynamics()
 
-        "Model initializer"
-        initializer::Init = DefaultInitializer()
-    end
+	"Model initializer"
+	initializer::Init = DefaultInitializer()
 end
 
 # ╔═╡ 575d920c-b12e-493f-95a7-5c962c3591fd
@@ -276,17 +275,21 @@ begin
     # Reset the integrator to its initial state
     Terrarium.initialize!(integrator)
 
-    output_file = tempname()
+    output_dir = mkpath(tempname())
+	output_file = joinpath(output_dir, "simulation.jld2")
     sim.output_writers[:snapshots] = JLD2Writer(
         integrator,
         (u = integrator.state.u,);
         filename = output_file,
         overwrite_existing = true,
+		including = [:grid],
         schedule = TimeInterval(10seconds)
     )
 
 	# Run the simulation
 	run!(sim)
+	@assert isfile(output_file) "Output file does not exist!"
+	display("Simulaton data saved to $(output_file)")
 end
 
 # ╔═╡ 081d0b29-927c-4a03-a3dd-4dcac043dcc1
@@ -320,6 +323,7 @@ Well that's it. We defined and ran a simple exponential model with external forc
 # ╠═78f268ef-5385-4c63-bc35-2c973de69da5
 # ╟─054a8b11-250f-429f-966f-ca3c9a5dc2ef
 # ╠═407786db-607f-4508-b697-fe75b3ce0b25
+# ╠═ecd92bff-a116-493d-9ce0-a2eb7d161dc6
 # ╟─575d920c-b12e-493f-95a7-5c962c3591fd
 # ╠═82e45724-ba16-4806-9470-5cb4c43ea734
 # ╟─d4d19de7-6f77-4873-9182-9832d1ca4381

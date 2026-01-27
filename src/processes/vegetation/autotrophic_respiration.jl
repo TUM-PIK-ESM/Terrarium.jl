@@ -152,7 +152,7 @@ function compute_auxiliary!(state, model, autoresp::PALADYNAutotrophicRespiratio
     grid = get_grid(model)
     atmos = get_atmosphere(model)
     carbon = get_vegetation_carbon_dynamics(model)
-    launch!(state, grid, :xy, compute_auxiliary_kernel!, autoresp, carbon, atmos)
+    launch!(grid, XY, compute_auxiliary_kernel!, state, autoresp, carbon, atmos)
 end
 
 @kernel function compute_auxiliary_kernel!(
@@ -164,7 +164,7 @@ end
     i, j = @index(Global, NTuple)
 
     # Get inputs    
-    @inbounds let T_air = air_temperature(i, j, state, grid, atmos),
+    @inbounds let T_air = air_temperature(i, j, grid, state, atmos),
         T_soil = state.ground_temperature[i, j],
         Rd = state.Rd[i, j],
         phen = state.phen[i, j],
@@ -178,8 +178,8 @@ end
         NPP = compute_NPP(autoresp, GPP, Ra)
 
         # Store results
-        state.Ra[i, j] = Ra
-        state.NPP[i, j] = NPP
+        state.Ra[i, j, 1] = Ra
+        state.NPP[i, j, 1] = NPP
     end
 end
 

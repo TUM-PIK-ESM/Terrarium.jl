@@ -232,13 +232,13 @@ end
     integrator = initialize(model, ForwardEuler())
     state = integrator.state
     # check that forcing_ET is zero when no latent heat flux is supplied
-    @test iszero(forcing(1, 1, Nz, state, grid, vwc_forcing, hydrology))
+    @test iszero(forcing(1, 1, Nz, grid, state, vwc_forcing, hydrology))
     # negative flux
     forcing_value.value = -0.01
-    @test forcing(1, 1, Nz, state, grid, vwc_forcing, hydrology) == forcing_value.value
+    @test forcing(1, 1, Nz, grid, state, vwc_forcing, hydrology) == forcing_value.value
     # positive flux
     forcing_value.value = 0.01
-    @test forcing(1, 1, Nz, state, grid, vwc_forcing, hydrology) == forcing_value.value
+    @test forcing(1, 1, Nz, grid, state, vwc_forcing, hydrology) == forcing_value.value
     # check tendency calculation
     dθdt = volumetric_water_content_tendency(1, 1, Nz, grid, state, hydrology, model.constants, nothing)
     @test dθdt == forcing_value.value

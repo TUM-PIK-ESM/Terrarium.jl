@@ -39,7 +39,7 @@ function compute_auxiliary!(state, model, paw::FieldCapacityLimitedPAW)
     hydrology = get_soil_hydrology(model)
     strat = get_soil_stratigraphy(model)
     bgc = get_soil_biogeochemistry(model)
-    launch!(state, grid, :xyz, compute_paw_kernel!, paw, hydrology, strat, bgc)
+    launch!(grid, XYZ, compute_paw_kernel!, state, paw, hydrology, strat, bgc)
     # compute the derived soil moisture limiting factor field
     compute!(state.SMLF)
 end
@@ -53,7 +53,7 @@ end
 ) where {NF}
     i, j, k = @index(Global, NTuple)
 
-    @inbounds let soil = soil_volume(i, j, k, state, grid, strat, hydrology, bgc),
+    @inbounds let soil = soil_volume(i, j, k, grid, state, strat, hydrology, bgc),
                   θfc = field_capacity(hydrology.hydraulic_properties, soil.solid.texture),
                   θwp = wilting_point(hydrology.hydraulic_properties, soil.solid.texture),
                   vol = volumetric_fractions(soil),

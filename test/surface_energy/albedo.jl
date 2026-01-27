@@ -20,6 +20,6 @@ end
             emissivity=set!(Field(grid, XY()), 0.8)
         )
     )
-    @test albedo(1, 1, state, grid, albd) == 0.4
-    @test emissivity(1, 1, state, grid, albd) == 0.8
+    @test albedo(1, 1, grid, state, albd) == 0.4
+    @test emissivity(1, 1, grid, state, albd) == 0.8
 end
