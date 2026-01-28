@@ -96,9 +96,9 @@ variables(atmos::PrescribedAtmosphere{NF}) where {NF} = (
     tuplejoin(map(variables, atmos.tracers)...)...,
 )
 
-@inline compute_auxiliary!(state, model, atmos::PrescribedAtmosphere) = nothing
+@inline compute_auxiliary!(state, grid, atmos::PrescribedAtmosphere) = nothing
 
-@inline compute_tendencies!(state, model, atmos::PrescribedAtmosphere) = nothing
+@inline compute_tendencies!(state, grid, atmos::PrescribedAtmosphere) = nothing
 
 """
     aerodynamic_resistance(i, j, grid, state, atmos::PrescribedAtmosphere)
