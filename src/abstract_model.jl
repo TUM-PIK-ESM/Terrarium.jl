@@ -133,29 +133,17 @@ get_initializer(model::AbstractModel) = model.initializer
 
 """
     closure!(state, model::AbstractModel)
-    closure!(state, grid, process::AbstractProcess)
 
-Apply all closure relations defined for the given `model` or `process`.
+Apply all closure relations defined for the given `model`.
 """
-closure!(state, grid, ::AbstractProcess) = nothing
-function closure!(state, model::AbstractModel)
-    for process in processes(model)
-        closure!(state, get_grid(model), process)
-    end
-end
+closure!(state, model::AbstractModel) = nothing
 
 """
     invclosure!(state, model::AbstractModel)
-    invclosure!(state, grid, process::AbstractProcess)
 
 Apply the inverse of all closure relations defined for the given `model`.
 """
-invclosure!(state, grid, ::AbstractProcess) = nothing
-function invclosure!(state, model::AbstractModel)
-    for process in processes(model)
-        invclosure!(state, get_grid(model), process)
-    end
-end
+invclosure!(state, model::AbstractModel) = nothing
 
 """
 Convenience constructor for all `AbstractModel` types that allows the `grid` to be passed
