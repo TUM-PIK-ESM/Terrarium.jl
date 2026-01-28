@@ -61,9 +61,10 @@ function compute_tendencies!(
     state, grid,
     hydrology::SoilHydrologyRRE{NF},
     strat::AbstractStratigraphy,
+    bgc::AbstractSoilBiogeochemistry,
     constants::PhysicalConstants
 ) where {NF}
-    launch!(grid, XYZ, compute_saturation_tendency_kernel!, state, hydrology, strat, constants, nothing)
+    launch!(grid, XYZ, compute_saturation_tendency_kernel!, state, hydrology, strat, bgc, constants, nothing)
     return nothing
 end
 
@@ -71,10 +72,11 @@ function compute_tendencies!(
     state, grid,
     hydrology::SoilHydrologyRRE{NF},
     strat::AbstractStratigraphy,
+    bgc::AbstractSoilBiogeochemistry,
     constants::PhysicalConstants,
     evtr::AbstractEvapotranspiration
 ) where {NF}
-    launch!(grid, XYZ, compute_saturation_tendency_kernel!, state, hydrology, strat, constants, evtr)
+    launch!(grid, XYZ, compute_saturation_tendency_kernel!, state, hydrology, strat, bgc, constants, evtr)
     return nothing
 end
 
@@ -124,6 +126,7 @@ Kernel for computing the tendency of the prognostic `saturation_water_ice` varia
     state, grid,
     hydrology::SoilHydrology,
     strat::AbstractStratigraphy,
+    bgc::AbstractSoilBiogeochemistry,
     constants::PhysicalConstants,
     evapotranspiration::Union{Nothing, AbstractEvapotranspiration}
 )
@@ -131,7 +134,7 @@ Kernel for computing the tendency of the prognostic `saturation_water_ice` varia
     # Compute volumetic water content tendency
     ∂θ∂t = volumetric_water_content_tendency(i, j, k, grid, state, hydrology, constants, evapotranspiration)
     # Get porosity
-    por = porosity(i, j, k, grid, state, strat)
+    por = porosity(i, j, k, grid, state, strat, bgc)
     # Rescale by porosity to get saturation tendency
     state.tendencies.saturation_water_ice[i, j, k] +=  ∂θ∂t / por
 end

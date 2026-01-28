@@ -23,10 +23,12 @@ include("atmosphere/prescribed_atmosphere.jl")
 
 export SoilTexture
 include("soil/stratigraphy/soil_texture.jl")
+export ConstantSoilPorosity, SoilPorositySURFEX
+include("soil/stratigraphy/soil_porosity.jl")
 export SoilVolume, MineralOrganic, volumetric_fractions
 include("soil/stratigraphy/soil_volume.jl")
-export HomogeneousSoil
-include("soil/stratigraphy/homogeneous_soil.jl")
+export HomogeneousStratigraphy
+include("soil/stratigraphy/homogeneous_strat.jl")
 
 export ConstantSoilCarbonDensity
 include("soil/biogeochem/constant_soil_carbon.jl")

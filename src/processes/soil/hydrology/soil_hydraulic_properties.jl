@@ -36,12 +36,6 @@ soil water retention curve (SWRC), and volumetric fractions.
 """
 function hydraulic_conductivity end
 
-"""
-    $SIGNATURES
-
-Compute the natural porosity of the mineral soil constitutents, i.e. excluding organic material.
-"""
-function mineral_porosity end
 
 """
     $SIGNATURES
@@ -79,9 +73,6 @@ $TYPEDFIELDS
     "Hydraulic conductivity at saturation [m/s]"
     cond_sat::NF = 1e-5
 
-    "Prescribed soil porosity [-]"
-    porosity::NF = 0.49
-
     "Prescribed field capacity [-]"
     field_capacity::NF = 0.25
 
@@ -99,8 +90,6 @@ ConstantHydraulics(::Type{NF}; cond_unsat=UnsatKLinear(NF), kwargs...) where {NF
 
 @inline saturated_hydraulic_conductivity(hydraulics::ConstantHydraulics, args...) = hydraulics.cond_sat
 
-@inline mineral_porosity(hydraulics::ConstantHydraulics, args...) = hydraulics.porosity
-
 @inline wilting_point(hydraulics::ConstantHydraulics, args...) = hydraulics.wilting_point
 
 @inline field_capacity(hydraulics::ConstantHydraulics, args...) = hydraulics.field_capacity
@@ -108,7 +97,8 @@ ConstantHydraulics(::Type{NF}; cond_unsat=UnsatKLinear(NF), kwargs...) where {NF
 """
     $TYPEDEF
 
-SURFEX parameterization of mineral soil porosity (Masson et al. 2013).
+Soil hydraulics parameterization that includes the SURFEX (Masson et al. 2013) formulation of field capacity
+and wilting point as a function of soil texture.
 
 Properties:
 $TYPEDFIELDS
@@ -122,12 +112,6 @@ $TYPEDFIELDS
 
     "Hydraulic conductivity at saturation [m/s]"
     cond_sat::NF = 1e-5
-
-    "Base porosity of soil without any sand [-]"
-    porosity::NF = 0.49
-
-    "Linear coeficient of porosity adjustment due to sand content [-]"
-    porosity_sand_coef::NF = -1.1e-3
     
     "Linear coeficient of wilting point adjustment due to clay content [-]"
     wilting_point_coef::NF = 37.13e-3
@@ -149,13 +133,6 @@ SoilHydraulicsSURFEX(::Type{NF}; cond_unsat=UnsatKLinear(NF), kwargs...) where {
 
 # TODO: this is not quite correct, SURFEX uses a hydraulic conductivity function that decreases exponentially with depth
 @inline saturated_hydraulic_conductivity(hydraulics::SoilHydraulicsSURFEX, args...) = hydraulics.cond_sat
-
-@inline function mineral_porosity(hydraulics::SoilHydraulicsSURFEX, texture::SoilTexture)
-    p₀ = hydraulics.porosity
-    β_s = hydraulics.porosity_sand_coef
-    por = p₀ + β_s*texture.sand*100
-    return por
-end
 
 @inline function wilting_point(hydraulics::SoilHydraulicsSURFEX, texture::SoilTexture)
     β_w = hydraulics.wilting_point_coef
@@ -181,9 +158,9 @@ i.e. `soil.water / (soil.water + soil.ice + soil.air)`.
 struct UnsatKLinear <: AbstractUnsatK end
 
 function hydraulic_conductivity(
-    hydraulics::AbstractSoilHydraulics{NF, UnsatKLinear},
+    hydraulics::AbstractSoilHydraulics{NF, RC, UnsatKLinear},
     soil::SoilVolume
-) where {NF}
+) where {NF, RC}
     let fracs = volumetric_fractions(soil),
         θw = fracs.water, # unfrozen water content
         θsat = fracs.water + fracs.ice + fracs.air, # water + ice content at saturation (porosity)
@@ -209,11 +186,11 @@ end
 UnsatKVanGenuchten(::Type{NF}; impedance::NF = NF(7)) where {NF} = UnsatKVanGenuchten(NF(impedance))
 
 function hydraulic_conductivity(
-    hydraulics::AbstractSoilHydraulics{NF, <:UnsatKVanGenuchten},
+    hydraulics::AbstractSoilHydraulics{NF, <:VanGenuchten, UnsatKVanGenuchten{NF}},
     soil::SoilVolume,
 ) where {NF}
     # TODO: The SWRC parameters will need to also be spatially varying at some point
-    let n = hydraulics.cond_unsat.swrc.n, # van Genuchten parameter `n`
+    let n = hydraulics.swrc.n, # van Genuchten parameter `n`
         fracs = volumetric_fractions(soil),
         θw = fracs.water, # unfrozen water content
         θwi = fracs.water + fracs.ice, # total water + ice content

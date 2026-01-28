@@ -69,7 +69,7 @@ end
 ) where {NF, OP}
     T = state.temperature[i, j, k] # assumed given
     L = constants.ρw*constants.Lsl
-    por = porosity(i, j, k, grid, state, strat)
+    por = porosity(i, j, k, grid, state, strat, bgc)
     sat = saturation_water_ice(i, j, k, grid, state, hydrology)
     # calculate unfrozen water content from temperature
     # N.B. For the free water freeze curve, the mapping from temperature to unfrozen water content
@@ -102,7 +102,7 @@ end
 
     U = state.internal_energy[i, j, k] # assumed given
     L = constants.ρw*constants.Lsl
-    por = porosity(i, j, k, grid, state, strat)
+    por = porosity(i, j, k, grid, state, strat, bgc)
     sat = saturation_water_ice(i, j, k, grid, state, hydrology)
     Lθ = L*sat*por
     # calculate unfrozen water content

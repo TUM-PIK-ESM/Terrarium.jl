@@ -20,7 +20,7 @@ $(TYPEDFIELDS)
     grid::GridType
 
     "Stratigraphy of the soil"
-    strat::Stratigraphy = HomogeneousSoil(eltype(grid))
+    strat::Stratigraphy = HomogeneousStratigraphy(eltype(grid))
 
     "Soil energy balance"
     energy::SoilEnergy = SoilEnergyBalance(eltype(grid))
@@ -51,20 +51,6 @@ get_soil_biogeochemistry(model::SoilModel) = model.biogeochem
 get_constants(model::SoilModel) = model.constants
 
 # Model interface methods
-
-variables(model::SoilModel) = tuplejoin(
-    variables(model.hydrology),
-    variables(model.energy),
-    variables(model.strat),
-    variables(model.biogeochem),
-)
-
-processes(model::SoilModel) = (
-    model.strat,
-    model.energy,
-    model.hydrology,
-    model.biogeochem
-)
 
 function compute_auxiliary!(state, model::SoilModel)
     compute_auxiliary!(state, model, model.biogeochem)

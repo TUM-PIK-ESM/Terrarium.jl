@@ -21,14 +21,15 @@ Computes `pressure_head` ``Ψ = ψm + ψz + ψh`` from the current `saturation_w
 function closure!(
     state, grid,
     hydrology::SoilHydrologyRRE{NF, SaturationPressureClosure},
-    strat::AbstractStratigraphy
+    strat::AbstractStratigraphy,
+    bgc::AbstractSoilBiogeochemistry
 ) where {NF}
     # apply saturation correction
     launch!(grid, XY, adjust_saturation_profile_kernel!, state, hydrology)
     # update water table
     compute_water_table!(state, grid, hydrology)
     # determine pressure head from saturation
-    launch!(grid, XYZ, saturation_to_pressure_kernel!, state, hydrology, strat)
+    launch!(grid, XYZ, saturation_to_pressure_kernel!, state, hydrology, strat, bgc)
     return nothing
 end
 
@@ -40,10 +41,11 @@ Computes `saturation_water_ice` from the current `pressure_head` state.
 function invclosure!(
     state, grid,
     hydrology::SoilHydrologyRRE{NF, SaturationPressureClosure},
-    strat::AbstractStratigraphy 
+    strat::AbstractStratigraphy,
+    bgc::AbstractSoilBiogeochemistry
 ) where {NF}
     # determine saturation from pressure
-    launch!(grid, XYZ, pressure_to_saturation_kernel!, state, hydrology, strat)
+    launch!(grid, XYZ, pressure_to_saturation_kernel!, state, hydrology, strat, bgc)
     # apply saturation correction
     launch!(grid, XY, adjust_saturation_profile_kernel!, state, hydrology)
     # update water table
@@ -54,25 +56,28 @@ end
 @kernel function pressure_to_saturation_kernel!(
     state, grid,
     hydrology::SoilHydrologyRRE{NF, SaturationPressureClosure},
-    strat::AbstractStratigraphy
+    strat::AbstractStratigraphy,
+    bgc::AbstractSoilBiogeochemistry
 ) where {NF}
     i, j, k = @index(Global, NTuple)
-    pressure_to_saturation!(i, j, k, grid, state, hydrology, strat)
+    pressure_to_saturation!(i, j, k, grid, state, hydrology, strat, bgc)
 end
 
 @kernel function saturation_to_pressure_kernel!(
     state, grid,
     hydrology::SoilHydrologyRRE{NF, SaturationPressureClosure},
-    strat::AbstractStratigraphy
+    strat::AbstractStratigraphy,
+    bgc::AbstractSoilBiogeochemistry
 ) where {NF}
     i, j, k = @index(Global, NTuple)
-    saturation_to_pressure!(i, j, k, grid, state, hydrology, strat)
+    saturation_to_pressure!(i, j, k, grid, state, hydrology, strat, bgc)
 end
 
 @inline function pressure_to_saturation!(
     i, j, k, grid, state,
     hydrology::SoilHydrologyRRE{NF, SaturationPressureClosure},
-    strat::AbstractStratigraphy
+    strat::AbstractStratigraphy,
+    bgc::AbstractSoilBiogeochemistry
 ) where {NF}
     fgrid = get_field_grid(grid)
     ψ = state.pressure_head[i, j, k] # assumed given
@@ -88,7 +93,7 @@ end
     # remove hydrostatic and elevation components
     ψm = ψ - ψh - ψz
     swrc = get_swrc(hydrology)
-    por = porosity(i, j, k, grid, state, strat)
+    por = porosity(i, j, k, grid, state, strat, bgc)
     vol_water_ice_content = swrc(ψm; θsat=por)
     state.saturation_water_ice[i, j, k] = vol_water_ice_content / por
     return nothing
@@ -98,6 +103,7 @@ end
     i, j, k, grid, state,
     hydrology::SoilHydrologyRRE{NF, SaturationPressureClosure},
     strat::AbstractStratigraphy,
+    bgc::AbstractSoilBiogeochemistry
 ) where {NF}
     fgrid = get_field_grid(grid)
     sat = state.saturation_water_ice[i, j, k] # assumed given
@@ -106,7 +112,7 @@ end
     z_ref = znode(i, j, fgrid.Nz, state.saturation_water_ice)
     # get inverse of SWRC
     inv_swrc = inv(get_swrc(hydrology))
-    por = porosity(i, j, k, grid, state, strat)
+    por = porosity(i, j, k, grid, state, strat, bgc)
     # compute matric pressure head
     ψm = inv_swrc(sat*por; θsat=por)
     # compute elevation pressure head
