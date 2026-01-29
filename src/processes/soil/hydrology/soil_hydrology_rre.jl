@@ -160,8 +160,8 @@ VWC tendency is not scaled by the porosity and is thus not a saturation tendency
     # ∂θ∂t = ∇⋅K(θ)∇Ψ + forcing, where Ψ = ψₘ + ψₕ + ψz, and "forcing" represents sources and sinks such as ET losses
     ∂θ∂t = (
         - ∂zᵃᵃᶜ(i, j, k, field_grid, darcy_flux, state.pressure_head, state.hydraulic_conductivity)
-        + forcing(i, j, k, grid, state, evapotranspiration, hydrology, constants)
-        + forcing(i, j, k, grid, state, hydrology.vwc_forcing, hydrology)
+        + forcing(i, j, k, grid, state, evapotranspiration, hydrology, constants) # ET forcing
+        + forcing(i, j, k, grid, state, hydrology.vwc_forcing, hydrology) # generic user-defined forcing
     )
     return ∂θ∂t
 end
@@ -180,7 +180,7 @@ conductivity `K`.
     Kₖ = (∇ψ < 0)*min(K[i, j, k-1], K[i, j, k]) +
          (∇ψ >= 0)*min(K[i, j, k], K[i, j, k+1])
     ## Note that elevation and hydrostatic pressure are assumed to be accounted
-    ## for in the computation of ψ, so we do need any additional terms.
+    ## for in the computation of ψ, so we don't need any additional terms.
     q = -Kₖ*∇ψ
     return q
 end
