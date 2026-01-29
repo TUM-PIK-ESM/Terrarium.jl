@@ -19,7 +19,7 @@ using Flatten: flatten, flattenable, reconstruct
 using KernelAbstractions: @kernel, @index
 
 # Oceananigans numerics
-using Oceananigans.AbstractOperations: Average, Integral, ConditionalOperation
+using Oceananigans.AbstractOperations: Average, Integral, ConditionalOperation, KernelFunctionOperation
 using Oceananigans.Architectures: Architectures, AbstractArchitecture, CPU, GPU, architecture, on_architecture, array_type
 using Oceananigans.Fields: Field, FunctionField, AbstractField, Center, Face, set!, compute!, interior, location
 using Oceananigans.Forcings: Forcing, ContinuousForcing, DiscreteForcing

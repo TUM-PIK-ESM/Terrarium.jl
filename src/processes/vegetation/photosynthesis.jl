@@ -320,7 +320,7 @@ end
     # Get inputs
     T_air = air_temperature(i, j, grid, state, atmos)
     pres = air_pressure(i, j, grid, state, atmos)
-    swdown = shortwave_in(i, j, grid, state, atmos)
+    swdown = shortwave_down(i, j, grid, state, atmos)
     # day_length = daytime_length(i, j, grid, state, atmos)
     co2 = state.CO2[i, j] # no method for this currently...
     β = state.SMLF[i, j]

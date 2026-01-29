@@ -203,18 +203,18 @@ variables(::LongShortWaveRadiation) = (
 )
 
 """
-    shortwave_in(i, j, grid, state, ::AbstractAtmosphere{PR, <:LongShortWaveRadiation})
+    shortwave_down(i, j, grid, state, ::AbstractAtmosphere{PR, <:LongShortWaveRadiation})
 
 Retrieve or compute the incoming/downwelling shortwave radiation at the current time step.
 """
-shortwave_in(i, j, grid, state, ::AbstractAtmosphere{PR, <:LongShortWaveRadiation}) where {PR} = state.surface_shortwave_down[i, j]
+shortwave_down(i, j, grid, state, ::AbstractAtmosphere{PR, <:LongShortWaveRadiation}) where {PR} = state.surface_shortwave_down[i, j]
 
 """
-    longwave_in(i, j, grid, state, ::AbstractAtmosphere{PR, <:LongShortWaveRadiation})
+    longwave_down(i, j, grid, state, ::AbstractAtmosphere{PR, <:LongShortWaveRadiation})
 
 Retrieve or compute the incoming/downwelling longwave radiation at the current time step.
 """
-longwave_in(i, j, grid, state, ::AbstractAtmosphere{PR, <:LongShortWaveRadiation}) where {PR} = state.surface_longwave_down[i, j]
+longwave_down(i, j, grid, state, ::AbstractAtmosphere{PR, <:LongShortWaveRadiation}) where {PR} = state.surface_longwave_down[i, j]
 
 """
     daytime_length(i, j, grid, state, ::AbstractAtmosphere{PR, <:LongShortWaveRadiation})

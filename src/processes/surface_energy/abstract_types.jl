@@ -1,68 +1,101 @@
-# Surface energy balance types
+# Surface energy balance processes
 
 """
-Base type for surface albedo and emissivity process implementations.
+Base type for surface energy balance schemes.
 """
-abstract type AbstractAlbedo <: AbstractProcess end
+abstract type AbstractSurfaceEnergyBalance{NF} <: AbstractProcess end
 
 """
-    albedo(i, j, grid, state, ::AbstractAlbedo)
+    compute_surface_energy_fluxes!(state, grid, ::AbstractSurfaceEnergyBalance, args...)
 
-Return the current albedo at the given indices.
+Compute the surface energy fluxes and skin temperature from the current `state` and `grid`.
+The required `args` are implementation dependent.
 """
-function albedo end
-
-"""
-    emissivity(i, j, grid, state, ::AbstractAlbedo)
-
-Return the current emissivity at the given indices.
-"""
-function emissivity end
-
-"""
-Base type for radiation budget schemes.
-"""
-abstract type AbstractRadiativeFluxes <: AbstractProcess end
-
-"""
-    surface_net_radiation(i, j, grid, state, ::AbstractRadiativeFluxes)
-
-Return the current net radiation at the given indices.
-"""
-function surface_net_radiation end
-
-"""
-Base type for turbulent (latent and sensible) heat fluxes at the surface.
-"""
-abstract type AbstractTurbulentFluxes <: AbstractProcess end
-
-"""
-    sensible_heat_flux(i, j, grid, state, ::AbstractTurbulentFluxes)
-
-Return the current sensible heat flux at the given indices.
-"""
-function sensible_heat_flux end
-
-"""
-    latent_heat_flux(i, j, grid, state, ::AbstractTurbulentFluxes)
-
-Return the current latent heat flux at the given indices.
-"""
-function latent_heat_flux end
+function compute_surface_energy_fluxes! end
 
 """
 Base type for skin temperature and ground heat flux schemes.
 """
-abstract type AbstractSkinTemperature <: AbstractProcess end
+abstract type AbstractSkinTemperature{NF} <: AbstractProcess end
 
 """
     skin_temperature(i, j, grid, state, ::AbstractSkinTemperature)
 
 Return the current skin temperature at the given indices.
 """
-function skin_temperature end
+@propagate_inbounds skin_temperature(i, j, grid, state, ::AbstractSkinTemperature) = state.skin_temperature[i, j]
 
 """
-Base type for surface energy balance schemes.
+    ground_heat_flux(i, j, grid, state, ::AbstractSkinTemperature)
+
+Return the current ground heat flux at the given indices.
 """
-abstract type AbstractSurfaceEnergyBalance <: AbstractProcess end
+@propagate_inbounds ground_heat_flux(i, j, grid, state, ::AbstractSkinTemperature) = state.ground_heat_flux[i, j]
+
+"""
+    $TYPEDEF
+
+Base type for radiative flux parameterizations.
+"""
+abstract type AbstractRadiativeFluxes{NF} <: AbstractProcess end
+
+"""
+    shortwave_up(i, j, grid, state, ::AbstractRadiativeFluxes)
+
+Return the current outgoing (upwelling) shortwave radiation at the surface.
+"""
+@propagate_inbounds shortwave_up(i, j, grid, state, ::AbstractRadiativeFluxes) = state.shortwave_up[i, j]
+
+"""
+    longwave_up(i, j, grid, state, ::AbstractRadiativeFluxes)
+
+Return the current outgoing (upwelling) longwave radiation at the given indices `i, j`.
+"""
+@propagate_inbounds longwave_up(i, j, grid, state, ::AbstractRadiativeFluxes) = state.shortwave_up[i, j]
+
+"""
+    surface_net_radiation(i, j, grid, state, ::AbstractRadiativeFluxes)
+
+Return the current surface net radiation at the given indices `i, j`.
+"""
+@propagate_inbounds surface_net_radiation(i, j, grid, state, ::AbstractRadiativeFluxes) = state.surface_net_radiation[i, j]
+
+"""
+Base type for turbulent (latent and sensible) heat flux parameterizations.
+"""
+abstract type AbstractTurbulentFluxes{NF} <: AbstractProcess end
+
+"""
+    sensible_heat_flux(i, j, grid, state, ::AbstractTurbulentFluxes)
+
+Return the current sensible heat flux at the given indices.
+"""
+@propagate_inbounds sensible_heat_flux(i, j, grid, state, ::AbstractRadiativeFluxes) = state.sensible_heat_flux[i, j]
+
+"""
+    latent_heat_flux(i, j, grid, state, ::AbstractTurbulentFluxes)
+
+Return the current latent heat flux at the given indices.
+"""
+@propagate_inbounds latent_heat_flux(i, j, grid, state, ::AbstractRadiativeFluxes) = state.latent_heat_flux[i, j]
+
+# Surface energy balance parameterizations
+
+"""
+Base type for surface albedo and emissivity parameterizations.
+"""
+abstract type AbstractAlbedo{NF} end
+
+"""
+    albedo(i, j, grid, state, ::AbstractAlbedo)
+
+Return the current albedo at the given indices.
+"""
+@propagate_inbounds albedo(i, j, grid, state, ::AbstractAlbedo) = state.albedo[i, j]
+
+"""
+    emissivity(i, j, grid, state, ::AbstractAlbedo)
+
+Return the current emissivity at the given indices.
+"""
+@propagate_inbounds emissivity(i, j, grid, state, ::AbstractAlbedo) = state.emissivity[i, j]
