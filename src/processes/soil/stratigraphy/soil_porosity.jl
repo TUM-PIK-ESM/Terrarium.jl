@@ -12,6 +12,8 @@ for the `mineral` and `organic` components.
     organic_porosity::NF = 0.90
 end
 
+ConstantSoilPorosity(::Type{NF}; kwargs...) where {NF} = ConstantSoilPorosity{NF}(; kwargs...)
+
 @inline organic_porosity(props::ConstantSoilPorosity, texture::SoilTexture) = props.organic_porosity
 
 @inline mineral_porosity(props::ConstantSoilPorosity, texture::SoilTexture) = props.mineral_porosity
@@ -31,6 +33,8 @@ SURFEX parameterization of mineral soil porosity (Masson et al. 2013).
     "Natural porosity of organic material"
     porosity_organic::NF = 0.90
 end
+
+SoilPorositySURFEX(::Type{NF}; kwargs...) where {NF} = SoilPorositySURFEX{NF}(; kwargs...)
 
 @inline organic_porosity(props::SoilPorositySURFEX) = por.porosity_organic
 

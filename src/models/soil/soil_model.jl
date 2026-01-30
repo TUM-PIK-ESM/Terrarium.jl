@@ -38,33 +38,19 @@ $(TYPEDFIELDS)
     initializer::Initializer = SoilInitializer()
 end
 
-# SoilModel getter methods
-
-get_soil_stratigraphy(model::SoilModel) = model.strat
-
-get_soil_energy_balance(model::SoilModel) = model.energy
-
-get_soil_hydrology(model::SoilModel) = model.hydrology
-
-get_soil_biogeochemistry(model::SoilModel) = model.biogeochem
-
-get_constants(model::SoilModel) = model.constants
-
 # Model interface methods
 
 function compute_auxiliary!(state, model::SoilModel)
-    compute_auxiliary!(state, model, model.biogeochem)
-    compute_auxiliary!(state, model, model.strat)
-    compute_auxiliary!(state, model, model.hydrology)
-    compute_auxiliary!(state, model, model.energy)
+    compute_auxiliary!(state, model.grid, model.biogeochem)
+    compute_auxiliary!(state, model.grid, model.hydrology, model.strat, model.biogeochem)
+    compute_auxiliary!(state, model.grid, model.energy)
     return nothing
 end
 
 function compute_tendencies!(state, model::SoilModel)
-    compute_tendencies!(state, model, model.biogeochem)
-    compute_tendencies!(state, model, model.strat)
-    compute_tendencies!(state, model, model.hydrology)
-    compute_tendencies!(state, model, model.energy)
+    compute_tendencies!(state, model.grid, model.biogeochem)
+    compute_tendencies!(state, model.grid, model.hydrology, model.strat, model.biogeochem, model.constants)
+    compute_tendencies!(state, model.grid, model.energy, model.hydrology, model.strat, model.biogeochem)
     return nothing
 end
 
@@ -74,10 +60,9 @@ function initialize!(state, model::SoilModel)
     # run model/field initializers
     initialize!(state, model, model.initializer)
     # run process initializers
-    initialize!(state, model, model.strat)
-    initialize!(state, model, model.biogeochem)
-    initialize!(state, model, model.hydrology)
-    initialize!(state, model, model.energy)
+    initialize!(state, model.grid, model.biogeochem)
+    initialize!(state, model.grid, model.hydrology, model.strat)
+    initialize!(state, model.grid, model.energy, model.hydrology, model.strat, model.biogeochem)
 end
 
 function closure!(state, model::SoilModel)

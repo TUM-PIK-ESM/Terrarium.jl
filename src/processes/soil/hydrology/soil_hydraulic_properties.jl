@@ -65,10 +65,10 @@ $TYPEDFIELDS
 """
 @kwdef struct ConstantHydraulics{NF, RC, UnsatK} <: AbstractSoilHydraulics{NF, RC, UnsatK}
     "Soil water retention curve"
-    swrc::RC = ustrip(BrooksCorey())
+    swrc::RC
     
     "Unsaturated hydraulic conductivity formulation; defaults to `cond_sat`"
-    cond_unsat::UnsatK = UnsatKLinear()
+    cond_unsat::UnsatK 
 
     "Hydraulic conductivity at saturation [m/s]"
     cond_sat::NF = 1e-5
@@ -86,7 +86,14 @@ $TYPEDFIELDS
     end
 end
 
-ConstantHydraulics(::Type{NF}; cond_unsat=UnsatKLinear(NF), kwargs...) where {NF} = ConstantHydraulics{NF, typeof(cond_unsat)}(; cond_unsat, kwargs...)
+function ConstantHydraulics(
+    ::Type{NF};
+    swrc = BrooksCorey(),
+    cond_unsat = UnsatKLinear(NF),
+    kwargs...
+) where {NF}
+    return ConstantHydraulics(; swrc, cond_unsat, kwargs...)
+end
 
 @inline saturated_hydraulic_conductivity(hydraulics::ConstantHydraulics, args...) = hydraulics.cond_sat
 
@@ -105,10 +112,10 @@ $TYPEDFIELDS
 """
 @kwdef struct SoilHydraulicsSURFEX{NF, RC, UnsatK} <: AbstractSoilHydraulics{NF, RC, UnsatK}
     "Soil water retention curve"
-    swrc::RC = ustrip(BrooksCorey())
+    swrc::RC
 
     "Unsaturated hydraulic conductivity formulation; defaults to `cond_sat`"
-    cond_unsat::UnsatK = UnsatKLinear()
+    cond_unsat::UnsatK
 
     "Hydraulic conductivity at saturation [m/s]"
     cond_sat::NF = 1e-5
@@ -129,7 +136,14 @@ $TYPEDFIELDS
     end
 end
 
-SoilHydraulicsSURFEX(::Type{NF}; cond_unsat=UnsatKLinear(NF), kwargs...) where {NF} = SoilHydraulicsSURFEX{NF, typeof(cond_unsat)}(; cond_unsat, kwargs...)
+function SoilHydraulicsSURFEX(
+    ::Type{NF};
+    swrc = BrooksCorey(),
+    cond_unsat = UnsatKLinear(NF),
+    kwargs...
+) where {NF}
+    return SoilHydraulicsSURFEX(; swrc, cond_unsat, kwargs...)
+end
 
 # TODO: this is not quite correct, SURFEX uses a hydraulic conductivity function that decreases exponentially with depth
 @inline saturated_hydraulic_conductivity(hydraulics::SoilHydraulicsSURFEX, args...) = hydraulics.cond_sat
@@ -155,7 +169,9 @@ end
 Simple formulation of hydraulic conductivity as a linear function of the liquid water saturated fraction,
 i.e. `soil.water / (soil.water + soil.ice + soil.air)`.
 """
-struct UnsatKLinear <: AbstractUnsatK end
+struct UnsatKLinear{NF} <: AbstractUnsatK end
+
+UnsatKLinear(::Type{NF}) where {NF} = UnsatKLinear{NF}()
 
 function hydraulic_conductivity(
     hydraulics::AbstractSoilHydraulics{NF, RC, UnsatKLinear},

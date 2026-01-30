@@ -15,8 +15,7 @@ abstract type AbstractProcess end
 """
     $TYPEDEF
 
-Base type for sets of coupled `AbstractProcess`es. Coupled process types aggregate
-together two or more sub-processes and define any 
+Base type for components that couple two or more `AbstractProcess`es.
 """
 abstract type AbstractCoupledProcesses <: AbstractProcess end
 
@@ -116,6 +115,8 @@ Note that this is a type-stable, `@generated` function that is compiled for each
     accessors = map(name -> :(obj.$name), procnames)
     return :(tuple($(accessors...)))
 end
+
+initialize!(state, grid, process::AbstractProcess, args...) = nothing
 
 """
     get_grid(model::AbstractModel)::AbstractLandGrid

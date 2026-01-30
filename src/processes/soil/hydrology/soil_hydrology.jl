@@ -104,10 +104,11 @@ end
     return nothing
 end
 
-@inline function compute_auxiliary!(state, grid, hydrology::SoilHydrology)
-    compute_water_table!(state, get_grid(model), hydrology)
+@inline function compute_auxiliary!(state, grid, hydrology::SoilHydrology, args...)
+    compute_water_table!(state, grid, hydrology)
 end
 
+@inline compute_tendencies!(state, grid, hydrology::SoilHydrology, args...) = nothing
 @inline function compute_tendencies!(state, grid, hydrology::SoilHydrology{NF, NoFlow, HP, <:AbstractForcing}) where {NF, HP}
     # TODO: do we need to also include ET? does that really make sense for a "no flow" scheme?
     forcing_kernel = KernelFunctionOperation{Center, Center, Center}(get_grid(model)) do i, j, k, grid

@@ -14,12 +14,12 @@ and the unfrozen fraction of pore water. Note that, under this formulation, zero
 The closure relation is defined as being a mapping from the conserved quantity (energy) to the continuous
 quantity (temperature), i.e. the inverse of U(T).
 """
-@kwdef struct EnergyTemperatureClosure <: AbstractSoilEnergyClosure end
+struct SoilEnergyTemperatureClosure <: AbstractSoilEnergyClosure end
 
 """
-Defines `temperature` as the closure variable for `EnergyTemperatureClosure`.
+Defines `temperature` as the closure variable for `SoilEnergyTemperatureClosure`.
 """
-closurevar(::EnergyTemperatureClosure) = auxiliary(:temperature, XYZ(), units=u"°C", desc="Temperature of the soil volume in °C")
+closurevar(::SoilEnergyTemperatureClosure) = auxiliary(:temperature, XYZ(), units=u"°C", desc="Temperature of the soil volume in °C")
 
 function closure!(
     state, grid,
@@ -30,7 +30,9 @@ function closure!(
     constants::PhysicalConstants
 )
     fc = freezecurve(energy.thermal_properties, hydrology)
-    launch!(grid, XYZ, energy_to_temperature_kernel!, state, fc, energy, hydrology, strat, bgc, constants)
+    closure = energy.closure
+    args = (; fc, energy, hydrology, strat, bgc, constants)
+    launch!(grid, XYZ, energy_to_temperature_kernel!, state, args)
     return nothing
 end
 
@@ -43,25 +45,28 @@ function invclosure!(
     constants::PhysicalConstants
 )
     fc = freezecurve(energy.thermal_properties, hydrology)
-    launch!(grid, XYZ, temperature_to_energy_kernel!, state, fc, energy, hydrology, strat, bgc, constants)
+    closure = energy.closure
+    args = (; closure, fc, energy, hydrology, strat, bgc, constants)
+    launch!(grid, XYZ, temperature_to_energy_kernel!, state, args)
     return nothing
 end
 
 
-@kernel inbounds=true function temperature_to_energy_kernel!(state, grid, args...)
+@kernel inbounds=true function temperature_to_energy_kernel!(state, grid, args)
     i, j, k = @index(Global, NTuple)
     temperature_to_energy!(i, j, k, grid, state, args...)
 end
 
-@kernel inbounds=true function energy_to_temperature_kernel!(state, grid, args...)
+@kernel inbounds=true function energy_to_temperature_kernel!(state, grid, args)
     i, j, k = @index(Global, NTuple)
     energy_to_temperature!(i, j, k, grid, state, args...)
 end
 
 @propagate_inbounds function temperature_to_energy!(
     i, j, k, grid, state,
+    ::SoilEnergyTemperatureClosure,
     ::FreeWater,
-    energy::SoilEnergyBalance{NF, OP, EnergyTemperatureClosure},
+    energy::SoilEnergyBalance{NF, OP, SoilEnergyTemperatureClosure},
     hydrology::AbstractSoilHydrology,
     strat::AbstractStratigraphy,
     bgc::AbstractSoilBiogeochemistry,
@@ -92,13 +97,14 @@ end
 
 @propagate_inbounds function energy_to_temperature!(
     i, j, k, grid, state,
+    ::SoilEnergyTemperatureClosure,
     fc::FreeWater,
-    energy::SoilEnergyBalance{NF, OP, EnergyTemperatureClosure},
+    energy::SoilEnergyBalance,
     hydrology::AbstractSoilHydrology,
     strat::AbstractStratigraphy,
     bgc::AbstractSoilBiogeochemistry,
     constants::PhysicalConstants
-) where {NF, OP}
+)
 
     U = state.internal_energy[i, j, k] # assumed given
     L = constants.ρw*constants.Lsl

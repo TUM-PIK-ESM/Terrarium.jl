@@ -39,7 +39,7 @@ end
 SoilEnergyBalance(
     ::Type{NF};
     operator::AbstractHeatOperator = ExplicitTwoPhaseHeatConduction(),
-    closure::AbstractSoilEnergyClosure = FreeWaterEnergyClosure(),
+    closure::AbstractSoilEnergyClosure = SoilEnergyTemperatureClosure(),
     thermal_properties::SoilThermalProperties{NF} = SoilThermalProperties(NF),
 ) where {NF} = SoilEnergyBalance(operator, closure, thermal_properties)
 
@@ -80,24 +80,19 @@ function compute_tendencies!(
     energy::SoilEnergyBalance,
     hydrology::AbstractSoilHydrology,
     strat::AbstractStratigraphy,
-    bgc::AbstractSoilBiogeochemistry,
-    args...
+    bgc::AbstractSoilBiogeochemistry
 )
-    launch!(grid, XYZ, compute_energy_tendency_kernel!, state, energy, hydrology, strat, bgc)
+    args = (; hydrology, strat, bgc)
+    launch!(grid, XYZ, compute_energy_tendency_kernel!, state, energy, args)
     return nothing
 end
 
 # Kernels
 
-@kernel function compute_energy_tendency_kernel!(
-    state, grid,
-    energy::SoilEnergyBalance,
-    hydrology::AbstractSoilHydrology,
-    strat::AbstractStratigraphy,
-    bgc::AbstractSoilBiogeochemistry,
-)
+@kernel function compute_energy_tendency_kernel!(state, grid, energy::SoilEnergyBalance, args)
     i, j, k = @index(Global, NTuple)
-    state.tendencies.internal_energy[i, j, k] += energy_tendency(i, j, k, grid, state, energy, hydrology, strat, bgc)
+
+    state.tendencies.internal_energy[i, j, k] += energy_tendency(i, j, k, grid, state, energy, args...)
 end
 
 # Kernel functions
@@ -107,7 +102,7 @@ end
     energy::SoilEnergyBalance{NF, <:ExplicitTwoPhaseHeatConduction},
     hydrology::AbstractSoilHydrology,
     strat::AbstractStratigraphy,
-    bgc::AbstractSoilBiogeochemistry,
+    bgc::AbstractSoilBiogeochemistry
 ) where {NF}
     # operators require the underlying Oceananigans grid
     field_grid = get_field_grid(grid)

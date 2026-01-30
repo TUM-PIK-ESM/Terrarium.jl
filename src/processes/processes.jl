@@ -48,7 +48,7 @@ export SoilThermalConductivities, SoilHeatCapacities, SoilThermalProperties, Inv
 export thermal_conductivity, heat_capacity
 include("soil/energy/soil_thermal_properties.jl")
 
-export SoilEnergyBalance, EnergyTemperatureClosure
+export SoilEnergyBalance, SoilEnergyTemperatureClosure
 include("soil/energy/soil_energy.jl")
 include("soil/energy/soil_energy_closures.jl")
 

@@ -26,6 +26,18 @@ end
 
 soil_texture(i, j, k, grid, state, strat::HomogeneousStratigraphy) = strat.texture
 
+@inline function organic_fraction(
+    i, j, k, grid, state,
+    strat::HomogeneousStratigraphy,
+    bgc::AbstractSoilBiogeochemistry
+)
+    ρ_soc = density_soc(i, j, k, grid, state, bgc)
+    ρ_org = density_pure_soc(bgc)
+    por = organic_porosity(i, j, k, grid, state, strat.porosity, strat.texture)
+    organic = ρ_soc / ((1 - por) * ρ_org)
+    return organic
+end
+
 """
     $TYPEDSIGNATURES
 
@@ -36,7 +48,7 @@ Compute the porosity of the soil volume at the given indices.
     strat::HomogeneousStratigraphy,
     bgc::AbstractSoilBiogeochemistry
 )
-    organic = organic_fraction(i, j, k, grid, state, bgc)
+    organic = organic_fraction(i, j, k, grid, state, bgc, strat)
     texture = strat.soil_texture
     por_m = mineral_porosity(i, j, k, grid, state, strat.porosity, texture)
     por_o = organic_porosity(i, j, k, grid, state, strat.porosity, texture)
@@ -74,7 +86,7 @@ implementation assumes a simple `MineralOrganic` parameterization of the solid m
     strat::AbstractStratigraphy,
     bgc::AbstractSoilBiogeochemistry
 )
-    organic = organic_fraction(i, j, k, grid, state, bgc)
+    organic = organic_fraction(i, j, k, grid, state, strat, bgc)
     texture = soil_texture(i, j, k, grid, state, strat)
     return MineralOrganic(texture, organic)
 end
