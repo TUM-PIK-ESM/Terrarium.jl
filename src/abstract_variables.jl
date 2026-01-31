@@ -62,7 +62,7 @@ function closurevar end
 """
 Base type for state variable placeholder types.
 """
-abstract type AbstractVariable{name, VD} end
+abstract type AbstractVariable{name, VD, UT} end
 
 """
     $SIGNATURES
@@ -71,6 +71,7 @@ Retrieve the name of the given variable or closure. For closure relations, `varn
 should return the name of the variable returned by the closure relation.
 """
 @inline varname(::AbstractVariable{name}) where {name} = name
+@inline varname(::Type{<:AbstractVariable{name}}) where {name} = name
 @inline varname(namespace::Pair{Symbol}) = first(namespace)
 
 """
@@ -79,6 +80,7 @@ should return the name of the variable returned by the closure relation.
 Retrieve the grid dimensions on which this variable is defined.
 """
 @inline vardims(var::AbstractVariable) = var.dims
+@inline vardims(::Type{<:AbstractVariable{name, VD}}) where {name, VD} = VD
 
 """
     $SIGNATURES
@@ -86,6 +88,7 @@ Retrieve the grid dimensions on which this variable is defined.
 Retrieve the physical units for the given variable.
 """
 @inline varunits(var::AbstractVariable) = var.units
+@inline varunits(::Type{<:AbstractVariable{name, VD, UT}}) where {name, VD, UT} = UT
 
 # Test equality between variables by their names, dimensions, and physical units
 Base.:(==)(var1::AbstractVariable, var2::AbstractVariable) =
@@ -98,7 +101,7 @@ Base.:(==)(var1::AbstractVariable, var2::AbstractVariable) =
 
 Represents metadata for a generic state variable with the given `name` and spatial `dims`.
 """
-struct Variable{name, VD, UT} <: AbstractVariable{name, VD}
+struct Variable{name, VD, UT} <: AbstractVariable{name, VD, UT}
     "Variable dimensions"
     dims::VD
 
@@ -111,7 +114,7 @@ end
 """
 Baste type for process state variables with specific intents, e.g. `prognostic`, `auxiliary`, or `input`.
 """
-abstract type AbstractProcessVariable{name, VD} <: AbstractVariable{name, VD} end
+abstract type AbstractProcessVariable{name, VD, UT} <: AbstractVariable{name, VD, UT} end
 
 @inline vardims(pv::AbstractProcessVariable) = vardims(pv.var)
 @inline varunits(pv::AbstractProcessVariable) = varunits(pv.var)
@@ -139,7 +142,7 @@ struct AuxiliaryVariable{
     Var<:Variable{name, VD, UT},
     DT<:AbstractInterval,
     FC<:Union{Nothing, Function}
-} <: AbstractProcessVariable{name, VD}
+} <: AbstractProcessVariable{name, VD, UT}
     "State variable"
     var::Var
 
@@ -165,7 +168,7 @@ struct InputVariable{
     Var<:Variable{name, VD, UT},
     DT<:AbstractInterval,
     Def<:Union{Nothing, Number, Function}
-} <: AbstractProcessVariable{name, VD}
+} <: AbstractProcessVariable{name, VD, UT}
     "State variable"
     var::Var
 
@@ -192,7 +195,7 @@ struct PrognosticVariable{
     CL<:Union{Nothing, AbstractClosureRelation},
     TV<:Union{Nothing, AuxiliaryVariable},
     DT<:AbstractInterval
-} <: AbstractProcessVariable{name, VD}
+} <: AbstractProcessVariable{name, VD, UT}
     "State variable"
     var::Var
 
@@ -247,17 +250,19 @@ function Variables(vars::Tuple{Vararg{Union{AbstractProcessVariable, Namespace}}
     # duplicates within each group are automatically merged
     varinfo(var::AbstractVariable) = (varname(var), vardims(var), varunits(var))
     varinfo(ns::Namespace) = varname(ns)
-    prognostic_vars = merge_duplicates(varinfo, filter(var -> isa(var, PrognosticVariable), vars))
-    auxiliary_vars = merge_duplicates(varinfo, filter(var -> isa(var, AuxiliaryVariable), vars))
-    input_vars = merge_duplicates(varinfo, filter(var -> isa(var, InputVariable), vars))
-    namespaces = merge_duplicates(varinfo, filter(var -> isa(var, Namespace), vars))
+    # Note that we intentionally use `deduplicate` here instead of `deduplicate_vars` to
+    # avoid unnecessary compilation overhead; this is performance non-critical code anyway.
+    prognostic_vars = deduplicate(varinfo, filter(var -> isa(var, PrognosticVariable), vars))
+    auxiliary_vars = deduplicate(varinfo, filter(var -> isa(var, AuxiliaryVariable), vars))
+    input_vars = deduplicate(varinfo, filter(var -> isa(var, InputVariable), vars))
+    namespaces = deduplicate(varinfo, filter(var -> isa(var, Namespace), vars))
     # get tendencies from prognostic variables
     tendency_vars = map(var -> var.tendency, prognostic_vars)
     # create closure variables and prepend to tuple of auxiliary variables;
     # note that the order matters here since Field constructors will be called in the order
     # that they appear in the var tuples.
     closure_vars = map(var -> closurevar(var.closure), filter(hasclosure, prognostic_vars))
-    auxiliary_vars = merge_duplicates(varinfo, tuplejoin(closure_vars, auxiliary_vars))
+    auxiliary_vars = deduplicate(varinfo, tuplejoin(closure_vars, auxiliary_vars))
     # drop inputs with matching prognostic or auxiliary variables
     input_vars = filter(var -> var ∉ prognostic_vars && var ∉ auxiliary_vars, input_vars)
     # check for duplicates
@@ -275,6 +280,20 @@ function Variables(vars::Tuple{Vararg{Union{AbstractProcessVariable, Namespace}}
         input_nt,
         namespace_nt,
     )
+end
+
+"""
+    $TYPEDSIGNATURES
+
+Removes duplicate variables from the given tuple of `vars` according to the given
+function `by`, which defaults to deduplication by `varname`. This function is `@generated`
+and is fully type-stable.
+"""
+@generated function deduplicate_vars(vars::Tuple{Vararg{<:AbstractVariable}}, by = varname)
+    id = map(by, vars.parameters)
+    unique_idx = unique(i -> id[i], eachindex(vars.parameters))
+    accessors = map(i -> :(vars[$i]), unique_indices)
+    return :(tuple($(accessors...)))
 end
 
 """

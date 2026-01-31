@@ -13,8 +13,8 @@ tuplejoin(x, y, z...) = (x..., tuplejoin(y, z...)...)
     
 Filter out duplicates from the given tuple. Note that this method is not type stable or allocation-free!
 """
-merge_duplicates(values::Tuple) = Tuple(unique(values))
-merge_duplicates(f, values::Tuple) = Tuple(unique(f, values))
+deduplicate(values::Tuple) = Tuple(unique(values))
+deduplicate(f, values::Tuple) = Tuple(unique(f, values))
 
 """
     merge_recursive(nt1::NamedTuple, nt2::NamedTuple)
