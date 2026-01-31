@@ -285,14 +285,12 @@ end
 """
     $TYPEDSIGNATURES
 
-Removes duplicate variables from the given tuple of `vars` according to the given
-function `by`, which defaults to deduplication by `varname`. This function is `@generated`
-and is fully type-stable.
+Removes duplicate variables from the given tuple of `vars` by name.
 """
-@generated function deduplicate_vars(vars::Tuple{Vararg{<:AbstractVariable}}, by = varname)
-    id = map(by, vars.parameters)
-    unique_idx = unique(i -> id[i], eachindex(vars.parameters))
-    accessors = map(i -> :(vars[$i]), unique_indices)
+@generated function deduplicate_vars(vars::Tuple{Vararg{<:AbstractVariable}})
+    names = map(varname, vars.parameters)
+    unique_idx = unique(i -> names[i], eachindex(vars.parameters))
+    accessors = map(i -> :(vars[$i]), unique_idx)
     return :(tuple($(accessors...)))
 end
 
@@ -376,6 +374,24 @@ Convenience constructor method for variable `Namespace`s.
 Alias for `Variables(vars...)`
 """
 @inline variables(vars::Union{AbstractVariable, Namespace}...) = Variables(vars)
+
+"""
+Helper method that selects only prognostic variables declared on `obj`.
+"""
+@inline prognostic_variables(obj) = prognostic_variables(variables(obj))
+@inline prognostic_variables(vars::Tuple) = deduplicate_vars(Tuple(filter(var -> isa(var, PrognosticVariable), vars)))
+
+"""
+Helper method that selects only auxiliary variables declared on `obj`.
+"""
+@inline auxiliary_variables(obj) = auxiliary_variables(variables(obj))
+@inline auxiliary_variables(vars::Tuple) = deduplicate_vars(Tuple(filter(var -> isa(var, AuxiliaryVariable), vars)))
+
+"""
+Helper method that selects only input variables declared on `obj`.
+"""
+@inline input_variables(obj) = input_variables(variables(obj))
+@inline input_variables(vars::Tuple) = deduplicate_vars(Tuple(filter(var -> isa(var, InputVariable), vars)))
 
 function Base.NamedTuple(vars::Tuple{Vararg{Union{AbstractVariable, Namespace}}})
     keys = map(varname, vars)

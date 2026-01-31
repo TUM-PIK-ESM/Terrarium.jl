@@ -112,12 +112,17 @@ function reset_tendencies!(state::StateVariables)
 end
 
 """
-    get_fields(state::StateVariables, queries::Union{Symbol, Pair}...)
+    get_fields(state, queries::Union{Symbol, Pair}...)
 
 Retrieves fields with names given in `queries` and returns them in a `NamedTuple`. Each argument
 in `queries` can either be a `Symbol` corresponding to a field/variable defined in the namespace
 of `state` or a `Pair{Symbol, Tuple}` where the key is the child namespace and the value is a
 tuple of queries from that namespace.
+
+!!! warning
+    This method relies on runtime dispatch and thus should not be used in performance-critical code.
+    If you need to query fields for specific sets of variables or components, use one of the
+    type-stable variants instead.
 
 ```julia
 # initialize model
@@ -128,16 +133,64 @@ fields = get_fields(state, :temperature, :saturation_water_ice)
 nested_fields = get_fields(state, :temperature, :namespace => (:subvar1, :subvar2))
 ```
 """
-function get_fields(state::StateVariables, queries::Union{Symbol, Pair}...)
+function get_fields(state, queries::Union{Symbol, Pair}...)
     fields = map(queries) do query
         if isa(query, Symbol)
             query => getproperty(state, query)
         else isa(query, Pair)
             key, value = query
+            @assert isa(value, Tuple) "namespaces queries must be given as tuples"
             key => get_fields(getproperty(state, key), value...)
         end
     end
     return (; fields...)
+end
+
+"""
+    $TYPEDSIGNATURES
+
+Retrieves the `Field` from `state` matching the `name` of the given variable.
+"""
+@inline get_field(state, ::AbstractVariable{name}) where {name} = getproperty(state, name)
+
+"""
+    $TYPEDSIGNATURES
+
+Retrieves all `Field`s from `state` matching the names of the given variables.
+"""
+@inline function get_fields(state, vars::Tuple{Vararg{AbstractVariable}})
+    names = map(varname, vars)
+    matched_fields = fastmap(vars) do var
+        get_field(state, var)
+    end
+    return NamedTuple{names}(matched_fields)
+end
+
+"""
+    $TYPEDSIGNATURES
+
+Retrieves all `Field`s from `state` corresponding to prognostic variables defined on the given `components`.
+"""
+@inline function prognostic_fields(state, components::Union{AbstractModel, AbstractProcess}...)
+    return get_fields(state, mapreduce(prognostic_variables, tuplejoin, components))
+end
+
+"""
+    $TYPEDSIGNATURES
+
+Retrieves all `Field`s from `state` corresponding to auxiliary variables defined on the given `components`.
+"""
+@inline function auxiliary_fields(state, components::Union{AbstractModel, AbstractProcess}...)
+    return get_fields(state, mapreduce(auxiliary_variables, tuplejoin, components))
+end
+
+"""
+    $TYPEDSIGNATURES
+
+Retrieves all `Field`s from `state` corresponding to input variables defined on the given `components`.
+"""
+@inline function input_fields(state, components::Union{AbstractModel, AbstractProcess}...)
+    return get_fields(state, mapreduce(input_variables, tuplejoin, components))
 end
 
 # Initialization of StateVariables from models and processes
@@ -226,7 +279,7 @@ function initialize(
     namespaces = map(vars.namespaces) do ns
         ns_bcs = get(boundary_conditions, varname(ns), (;))
         ns_fields = get(fields, varname(ns), (;))
-        initialize(ns.vars, grid, clock; boundary_conditions=ns_bcs, fields=ns_fields)
+        initialize(ns.vars, grid; clock, boundary_conditions=ns_bcs, fields=ns_fields)
     end
     # construct and return StateVariables
     return StateVariables(
