@@ -86,12 +86,19 @@ $TYPEDFIELDS
 
     "Organic soil fraction"
     organic::NF = zero(eltype(texture))
+
+    function MineralOrganic(texture::SoilTexture{NF}, organic::NF) where {NF}
+        @assert 0 <= organic <= 1 "organic content must be between zero and one"
+        return new{NF}(texture, organic)
+    end
 end
 
 """
 Alias for `SoilVolume{T, MineralOrganic{T}}`
 """
 const MineralOrganicSoil{NF} = SoilVolume{NF, MineralOrganic{NF}}
+
+@inline organic_fraction(solid::MineralOrganic) = solid.organic
 
 """
     $TYPEDSIGNATURES

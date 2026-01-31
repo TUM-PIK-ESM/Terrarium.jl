@@ -1,6 +1,8 @@
 # Interface
 
 """
+    $TYPEDEF
+
 Base type for unsaturated hydraulic conductivity parameterizations.
 """
 abstract type AbstractUnsatK end
@@ -13,9 +15,11 @@ Return the soil water retention curve associated with the given unsaturated hydr
 function get_swrc end
 
 """
+    $TYPEDEF
+
 Base type for soil hydraulic properties and parameterization schemes.
 """
-abstract type AbstractSoilHydraulics{NF, UnsatK} end
+abstract type AbstractSoilHydraulics{NF, RC<:SWRC, UnsatK<:AbstractUnsatK} end
 
 """
     $SIGNATURES
@@ -32,12 +36,6 @@ soil water retention curve (SWRC), and volumetric fractions.
 """
 function hydraulic_conductivity end
 
-"""
-    $SIGNATURES
-
-Compute the natural porosity of the mineral soil constitutents, i.e. excluding organic material.
-"""
-function mineral_porosity end
 
 """
     $SIGNATURES
@@ -56,7 +54,7 @@ function field_capacity end
 # Hydraulics parameterizations
 
 """
-    ConstantHydraulics{NF} <: AbstractSoilHydraulics
+    $TYPEDEF
 
 Represents a simple case where soil hydraulic properties are given as constant values.
 This is mostly provided just for testing, although it may be useful in certain cases where direct
@@ -65,53 +63,62 @@ measurements of hydraulic properites are available.
 Properties:
 $TYPEDFIELDS
 """
-@kwdef struct ConstantHydraulics{NF, UnsatK} <: AbstractSoilHydraulics{NF, UnsatK}
+@kwdef struct ConstantSoilHydraulics{NF, RC, UnsatK} <: AbstractSoilHydraulics{NF, RC, UnsatK}
+    "Soil water retention curve"
+    swrc::RC
+    
     "Unsaturated hydraulic conductivity formulation; defaults to `cond_sat`"
-    cond_unsat::UnsatK
+    cond_unsat::UnsatK 
 
     "Hydraulic conductivity at saturation [m/s]"
     cond_sat::NF = 1e-5
-
-    "Prescribed soil porosity [-]"
-    porosity::NF = 0.49
 
     "Prescribed field capacity [-]"
     field_capacity::NF = 0.25
 
     "Prescribed wilting point [-]"
     wilting_point::NF = 0.05
+
+    # TODO: Remove once FreezeCurves.jl allows for generic type bounds
+    function ConstantSoilHydraulics(swrc::SWRC, cond_unsat::AbstractUnsatK, args::NF...) where {NF}
+        adapted_swrc = adapt(NumberFormatAdaptor{NF}(), ustrip(swrc))
+        return new{NF, typeof(adapted_swrc), typeof(cond_unsat)}(adapted_swrc, cond_unsat, args...)
+    end
 end
 
-ConstantHydraulics(::Type{NF}; cond_unsat=UnsatKLinear(NF), kwargs...) where {NF} = ConstantHydraulics{NF, typeof(cond_unsat)}(; cond_unsat, kwargs...)
+function ConstantSoilHydraulics(
+    ::Type{NF};
+    swrc = BrooksCorey(),
+    cond_unsat = UnsatKLinear(NF),
+    kwargs...
+) where {NF}
+    return ConstantSoilHydraulics(; swrc, cond_unsat, kwargs...)
+end
 
-@inline saturated_hydraulic_conductivity(hydraulics::ConstantHydraulics, args...) = hydraulics.cond_sat
+@inline saturated_hydraulic_conductivity(hydraulics::ConstantSoilHydraulics, args...) = hydraulics.cond_sat
 
-@inline mineral_porosity(hydraulics::ConstantHydraulics, args...) = hydraulics.porosity
+@inline wilting_point(hydraulics::ConstantSoilHydraulics, args...) = hydraulics.wilting_point
 
-@inline wilting_point(hydraulics::ConstantHydraulics, args...) = hydraulics.wilting_point
-
-@inline field_capacity(hydraulics::ConstantHydraulics, args...) = hydraulics.field_capacity
+@inline field_capacity(hydraulics::ConstantSoilHydraulics, args...) = hydraulics.field_capacity
 
 """
     $TYPEDEF
 
-SURFEX parameterization of mineral soil porosity (Masson et al. 2013).
+Soil hydraulics parameterization that includes the SURFEX (Masson et al. 2013) formulation of field capacity
+and wilting point as a function of soil texture.
 
 Properties:
 $TYPEDFIELDS
 """
-@kwdef struct SoilHydraulicsSURFEX{NF, UnsatK} <: AbstractSoilHydraulics{NF, UnsatK}
+@kwdef struct SoilHydraulicsSURFEX{NF, RC, UnsatK} <: AbstractSoilHydraulics{NF, RC, UnsatK}
+    "Soil water retention curve"
+    swrc::RC
+
     "Unsaturated hydraulic conductivity formulation; defaults to `cond_sat`"
     cond_unsat::UnsatK
 
     "Hydraulic conductivity at saturation [m/s]"
     cond_sat::NF = 1e-5
-
-    "Base porosity of soil without any sand [-]"
-    porosity::NF = 0.49
-
-    "Linear coeficient of porosity adjustment due to sand content [-]"
-    porosity_sand_coef::NF = -1.1e-3
     
     "Linear coeficient of wilting point adjustment due to clay content [-]"
     wilting_point_coef::NF = 37.13e-3
@@ -121,19 +128,25 @@ $TYPEDFIELDS
     
     "Exponent of field capacity adjustment due to clay content [-]"
     field_capacity_exp::NF = 0.35
+
+    # TODO: Remove once FreezeCurves.jl allows for generic type bounds
+    function SoilHydraulicsSURFEX(swrc::SWRC, cond_unsat::AbstractUnsatK, args::NF...) where {NF}
+        adapted_swrc = adapt(NumberFormatAdaptor{NF}(), ustrip(swrc))
+        return new{NF, typeof(adapted_swrc), typeof(cond_unsat)}(adapted_swrc, cond_unsat, args...)
+    end
 end
 
-SoilHydraulicsSURFEX(::Type{NF}; cond_unsat=UnsatKLinear(NF), kwargs...) where {NF} = SoilHydraulicsSURFEX{NF, typeof(cond_unsat)}(; cond_unsat, kwargs...)
+function SoilHydraulicsSURFEX(
+    ::Type{NF};
+    swrc = BrooksCorey(),
+    cond_unsat = UnsatKLinear(NF),
+    kwargs...
+) where {NF}
+    return SoilHydraulicsSURFEX(; swrc, cond_unsat, kwargs...)
+end
 
 # TODO: this is not quite correct, SURFEX uses a hydraulic conductivity function that decreases exponentially with depth
 @inline saturated_hydraulic_conductivity(hydraulics::SoilHydraulicsSURFEX, args...) = hydraulics.cond_sat
-
-@inline function mineral_porosity(hydraulics::SoilHydraulicsSURFEX, texture::SoilTexture)
-    p₀ = hydraulics.porosity
-    β_s = hydraulics.porosity_sand_coef
-    por = p₀ + β_s*texture.sand*100
-    return por
-end
 
 @inline function wilting_point(hydraulics::SoilHydraulicsSURFEX, texture::SoilTexture)
     β_w = hydraulics.wilting_point_coef
@@ -156,17 +169,14 @@ end
 Simple formulation of hydraulic conductivity as a linear function of the liquid water saturated fraction,
 i.e. `soil.water / (soil.water + soil.ice + soil.air)`.
 """
-struct UnsatKLinear{RetentionCurve<:SWRC} <: AbstractUnsatK
-    "Soil water retention curve"
-    swrc::RetentionCurve
-end
+struct UnsatKLinear{NF} <: AbstractUnsatK end
 
-UnsatKLinear(::Type{NF}; swrc=FreezeCurves.BrooksCorey()) where {NF} = UnsatKLinear(adapt(NumberFormatAdaptor{NF}(), ustrip(swrc)))
+UnsatKLinear(::Type{NF}) where {NF} = UnsatKLinear{NF}()
 
 function hydraulic_conductivity(
-    hydraulics::AbstractSoilHydraulics{NF, <:UnsatKLinear},
+    hydraulics::AbstractSoilHydraulics{NF, RC, UnsatKLinear{NF}},
     soil::SoilVolume
-) where {NF}
+) where {NF, RC}
     let fracs = volumetric_fractions(soil),
         θw = fracs.water, # unfrozen water content
         θsat = fracs.water + fracs.ice + fracs.air, # water + ice content at saturation (porosity)
@@ -184,21 +194,19 @@ volumetric fractions, assumed to include those of water, ice, and air.
 
 See van Genuchten (1980) and Westermann et al. (2023).
 """
-struct UnsatKVanGenuchten{NF, RetentionCurve<:FreezeCurves.VanGenuchten} <: AbstractUnsatK
+struct UnsatKVanGenuchten{NF} <: AbstractUnsatK
     "Exponential scaling factor for ice impedance"
     impedance::NF
-
-    "Van Genuchten soil water retention curve"
-    swrc::RetentionCurve
 end
 
-UnsatKVanGenuchten(::Type{NF}; impedance::NF = NF(7), swrc=FreezeCurves.VanGenuchten()) where {NF} = UnsatKVanGenuchten(NF(impedance), adapt(NumberFormatAdaptor{NF}(), ustrip(swrc)))
+UnsatKVanGenuchten(::Type{NF}; impedance::NF = NF(7)) where {NF} = UnsatKVanGenuchten(NF(impedance))
 
 function hydraulic_conductivity(
-    hydraulics::AbstractSoilHydraulics{NF, <:UnsatKVanGenuchten},
-    soil::SoilVolume,
+    hydraulics::AbstractSoilHydraulics{NF, <:VanGenuchten, UnsatKVanGenuchten{NF}},
+    soil::SoilVolume
 ) where {NF}
-    let n = hydraulics.cond_unsat.swrc.n, # van Genuchten parameter `n`
+    # TODO: The SWRC parameters will need to also be spatially varying at some point
+    let n = hydraulics.swrc.n, # van Genuchten parameter `n`
         fracs = volumetric_fractions(soil),
         θw = fracs.water, # unfrozen water content
         θwi = fracs.water + fracs.ice, # total water + ice content
