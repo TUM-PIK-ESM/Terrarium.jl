@@ -48,6 +48,12 @@ struct StateVariables{
     end
 end
 
+# Name getters (always type-stable, inlined constant propagation)
+@inline prognostic_names(state::StateVariables) = keys(getfield(state, :prognostic))
+@inline auxiliary_names(state::StateVariables) = keys(getfield(state, :auxiliary))
+@inline input_names(state::StateVariables) = keys(getfield(state, :inputs))
+@inline namespace_names(state::StateVariables) = keys(getfield(state, :namespaces))
+
 # Allow reconstruction from properties
 ConstructionBase.constructorof(::Type{StateVariables{NF}}) where {NF} = (args...) -> StateVariables(NF, args...)
 
@@ -182,6 +188,15 @@ Retrieves all `Field`s from `state` corresponding to auxiliary variables defined
 """
 @inline function auxiliary_fields(state, components::Union{AbstractModel, AbstractProcess}...)
     return get_fields(state, mapreduce(auxiliary_variables, tuplejoin, components))
+end
+
+"""
+    $TYPEDSIGNATURES
+
+Retrieves all `Field`s from `state` corresponding to closure variables defined on the given `components`.
+"""
+@inline function closure_fields(state, components::Union{AbstractModel, AbstractProcess}...)
+    return get_fields(state, mapreduce(closure_variables, tuplejoin, components))
 end
 
 """
@@ -364,108 +379,95 @@ end
 
 # Base overrides
 
-function Adapt.adapt_structure(to, vars::StateVariables{NF}) where {NF}
+function Adapt.adapt_structure(to, state::StateVariables{NF}) where {NF}
     return StateVariables(
         NF,
-        Adapt.adapt_structure(to, vars.prognostic),
-        Adapt.adapt_structure(to, vars.tendencies),
-        Adapt.adapt_structure(to, vars.auxiliary),
-        Adapt.adapt_structure(to, vars.inputs),
-        Adapt.adapt_structure(to, vars.namespaces),
-        Adapt.adapt_structure(to, vars.clock),
+        Adapt.adapt_structure(to, state.prognostic),
+        Adapt.adapt_structure(to, state.tendencies),
+        Adapt.adapt_structure(to, state.auxiliary),
+        Adapt.adapt_structure(to, state.inputs),
+        Adapt.adapt_structure(to, state.namespaces),
+        Adapt.adapt_structure(to, state.clock),
     )
 end
 
 Base.eltype(::StateVariables{NF}) where {NF} = NF
 
-Base.propertynames(
-    vars::StateVariables{NF, prognames, tendnames, auxnames, inputnames, nsnames}
-) where {NF, prognames, tendnames, auxnames, inputnames, nsnames} = (
-    prognames...,
-    auxnames...,
-    inputnames...,
-    nsnames...,
-    fieldnames(typeof(vars))...,
+Base.propertynames(state::StateVariables) = tuplejoin(
+    prognostic_names(state),
+    auxiliary_names(state),
+    input_names(state),
+    namespace_names(state),
+    fieldnames(typeof(state)),
 )
 
-function Base.getproperty(
-    vars::StateVariables{NF, prognames, tendnames, auxnames, inputnames, nsnames},
-    name::Symbol
-) where {NF, prognames, tendnames, auxnames, inputnames, nsnames}
+function Base.getproperty(state::StateVariables, name::Symbol)
     # forward getproperty calls to variable groups
-    if name ∈ prognames
-        return getproperty(getfield(vars, :prognostic), name)
-    elseif name ∈ auxnames
-        return getproperty(getfield(vars, :auxiliary), name)
-    elseif name ∈ inputnames
-        return getproperty(getfield(vars, :inputs), name)
-    elseif name ∈ nsnames
-        return getproperty(getfield(vars, :namespaces), name)
+    if name ∈ prognostic_names(state)
+        return getproperty(getfield(state, :prognostic), name)
+    elseif name ∈ auxiliary_names(state)
+        return getproperty(getfield(state, :auxiliary), name)
+    elseif name ∈ input_names(state)
+        return getproperty(getfield(state, :inputs), name)
+    elseif name ∈ namespace_names(state)
+        return getproperty(getfield(state, :namespaces), name)
     else
-        return getfield(vars, name)
+        return getfield(state, name)
     end
 end
 
 # helper function e.g. for usage with Enzyme 
-function Base.fill!(
-    state::StateVariables{NF, prognames, tendnames, auxnames, namespaces}, 
-    value
-) where {NF, prognames, tendnames, auxnames, namespaces}
-    
-    for progname in prognames
-        fill!(getproperty(state.prognostic, progname), value)
+function Base.fill!(state::StateVariables{NF}, value) where {NF}
+    for progname in prognostic_names(state)
+        fill!(getproperty(state.prognostic, progname), NF(value))
     end
-    for tendname in tendnames
-        fill!(getproperty(state.tendencies, tendname), value)
+    for tendname in keys(state.tendencies)
+        fill!(getproperty(state.tendencies, tendname), NF(value))
     end
-    for auxname in auxnames
-        fill!(getproperty(state.auxiliary, auxname), value)
+    for auxname in keys(state.auxiliary)
+        fill!(getproperty(state.auxiliary, auxname), NF(value))
     end
-    return nothing 
+    return nothing
 end
 
-function Base.copyto!(
-    state::StateVariables{NF, prognames, tendnames, auxnames, inputnames, nsnames}, 
-    other::StateVariables{NF, prognames, tendnames, auxnames, inputnames, nsnames}
-) where {NF, prognames, tendnames, auxnames, inputnames, nsnames}
-    
-    for progname in prognames
+function Base.copyto!(state::SV, other::SV) where {SV<:StateVariables}
+    for progname in prognostic_names(state)
         copyto!(getproperty(state.prognostic, progname), getproperty(other.prognostic, progname))
     end
-    for tendname in tendnames
+    for tendname in prognostic_names(state)
         copyto!(getproperty(state.tendencies, tendname), getproperty(other.tendencies, tendname))
     end
-    for auxname in auxnames
+    for auxname in auxiliary_names(state)
         copyto!(getproperty(state.auxiliary, auxname), getproperty(other.auxiliary, auxname))
     end
-    for inputname in inputnames
+    for inputname in input_names(state)
         copyto!(getproperty(state.inputs, inputname), getproperty(other.inputs, inputname))
     end
-    for nsname in nsnames
+    for nsname in namespace_names(state)
         copyto!(getproperty(state.namespaces, nsname), getproperty(other.namespaces, nsname))
     end
     set!(state.clock, other.clock)
     return nothing
 end
 
-function Base.summary(vars::StateVariables{NF}) where {NF}
-    clockstr = summary(vars.clock)
-    str = "StateVariables{$NF}(clock = $clockstr, prognostic = $(keys(vars.prognostic)), auxiliary = $(keys(vars.auxiliary)), inputs = $(keys(vars.inputs)), namespaces = $(keys(vars.namespaces)))"
+function Base.summary(state::StateVariables{NF}) where {NF}
+    clockstr = summary(state.clock)
+    str = "StateVariables{$NF}(clock = $clockstr, prognostic = $(keys(state.prognostic)), auxiliary = $(keys(state.auxiliary)), inputs = $(keys(state.inputs)), namespaces = $(keys(state.namespaces)))"
     return str
 end
 
-function Base.show(io::IO, vars::StateVariables{NF}) where {NF}
+function Base.show(io::IO, state::StateVariables{NF}) where {NF}
     println(io, "StateVariables{$NF}")
-    print(io, "├─ Clock: $(vars.clock)")
+    print(io, "├─ Clock: $(state.clock)")
     println(io)
     print(io, "├─ Prognostic: ")
-    show(io, vars.prognostic)
+    show(io, state.prognostic)
     println(io)
     print(io, "├─ Auxiliary: ")
-    show(io, vars.auxiliary)
+    show(io, state.auxiliary)
     println(io)
     print(io, "├─ Input: ")
-    show(io, vars.inputs)
+    show(io, state.inputs)
     println(io)
-    print(io, "├─ Namespaces: $(keys(vars.namespaces))")
+    print(io, "├─ Namespaces: $(keys(state.namespaces))")
 end

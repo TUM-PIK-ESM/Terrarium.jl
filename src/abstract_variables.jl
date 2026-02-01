@@ -53,13 +53,6 @@ are temperature-enthalpy and saturation-pressure relations.
 abstract type AbstractClosureRelation end
 
 """
-    closurevar(::AbstractClosureRelation)
-
-Return an `AuxiliaryVariable` corresponding to the closure variable defined by the given closure relation.
-"""
-function closurevar end
-
-"""
 Base type for state variable placeholder types.
 """
 abstract type AbstractVariable{name, VD, UT} end
@@ -261,7 +254,7 @@ function Variables(vars::Tuple{Vararg{Union{AbstractProcessVariable, Namespace}}
     # create closure variables and prepend to tuple of auxiliary variables;
     # note that the order matters here since Field constructors will be called in the order
     # that they appear in the var tuples.
-    closure_vars = map(var -> closurevar(var.closure), filter(hasclosure, prognostic_vars))
+    closure_vars = mapreduce(var -> variables(var.closure), tuplejoin, filter(hasclosure, prognostic_vars))
     auxiliary_vars = deduplicate(varinfo, tuplejoin(closure_vars, auxiliary_vars))
     # drop inputs with matching prognostic or auxiliary variables
     input_vars = filter(var -> var ∉ prognostic_vars && var ∉ auxiliary_vars, input_vars)
@@ -392,6 +385,17 @@ Helper method that selects only input variables declared on `obj`.
 """
 @inline input_variables(obj) = input_variables(variables(obj))
 @inline input_variables(vars::Tuple) = deduplicate_vars(Tuple(filter(var -> isa(var, InputVariable), vars)))
+
+"""
+Helper method that selects only closure (auxiliary) variables declared on `obj`.
+"""
+@inline closure_variables(obj) = closure_variables(variables(obj))
+@inline function closure_variables(vars::Tuple)
+    progvars = prognostic_variables(vars)
+    closure_vars = mapreduce(var -> variables(var.closure), tuplejoin, progvars)
+    return deduplicate_vars(closure_vars)
+end
+
 
 function Base.NamedTuple(vars::Tuple{Vararg{Union{AbstractVariable, Namespace}}})
     keys = map(varname, vars)
