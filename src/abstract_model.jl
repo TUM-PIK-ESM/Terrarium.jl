@@ -10,15 +10,15 @@ be able to operate on any given set of `Field`s and parameters representing the 
 a model at any point in time. Note that process types may also wrap/orchestrate one or
 more other process types.
 """
-abstract type AbstractProcess end
+abstract type AbstractProcess{NF} end
 
 """
     $TYPEDEF
 
-Base type for sets of coupled `AbstractProcess`es. Coupled process types aggregate
-together two or more sub-processes and define any 
+Base type for model components that are responsible for coupling two or more
+`AbstractProcess`es together.
 """
-abstract type AbstractCoupledProcesses <: AbstractProcess end
+abstract type AbstractComponent{NF} <: AbstractProcess{NF} end
 
 """
     $TYPEDEF
@@ -61,10 +61,10 @@ calling `initialize!(state, model, get_initializer(model))`.
 Initialize the model state variables using the corresponding `initializer`. This method only needs to be
 implemented if initialization routines are necessary in addition to direct field/variable initializers.
 
-    initialize!(state, grid, process::AbstractProcess)
+    initialize!(state, grid, process::AbstractProcess, args...)
 
-Initialize all state variables associated with the given `process` defined on `model`. This method is
-typically defined by the corresponding `AbstractProcess` types.
+Initialize all state variables associated with the given `process` on `grid`. Implementations of
+`AbstractProcess` may define additional `args` that correspond to different process coupling interfaces.
 """
 function initialize! end
 
@@ -75,8 +75,8 @@ Compute updates to all auxiliary variables based on the current prognostic state
 
     compute_auxiliary!(state, grid, process:AbstractProcess, args...)
 
-Compute all auxiliary state variables for the given `process` on `grid`.
-The number and type of `args...` are permitted to vary for different process interfaces.
+Compute all auxiliary state variables for the given `process` on `grid`. Implementations of
+`AbstractProcess` may define additional `args` that correspond to different process coupling interfaces.
 """
 function compute_auxiliary! end
 
@@ -88,8 +88,8 @@ This method should be called after `compute_tendencies!`.
 
     compute_tendencies!(state, grid, process:AbstractProcess, args...)
 
-Compute the tendencies of all prognostic state variables for the given `process` on `grid`.
-The number and type of `args...` are permitted to vary for different process interfaces.
+Compute the tendencies of all prognostic state variables for the given `process` on `grid`. Implementations of
+`AbstractProcess` may define additional `args` that correspond to different process coupling interfaces.
 """
 function compute_tendencies! end
 
@@ -97,8 +97,8 @@ function compute_tendencies! end
 
 # Allow variables to be defined on any type, defaulting to an empty tuple
 variables(::Any) = ()
-# For AbstractCoupledProcesses and AbstractModel types, default to collecting variables on all processes contained therein
-variables(obj::Union{AbstractCoupledProcesses, AbstractModel}) = mapreduce(variables, tuplejoin, processes(obj))
+# For AbstractComponent and AbstractModel types, default to collecting variables on all processes contained therein
+variables(obj::Union{AbstractComponent, AbstractModel}) = mapreduce(variables, tuplejoin, processes(obj))
 
 """
     $TYPEDSIGNATURES
@@ -106,7 +106,7 @@ variables(obj::Union{AbstractCoupledProcesses, AbstractModel}) = mapreduce(varia
 Return a tuple of `AbstractProces`es contained in the given model or coupled processes type.
 Note that this is a type-stable, `@generated` function that is compiled for each argument type.
 """
-@generated function processes(obj::Union{AbstractCoupledProcesses, AbstractModel})
+@generated function processes(obj::Union{AbstractComponent, AbstractModel})
     names = fieldnames(obj)
     types = fieldtypes(obj)
     procfields = filter(Tuple(zip(names, types))) do (name, type)
@@ -117,45 +117,46 @@ Note that this is a type-stable, `@generated` function that is compiled for each
     return :(tuple($(accessors...)))
 end
 
+initialize!(state, grid, process::AbstractProcess, args...) = nothing
+compute_auxiliary!(state, grid, process::AbstractProcess, args...) = nothing
+compute_tendencies!(state, grid, process::AbstractProcess, args...) = nothing
+
 """
     get_grid(model::AbstractModel)::AbstractLandGrid
 
-Return the spatial grid associated with this `model`.
+Return the spatial grid associated with the given `model`.
 """
 get_grid(model::AbstractModel) = model.grid
 
 """
     get_initializer(model::AbstractModel)::AbstractInitializer
 
-Returns the initializer associated with this `model`.
+Return the initializer associated with the given `model`.
 """
 get_initializer(model::AbstractModel) = model.initializer
 
 """
-    closure!(state, model::AbstractModel)
-    closure!(state, grid, process::AbstractProcess)
+    get_constants(model::AbstractModel)::PhysicalConstants
 
-Apply all closure relations defined for the given `model` or `process`.
+Return the `PhysicalConstants` associated with the given `model`.
 """
-closure!(state, grid, ::AbstractProcess) = nothing
-function closure!(state, model::AbstractModel)
-    for process in processes(model)
-        closure!(state, get_grid(model), process)
-    end
-end
+get_constants(model::AbstractModel) = model.constants
+
+"""
+    closure!(state, model::AbstractModel)
+
+Apply all closure relations defined for the given `model`.
+"""
+closure!(state, model::AbstractModel) = nothing
+closure!(state, grid, ::AbstractProcess, args...) = nothing
 
 """
     invclosure!(state, model::AbstractModel)
-    invclosure!(state, grid, process::AbstractProcess)
 
 Apply the inverse of all closure relations defined for the given `model`.
 """
-invclosure!(state, grid, ::AbstractProcess) = nothing
-function invclosure!(state, model::AbstractModel)
-    for process in processes(model)
-        invclosure!(state, get_grid(model), process)
-    end
-end
+invclosure!(state, model::AbstractModel) = nothing
+invclosure!(state, grid, ::AbstractProcess, args...) = nothing
 
 """
 Convenience constructor for all `AbstractModel` types that allows the `grid` to be passed
