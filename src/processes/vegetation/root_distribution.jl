@@ -25,18 +25,25 @@ end
 
 StaticExponentialRootDistribution(::Type{NF}; kwargs...) where {NF} = StaticExponentialRootDistribution{NF}(; kwargs...)
 
-variables(roots::StaticExponentialRootDistribution) = (
+"""
+    $TYPEDSIGNATURES
+
+Compute the continuous density function of the root distirbution as a function of depth `z`.
+"""
+@inline root_density(roots::StaticExponentialRootDistribution, z) = (p.a * exp(p.a * z) + p.b * exp(p.b * z)) / 2
+
+variables(rootdist::StaticExponentialRootDistribution) = (
     auxiliary(:root_fraction, XYZ(), root_fraction, roots), # Static root fraction defined as function
 )
 
 """
 Returns a `FunctionField` that lazily computes the static root distribution on a 1D column grid.
 """
-function root_fraction(roots::StaticExponentialRootDistribution{NF}, grid::AbstractColumnGrid, clock, fields) where {NF}
+function root_fraction(rootdist::StaticExponentialRootDistribution{NF}, grid::AbstractColumnGrid, clock, fields) where {NF}
     fgrid = get_field_grid(grid)
     # define pdf of root distribution as a continuous function of depth
-    ∂R∂z = FunctionField{Center, Center, Center}(fgrid, parameters=roots) do x, z, p
-        0.5 * (p.a * exp(p.a * z) + p.b * exp(p.b * z))
+    ∂R∂z = FunctionField{Center, Center, Center}(fgrid, parameters=rootdist) do x, z, params
+        root_density(params, z)
     end
     # scale by the layer thicknesses
     Δz = zspacings(fgrid, Center(), Center(), Center())
