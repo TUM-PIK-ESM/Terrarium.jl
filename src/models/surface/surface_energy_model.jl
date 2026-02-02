@@ -1,3 +1,12 @@
+"""
+    $TYPEDEF
+
+Simple model wrapper for the `SurfaceEnergyBalance` that couples it with
+an `AbstractAtmosphere` to provide meteorological inputs. This model type
+is mostly intened for testing but could also be used for simple energy
+balance calculations from prescribed meteorological and ground temperature
+conditions.
+"""
 struct SurfaceEnergyModel{
     NF,
     GridType<:AbstractLandGrid{NF},
@@ -31,14 +40,11 @@ function SurfaceEnergyModel(
     return SurfaceEnergyModel(grid, atmosphere, surface_energy_balance, constants, initializer)
 end
 
-processes(model::SurfaceEnergyModel) = (model.atmosphere, model.surface_energy_balance)
-
 function compute_auxiliary!(state, model::SurfaceEnergyModel)
     compute_auxiliary!(state, model, model.atmosphere)
     compute_auxiliary!(state, model, model.surface_energy_balance)
 end
 
 function compute_tendencies!(state, ::SurfaceEnergyModel)
-    compute_tendencies!(state, model, model.atmosphere)
     compute_tendencies!(state, model, model.surface_energy_balance)
 end

@@ -5,7 +5,7 @@ using Oceananigans: Field
 
 @testset "PrescribedAtmosphere" begin
     grid = ColumnGrid(ExponentialSpacing())
-    precip = TwoPhasePrecipitation()
+    precip = RainSnow()
     solar = TwoBandSolarRadiation()
     tracers = TracerGases(AmbientCO2())
     atm = PrescribedAtmosphere(; grid, precip, solar, T_air, humidity, pressure, windspeed, tracers)

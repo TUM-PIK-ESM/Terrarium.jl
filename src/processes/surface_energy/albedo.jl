@@ -29,6 +29,6 @@ end
 
 ConstantAlbedo(::Type{NF}; kwargs...) where {NF} = ConstantAlbedo{NF}(; kwargs...)
 
-@inline albedo(i, j, grid, state, albedo::ConstantAlbedo) = albedo.albedo
+@inline albedo(i, j, grid, fields, albedo::ConstantAlbedo) = albedo.albedo
 
-@inline emissivity(i, j, grid, state, albedo::ConstantAlbedo) = albedo.emissivity
+@inline emissivity(i, j, grid, fields, albedo::ConstantAlbedo) = albedo.emissivity

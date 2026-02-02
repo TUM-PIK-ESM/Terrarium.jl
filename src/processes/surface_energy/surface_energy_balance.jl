@@ -47,9 +47,11 @@ function compute_auxiliary!(
     state, grid,
     seb::SurfaceEnergyBalance,
     atmos::AbstractAtmosphere,
-    constants::PhysicalConstants
+    constants::PhysicalConstants,
+    evtr::Optional{AbstractEvapotranspiration} = nothing,
+    args...
 )
-    compute_surface_energy_fluxes!(state, grid, seb, atmos, constants)
+    compute_surface_energy_fluxes!(state, grid, seb, atmos, constants, evtr, args...)
 end
 
 """
@@ -62,15 +64,19 @@ function compute_surface_energy_fluxes!(
     seb::SurfaceEnergyBalance,
     atmos::AbstractAtmosphere,
     constants::PhysicalConstants,
+    evtr::Optional{AbstractEvapotranspiration} = nothing,
     args...
 )
-    launch!(grid, XY, compute_surface_energy_fluxes_kernel!, state, seb, atmos, constants, args...)
+    # Construct outputs as auxiliaries + skin temperature (which is prognostic)
+    out = (skin_temperature = state.skin_temperature, auxiliary_fields(state, seb)...)
+    fields = get_fields(state, seb, atmos, evtr)
+    launch!(grid, XY, compute_surface_energy_fluxes_kernel!, out, fields, seb, atmos, constants, evtr, args...)
 end
 
 # Kernels (fused)
 
 @kernel inbounds=true function compute_surface_energy_fluxes_kernel!(
-    state, grid,
+    out, grid, fields,
     seb::SurfaceEnergyBalance,
     atmos::AbstractAtmosphere,
     constants::PhysicalConstants,
@@ -79,11 +85,11 @@ end
     i, j = @index(Global, NTuple)
 
     # Compute fluxes based on current skin temperature
-    compute_surface_energy_fluxes!(state, i, j, grid, seb, atmos, constants, args...)
+    compute_surface_energy_fluxes!(out, i, j, grid, fields, seb, atmos, constants, args...)
 end
 
 @kernel inbounds=true function compute_surface_energy_fluxes_kernel!(
-    state, grid,
+    out, grid, fields,
     seb::SurfaceEnergyBalance{NF, <:ImplicitSkinTemperature},
     atmos::AbstractAtmosphere,
     constants::PhysicalConstants,
@@ -92,11 +98,11 @@ end
     i, j = @index(Global, NTuple)
 
     # Compute fluxes based on current skin temperature
-    compute_surface_energy_fluxes!(state, i, j, grid, seb, atmos, constants, args...)
+    compute_surface_energy_fluxes!(out, i, j, grid, fields, seb, atmos, constants, args...)
     # Update skin temperature
-    state.skin_temperature[i, j, 1] = compute_skin_temperature(i, j, grid, state, seb.skin_temperature)
+    out.skin_temperature[i, j, 1] = compute_skin_temperature(i, j, grid, fields, seb.skin_temperature)
     # Recompute fluxes from updated skin temperature
-    compute_surface_energy_fluxes!(state, i, j, grid, seb, atmos, constants, args...)
+    compute_surface_energy_fluxes!(out, i, j, grid, fields, seb, atmos, constants, args...)
 end
 
 # Kernel functions
@@ -104,23 +110,30 @@ end
 """
     $TYPEDSIGNATURES
 
-Mutating kernel function that computes the radiative and turbulent fluxes, as well as the ground heat flux, in
-a single kernel operation for efficiency.
+Fused kernel function that computes the radiative and turbulent fluxes, as well as the ground heat flux.
 """
 @propagate_inbounds function compute_surface_energy_fluxes!(
-    state, i, j, grid,
+    out, i, j, grid, fields,
     seb::SurfaceEnergyBalance,
     atmos::AbstractAtmosphere,
-    constants::PhysicalConstants
+    constants::PhysicalConstants,
+    evtr::Optional{AbstractEvapotranspiration} = nothing,
+    args...
 )
     # Compute radiative fluxes
-    radiative_fluxes = compute_surface_upwelling_radiation(i, j, grid, state, seb.radiative_fluxes, seb.skin_temperature, seb.albedo, atmos, constants)
-    state.surface_shortwave_up[i, j, 1] = radiative_fluxes.surface_shortwave_up[i, j]
-    state.surface_longwave_up[i, j, 1] = radiative_fluxes.surface_longwave_up[i, j]
-    state.surface_net_radiation[i, j, 1] = compute_surface_net_radiation(i, j, grid, state, seb.radiative_fluxes)
+    radiative_fluxes = compute_surface_upwelling_radiation(i, j, grid, fields, seb.radiative_fluxes, seb.skin_temperature, seb.albedo, atmos, constants)
+    out.surface_shortwave_up[i, j, 1] = radiative_fluxes.surface_shortwave_up
+    out.surface_longwave_up[i, j, 1] = radiative_fluxes.surface_longwave_up
+    out.surface_net_radiation[i, j, 1] = compute_surface_net_radiation(i, j, grid, fields, seb.radiative_fluxes, atmos)
     # Compute turbulent fluxes
-    state.sensible_heat_flux[i, j, 1] = compute_sensible_heat_flux(i, j, grid, state, seb.turbulent_fluxes, seb.skin_temperature, atmos, constants)
-    state.latent_heat_flux[i, j, 1] = compute_latent_heat_flux(i, j, grid, state, seb.turbulent_fluxes, seb.skin_temperature, atmos, constants)
+    out.sensible_heat_flux[i, j, 1] = compute_sensible_heat_flux(i, j, grid, fields, seb.turbulent_fluxes, seb.skin_temperature, atmos, constants)
+    if isnothing(evtr)
+        # Bare ground evaporation, no coupling with ET
+        out.latent_heat_flux[i, j, 1] = compute_latent_heat_flux(i, j, grid, fields, seb.turbulent_fluxes, seb.skin_temperature, atmos, constants)
+    else
+        # Coupling with surface hydrology ET scheme
+        out.latent_heat_flux[i, j, 1] = compute_latent_heat_flux(i, j, grid, fields, seb.turbulent_fluxes, evtr, constants)
+    end
     # Compute ground heat flux
-    state.ground_heat_flux[i, j, 1] = compute_ground_heat_flux(i, j, grid, state, seb.skin_temperature, seb.radiative_fluxes, seb.turbulent_fluxes)
+    out.ground_heat_flux[i, j, 1] = compute_ground_heat_flux(i, j, grid, fields, seb.skin_temperature, seb.radiative_fluxes, seb.turbulent_fluxes)
 end

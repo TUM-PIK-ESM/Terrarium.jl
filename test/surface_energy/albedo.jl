@@ -13,7 +13,7 @@ end
 
 @testset "PrescribedAlbedo" begin
     grid = ColumnGrid(CPU(), Float64, ExponentialSpacing())
-    albd = PrescribedAlbedo()
+    albd = PrescribedAlbedo(eltype(grid))
     state = (
         inputs = (
             albedo=set!(Field(grid, XY()), 0.4),

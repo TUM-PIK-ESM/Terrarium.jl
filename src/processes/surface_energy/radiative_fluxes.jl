@@ -22,16 +22,35 @@ variables(::PrescribedRadiativeFluxes) = (
     auxiliary(:surface_net_radiation, XY(), units=u"W/m^2", desc="Net outgoing (positive up) radiation"),
 )
 
-@inline function compute_auxiliary!(state, grid, rad::PrescribedRadiativeFluxes)
-    launch!(grid, XY, compute_radiative_fluxes_kernel!, state, rad)
+function compute_auxiliary!(
+    state, grid,
+    rad::PrescribedRadiativeFluxes,
+    seb::AbstractSurfaceEnergyBalance,
+    atmos::AbstractAtmosphere,
+    args...
+)
+    out = auxiliary_fields(state, rad)
+    fields = get_fields(state, rad, atmos; except = out)
+    launch!(grid, XY, compute_radiative_fluxes_kernel!, out, fields, rad, atmos)
 end
 
 ## Kernel functions
 
-@propagate_inbounds function compute_surface_upwelling_radiation(i, j, grid, state, rad::PrescribedRadiativeFluxes, args...)
-    surface_shortwave_up = state.surface_shortwave_up[i, j]
-    surface_longwave_up = state.surface_longwave_up[i, j]
+@propagate_inbounds function compute_surface_upwelling_radiation(i, j, grid, fields, rad::PrescribedRadiativeFluxes, args...)
+    surface_shortwave_up = fields.surface_shortwave_up[i, j]
+    surface_longwave_up = fields.surface_longwave_up[i, j]
     return (; surface_shortwave_up, surface_longwave_up)
+end
+
+@propagate_inbounds function compute_radiative_fluxes!(
+    out, i, j, grid, fields,
+    rad::PrescribedRadiativeFluxes,
+    atmos::AbstractAtmosphere,
+    args...
+)
+    # Compute and store net radiation
+    out.surface_net_radiation[i, j, 1] = compute_surface_net_radiation(i, j, grid, fields, rad, atmos)
+    return out
 end
 
 # Diagnosed radiative fluxes
@@ -76,21 +95,25 @@ variables(::DiagnosedRadiativeFluxes) = (
     auxiliary(:surface_net_radiation, XY(), units=u"W/m^2", desc="Net radiation budget"),
 )
 
-@inline function compute_auxiliary!(
+function compute_auxiliary!(
     state, grid,
     rad::DiagnosedRadiativeFluxes,
-    skinT::AbstractSkinTemperature,
-    albedo::AbstractAlbedo,
+    seb::AbstractSurfaceEnergyBalance,
     atmos::AbstractAtmosphere,
-    consts::PhysicalConstants
+    consts::PhysicalConstants,
+    args...
 )
-    launch!(grid, XY, compute_radiative_fluxes_kernel!, state, rad, skinT, albedo, atmos, consts)
+    (; skin_temperature, albedo) = seb
+    out = auxiliary_fields(state, rad)
+    fields = get_fields(state, rad, skin_temperature, albedo, atmos; except = out)
+    launch!(grid, XY, compute_radiative_fluxes_kernel!,
+            out, fields, rad, skin_temperature, albedo, atmos, consts)
 end
 
 ## Kernel functions
 
 @propagate_inbounds function compute_surface_upwelling_radiation(
-    i, j, grid, state,
+    i, j, grid, fields,
     rad::DiagnosedRadiativeFluxes,
     skinT::AbstractSkinTemperature,
     abd::AbstractAlbedo,
@@ -98,11 +121,11 @@ end
     consts::PhysicalConstants
 )
     # Get inputs
-    SW_down = shortwave_down(i, j, grid, state, atmos)
-    LW_down = longwave_down(i, j, grid, state, atmos)
-    Tsurf = skin_temperature(i, j, grid, state, skinT)
-    α = albedo(i, j, grid, state, abd)
-    ϵ = emissivity(i, j, grid, state, abd)
+    SW_down = shortwave_down(i, j, grid, fields, atmos)
+    LW_down = longwave_down(i, j, grid, fields, atmos)
+    Tsurf = skin_temperature(i, j, grid, fields, skinT)
+    α = albedo(i, j, grid, fields, abd)
+    ϵ = emissivity(i, j, grid, fields, abd)
 
     # Compute fluxes
     surface_shortwave_up = compute_shortwave_up(rad, SW_down, α)
@@ -110,6 +133,44 @@ end
     
     # Return fluxes as named tuple
     return (; surface_shortwave_up, surface_longwave_up)
+end
+
+@propagate_inbounds function compute_radiative_fluxes!(
+    out, i, j, grid, fields,
+    rad::DiagnosedRadiativeFluxes,
+    skinT::AbstractSkinTemperature,
+    abd::AbstractAlbedo,
+    atmos::AbstractAtmosphere,
+    consts::PhysicalConstants
+)
+    # Unpack outputs
+    (; surface_shortwave_up, surface_longwave_up) = out
+
+    # Compute and store outgoing fluxes
+    outgoing_fluxes = compute_surface_upwelling_radiation(i, j, grid, fields, rad, skinT, abd, atmos, consts)
+    surface_shortwave_up[i, j, 1] = outgoing_fluxes.surface_shortwave_up
+    surface_longwave_up[i, j, 1] = outgoing_fluxes.surface_longwave_up
+    
+    # Compute and store net radiation
+    fields = merge(fields, (; surface_shortwave_up, surface_longwave_up))
+    out.surface_net_radiation[i, j, 1] = compute_surface_net_radiation(i, j, grid, fields, rad, atmos)
+    return out
+end
+
+@propagate_inbounds function compute_surface_net_radiation(
+    i, j, grid, fields,
+    rad::AbstractRadiativeFluxes,
+    atmos::AbstractAtmosphere
+)
+    # Get inputs
+    SW_down = shortwave_down(i, j, grid, fields, atmos)
+    SW_up = shortwave_up(i, j, grid, fields, rad)
+    LW_down = longwave_down(i, j, grid, fields, atmos)
+    LW_up = longwave_up(i, j, grid, fields, rad)
+    
+    # Compute and return net radiation
+    surface_net_radiation = compute_surface_net_radiation(rad, SW_up, SW_down, LW_up, LW_down)
+    return surface_net_radiation
 end
 
 # Common implementations
@@ -131,30 +192,9 @@ Compute the net radiation budget given incoming and outgoing shortwave and longw
     return rad_net
 end
 
-## Kernel functions
-
-@propagate_inbounds function compute_surface_net_radiation(i, j, grid, state, rad::AbstractRadiativeFluxes)
-    # Get inputs
-    SW_down = shortwave_down(i, j, grid, state, atmos)
-    SW_up = shortwave_up(i, j, grid, state, rad)
-    LW_down = longwave_down(i, j, grid, state, atmos)
-    LW_up = longwave_up(i, j, grid, state, rad)
-    
-    # Compute and return net radiation
-    surface_net_radiation = compute_surface_net_radiation(rad, SW_up, SW_down, LW_up, LW_down)
-    return surface_net_radiation
-end
-
 ## Kernels
 
-@kernel inbounds=true function compute_radiative_fluxes_kernel!(state, grid, rad::AbstractRadiativeFluxes, args...)
+@kernel inbounds=true function compute_radiative_fluxes_kernel!(out, grid, fields, rad::AbstractRadiativeFluxes, args...)
     i, j = @index(Global, NTuple)
-
-    # Compute and store outgoing fluxes
-    outgoing_fluxes = compute_surface_upwelling_radiation(i, j, grid, state, rad, args...)
-    state.surface_shortwave_up[i, j, 1] = outgoing_fluxes.surface_shortwave_up[i, j]
-    state.surface_longwave_up[i, j, 1] = outgoing_fluxes.surface_longwave_up[i, j]
-    
-    # Comptue and store net radiation
-    state.surface_net_radiation[i, j, 1] = compute_surface_net_radiation(i, j, grid, state, rad)
+    compute_radiative_fluxes!(out, i, j, grid, fields, rad, args...)
 end

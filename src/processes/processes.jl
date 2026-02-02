@@ -16,7 +16,7 @@ include("vegetation/abstract_types.jl")
 
 export ConstantAerodynamicResistance
 include("atmosphere/aerodynamics.jl")
-export PrescribedAtmosphere, TwoPhasePrecipitation, LongShortWaveRadiation, TracerGas, TracerGases, AmbientCO2
+export PrescribedAtmosphere, RainSnow, LongShortWaveRadiation, TracerGas, TracerGases, AmbientCO2
 include("atmosphere/prescribed_atmosphere.jl")
 
 # Soil
