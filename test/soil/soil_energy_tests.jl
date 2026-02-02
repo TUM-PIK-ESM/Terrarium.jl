@@ -104,7 +104,7 @@ end
         push!(ts, current_time(integrator))
     end
 
-    soil_thermal_props = model.energy.thermal_properties
+    soil_thermal_props = soil.energy.thermal_properties
     k = soil_thermal_props.cond.mineral
     c = soil_thermal_props.heatcap.mineral
     α = k / c
