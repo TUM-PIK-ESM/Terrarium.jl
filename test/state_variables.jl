@@ -32,7 +32,9 @@ module StateVariablesTestTypes
 
     struct TestClosure <: Terrarium.AbstractClosureRelation end
 
-    Terrarium.closurevar(::TestClosure) = auxiliary(:closurevar, XYZ())
+    Terrarium.variables(::TestClosure) = (
+        auxiliary(:closurevar, XYZ()),
+    )
 
     Terrarium.variables(model::TestModel) = (
         prognostic(:progvar3D, XYZ()),

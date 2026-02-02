@@ -73,7 +73,7 @@ function initialize! end
 
 Compute updates to all auxiliary variables based on the current prognostic state of the `model`.
 
-    compute_auxiliary!(state, grid, process:AbstractProcess, args...)
+    compute_auxiliary!(state, grid, process::AbstractProcess, args...)
 
 Compute all auxiliary state variables for the given `process` on `grid`. Implementations of
 `AbstractProcess` may define additional `args` that correspond to different process coupling interfaces.
@@ -84,9 +84,9 @@ function compute_auxiliary! end
     compute_tendencies!(state, model::AbstractModel)
 
 Compute tendencies for all prognostic state variables for `model` stored in the given `state`.
-This method should be called after `compute_tendencies!`.
+This method should be called after `compute_auxiliary!`.
 
-    compute_tendencies!(state, grid, process:AbstractProcess, args...)
+    compute_tendencies!(state, grid, process::AbstractProcess, args...)
 
 Compute the tendencies of all prognostic state variables for the given `process` on `grid`. Implementations of
 `AbstractProcess` may define additional `args` that correspond to different process coupling interfaces.

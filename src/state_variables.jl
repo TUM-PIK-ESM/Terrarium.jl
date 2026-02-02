@@ -175,10 +175,33 @@ end
 """
     $TYPEDSIGNATURES
 
+Retrieves all non-tendency `Field`s from `state` defined on the given `components`.
+"""
+@inline function get_fields(state, components::Union{AbstractModel, AbstractProcess}...; except=(;))
+    vars = mapreduce(tuplejoin, components) do component
+        allvars = variables(component)
+        closurevars = closure_variables(component)
+        deduplicate_vars(tuplejoin(allvars, closurevars))
+    end
+    return ntdiff(get_fields(state, vars), except)
+end
+
+"""
+    $TYPEDSIGNATURES
+
 Retrieves all `Field`s from `state` corresponding to prognostic variables defined on the given `components`.
 """
 @inline function prognostic_fields(state, components::Union{AbstractModel, AbstractProcess}...)
     return get_fields(state, mapreduce(prognostic_variables, tuplejoin, components))
+end
+
+"""
+    $TYPEDSIGNATURES
+
+Retrieves all `Field`s from `state` corresponding to tendencies defined on the given `components`.
+"""
+@inline function tendency_fields(state, components::Union{AbstractModel, AbstractProcess}...)
+    return get_fields(state.tendencies, mapreduce(prognostic_variables, tuplejoin, components))
 end
 
 """
