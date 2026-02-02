@@ -1,19 +1,21 @@
+# Prescribed turbulent fluxes
+
 """
     $TYPEDEF
 
 Represents the simplest case where the turbulent (sensible and latent) heat fluxes are prescribed
 via input variables.
 """
-struct PrescribedTurbulentFluxes <: AbstractTurbulentFluxes end
+struct PrescribedTurbulentFluxes{NF} <: AbstractTurbulentFluxes{NF} end
+
+PrescribedTurbulentFluxes(::Type{NF}) where {NF} = PrescribedTurbulentFluxes{NF}()
 
 variables(::PrescribedTurbulentFluxes) = (
     input(:sensible_heat_flux, XY(), units=u"W/m^2", desc="Sensible heat flux at the surface [W m⁻²]"),
     input(:latent_heat_flux, XY(), units=u"W/m^2", desc="Latent heat flux at the surface [W m⁻²]")
 )
 
-sensible_heat_flux(i, j, grid, state, ::PrescribedTurbulentFluxes) = state.sensible_heat_flux[i, j]
-
-latent_heat_flux(i, j, grid, state, ::PrescribedTurbulentFluxes) = state.latent_heat_flux[i, j]
+# Diagnosed turbulent fluxes
 
 """
     $TYPEDEF
@@ -21,19 +23,46 @@ latent_heat_flux(i, j, grid, state, ::PrescribedTurbulentFluxes) = state.latent_
 Represents the standard case where the turbulent (sensible and latent) heat fluxes are diagnosed
 from atmosphere and soil conditions.
 """
-struct DiagnosedTurbulentFluxes{NF} <: AbstractTurbulentFluxes end
+struct DiagnosedTurbulentFluxes{NF} <: AbstractTurbulentFluxes{NF} end
 
 DiagnosedTurbulentFluxes(::Type{NF}) where {NF} = DiagnosedTurbulentFluxes{NF}()
 
-# Process methods
+"""
+    $TYPEDSIGNATURES
+
+Compute the sensible heat flux as a function of the bulk aerodynamic temperature gradient `Q_T` [K m/s]
+and the density `ρₐ` [kg/m³] and specific heat capacity `cₐ` [J/kg K] of air.
+"""
+function compute_sensible_heat_flux(::DiagnosedTurbulentFluxes, Q_T, ρₐ, cₐ)
+    Hₛ = cₐ * ρₐ * Q_T
+    return Hₛ
+end
+
+"""
+    $TYPEDSIGNATURES
+
+Compute the latent heat flux as a function of the humidity flux `Q_h` [m/s], the density `ρₐ` [kg/m³] of air,
+and the specific latent heat of fusion `Lsl` [J/kg].
+"""
+function compute_latent_heat_flux(::DiagnosedTurbulentFluxes, Q_h, ρₐ, Lsl)
+    Hₗ = Lsl * ρₐ * Q_h
+    return Hₗ
+end
+
+## Process methods
 
 variables(::DiagnosedTurbulentFluxes) = (
     auxiliary(:sensible_heat_flux, XY(), units=u"W/m^2", desc="Sensible heat flux at the surface [W m⁻²]"),
     auxiliary(:latent_heat_flux, XY(), units=u"W/m^2", desc="Latent heat flux at the surface [W m⁻²]"),
 )
 
-function compute_auxiliary!(state, model, tur::DiagnosedTurbulentFluxes)
-    (; grid, surface_energy_balance, atmosphere, constants) = model
+function compute_auxiliary!(
+    state, grid,
+    tur::DiagnosedTurbulentFluxes,
+    skinT::AbstractSkinTemperature,
+    atmos::AbstractAtmosphere,
+    constants::PhysicalConstants
+)
     launch!(grid, XY, compute_turbulent_fluxes_kernel!, state,
             tur, surface_energy_balance.skin_temperature, atmosphere, constants)
 end
@@ -49,9 +78,9 @@ end
 )
     i, j = @index(Global, NTuple)
     # compute sensible heat flux
-    state.sensible_heat_flux[i, j, 1] = sensible_heat_flux(i, j, grid, state, tur, skinT, atmos, constants)
+    state.sensible_heat_flux[i, j, 1] = compute_sensible_heat_flux(i, j, grid, state, tur, skinT, atmos, constants)
     # compute latent heat flux
-    state.latent_heat_flux[i, j, 1] = latent_heat_flux(i, j, grid, state, tur, skinT, atmos, constants)
+    state.latent_heat_flux[i, j, 1] = compute_latent_heat_flux(i, j, grid, state, tur, skinT, atmos, constants)
 end
 
 @kernel function compute_turbulent_fluxes_kernel!(
@@ -64,14 +93,20 @@ end
 )
     i, j = @index(Global, NTuple)
     # compute sensible heat flux
-    state.sensible_heat_flux[i, j, 1] = sensible_heat_flux(i, j, grid, state, tur, skinT, atmos, constants)
+    state.sensible_heat_flux[i, j, 1] = compute_sensible_heat_flux(i, j, grid, state, tur, skinT, atmos, constants)
     # compute latent heat flux
-    state.latent_heat_flux[i, j, 1] = latent_heat_flux(i, j, grid, state, tur, evtr)
+    state.latent_heat_flux[i, j, 1] = compute_latent_heat_flux(i, j, grid, state, tur, evtr)
 end
 
-# Kernel functions
 
-@inline function sensible_heat_flux(
+## Kernel functions
+
+"""
+    $TYPEDSIGNATURES
+
+Compute the sensible heat flux at `i, j` based on the current skin temperature and atmospheric conditions.
+"""
+@inline function compute_sensible_heat_flux(
     i, j, grid, state,
     tur::DiagnosedTurbulentFluxes,
     skinT::AbstractSkinTemperature,
@@ -81,44 +116,58 @@ end
     let ρₐ = constants.ρₐ, # density of air
         cₐ = constants.cₐ, # specific heat capacity of air
         rₐ = aerodynamic_resistance(i, j, grid, state, atmos), # aerodynamic resistance
-        Ts = skin_temperature(i, j, grid, state, skinT), # skin temperature
-        Tair = air_temperature(i, j, grid, state, atmos); # air temperature
+        Tₛ = skin_temperature(i, j, grid, state, skinT), # skin temperature
+        Tₐ = air_temperature(i, j, grid, state, atmos), # air temperature
+        Q_T = (Tₛ - Tₐ) / rₐ; # bulk aerodynamic temperature-gradient
         # Calculate sensible heat flux (positive upwards)
-        Hₛ = -ρₐ * cₐ / rₐ * (Tair - Ts)
+        Hₛ = compute_sensible_heat_flux(tur, Q_T, ρₐ, cₐ)
         return Hₛ
     end
 end
 
-# Standalone latent heat flux
-@inline function latent_heat_flux(
+"""
+    $TYPEDSIGNATURES
+
+Compute the bare ground latent heat flux at `i, j` based on the current skin temperature
+and atmospheric conditions. This imlementation assumes that evaporation is the only contributor
+to the latent heat flux.
+"""
+@inline function compute_latent_heat_flux(
     i, j, grid, state,
     ::DiagnosedTurbulentFluxes,
     skinT::AbstractSkinTemperature,
     atmos::AbstractAtmosphere,
     constants::PhysicalConstants
 )
-    let L = constants.Llg, # specific latent heat of vaporization of water
+    let L  = constants.Llg, # specific latent heat of vaporization of water
         ρₐ = constants.ρₐ, # density of air
-        Ts = skin_temperature(i, j, grid, state, skinT),
+        Tₛ = skin_temperature(i, j, grid, state, skinT),
         rₐ = aerodynamic_resistance(i, j, grid, state, atmos), # aerodynamic resistance
-        Δq = compute_humidity_vpd(i, j, grid, state, atmos, constants, Ts);
+        Δq = compute_humidity_vpd(i, j, grid, state, atmos, constants, Tₛ),
+        Q_h  = Δq / rₐ; # humidity flux
         # Calculate latent heat flux (positive upwards)
-        Hₗ = L * ρₐ * Δq / rₐ
+        Hₗ = compute_latent_heat_flux(tur, Q_h, ρₐ, L)
         return Hₗ
     end
 end
 
-# Latent heat flux based on ET
-@inline function latent_heat_flux(
+"""
+    $TYPEDSIGNATURES
+
+Compute the latent heat flux at `i, j` based on the given evapotranspiration scheme.
+This implementation derives the latent heat flux from the [`surface_humidity_flux`](@ref)
+defined by `evtr` which is assumed to be already computed.
+"""
+@inline function compute_latent_heat_flux(
     i, j, grid, state,
     ::DiagnosedTurbulentFluxes,
     evtr::AbstractEvapotranspiration
 )
     let L = constants.Llg, # specific latent heat of vaporization of water
         ρₐ = constants.ρₐ, # density of air
-        Qh = surface_humidity_flux(i, j, grid, state, evtr);
+        Q_h = surface_humidity_flux(i, j, grid, state, evtr);  # humidity flux
         # Calculate latent heat flux (positive upwards)
-        Hₗ = L * ρₐ * Qh
+        Hₗ = compute_latent_heat_flux(tur, Q_h, ρₐ, L)
         return Hₗ
     end
 end
