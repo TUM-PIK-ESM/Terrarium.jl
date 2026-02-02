@@ -280,7 +280,7 @@ end
 
 Removes duplicate variables from the given tuple of `vars` by name.
 """
-@generated function deduplicate_vars(vars::Tuple{Vararg{<:AbstractVariable}})
+@generated function deduplicate_vars(vars::Tuple{Vararg{AbstractVariable}})
     names = map(varname, vars.parameters)
     unique_idx = unique(i -> names[i], eachindex(vars.parameters))
     accessors = map(i -> :(vars[$i]), unique_idx)
