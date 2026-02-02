@@ -117,30 +117,29 @@ Note that this is a type-stable, `@generated` function that is compiled for each
     return :(tuple($(accessors...)))
 end
 
+# Fallback dispatch for initialize!
 initialize!(state, grid, process::AbstractProcess, args...) = nothing
-compute_auxiliary!(state, grid, process::AbstractProcess, args...) = nothing
-compute_tendencies!(state, grid, process::AbstractProcess, args...) = nothing
 
 """
     get_grid(model::AbstractModel)::AbstractLandGrid
 
 Return the spatial grid associated with the given `model`.
 """
-get_grid(model::AbstractModel) = model.grid
+@inline get_grid(model::AbstractModel) = model.grid
 
 """
     get_initializer(model::AbstractModel)::AbstractInitializer
 
 Return the initializer associated with the given `model`.
 """
-get_initializer(model::AbstractModel) = model.initializer
+@inline get_initializer(model::AbstractModel) = model.initializer
 
 """
     get_constants(model::AbstractModel)::PhysicalConstants
 
 Return the `PhysicalConstants` associated with the given `model`.
 """
-get_constants(model::AbstractModel) = model.constants
+@inline get_constants(model::AbstractModel) = model.constants
 
 """
     closure!(state, model::AbstractModel)
