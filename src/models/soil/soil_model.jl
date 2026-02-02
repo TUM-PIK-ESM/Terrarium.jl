@@ -28,6 +28,13 @@ end
 
 # Model interface methods
 
+function initialize!(state, model::SoilModel)
+    # run model/field initializers
+    initialize!(state, model, model.initializer)
+    # run process initializers
+    initialize!(state, model.grid, model.soil, model.constants)
+end
+
 function compute_auxiliary!(state, model::SoilModel)
     compute_auxiliary!(state, model.grid, model.soil, model.constants)
     return nothing
@@ -46,13 +53,4 @@ end
 
 function invclosure!(state, model::SoilModel)
     invclosure!(state, model.grid, model.soil, model.constants)
-end
-
-# Initialization
-
-function initialize!(state, model::SoilModel)
-    # run model/field initializers
-    initialize!(state, model, model.initializer)
-    # run process initializers
-    initialize!(state, model.grid, model.soil, model.constants)
 end
