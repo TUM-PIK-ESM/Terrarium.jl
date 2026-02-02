@@ -9,7 +9,7 @@ Authors: Maha Badri
 Properties:
 $TYPEDFIELDS
 """
-@kwdef struct PALADYNVegetationDynamics{NF} <: AbstractVegetationDynamics
+@kwdef struct PALADYNVegetationDynamics{NF} <: AbstractVegetationDynamics{NF}
     "Vegetation seed fraction [-]"
     ν_seed::NF = 0.001
 

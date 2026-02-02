@@ -81,7 +81,7 @@ We start by defining a `struct` for our model that inherits from `AbstractModel`
 """
 
 # ╔═╡ 407786db-607f-4508-b697-fe75b3ce0b25
-@kwdef struct LinearDynamics{NF} <: Terrarium.AbstractProcess
+@kwdef struct LinearDynamics{NF} <: Terrarium.AbstractProcess{NF}
 	"Exponential growth rate"
 	alpha::NF = 0.01
 

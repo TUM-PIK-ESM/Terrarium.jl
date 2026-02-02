@@ -48,7 +48,7 @@ struct PrescribedAtmosphere{
     IncomingRad<:AbstractIncomingRadiation,
     Aerodynamics<:AbstractAerodynamics,
     Tracers<:NamedTuple{tracernames,<:Tuple{Vararg{TracerGas}}}
-} <: AbstractAtmosphere{Precip, IncomingRad, Humidity, Aerodynamics}
+} <: AbstractAtmosphere{NF, Precip, IncomingRad, Humidity, Aerodynamics}
     "Surface-relative altitude in meters at which the atmospheric forcings are assumed to be applied"
     altitude::NF
 
@@ -96,9 +96,9 @@ variables(atmos::PrescribedAtmosphere{NF}) where {NF} = (
     tuplejoin(map(variables, atmos.tracers)...)...,
 )
 
-@inline compute_auxiliary!(state, model, atmos::PrescribedAtmosphere) = nothing
+@inline compute_auxiliary!(state, grid, atmos::PrescribedAtmosphere) = nothing
 
-@inline compute_tendencies!(state, model, atmos::PrescribedAtmosphere) = nothing
+@inline compute_tendencies!(state, grid, atmos::PrescribedAtmosphere) = nothing
 
 """
     aerodynamic_resistance(i, j, grid, state, atmos::PrescribedAtmosphere)
@@ -203,18 +203,18 @@ variables(::LongShortWaveRadiation) = (
 )
 
 """
-    shortwave_in(i, j, grid, state, ::AbstractAtmosphere{PR, <:LongShortWaveRadiation})
+    shortwave_down(i, j, grid, state, ::AbstractAtmosphere{PR, <:LongShortWaveRadiation})
 
 Retrieve or compute the incoming/downwelling shortwave radiation at the current time step.
 """
-shortwave_in(i, j, grid, state, ::AbstractAtmosphere{PR, <:LongShortWaveRadiation}) where {PR} = state.surface_shortwave_down[i, j]
+shortwave_down(i, j, grid, state, ::AbstractAtmosphere{PR, <:LongShortWaveRadiation}) where {PR} = state.surface_shortwave_down[i, j]
 
 """
-    longwave_in(i, j, grid, state, ::AbstractAtmosphere{PR, <:LongShortWaveRadiation})
+    longwave_down(i, j, grid, state, ::AbstractAtmosphere{PR, <:LongShortWaveRadiation})
 
 Retrieve or compute the incoming/downwelling longwave radiation at the current time step.
 """
-longwave_in(i, j, grid, state, ::AbstractAtmosphere{PR, <:LongShortWaveRadiation}) where {PR} = state.surface_longwave_down[i, j]
+longwave_down(i, j, grid, state, ::AbstractAtmosphere{PR, <:LongShortWaveRadiation}) where {PR} = state.surface_longwave_down[i, j]
 
 """
     daytime_length(i, j, grid, state, ::AbstractAtmosphere{PR, <:LongShortWaveRadiation})

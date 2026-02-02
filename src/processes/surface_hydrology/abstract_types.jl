@@ -3,7 +3,7 @@
 """
 Base type for canopy hydrology processes.
 """
-abstract type AbstractCanopyHydrology <: AbstractProcess end
+abstract type AbstractCanopyHydrology{NF} <: AbstractProcess{NF} end
 
 """
     canopy_water(i, j, grid, state, ::AbstractCanopyHydrology)
@@ -29,7 +29,7 @@ function ground_precipitation end
 """
 Base type for evapotranspiration processes.
 """
-abstract type AbstractEvapotranspiration <: AbstractProcess end
+abstract type AbstractEvapotranspiration{NF} <: AbstractProcess{NF} end
 
 """
     surface_humidity_flux(i, j, grid, state, ::AbstractEvapotranspiration)
@@ -41,12 +41,12 @@ function surface_humidity_flux end
 """
 Base type for surface runoff processes.
 """
-abstract type AbstractSurfaceRunoff <: AbstractProcess end
+abstract type AbstractSurfaceRunoff{NF} <: AbstractProcess{NF} end
 
 """
 Base type for coupled surface hydrology processes.
 """
-abstract type AbstractSurfaceHydrology <: AbstractProcess end
+abstract type AbstractSurfaceHydrology{NF} <: AbstractProcess{NF} end
 
 # Parameterizations
 

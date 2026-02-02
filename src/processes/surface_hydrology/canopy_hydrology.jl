@@ -6,7 +6,7 @@ Canopy interception and storage implementation following PALADYN (Willeit 2016) 
 Properties:
 $FIELDS
 """
-@kwdef struct PALADYNCanopyHydrology{NF} <: AbstractCanopyHydrology
+@kwdef struct PALADYNCanopyHydrology{NF} <: AbstractCanopyHydrology{NF}
     "Canopy water interception factor for tree PFTs"
     α_int::NF = 0.2 
 

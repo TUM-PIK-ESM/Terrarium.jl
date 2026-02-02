@@ -9,7 +9,7 @@ Authors: Maha Badri and Matteo Willeit
 Properties:
 $TYPEDFIELDS
 """
-@kwdef struct PALADYNPhenology{NF} <: AbstractPhenology
+@kwdef struct PALADYNPhenology{NF} <: AbstractPhenology{NF}
     # TODO add phenology parameters
 end
 

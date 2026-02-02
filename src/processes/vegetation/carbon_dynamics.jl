@@ -9,7 +9,7 @@ Authors: Maha Badri
 Properties:
 $TYPEDFIELDS
 """
-@kwdef struct PALADYNCarbonDynamics{NF} <: AbstractVegetationCarbonDynamics
+@kwdef struct PALADYNCarbonDynamics{NF} <: AbstractVegetationCarbonDynamics{NF}
     "Specific leaf area (Kattge et al. 2011) [m²/kgC], PFT specific"
     SLA::NF = 10.0 # Value for Needleleaf tree PFT 
     

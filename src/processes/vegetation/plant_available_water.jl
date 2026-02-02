@@ -14,7 +14,7 @@ is the "field capacity", and ``\\theta_{\\text{wp},i}`` is the "wilting point". 
 Properties:
 $TYPEDFIELDS
 """
-@kwdef struct FieldCapacityLimitedPAW{NF} <: AbstractPlantAvailableWater end
+@kwdef struct FieldCapacityLimitedPAW{NF} <: AbstractPlantAvailableWater{NF} end
 
 FieldCapacityLimitedPAW(::Type{NF} = Float32) where {NF} = FieldCapacityLimitedPAW{NF}()
 

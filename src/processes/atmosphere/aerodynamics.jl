@@ -3,7 +3,7 @@
 
 Dummy implementation of aerodynamics that simply returns constant values for all drag coefficients.
 """
-@kwdef struct ConstantAerodynamics{NF} <: AbstractAerodynamics
+@kwdef struct ConstantAerodynamics{NF} <: AbstractAerodynamics{NF}
     "Drag coefficient for heat transfer"
     Cₕ::NF = 1.2e-3
 end

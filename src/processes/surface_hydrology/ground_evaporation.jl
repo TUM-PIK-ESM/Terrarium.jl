@@ -9,7 +9,7 @@ E = \\beta \\frac{\\Delta q}{r_a}
 where `Δq` is the vapor pressure deficit in terms of specific humidity, `rₐ` is aerodynamic resistance,
 and `β` is an evaporation limiting factor.
 """
-struct GroundEvaporation{NF, GR<:AbstractGroundEvaporationResistanceFactor} <: AbstractEvapotranspiration
+struct GroundEvaporation{NF, GR<:AbstractGroundEvaporationResistanceFactor} <: AbstractEvapotranspiration{NF}
     "Parameterization for ground resistance to evaporation/sublimation"
     ground_resistance::GR
 end

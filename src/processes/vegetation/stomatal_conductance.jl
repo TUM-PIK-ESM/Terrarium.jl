@@ -8,7 +8,7 @@ Authors: Maha Badri and Matteo Willeit
 Properties:
 $TYPEDFIELDS
 """
-@kwdef struct MedlynStomatalConductance{NF} <: AbstractStomatalConductance
+@kwdef struct MedlynStomatalConductance{NF} <: AbstractStomatalConductance{NF}
     "Parameter in optimal stomatal conductance formulation representing the quasi-linear
     relationship between conductance and net assimilation, Lin et al. 2015 [-], PFT specific"
     g₁::NF = 2.3 # TODO: value for Needleleaf tree PFT

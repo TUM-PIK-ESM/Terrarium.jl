@@ -19,11 +19,11 @@ using Flatten: flatten, flattenable, reconstruct
 using KernelAbstractions: @kernel, @index
 
 # Oceananigans numerics
-using Oceananigans.AbstractOperations: Average, Integral, ConditionalOperation
+using Oceananigans.AbstractOperations: Average, Integral, ConditionalOperation, KernelFunctionOperation
 using Oceananigans.Architectures: Architectures, AbstractArchitecture, CPU, GPU, architecture, on_architecture, array_type
 using Oceananigans.Fields: Field, FunctionField, AbstractField, Center, Face, set!, compute!, interior, location
 using Oceananigans.Forcings: Forcing, ContinuousForcing, DiscreteForcing
-using Oceananigans.Grids: Periodic, Flat, Bounded, xnodes, ynodes, znodes, zspacings
+using Oceananigans.Grids: Periodic, Flat, Bounded, znodes, znode, zspacings
 using Oceananigans.Operators: ∂zᵃᵃᶜ, ∂zᵃᵃᶠ, ℑzᵃᵃᶠ, Δzᵃᵃᶜ
 using Oceananigans.OutputReaders: FieldTimeSeries
 using Oceananigans.Simulations: Simulation, run!, timestepper
@@ -65,7 +65,7 @@ const BCType = AbstractBoundaryConditionClassification
 # Re-export selected types and methods from Oceananigans
 export Simulation, Field, FieldTimeSeries, CPU, GPU, Clock, Center, Face
 export Value, Flux, Gradient, ValueBoundaryCondition, GradientBoundaryCondition, FluxBoundaryCondition, NoFluxBoundaryCondition
-export run!, time_step!, set!, compute!, interior, architecture, on_architecture, xnodes, ynodes, znodes, zspacings, location
+export run!, time_step!, set!, compute!, interior, architecture, on_architecture, znodes, zspacings, location
 
 # Re-export selected types from FreezeCurves
 export SFCC, SWRC, FreeWater, VanGenuchten, BrooksCorey

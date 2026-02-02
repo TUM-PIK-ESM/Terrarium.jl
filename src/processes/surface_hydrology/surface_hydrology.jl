@@ -3,7 +3,7 @@ struct SurfaceHydrology{
     CanopyHydrology<:AbstractCanopyHydrology,
     Evapotranspiration<:AbstractEvapotranspiration,
     SurfaceRunoff<:AbstractSurfaceRunoff,
-} <: AbstractSurfaceHydrology
+} <: AbstractSurfaceHydrology{NF}
     "Canopy hydrology scheme"
     canopy_hydrology::CanopyHydrology
 

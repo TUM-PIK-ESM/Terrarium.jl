@@ -9,7 +9,7 @@ Authors: Maha Badri and Matteo Willeit
 Properties:
 $TYPEDFIELDS
 """
-@kwdef struct PALADYNAutotrophicRespiration{NF} <: AbstractAutotrophicRespiration
+@kwdef struct PALADYNAutotrophicRespiration{NF} <: AbstractAutotrophicRespiration{NF}
     # TODO check physical meaning of this parameter + add unit
     "Sapwood parameter"
     cn_sapwood::NF = 330.0

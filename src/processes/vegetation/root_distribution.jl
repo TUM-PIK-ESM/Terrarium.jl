@@ -15,7 +15,7 @@ with units m⁻¹. The resulting CDF of this distribution determines the root di
 Properties:
 $FIELDS
 """
-@kwdef struct StaticExponentialRootDistribution{NF} <: AbstractRootDistribution
+@kwdef struct StaticExponentialRootDistribution{NF} <: AbstractRootDistribution{NF}
     "First empirical rate parameter for root distribution"
     a::NF = 7.0 # TODO PFT-specific parameter (here needleleaf tree)
     

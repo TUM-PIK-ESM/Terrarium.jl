@@ -14,7 +14,7 @@ T_c &= \\frac{\\Delta q}{r_a + r_s} \\
 Properties:
 $FIELDS
 """
-struct PALADYNCanopyEvapotranspiration{NF, GR<:AbstractGroundEvaporationResistanceFactor} <: AbstractEvapotranspiration
+struct PALADYNCanopyEvapotranspiration{NF, GR<:AbstractGroundEvaporationResistanceFactor} <: AbstractEvapotranspiration{NF}
     "Drag coefficient for the traansfer of heat and water between the ground and canopy"
     C_can::NF
 
