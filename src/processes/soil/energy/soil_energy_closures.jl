@@ -24,49 +24,8 @@ variables(::SoilEnergyTemperatureClosure) = (
     auxiliary(:liquid_water_fraction, XYZ(), domain=UnitInterval(), desc="Fraction of unfrozen water in the pore space"),
 )
 
-function closure!(
-    state, grid,
-    energy::SoilEnergyBalance,
-    hydrology::AbstractSoilHydrology,
-    strat::AbstractStratigraphy,
-    bgc::AbstractSoilBiogeochemistry,
-    constants::PhysicalConstants
-)
-    fc = freezecurve(energy.thermal_properties, hydrology)
-    closure = energy.closure
-    args = (; closure, fc, energy, hydrology, strat, bgc, constants)
-    launch!(grid, XYZ, energy_to_temperature_kernel!, state, args)
-    return nothing
-end
-
-function invclosure!(
-    state, grid,
-    energy::SoilEnergyBalance,
-    hydrology::AbstractSoilHydrology,
-    strat::AbstractStratigraphy,
-    bgc::AbstractSoilBiogeochemistry,
-    constants::PhysicalConstants
-)
-    fc = freezecurve(energy.thermal_properties, hydrology)
-    closure = energy.closure
-    args = (; closure, fc, energy, hydrology, strat, bgc, constants)
-    launch!(grid, XYZ, temperature_to_energy_kernel!, state, args)
-    return nothing
-end
-
-
-@kernel inbounds=true function temperature_to_energy_kernel!(state, grid, args)
-    i, j, k = @index(Global, NTuple)
-    temperature_to_energy!(i, j, k, grid, state, args...)
-end
-
-@kernel inbounds=true function energy_to_temperature_kernel!(state, grid, args)
-    i, j, k = @index(Global, NTuple)
-    energy_to_temperature!(i, j, k, grid, state, args...)
-end
-
 @propagate_inbounds function temperature_to_energy!(
-    i, j, k, grid, state,
+    out, i, j, k, grid, fields,
     ::SoilEnergyTemperatureClosure,
     ::FreeWater,
     energy::SoilEnergyBalance{NF, OP, SoilEnergyTemperatureClosure},
@@ -75,31 +34,33 @@ end
     bgc::AbstractSoilBiogeochemistry,
     constants::PhysicalConstants
 ) where {NF, OP}
-    T = state.temperature[i, j, k] # assumed given
+    T = fields.temperature[i, j, k] # assumed given
     L = constants.ρw*constants.Lsl
-    por = porosity(i, j, k, grid, state, strat, bgc)
-    sat = saturation_water_ice(i, j, k, grid, state, hydrology)
+    por = porosity(i, j, k, grid, fields, strat, bgc)
+    sat = saturation_water_ice(i, j, k, grid, fields, hydrology)
     # calculate unfrozen water content from temperature
     # N.B. For the free water freeze curve, the mapping from temperature to unfrozen water content
     # within the phase change region is indeterminate since it is assumed that T = 0. As such, we
     # have to assume here that the liquid water fraction is zero if T < 0 and one otherwise. This method
     # should therefore only be used for initialization and should **not** be involved in the calculation
     # of tendencies.
-    liq = state.liquid_water_fraction[i, j, k] = ifelse(
+    liq = out.liquid_water_fraction[i, j, k] = ifelse(
         T >= zero(T),
         one(sat),
         zero(sat),
     )
-    solid = soil_matrix(i, j, k, grid, state, strat, bgc)
+    # add liquid water fraction to fields
+    fields = merge(fields, (; liquid_water_fraction = out.liquid_water_fraction))
+    solid = soil_matrix(i, j, k, grid, fields, strat, bgc)
     soil = SoilVolume(por, sat, liq, solid)
     C = heat_capacity(energy.thermal_properties, soil)
     # compute energy from temperature, heat capacity, and ice fraction
-    U = state.internal_energy[i, j, k] = T * C - L * sat * por * (1 - liq)
+    U = out.internal_energy[i, j, k] = T * C - L * sat * por * (1 - liq)
     return U
 end
 
 @propagate_inbounds function energy_to_temperature!(
-    i, j, k, grid, state,
+    out, i, j, k, grid, fields,
     ::SoilEnergyTemperatureClosure,
     fc::FreeWater,
     energy::SoilEnergyBalance,
@@ -109,18 +70,21 @@ end
     constants::PhysicalConstants
 )
 
-    U = state.internal_energy[i, j, k] # assumed given
+    U = fields.internal_energy[i, j, k] # assumed given
     L = constants.ρw*constants.Lsl
-    por = porosity(i, j, k, grid, state, strat, bgc)
-    sat = saturation_water_ice(i, j, k, grid, state, hydrology)
+    por = porosity(i, j, k, grid, fields, strat, bgc)
+    sat = saturation_water_ice(i, j, k, grid, fields, hydrology)
     Lθ = L*sat*por
     # calculate unfrozen water content
-    liq = state.liquid_water_fraction[i, j, k] = liquid_water_fraction(fc, U, Lθ, sat)
-    solid = soil_matrix(i, j, k, grid, state, strat, bgc)
+    liq = out.liquid_water_fraction[i, j, k] = liquid_water_fraction(fc, U, Lθ, sat)
+    # add liquid water fraction to fields
+    fields = merge(fields, (; liquid_water_fraction = out.liquid_water_fraction))
+    # calculate soil volumetric fractions
+    solid = soil_matrix(i, j, k, grid, fields, strat, bgc)
     soil = SoilVolume(por, sat, liq, solid)
     C = heat_capacity(energy.thermal_properties, soil)
     # calculate temperature from internal energy and liquid water fraction
-    T = state.temperature[i, j, k] = energy_to_temperature(fc, U, Lθ, C)
+    T = out.temperature[i, j, k] = energy_to_temperature(fc, U, Lθ, C)
     return T
 end
 
@@ -155,4 +119,16 @@ capacity under the free water freezing characteristic.
     end
     # One-liner version:
     # return (U < -Lθ)*(U + Lθ) / C
+end
+
+# Kernels
+
+@kernel inbounds=true function temperature_to_energy_kernel!(out, grid, fields, args...)
+    i, j, k = @index(Global, NTuple)
+    temperature_to_energy!(out, i, j, k, grid, fields, args...)
+end
+
+@kernel inbounds=true function energy_to_temperature_kernel!(out, grid, fields, args...)
+    i, j, k = @index(Global, NTuple)
+    energy_to_temperature!(out, i, j, k, grid, fields, args...)
 end

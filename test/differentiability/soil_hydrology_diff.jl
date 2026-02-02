@@ -22,7 +22,7 @@ end
 @testset "Soil water: Pressure-saturation closure" begin
     por = 0.5
     sat = 0.5
-    hydraulic_properties = ConstantHydraulics(Float64, porosity=por)
+    hydraulic_properties = ConstantSoilHydraulics(Float64, porosity=por)
     model = build_soil_energy_hydrology_model(CPU(), Float64; hydraulic_properties)
     swrc = Terrarium.get_swrc(model.hydrology) # θ(ψₘ)
     swrc_inv = inv(swrc) # ψₘ(θ)
@@ -57,7 +57,7 @@ end
 @testset "Soil hydrology: hydraulic_conductivity" begin
     por = 0.5
     cond_unsat = UnsatKVanGenuchten(Float64)
-    hydraulic_properties = ConstantHydraulics(Float64; porosity=por, cond_unsat)
+    hydraulic_properties = ConstantSoilHydraulics(Float64; porosity=por, cond_unsat)
     # wrapper function for evaluating hydraulic conductivity
     function eval_hydraulic_cond((por, sat, liq))
         soil = SoilVolume(porosity=por, saturation=sat, liquid=liq, solid=MineralOrganic())
@@ -101,7 +101,7 @@ end
 end
 
 @testset "Soil energy/hydrology model: timestep!" begin
-    hydraulic_properties = ConstantHydraulics(Float64)
+    hydraulic_properties = ConstantSoilHydraulics(Float64)
     model = build_soil_energy_hydrology_model(CPU(), Float64; hydraulic_properties)
     integrator = initialize(model, ForwardEuler())
     inputs = integrator.inputs

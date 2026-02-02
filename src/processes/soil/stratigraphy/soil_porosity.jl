@@ -47,6 +47,6 @@ end
 
 # Kernel functions
 
-mineral_porosity(i, j, k, grid, state, props::AbstractSoilPorosity, texture::SoilTexture) = mineral_porosity(props, texture)
+mineral_porosity(i, j, k, grid, fields, props::AbstractSoilPorosity, texture::SoilTexture) = mineral_porosity(props, texture)
 
-organic_porosity(i, j, k, grid, state, props::AbstractSoilPorosity, texture::SoilTexture) = organic_porosity(props, texture)
+organic_porosity(i, j, k, grid, fields, props::AbstractSoilPorosity, texture::SoilTexture) = organic_porosity(props, texture)

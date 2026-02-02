@@ -165,10 +165,11 @@ Retrieves the `Field` from `state` matching the `name` of the given variable.
 Retrieves all `Field`s from `state` matching the names of the given variables.
 """
 @inline function get_fields(state, vars::Tuple{Vararg{AbstractVariable}})
-    names = map(varname, vars)
+    vars = deduplicate_vars(vars)
     matched_fields = fastmap(vars) do var
         get_field(state, var)
     end
+    names = map(varname, vars)
     return NamedTuple{names}(matched_fields)
 end
 
@@ -177,11 +178,11 @@ end
 
 Retrieves all non-tendency `Field`s from `state` defined on the given `components`.
 """
-@inline function get_fields(state, components::Union{AbstractModel, AbstractProcess}...; except=(;))
-    vars = mapreduce(tuplejoin, components) do component
+@inline function get_fields(state, components...; except=(;))
+    vars = mapreduce(tuplejoin, components, init=()) do component
         allvars = variables(component)
         closurevars = closure_variables(component)
-        deduplicate_vars(tuplejoin(allvars, closurevars))
+        tuplejoin(allvars, closurevars)
     end
     return ntdiff(get_fields(state, vars), except)
 end
@@ -191,7 +192,7 @@ end
 
 Retrieves all `Field`s from `state` corresponding to prognostic variables defined on the given `components`.
 """
-@inline function prognostic_fields(state, components::Union{AbstractModel, AbstractProcess}...)
+@inline function prognostic_fields(state, components...)
     return get_fields(state, mapreduce(prognostic_variables, tuplejoin, components))
 end
 
@@ -200,7 +201,7 @@ end
 
 Retrieves all `Field`s from `state` corresponding to tendencies defined on the given `components`.
 """
-@inline function tendency_fields(state, components::Union{AbstractModel, AbstractProcess}...)
+@inline function tendency_fields(state, components...)
     return get_fields(state.tendencies, mapreduce(prognostic_variables, tuplejoin, components))
 end
 
@@ -209,7 +210,7 @@ end
 
 Retrieves all `Field`s from `state` corresponding to auxiliary variables defined on the given `components`.
 """
-@inline function auxiliary_fields(state, components::Union{AbstractModel, AbstractProcess}...)
+@inline function auxiliary_fields(state, components...)
     return get_fields(state, mapreduce(auxiliary_variables, tuplejoin, components))
 end
 
@@ -218,7 +219,7 @@ end
 
 Retrieves all `Field`s from `state` corresponding to closure variables defined on the given `components`.
 """
-@inline function closure_fields(state, components::Union{AbstractModel, AbstractProcess}...)
+@inline function closure_fields(state, components...)
     return get_fields(state, mapreduce(closure_variables, tuplejoin, components))
 end
 
@@ -227,7 +228,7 @@ end
 
 Retrieves all `Field`s from `state` corresponding to input variables defined on the given `components`.
 """
-@inline function input_fields(state, components::Union{AbstractModel, AbstractProcess}...)
+@inline function input_fields(state, components...)
     return get_fields(state, mapreduce(input_variables, tuplejoin, components))
 end
 

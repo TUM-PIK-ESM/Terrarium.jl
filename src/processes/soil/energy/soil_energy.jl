@@ -79,15 +79,48 @@ function compute_tendencies!(
     ground::AbstractGround,
     args...
 )
-    kernel_args = (
-        energy,
-        get_hydrology(ground),
-        get_stratigraphy(ground),
-        get_biogeochemistry(ground)
-    )
-    fields = get_fields(state, kernel_args...)
+    # Get dependencies
+    procs = (get_hydrology(ground), get_stratigraphy(ground), get_biogeochemistry(ground))
+    # Get output (tendency) fields
     tendencies = tendency_fields(state, energy)
-    launch!(grid, XYZ, compute_energy_tendency_kernel!, tendencies, fields, kernel_args)
+    # Get other fields (does not include tendencies)
+    fields = get_fields(state, energy, procs...)
+    launch!(grid, XYZ, compute_energy_tendencies_kernel!, tendencies, fields, energy, procs...)
+    return nothing
+end
+
+function closure!(
+    state, grid,
+    energy::SoilEnergyBalance,
+    ground::AbstractGround,
+    constants::PhysicalConstants,
+    args...
+)
+    (; hydrology, strat, biogeochem) = ground
+    fc = freezecurve(energy.thermal_properties, hydrology)
+    kernel_args = (energy.closure, fc, energy, hydrology, strat, biogeochem, constants)
+    # get closure fields (outputs)
+    out = closure_fields(state, energy)
+    # collect state/input fields
+    fields = get_fields(state, kernel_args...; except = out)
+    launch!(grid, XYZ, energy_to_temperature_kernel!, out, fields, kernel_args...)
+    return nothing
+end
+
+function invclosure!(
+    state, grid,
+    energy::SoilEnergyBalance,
+    ground::AbstractGround,
+    constants::PhysicalConstants,
+    args...
+)
+    (; hydrology, strat, biogeochem) = ground
+    fc = freezecurve(energy.thermal_properties, hydrology)
+    kernel_args = (energy.closure, fc, energy, hydrology, strat, biogeochem, constants)
+    # here we mannually collect the output fields since one is the prognostic variable
+    out = (internal_energy = state.internal_energy, liquid_water_fraction = state.liquid_water_fraction)
+    fields = get_fields(state, kernel_args...; except = out)
+    launch!(grid, XYZ, temperature_to_energy_kernel!, out, fields, kernel_args...)
     return nothing
 end
 
@@ -140,7 +173,7 @@ end
 
 # Kernels
 
-@kernel function compute_tendencies_kernel!(tendencies, grid, fields, energy::SoilEnergyBalance, args)
+@kernel function compute_energy_tendencies_kernel!(tendencies, grid, fields, energy::SoilEnergyBalance, args...)
     i, j, k = @index(Global, NTuple)
     compute_energy_tendencies!(tendencies, i, j, k, grid, fields, energy, args...)
 end

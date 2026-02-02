@@ -23,15 +23,17 @@ include("atmosphere/prescribed_atmosphere.jl")
 
 export SoilTexture
 include("soil/stratigraphy/soil_texture.jl")
+export ConstantSoilPorosity, SoilPorositySURFEX
+include("soil/stratigraphy/soil_porosity.jl")
 export SoilVolume, MineralOrganic, volumetric_fractions
 include("soil/stratigraphy/soil_volume.jl")
-export HomogeneousSoil
-include("soil/stratigraphy/homogeneous_soil.jl")
+export HomogeneousStratigraphy
+include("soil/stratigraphy/homogeneous_strat.jl")
 
 export ConstantSoilCarbonDensity
 include("soil/biogeochem/constant_soil_carbon.jl")
 
-export ConstantHydraulics, SoilHydraulicsSURFEX, UnsatKLinear, UnsatKVanGenuchten
+export ConstantSoilHydraulics, SoilHydraulicsSURFEX, UnsatKLinear, UnsatKVanGenuchten
 export saturated_hydraulic_conductivity, mineral_porosity, field_capacity, wilting_point
 include("soil/hydrology/soil_hydraulic_properties.jl")
 
@@ -39,12 +41,19 @@ export SoilHydrology, NoFlow
 include("soil/hydrology/soil_hydrology.jl")
 export RichardsEq
 include("soil/hydrology/soil_hydrology_rre.jl")
+export SaturationPressureClosure
+include("soil/hydrology/soil_hydraulic_closures.jl")
 
 export SoilThermalConductivities, SoilHeatCapacities, SoilThermalProperties, InverseQuadratic
+export compute_thermal_conductivity, heat_capacity
 include("soil/energy/soil_thermal_properties.jl")
 
-export SoilEnergyBalance, EnergyTemperatureClosure
+export SoilEnergyBalance, SoilEnergyTemperatureClosure
 include("soil/energy/soil_energy.jl")
+include("soil/energy/soil_energy_closures.jl")
+
+export SoilEnergyHydrologyBGC
+include("soil/soil_coupled.jl")
 
 # Vegetation
 

@@ -27,10 +27,4 @@ variables(::ConstantSoilCarbonDensity) = ()
 Calculate the organic solid fraction based on the prescribed SOC and natural porosity/density of
 the organic material.
 """
-@propagate_inbounds density_soc(i, j, k, grid, state, bgc::ConstantSoilCarbonDensity) = bgc.ρ_soc
-
-@inline initialize!(state, model, bgc::ConstantSoilCarbonDensity) = nothing
-
-@inline compute_auxiliary!(state, grid, bgc::ConstantSoilCarbonDensity) = nothing
-
-@inline compute_tendencies!(state, grid, bgc::ConstantSoilCarbonDensity) = nothing
+@propagate_inbounds density_soc(i, j, k, grid, fields, bgc::ConstantSoilCarbonDensity) = bgc.ρ_soc

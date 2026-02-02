@@ -1,5 +1,10 @@
 # Component types
 
+"""
+    $TYPEDEF
+
+Base type for coupled ground processes.
+"""
 abstract type AbstractGround{NF} <: AbstractComponent{NF} end
 
 get_stratigraphy(ground::AbstractGround) = ground.strat
@@ -8,7 +13,14 @@ get_energy(ground::AbstractGround) = ground.energy
 
 get_hydrology(ground::AbstractGround) = ground.hydrology
 
-get_biogeochemistry(ground::AbstractGround) = ground.biogeochem
+"""
+    $TYPEDEF
+
+Base type for coupled soil processes.
+"""
+abstract type AbstractSoil{NF} <: AbstractGround{NF} end
+
+get_biogeochemistry(soil::AbstractSoil) = soil.biogeochem
 
 # Soil process types
 
