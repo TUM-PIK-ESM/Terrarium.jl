@@ -126,7 +126,7 @@ end
 
 # Kernel functions
 
-@inline function compute_energy_tendencies!(
+@propagate_inbounds function compute_energy_tendencies!(
     tendencies, i, j, k, grid, fields,
     energy::SoilEnergyBalance,
     args...
@@ -134,7 +134,7 @@ end
     tendencies.internal_energy[i, j, k] += compute_energy_tendency(i, j, k, grid, fields, energy, args...)
 end
 
-@inline function compute_energy_tendency(
+@propagate_inbounds function compute_energy_tendency(
     i, j, k, grid, fields,
     energy::SoilEnergyBalance{NF, <:ExplicitTwoPhaseHeatConduction},
     hydrology::AbstractSoilHydrology,
@@ -149,7 +149,7 @@ end
     return ∂U∂t
 end
 
-@inline function compute_thermal_conductivity(
+@propagate_inbounds function compute_thermal_conductivity(
     i, j, k, grid, fields,
     energy::SoilEnergyBalance,
     hydrology::AbstractSoilHydrology,
@@ -161,7 +161,7 @@ end
 end
 
 # Diffusive heat flux term passed to ∂z operator
-@inline function diffusive_heat_flux(i, j, k, grid, fields, args...)
+@propagate_inbounds function diffusive_heat_flux(i, j, k, grid, fields, args...)
     # Get temperature field
     T = fields.temperature
     # Compute and ∂U∂tinterpolate conductivity to grid cell faces
