@@ -254,7 +254,7 @@ function Variables(vars::Tuple{Vararg{Union{AbstractProcessVariable, Namespace}}
     # create closure variables and prepend to tuple of auxiliary variables;
     # note that the order matters here since Field constructors will be called in the order
     # that they appear in the var tuples.
-    closure_vars = mapreduce(var -> variables(var.closure), tuplejoin, filter(hasclosure, prognostic_vars))
+    closure_vars = mapreduce(var -> variables(var.closure), tuplejoin, filter(hasclosure, prognostic_vars), init=())
     auxiliary_vars = deduplicate(varinfo, tuplejoin(closure_vars, auxiliary_vars))
     # drop inputs with matching prognostic or auxiliary variables
     input_vars = filter(var -> var ∉ prognostic_vars && var ∉ auxiliary_vars, input_vars)
