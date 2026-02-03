@@ -303,29 +303,30 @@ function compute_GPP(::LUEPhotosynthesis{NF}, An::NF) where {NF}
     return GPP
 end
 
-function compute_auxiliary!(state, model, photo::LUEPhotosynthesis)
-    grid = get_grid(model)
-    atmos = get_atmosphere(model)
-    launch!(grid, XY, compute_photosynthesis_kernel!, state, photo, atmos)
+# Process methods
+
+function compute_auxiliary!(
+    state, grid,
+    photo::LUEPhotosynthesis,
+    atmos::AbstractAtmosphere,
+    args...
+)
+    out = auxiliary_fields(state, photo)
+    fields = get_fields(state, photo, atmos; except = out)
+    launch!(grid, XY, compute_photosynthesis_kernel!, out, fields, photo, atmos)
 end
 
-@kernel inbounds=true function compute_photosynthesis_kernel!(
-    state, grid,
-    photo::LUEPhotosynthesis{NF},
-    atmos::AbstractAtmosphere
-) where NF
-    # TODO checks for positive/negative values in the original PALADYN code ignored for now
-    i, j = @index(Global, NTuple)
+# Kernel functions
 
-    # Get inputs
-    T_air = air_temperature(i, j, grid, state, atmos)
-    pres = air_pressure(i, j, grid, state, atmos)
-    swdown = shortwave_down(i, j, grid, state, atmos)
-    # day_length = daytime_length(i, j, grid, state, atmos)
-    co2 = state.CO2[i, j] # no method for this currently...
-    β = state.SMLF[i, j]
-    LAI = state.LAI[i, j]
-    λc = state.λc[i, j]
+@propagate_inbounds function compute_photosynthesis(i, j, grid, fields, photo::LUEPhotosynthesis, atmos::AbstractAtmosphere)
+    # Get inputs from fields/atmosphere
+    T_air = air_temperature(i, j, grid, fields, atmos)
+    pres = air_pressure(i, j, grid, fields, atmos)
+    swdown = shortwave_down(i, j, grid, fields, atmos)
+    co2 = fields.CO2[i, j]
+    β = fields.SMLF[i, j]
+    LAI = fields.LAI[i, j]
+    λc = fields.λc[i, j]
 
     # Compute Rd, leaf respiration rate in [gC/m²/s],
     # An, daily net photosynthesis [gC/m²/s]
@@ -334,8 +335,20 @@ end
     # Compute GPP, Gross Primary Production in [kgC/m²/s]
     GPP = compute_GPP(photo, An)
 
-    # Store results
-    state.GPP[i, j, 1] = GPP
-    state.Rd[i, j, 1] = Rd
-    state.An[i, j, 1] = An
+    return Rd, An, GPP
+end
+
+@propagate_inbounds function compute_photosynthesis!(out, i, j, grid, fields, photo::LUEPhotosynthesis, atmos::AbstractAtmosphere)
+    Rd, An, GPP = compute_photosynthesis(i, j, grid, fields, photo, atmos)
+    out.Rd[i, j, 1] = Rd
+    out.An[i, j, 1] = An
+    out.GPP[i, j, 1] = GPP
+    return out
+end
+
+# Kernels
+
+@kernel inbounds=true function compute_photosynthesis_kernel!(out, grid, fields, photo::AbstractPhotosynthesis, args...)
+    i, j = @index(Global, NTuple)
+    compute_photosynthesis!(out, i, j, grid, fields, photo, args...)
 end

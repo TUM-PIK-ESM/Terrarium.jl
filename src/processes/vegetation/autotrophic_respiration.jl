@@ -29,7 +29,7 @@ variables(::PALADYNAutotrophicRespiration) = (
     input(:GPP, XY()), # Gross Primary Production [kgC/m²/day]
     input(:Rd, XY()), # Daily leaf respiration [gC/m²/day]
     input(:phen, XY()), # Phenology factor [-]
-    input(:ground_temperature, XY(), units=u"°C"), # Ground surface temperature [°C]
+    input(:ground_temperature, XY(), default=10.0, units=u"°C"), # Ground surface temperature [°C]
 )
 
 """
@@ -147,40 +147,61 @@ in [kgC/m²/day].
     return NPP
 end
 
+# Process methods
 
-function compute_auxiliary!(state, model, autoresp::PALADYNAutotrophicRespiration)
-    grid = get_grid(model)
-    atmos = get_atmosphere(model)
-    carbon = get_vegetation_carbon_dynamics(model)
-    launch!(grid, XY, compute_auxiliary_kernel!, state, autoresp, carbon, atmos)
+function compute_auxiliary!(
+    state, grid,
+    autoresp::PALADYNAutotrophicRespiration,
+    vegcarbon::AbstractVegetationCarbonDynamics,
+    atmos::AbstractAtmosphere
+)
+    out = auxiliary_fields(state, autoresp)
+    fields = get_fields(state, autoresp, vegcarbon, atmos; except = out)
+    launch!(grid, XY, compute_auxiliary_kernel!, out, fields, autoresp, vegcarbon, atmos)
 end
 
-@kernel function compute_auxiliary_kernel!(
-    state, grid,
-    autoresp::PALADYNAutotrophicRespiration{NF},
+# Kernel functions
+
+"""
+    $TYPEDSIGNATURES
+
+Compute autotrophic respiration following the scheme of PALADYN (Willeit 2016).
+"""
+@propagate_inbounds function compute_autotrophic_respiration(
+    i, j, grid, fields,
+    autoresp::PALADYNAutotrophicRespiration,
     vegcarbon_dynamics::PALADYNCarbonDynamics{NF},
     atmos::AbstractAtmosphere
-) where NF
-    i, j = @index(Global, NTuple)
-
+)
     # Get inputs    
-    @inbounds let T_air = air_temperature(i, j, grid, state, atmos),
-        T_soil = state.ground_temperature[i, j],
-        Rd = state.Rd[i, j],
-        phen = state.phen[i, j],
-        C_veg = state.C_veg[i, j],
-        GPP = state.GPP[i, j];
+    T_air = air_temperature(i, j, grid, fields, atmos)
+    T_soil = fields.ground_temperature[i, j]
+    Rd = fields.Rd[i, j]
+    phen = fields.phen[i, j]
+    C_veg = fields.C_veg[i, j]
+    GPP = fields.GPP[i, j]
 
-        # Compute autotrophic respiration Ra
-        Ra = compute_Ra(autoresp, vegcarbon_dynamics, T_air, T_soil, Rd, phen, C_veg, GPP)
+    # Compute autotrophic respiration Ra
+    Ra = compute_Ra(autoresp, vegcarbon_dynamics, T_air, T_soil, Rd, phen, C_veg, GPP)
 
-        # Compute net primary product (NPP)
-        NPP = compute_NPP(autoresp, GPP, Ra)
-
-        # Store results
-        state.Ra[i, j, 1] = Ra
-        state.NPP[i, j, 1] = NPP
-    end
+    # Compute net primary product (NPP)
+    NPP = compute_NPP(autoresp, GPP, Ra)
+    
+    # Return both Ra and NPP
+    return Ra, NPP
 end
 
-   
+@propagate_inbounds function compute_autotrophic_respiration!(out, i, j, grid, fields, autoresp::AbstractAutotrophicRespiration, args...)
+    # Compute and store results
+    Ra, NPP  = compute_autotrophic_respiration(i, j, grid, fields, autoresp, args...)
+    out.Ra[i, j, 1] = Ra
+    out.NPP[i, j, 1] = NPP
+    return out
+end
+
+# Kernels
+
+@kernel inbounds=true function compute_autotrophic_respiration_kernel!(out, grid, fields, autoresp::AbstractAutotrophicRespiration, args...)
+    i, j = @index(Global, NTuple)
+    compute_autotrophic_respiration!(out, grid, fields, autoresp, args...)
+end

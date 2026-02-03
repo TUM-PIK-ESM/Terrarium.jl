@@ -65,16 +65,19 @@ Computes `LAI`, based on the balanced Leaf Area Index `LAI_b`:
     return LAI
 end
 
-function compute_auxiliary!(state, model, phenol::PALADYNPhenology)
-    grid = get_grid(model)
-    launch!(grid, XY, compute_auxiliary_kernel!, state, phenol)
+# Process methods
+
+function compute_auxiliary!(state, grid, phenol::PALADYNPhenology)
+    out = auxiliary_fields(state, phenol)
+    fields = get_fields(state, phenol; except = out)
+    launch!(grid, XY, compute_phenology_kernel!, out, fields, phenol)
 end
 
-@kernel function compute_auxiliary_kernel!(state, grid, phenol::PALADYNPhenology)
-    i, j = @index(Global, NTuple)
+# Kernel functions
 
+@propagate_inbounds function compute_phenology(i, j, grid, fields, phenol::PALADYNPhenology)
     # Get input
-    LAI_b = state.LAI_b[i, j]
+    LAI_b = fields.LAI_b[i, j]
 
     # Compute phen
     phen = compute_phen(phenol)
@@ -82,8 +85,20 @@ end
     # Compute LAI
     LAI = compute_LAI(phenol, LAI_b)
 
-    # Store results
-    state.phen[i, j, 1] = phen
-    state.LAI[i, j, 1] = LAI
+    return phen, LAI
+end
+
+@propagate_inbounds function compute_phenology!(out, i, j, grid, fields, phenol::PALADYNPhenology)
+    phen, LAI = compute_phenology(i, j, grid, fields, phenol)
+    out.phen[i, j, 1] = phen
+    out.LAI[i, j, 1] = LAI
+    return out
+end
+
+# Kernels
+
+@kernel function compute_phenology_kernel!(out, grid, fields, phenol::AbstractPhenology, args...)
+    i, j = @index(Global, NTuple)
+    compute_phenology!(out, i, j, grid, fields, phenol, args...)
 end
    

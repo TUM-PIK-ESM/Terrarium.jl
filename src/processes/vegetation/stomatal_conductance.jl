@@ -52,39 +52,50 @@ Eq. 71, PALADYN (Willeit 2016).
     return λc
 end
 
-function compute_auxiliary!(state, model, stomcond::MedlynStomatalConductance)
-    grid = get_grid(model)
-    atmos = get_atmosphere(model)
-    constants = get_constants(model)
-    photo = get_photosynthesis(model)
-    launch!(grid, XY, compute_auxiliary_kernel!, state, stomcond, photo, atmos, constants)
+# Process methods
+
+function compute_auxiliary!(
+    state, grid,
+    stomcond::MedlynStomatalConductance,
+    photo::LUEPhotosynthesis,
+    atmos::AbstractAtmosphere,
+    constants::PhysicalConstants,
+    args...
+)
+    out = auxiliary_fields(state, stomcond)
+    fields = get_fields(state, stomcond, photo, atmos, constants; except = out)
+    launch!(grid, XY, compute_stomatal_conductance_kernel!, out, fields, stomcond, photo, atmos, constants)
 end
 
-@kernel function compute_auxiliary_kernel!(
-    state, grid,
-    stomcond::MedlynStomatalConductance{NF},
-    photo::LUEPhotosynthesis{NF},
-    atmos::AbstractAtmosphere,
-    constants::PhysicalConstants
-) where NF
+# Kernel functions
+
+@propagate_inbounds function compute_stomatal_conductance(i, j, grid, fields, stomcond::MedlynStomatalConductance{NF}, photo::LUEPhotosynthesis{NF}, atmos::AbstractAtmosphere, constants::PhysicalConstants, args...) where NF
+    # Get inputs
+    An = fields.An[i, j]
+    CO2 = fields.CO2[i, j]
+    LAI = fields.LAI[i, j]
+    β = fields.SMLF[i, j]
+
+    # Compute vpd [Pa]
+    vpd = compute_vpd(i, j, grid, fields, atmos, constants)
+
+    # Compute conductance gw_can and internal CO2 ratio λc
+    gw_can = compute_gw_can(stomcond, photo, vpd, An, CO2, LAI, β)
+    λc = compute_λc(stomcond, vpd)
+
+    return gw_can, λc
+end
+
+@propagate_inbounds function compute_stomatal_conductance!(out, i, j, grid, fields, stomcond::MedlynStomatalConductance{NF}, photo::LUEPhotosynthesis{NF}, atmos::AbstractAtmosphere, constants::PhysicalConstants, args...) where NF
+    gw_can, λc = compute_stomatal_conductance(i, j, grid, fields, stomcond, photo, atmos, constants, args...)
+    out.gw_can[i, j, 1] = gw_can
+    out.λc[i, j, 1] = λc
+    return out
+end
+
+# Kernels
+
+@kernel function compute_stomatal_conductance_kernel!(out, grid, fields, stomcond::AbstractStomatalConductance, args...)
     i, j = @index(Global, NTuple)
-
-    @inbounds let An = state.An[i, j],
-                  CO2 = state.CO2[i, j],
-                  LAI = state.LAI[i, j],
-                  β = state.SMLF[i, j];
-                
-        # Compute vpd [Pa]
-        vpd = compute_vpd(i, j, grid, state, atmos, constants)
-
-        # Compute conducatance
-        gw_can = compute_gw_can(stomcond, photo, vpd, An, CO2, LAI, β)
-
-        # Compute λc
-        λc = compute_λc(stomcond, vpd)
-
-        # Store result
-        state.gw_can[i, j, 1] = gw_can
-        state.λc[i, j, 1] = λc
-    end
+    compute_stomatal_conductance!(out, i, j, grid, fields, stomcond, args...)
 end

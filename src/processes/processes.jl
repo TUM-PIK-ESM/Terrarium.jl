@@ -81,6 +81,9 @@ include("vegetation/stomatal_conductance.jl")
 export PALADYNAutotrophicRespiration
 include("vegetation/autotrophic_respiration.jl")
 
+export DynamicVegetation
+include("vegetation/vegetation_coupled.jl")
+
 # Surface Energy Balance
 
 export PrescribedAlbedo, ConstantAlbedo

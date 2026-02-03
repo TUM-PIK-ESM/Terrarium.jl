@@ -25,6 +25,8 @@ variables(paw::FieldCapacityLimitedPAW{NF}) where {NF} = (
 )
 
 """
+    $TYPEDSIGNATURES
+
 Field constructor for the soil moisture limiting factor. Returns a derived `Field` that calculates
 the integral of `W(z) * r(z)` where `W` is the water availability coefficient and `r` is the root fraction.
 """
@@ -34,31 +36,57 @@ function soil_moisture_limiting_factor(::FieldCapacityLimitedPAW, grid, clock, f
     return Field(PAW)
 end
 
-function compute_auxiliary!(state, model, paw::FieldCapacityLimitedPAW)
-    grid = get_grid(model)
-    hydrology = get_soil_hydrology(model)
-    strat = get_soil_stratigraphy(model)
-    bgc = get_soil_biogeochemistry(model)
-    launch!(grid, XYZ, compute_paw_kernel!, state, paw, hydrology, strat, bgc)
+# Process methods
+
+function compute_auxiliary!(
+    state, grid,
+    paw::FieldCapacityLimitedPAW,
+    soil::AbstractSoil,
+    args...
+)
+    out = auxiliary_fields(state, paw)
+    fields = get_fields(state, paw, soil; except = out)
+    launch!(grid, XYZ, compute_paw_kernel!, out, fields, paw, soil)
     # compute the derived soil moisture limiting factor field
     compute!(state.SMLF)
 end
 
-@kernel function compute_paw_kernel!(
-    state, grid,
-    ::FieldCapacityLimitedPAW{NF},
-    hydrology::AbstractSoilHydrology,
-    strat::AbstractStratigraphy,
-    bgc::AbstractSoilBiogeochemistry
-) where {NF}
-    i, j, k = @index(Global, NTuple)
+# Kernel functions
 
-    @inbounds let soil = soil_volume(i, j, k, grid, state, strat, hydrology, bgc),
-                  θfc = field_capacity(hydrology.hydraulic_properties, soil.solid.texture),
-                  θwp = wilting_point(hydrology.hydraulic_properties, soil.solid.texture),
-                  vol = volumetric_fractions(soil),
-                  θw = vol.water;
-        # compute PAW
-        state.plant_available_water[i, j, k] = max(min(NF(1), (θw - θwp) / (θfc - θwp)), NF(0))
-    end
+@propagate_inbounds function compute_paw(
+    i, j, k, grid, fields,
+    paw::FieldCapacityLimitedPAW{NF},
+    soil::AbstractSoil
+) where {NF}
+    # Unpack soil processes
+    strat = get_stratigraphy(soil)
+    hydrology = get_hydrology(soil)
+    bgc = get_biogeochemistry(soil)
+    # Compute soil composition and hydraulic properties
+    vol = soil_volume(i, j, k, grid, fields, strat, hydrology, bgc)
+    θfc = field_capacity(hydrology.hydraulic_properties, vol.solid.texture)
+    θwp = wilting_point(hydrology.hydraulic_properties, vol.solid.texture)
+    # Compute liquid water content
+    fracs = volumetric_fractions(vol)
+    θw = fracs.water
+    # Compute PAW
+    return max(min(NF(1), (θw - θwp) / (θfc - θwp)), NF(0))
+end
+
+@propagate_inbounds function compute_paw!(
+    out, i, j, k, grid, fields,
+    paw::FieldCapacityLimitedPAW{NF},
+    soil::AbstractSoil,
+    args...
+) where {NF}
+    PAW = compute_paw(i, j, k, grid, fields, paw, soil)
+    out.plant_available_water[i, j, k] = PAW
+    return out
+end
+
+# Kernels
+
+@kernel inbounds=true function compute_paw_kernel!(out, grid, fields, paw::AbstractPlantAvailableWater, args...)
+    i, j, k = @index(Global, NTuple)
+    compute_paw!(out, i, j, k, grid, fields, paw, hydrology, args...)
 end
