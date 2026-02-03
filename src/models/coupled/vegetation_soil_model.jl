@@ -4,9 +4,9 @@
     Atmosphere<:AbstractAtmosphere,
     SEB<:AbstractSurfaceEnergyBalance,
     Hydrology<:AbstractSurfaceHydrology,
-    Vegetation<:AbstractVegetationModel{NF, GridType},
+    Vegetation<:AbstractVegetation{NF},
     PAW<:AbstractPlantAvailableWater,
-    SoilModel<:AbstractSoilModel{NF, GridType},
+    SoilProcesses<:AbstractSoil{NF},
     Initializer<:AbstractInitializer,
 } <: AbstractLandModel{NF, GridType}
     "Spatial discretization"
@@ -27,8 +27,8 @@
     "Plant available water"
     plant_available_water::PAW = FieldCapacityLimitedPAW(eltype(grid))
 
-    "Soil model"
-    soil::SoilModel = SoilModel(grid)
+    "Soil processes"
+    soil::SoilProcesses = SoilEnergyHydrologyBGC(eltype(grid))
 
     "Physical constants"
     constants::PhysicalConstants{NF} = PhysicalConstants(eltype(grid))
@@ -36,41 +36,6 @@
     "Initializer for coupled model"
     initializer::Initializer = DefaultInitializer()
 end
-
-get_atmosphere(model::VegetationSoilModel) = model.atmosphere
-
-get_surface_energy_balance(model::VegetationSoilModel) = model.surface_energy
-
-get_surface_hydrology(model::VegetationSoilModel) = model.surface_hydrology
-
-get_soil_energy_balance(model::VegetationSoilModel) = model.soil.energy
-
-get_soil_hydrology(model::VegetationSoilModel) = model.soil.hydrology
-
-get_soil_stratigraphy(model::VegetationSoilModel) = model.soil.strat
-
-get_soil_biogeochemistry(model::VegetationSoilModel) = model.soil.biogeochem
-
-# just ignore that these are duplicated in veg model for now...
-get_constants(model::VegetationSoilModel) = model.soil.constants
-
-variables(model::VegetationSoilModel) = tuplejoin(
-    variables(model.atmosphere),
-    variables(model.surface_energy_balance),
-    variables(model.surface_hydrology),
-    variables(model.vegetation),
-    variables(model.soil),
-    variables(model.plant_available_water)
-)
-
-processes(model::VegetationSoilModel) = (
-    model.atmosphere,
-    model.surface_energy_balance,
-    model.surface_hydrology,
-    model.plant_available_water,
-    processes(model.vegetation)...,
-    processes(model.soil)...
-)
 
 function initialize(
     model::VegetationSoilModel{NF};

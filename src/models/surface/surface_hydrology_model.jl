@@ -38,33 +38,7 @@ $TYPEDFIELDS
     initializer::Initializer = DefaultInitializer()
 end
 
-# Getter methods
-get_grid(model::SurfaceHydrologyModel) = model.grid
-
-get_atmosphere(model::SurfaceHydrologyModel) = model.atmosphere
-
-get_surface_hydrology(model::SurfaceHydrologyModel) = SurfaceHydrology(
-    model.canopy_hydrology,
-    model.evapotranpsiration,
-    model.surface_runoff
-)
-
-get_constants(model::SurfaceHydrologyModel) = model.constants
-
 # Model interface methods
-variables(model::SurfaceHydrologyModel) = tuplejoin(
-    variables(model.atmosphere),
-    variables(model.canopy_hydrology),
-    variables(model.evapotranpsiration),
-    variables(model.surface_runoff),
-)
-
-processes(model::SurfaceHydrologyModel) = (
-    model.atmosphere,
-    model.canopy_hydrology,
-    model.evapotranpsiration,
-    model.surface_runoff
-)
 
 function compute_auxiliary!(state, model::SurfaceHydrologyModel)
     compute_auxiliary!(state, model, model.atmosphere)

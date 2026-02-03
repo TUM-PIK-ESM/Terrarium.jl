@@ -170,7 +170,7 @@ Compute autotrophic respiration following the scheme of PALADYN (Willeit 2016).
 @propagate_inbounds function compute_autotrophic_respiration(
     i, j, grid, fields,
     autoresp::PALADYNAutotrophicRespiration,
-    vegcarbon_dynamics::PALADYNCarbonDynamics{NF},
+    vegcarbon_dynamics::PALADYNCarbonDynamics,
     atmos::AbstractAtmosphere
 )
     # Get inputs    
