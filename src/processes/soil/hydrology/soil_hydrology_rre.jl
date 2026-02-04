@@ -31,7 +31,9 @@ variables(hydrology::SoilHydrology{NF, RichardsEq}) where {NF} = (
     input(:liquid_water_fraction, XYZ(), default=NF(1), domain=UnitInterval(), desc="Fraction of unfrozen water in the pore space"), 
 )
 
-@propagate_inbounds surface_excess_water(i, j, grid, state, ::SoilHydrology{NF, RichardsEq}) where {NF} = state.surface_excess_water[i, j]
+@propagate_inbounds surface_excess_water(i, j, grid, fields, ::SoilHydrology{NF, RichardsEq}) where {NF} = fields.surface_excess_water[i, j]
+
+# Process methods
 
 function initialize!(
     state, grid,
@@ -56,24 +58,6 @@ function compute_auxiliary!(
     out = auxiliary_fields(state, hydrology)
     fields = get_fields(state, hydrology, bgc; except=out)
     launch!(grid, XYZ, compute_hydraulics_kernel!, out, fields, hydrology, strat, bgc)
-    return nothing
-end
-
-function compute_tendencies!(
-    state, grid,
-    hydrology::SoilHydrology{NF, RichardsEq},
-    soil::AbstractSoil,
-    constants::PhysicalConstants,
-    evtr::Optional{AbstractEvapotranspiration} = nothing,
-    args...
-) where {NF}
-    strat = get_stratigraphy(soil)
-    bgc = get_biogeochemistry(soil)
-    tendencies = tendency_fields(state, hydrology)
-    fields = get_fields(state, hydrology, bgc, evtr)
-    clock = state.clock
-    launch!(grid, XYZ, compute_saturation_tendency_kernel!,
-            tendencies, clock, fields, hydrology, strat, bgc, constants, evtr)
     return nothing
 end
 
@@ -127,39 +111,16 @@ function invclosure!(
     return nothing
 end
 
-
-# Kernels
-
-"""
-    $TYPEDSIGNATURES
-
-Kernel function for computing the tendency of the prognostic `saturation_water_ice` variable in all grid cells and soil layers.
-"""
-@propagate_inbounds function compute_saturation_tendency!(
-    saturation_water_ice_tendency, i, j, k, grid, clock, fields,
-    hydrology::SoilHydrology,
-    strat::AbstractStratigraphy,
-    bgc::AbstractSoilBiogeochemistry,
-    constants::PhysicalConstants,
-    evapotranspiration::Union{Nothing, AbstractEvapotranspiration}
-)
-    # Compute volumetic water content tendency
-    ∂θ∂t = volumetric_water_content_tendency(i, j, k, grid, clock, fields, hydrology, constants, evapotranspiration)
-    # Get porosity
-    por = porosity(i, j, k, grid, fields, strat, bgc)
-    # Rescale by porosity to get saturation tendency
-    saturation_water_ice_tendency[i, j, k] +=  ∂θ∂t / por
-end
-
 # Kernel functions
 
 """
     $SIGNATURES
 
-Compute the volumetric water content (VWC) tendency at grid cell `i, j k`. Note that the
-VWC tendency is not scaled by the porosity and is thus not a saturation tendency.
+Compute the volumetric water content (VWC) tendency at grid cell `i, j k` according to the
+Richardson-Richards equation. Note that the VWC tendency is not scaled by the porosity and
+is thus not the same as the saturation tendency.
 """
-@inline function volumetric_water_content_tendency(
+@propagate_inbounds function volumetric_water_content_tendency(
     i, j, k, grid, clock, fields,
     hydrology::SoilHydrology{NF, RichardsEq},
     constants::PhysicalConstants,
@@ -184,7 +145,7 @@ end
 Kernel function for computing the Darcy flux over layer faces from the pressure head `ψ` and hydraulic
 conductivity `K`.
 """
-@inline function darcy_flux(i, j, k, grid, ψ, K)
+@propagate_inbounds function darcy_flux(i, j, k, grid, ψ, K)
     # Darcy's law: q = -K ∂ψ/∂z
     # TODO: also account for effect of temperature on matric potential
     ∇ψ = ∂zᵃᵃᶠ(i, j, k, grid, ψ)
@@ -202,7 +163,7 @@ end
 
 Compute the hydraulic conductivity at the center of the grid cell `i, j, k`.
 """
-@inline function hydraulic_conductivity(
+@propagate_inbounds function hydraulic_conductivity(
     i, j, k, grid, state,
     hydrology::SoilHydrology,
     strat::AbstractStratigraphy,
@@ -210,15 +171,4 @@ Compute the hydraulic conductivity at the center of the grid cell `i, j, k`.
 )
     soil = soil_volume(i, j, k, grid, state, strat, hydrology, bgc)
     return hydraulic_conductivity(hydrology.hydraulic_properties, soil)
-end
-
-# Kernels
-
-@kernel inbounds=true function compute_saturation_tendency_kernel!(
-    tendencies, grid, clock, fields,
-    hydrology::SoilHydrology{NF, RichardsEq},
-    args...
-) where {NF}
-    i, j, k = @index(Global, NTuple)
-    compute_saturation_tendency!(tendencies.saturation_water_ice, i, j, k, grid, clock, fields, hydrology, args...)
 end

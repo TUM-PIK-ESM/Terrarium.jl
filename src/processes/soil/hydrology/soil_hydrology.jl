@@ -77,40 +77,64 @@ variables(hydrology::SoilHydrology{NF}) where {NF} = (
     input(:liquid_water_fraction, XYZ(), default = 1, domain=UnitInterval(), desc="Fraction of unfrozen water in the pore space"),
 )
 
-@propagate_inbounds saturation_water_ice(i, j, k, grid, state, ::SoilHydrology) = state.saturation_water_ice[i, j, k]
+@propagate_inbounds saturation_water_ice(i, j, k, grid, fields, ::SoilHydrology) = fields.saturation_water_ice[i, j, k]
 
-@propagate_inbounds hydraulic_conductivity(i, j, k, grid, state, ::SoilHydrology) = state.hydraulic_conductivity[i, j, k]
+@propagate_inbounds hydraulic_conductivity(i, j, k, grid, fields, ::SoilHydrology) = fields.hydraulic_conductivity[i, j, k]
 
-@propagate_inbounds liquid_water_fraction(i, j, k, grid, state, ::SoilHydrology) = state.liquid_water_fraction[i, j, k]
+@propagate_inbounds liquid_water_fraction(i, j, k, grid, state, ::SoilHydrology) = fields.liquid_water_fraction[i, j, k]
 
-@propagate_inbounds water_table(i, j, grid, state, ::SoilHydrology) = state.water_table[i, j]
+@propagate_inbounds water_table(i, j, grid, fields, ::SoilHydrology) = fields.water_table[i, j]
 
-@inline function compute_water_table!(state, grid, hydrology::SoilHydrology)
+@propagate_inbounds surface_excess_water(i, j, grid, fields, ::SoilHydrology{NF}) where {NF} = zero(NF)
+
+function compute_water_table!(state, grid, hydrology::SoilHydrology)
     launch!(grid, XY, compute_water_table_kernel!,
             state.water_table, state.saturation_water_ice, hydrology)
 end
 
-@inline function adjust_saturation_profile!(state, grid, hydrology::SoilHydrology)
+function adjust_saturation_profile!(state, grid, hydrology::SoilHydrology)
     saturation_water_ice = state.saturation_water_ice
     surface_excess_water = state.surface_excess_water
     out = (; saturation_water_ice, surface_excess_water)
     launch!(grid, XY, adjust_saturation_profile_kernel!, out, hydrology)
 end
 
+function compute_hydraulics!(state, grid, hydrology::SoilHydrology, soil::AbstractSoil, args...)
+    strat = get_stratigraphy(soil)
+    bgc = get_biogeochemistry(soil)
+    out = (hydraulic_conductivity = state.hydraulic_conductivity,)
+    fields = get_fields(state, hydrology, bgc; except = out)
+    launch!(grid, XYZ, compute_hydraulics_kernel!, out, fields, hydrology, strat, bgc)
+end
+
 # Immobile soil water (NoFlow)
 
-@inline function compute_auxiliary!(state, grid, hydrology::SoilHydrology, args...)
+function initialize!(state, grid, hydrology::SoilHydrology, soil::AbstractSoil, args...)
+    compute_hydraulics!(state, grid, hydrology, soil)
     compute_water_table!(state, grid, hydrology)
 end
 
+@inline compute_auxiliary!(state, grid, hydrology::SoilHydrology, args...) = nothing
+
+## Fallback dispatch for compute_tendencies!
 @inline compute_tendencies!(state, grid, hydrology::SoilHydrology, args...) = nothing
-@inline function compute_tendencies!(state, grid, hydrology::SoilHydrology{NF, NoFlow, HP, <:AbstractForcing}) where {NF, HP}
-    # TODO: do we need to also include ET? does that really make sense for a "no flow" scheme?
-    forcing_kernel = KernelFunctionOperation{Center, Center, Center}(get_grid(model)) do i, j, k, grid
-        forcing(i, j, k, grid, state, hydrology.vwc_forcing, hydrology)
-    end
-    # apply forcing
-    set!(state.saturation_water_ice, forcing_kernel)
+
+function compute_tendencies!(
+    state, grid,
+    hydrology::SoilHydrology{NF},
+    soil::AbstractSoil,
+    constants::PhysicalConstants,
+    evtr::Optional{AbstractEvapotranspiration} = nothing,
+    args...
+) where {NF}
+    strat = get_stratigraphy(soil)
+    bgc = get_biogeochemistry(soil)
+    tendencies = tendency_fields(state, hydrology)
+    fields = get_fields(state, hydrology, bgc, evtr)
+    clock = state.clock
+    launch!(grid, XYZ, compute_saturation_tendency_kernel!,
+            tendencies, clock, fields, hydrology, strat, bgc, constants, evtr)
+    return nothing
 end
 
 # Kernel functions
@@ -158,7 +182,7 @@ arising due to numerical error. This implementation scans over the saturation pr
 grid cell and redistributes excess water upward layer-by-layer until reaching the topmost layer, where
 any remaining excess water is added to the `surface_excess_water` pool.
 """
-@propagate_inbounds function adjust_saturation_profile!(out, i, j, grid, hydrology::SoilHydrology{NF}) where {NF}
+@propagate_inbounds function adjust_saturation_profile!(out, i, j, grid, ::SoilHydrology{NF}) where {NF}
     sat = out.saturation_water_ice
     surface_excess_water = out.surface_excess_water
     field_grid = get_field_grid(grid)
@@ -199,6 +223,47 @@ any remaining excess water is added to the `surface_excess_water` pool.
     end
 end
 
+"""
+    $TYPEDSIGNATURES
+
+Kernel function for computing the tendency of the prognostic `saturation_water_ice` variable in all grid cells and soil layers.
+"""
+@propagate_inbounds function compute_saturation_tendency!(
+    saturation_water_ice_tendency, i, j, k, grid, clock, fields,
+    hydrology::SoilHydrology,
+    strat::AbstractStratigraphy,
+    bgc::AbstractSoilBiogeochemistry,
+    constants::PhysicalConstants,
+    evapotranspiration::Union{Nothing, AbstractEvapotranspiration}
+)
+    # Compute volumetic water content tendency
+    ∂θ∂t = volumetric_water_content_tendency(i, j, k, grid, clock, fields, hydrology, constants, evapotranspiration)
+    # Get porosity
+    por = porosity(i, j, k, grid, fields, strat, bgc)
+    # Rescale by porosity to get saturation tendency
+    saturation_water_ice_tendency[i, j, k] +=  ∂θ∂t / por
+end
+
+"""
+    $SIGNATURES
+
+Compute the volumetric water content (VWC) tendency at grid cell `i, j k` f. Note that the VWC tendency is not scaled by
+the porosity and is thus not the same as the saturation tendency.
+"""
+@propagate_inbounds function volumetric_water_content_tendency(
+    i, j, k, grid, clock, fields,
+    hydrology::SoilHydrology{NF},
+    constants::PhysicalConstants,
+    evapotranspiration::Union{Nothing, AbstractEvapotranspiration}
+) where {NF}
+    # Compute divergence of water fluxes due to forcings only
+    ∂θ∂t = (
+        + forcing(i, j, k, grid, clock, fields, evapotranspiration, hydrology, constants) # ET forcing
+        + forcing(i, j, k, grid, clock, fields, hydrology.vwc_forcing, hydrology) # generic user-defined forcing
+    )
+    return ∂θ∂t
+end
+
 # Kernels
 
 @kernel inbounds=true function compute_water_table_kernel!(water_table, grid, sat, hydrology::SoilHydrology{NF}) where {NF}
@@ -214,4 +279,11 @@ end
 @kernel inbounds=true function compute_hydraulics_kernel!(out, grid, fields, hydrology::SoilHydrology, args...)
     i, j, k = @index(Global, NTuple)
     compute_hydraulics!(out, i, j, k, grid, fields, hydrology, args...)
+end
+
+# Kernels
+
+@kernel inbounds=true function compute_saturation_tendency_kernel!(tend, grid, clock, fields, hydrology::SoilHydrology, args...) where {NF}
+    i, j, k = @index(Global, NTuple)
+    compute_saturation_tendency!(tend.saturation_water_ice, i, j, k, grid, clock, fields, hydrology, args...)
 end
