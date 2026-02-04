@@ -1,8 +1,14 @@
+"""
+    $TYPEDEF
+
+Properties:
+$FIELDS
+"""
 struct SurfaceHydrology{
     NF,
-    CanopyHydrology<:AbstractCanopyHydrology,
-    Evapotranspiration<:AbstractEvapotranspiration,
-    SurfaceRunoff<:AbstractSurfaceRunoff,
+    CanopyHydrology<:AbstractCanopyHydrology{NF},
+    Evapotranspiration<:AbstractEvapotranspiration{NF},
+    SurfaceRunoff<:AbstractSurfaceRunoff{NF},
 } <: AbstractSurfaceHydrology{NF}
     "Canopy hydrology scheme"
     canopy_hydrology::CanopyHydrology
@@ -23,20 +29,24 @@ function SurfaceHydrology(
     return SurfaceHydrology{NF, typeof(canopy_hydrology), typeof(canopy_ET), typeof(surface_runoff)}(canopy_hydrology, canopy_ET, surface_runoff)
 end
 
-variables(hydrology::SurfaceHydrology) = tuplejoin(
-    variables(hydrology.canopy_hydrology),
-    variables(hydrology.evapotranpsiration),
-    variables(hydrology.surface_runoff)
+function compute_auxiliary!(
+    state, grid,
+    hydrology::SurfaceHydrology,
+    atmos::AbstractAtmosphere,
+    constants::PhysicalConstants
 )
-
-function compute_auxiliary!(state, model, hydrology::SurfaceHydrology)
-    compute_auxiliary!(state, model, hydrology.canopy_hydrology)
-    compute_auxiliary!(state, model, hydrology.evapotranpsiration)
-    compute_auxiliary!(state, model, hydrology.surface_runoff)
+    compute_auxiliary!(state, grid, hydrology.canopy_hydrology, atmos, constants)
+    compute_auxiliary!(state, grid, hydrology.evapotranpsiration)
+    compute_auxiliary!(state, grid, hydrology.surface_runoff)
 end
 
-function compute_tendencies!(state, model, hydrology::SurfaceHydrology)
-    compute_auxiliary!(state, model, hydrology.canopy_hydrology)
-    compute_auxiliary!(state, model, hydrology.evapotranpsiration)
-    compute_auxiliary!(state, model, hydrology.surface_runoff)
+function compute_tendencies!(
+    state, grid,
+    hydrology::SurfaceHydrology,
+    atmos::AbstractAtmosphere,
+    constants::PhysicalConstants
+)
+    compute_auxiliary!(state, grid, hydrology.canopy_hydrology)
+    compute_auxiliary!(state, grid, hydrology.evapotranpsiration)
+    compute_auxiliary!(state, grid, hydrology.surface_runoff)
 end

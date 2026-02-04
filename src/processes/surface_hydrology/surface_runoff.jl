@@ -68,29 +68,33 @@ variables(::DirectSurfaceRunoff) = (
     auxiliary(:infiltration, XY(), units=u"m/s", desc="Infiltration flux"),
 )
 
-function compute_auxiliary!(state, model, runoff::DirectSurfaceRunoff)
-    grid = get_grid(model)
-    soil_hydrology = get_soil_hydrology(model)
-    surface_hydrology = get_surface_hydrology(model)
-    launch!(grid, XY, compute_auxiliary_kernel!, state, runoff, surface_hydrology.canopy_hydrology, soil_hydrology)
+function compute_auxiliary!(
+    state, grid,
+    runoff::DirectSurfaceRunoff,
+    canopy_hydrology::AbstractSurfaceHydrology,
+    soil_hydrology::AbstractSoilHydrology,
+    args...
+)
+    out = auxiliary_fields(state, runoff)
+    fields = get_fields(state, runoff, canopy_hydrology, soil_hydrology; except = out)
+    launch!(grid, XY, compute_auxiliary_kernel!, out, fields, runoff, canopy_hydrology, soil_hydrology)
 end
 
-# Kernels
+# Kernel function
 
-@kernel inbounds=true function compute_auxiliary_kernel!(
-    state, grid,
+@propagate_inbounds function compute_surface_runoff!(
+    out, i, j, grid, fields,
     runoff::DirectSurfaceRunoff{NF},
     canopy_hydrology::AbstractCanopyHydrology,
     soil_hydrology::AbstractSoilHydrology
 ) where {NF}
-    i, j = @index(Global, NTuple)
     fgrid = get_field_grid(grid)
 
     # Get inputs
-    precip_ground = ground_precipitation(i, j, grid, state, canopy_hydrology)
-    excess_water = surface_excess_water(i, j, grid, state, soil_hydrology)
-    k_unsat = hydraulic_conductivity(i, j, fgrid.Nz, grid, state, soil_hydrology)
-    sat_top = saturation_water_ice(i, j, fgrid.Nz, grid, state, soil_hydrology)
+    precip_ground = ground_precipitation(i, j, grid, fields, canopy_hydrology)
+    excess_water = surface_excess_water(i, j, grid, fields, soil_hydrology)
+    k_unsat = hydraulic_conductivity(i, j, fgrid.Nz, grid, fields, soil_hydrology)
+    sat_top = saturation_water_ice(i, j, fgrid.Nz, grid, fields, soil_hydrology)
 
     # Case 1: Excess water present at the surface -> precipitation adds to excess water
     # and we set the infiltration rate to the min of hydraulic conductivity and surface_excess_water
@@ -98,13 +102,21 @@ end
         # Compute rate of excess water removal (surface drainage)
         surface_drainage = compute_surface_drainage(runoff, excess_water)
         # Calculate infiltration
-        infil = state.infiltration[i, j, 1] = compute_infiltration(runoff, surface_drainage, sat_top, k_unsat)
+        infil = out.infiltration[i, j, 1] = compute_infiltration(runoff, surface_drainage, sat_top, k_unsat)
     # Case 2: No excess water -> rainfall is routed directly to infiltration
     else
         surface_drainage = zero(NF)
-        infil = state.infiltration[i, j, 1] = compute_infiltration(runoff, precip_ground, sat_top, k_unsat)
+        infil = out.infiltration[i, j, 1] = compute_infiltration(runoff, precip_ground, sat_top, k_unsat)
     end
 
     # Compute surface runoff
-    state.surface_runoff[i, j, 1] = compute_surface_runoff(runoff, precip_ground, surface_drainage, infil)
+    out.surface_runoff[i, j, 1] = compute_surface_runoff(runoff, precip_ground, surface_drainage, infil)
+    return out
+end
+
+# Kernels
+
+@kernel inbounds=true function compute_auxiliary_kernel!(out, grid, fields, runoff::AbstractSurfaceRunoff, args...)
+    i, j = @index(Global, NTuple)
+    compute_surface_runoff!(out, i, j, grid, fields, runoff, args...)
 end
