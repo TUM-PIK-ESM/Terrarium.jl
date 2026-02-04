@@ -4,7 +4,7 @@
 Base type for surface energy balance schemes which couple together the relevant processes
 for radiative and turbulent surface energy fluxes.
 """
-abstract type AbstractSurfaceEnergyBalance{NF} <: AbstractComponent{NF} end
+abstract type AbstractSurfaceEnergyBalance{NF} <: AbstractCoupledProcesses{NF} end
 
 ## Getter methods for SEB types
 """

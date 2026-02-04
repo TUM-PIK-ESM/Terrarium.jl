@@ -5,7 +5,7 @@
 
 Base type for coupled ground processes.
 """
-abstract type AbstractGround{NF} <: AbstractComponent{NF} end
+abstract type AbstractGround{NF} <: AbstractCoupledProcesses{NF} end
 
 """
     get_stratigraphy(ground)

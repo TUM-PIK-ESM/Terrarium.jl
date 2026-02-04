@@ -15,10 +15,10 @@ abstract type AbstractProcess{NF} end
 """
     $TYPEDEF
 
-Base type for model components that are responsible for coupling two or more
-`AbstractProcess`es together.
+Base type for `AbstractProces` implementations that define a coupling interface for
+(typically two or more) sub-processes.
 """
-abstract type AbstractComponent{NF} <: AbstractProcess{NF} end
+abstract type AbstractCoupledProcesses{NF} <: AbstractProcess{NF} end
 
 """
     $TYPEDEF
@@ -97,8 +97,8 @@ function compute_tendencies! end
 
 # Allow variables to be defined on any type, defaulting to an empty tuple
 variables(::Any) = ()
-# For AbstractComponent and AbstractModel types, default to collecting variables on all processes contained therein
-variables(obj::Union{AbstractComponent, AbstractModel}) = mapreduce(variables, tuplejoin, processes(obj))
+# For AbstractCoupledProcesses and AbstractModel types, default to collecting variables on all processes contained therein
+variables(obj::Union{AbstractCoupledProcesses, AbstractModel}) = mapreduce(variables, tuplejoin, processes(obj))
 
 """
     $TYPEDSIGNATURES
@@ -106,7 +106,7 @@ variables(obj::Union{AbstractComponent, AbstractModel}) = mapreduce(variables, t
 Return a tuple of `AbstractProces`es contained in the given model or coupled processes type.
 Note that this is a type-stable, `@generated` function that is compiled for each argument type.
 """
-@generated function processes(obj::Union{AbstractComponent, AbstractModel})
+@generated function processes(obj::Union{AbstractCoupledProcesses, AbstractModel})
     names = fieldnames(obj)
     types = fieldtypes(obj)
     procfields = filter(Tuple(zip(names, types))) do (name, type)

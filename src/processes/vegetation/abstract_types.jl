@@ -1,6 +1,6 @@
 # Vegetation component types
 
-abstract type AbstractVegetation{NF} <: AbstractComponent{NF} end
+abstract type AbstractVegetation{NF} <: AbstractCoupledProcesses{NF} end
 
 # Vegetation process types
 
