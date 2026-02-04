@@ -125,6 +125,7 @@ function compute_tendencies!(
     soil::AbstractSoil,
     constants::PhysicalConstants,
     evtr::Optional{AbstractEvapotranspiration} = nothing,
+    runoff::Optional{AbstractSurfaceRunoff} = nothing,
     args...
 ) where {NF}
     strat = get_stratigraphy(soil)
@@ -132,8 +133,8 @@ function compute_tendencies!(
     tendencies = tendency_fields(state, hydrology)
     fields = get_fields(state, hydrology, bgc, evtr)
     clock = state.clock
-    launch!(grid, XYZ, compute_saturation_tendency_kernel!,
-            tendencies, clock, fields, hydrology, strat, bgc, constants, evtr)
+    launch!(grid, XYZ, compute_tendencies_kernel!,
+            tendencies, clock, fields, hydrology, strat, bgc, constants, evtr, runoff)
     return nothing
 end
 
@@ -223,21 +224,17 @@ any remaining excess water is added to the `surface_excess_water` pool.
     end
 end
 
-"""
-    $TYPEDSIGNATURES
-
-Kernel function for computing the tendency of the prognostic `saturation_water_ice` variable in all grid cells and soil layers.
-"""
+""" $TYPEDSIGNATURES """
 @propagate_inbounds function compute_saturation_tendency!(
     saturation_water_ice_tendency, i, j, k, grid, clock, fields,
     hydrology::SoilHydrology,
     strat::AbstractStratigraphy,
     bgc::AbstractSoilBiogeochemistry,
     constants::PhysicalConstants,
-    evapotranspiration::Union{Nothing, AbstractEvapotranspiration}
+    evtr::Optional{AbstractEvapotranspiration}
 )
     # Compute volumetic water content tendency
-    ∂θ∂t = volumetric_water_content_tendency(i, j, k, grid, clock, fields, hydrology, constants, evapotranspiration)
+    ∂θ∂t = compute_volumetric_water_content_tendency(i, j, k, grid, clock, fields, hydrology, constants, evtr)
     # Get porosity
     por = porosity(i, j, k, grid, fields, strat, bgc)
     # Rescale by porosity to get saturation tendency
@@ -245,23 +242,49 @@ Kernel function for computing the tendency of the prognostic `saturation_water_i
 end
 
 """
-    $SIGNATURES
+    $TYPEDSIGNATURES
 
 Compute the volumetric water content (VWC) tendency at grid cell `i, j k` f. Note that the VWC tendency is not scaled by
 the porosity and is thus not the same as the saturation tendency.
 """
-@propagate_inbounds function volumetric_water_content_tendency(
+@propagate_inbounds function compute_volumetric_water_content_tendency(
     i, j, k, grid, clock, fields,
     hydrology::SoilHydrology{NF},
     constants::PhysicalConstants,
-    evapotranspiration::Union{Nothing, AbstractEvapotranspiration}
+    evtr::Optional{AbstractEvapotranspiration}
 ) where {NF}
     # Compute divergence of water fluxes due to forcings only
     ∂θ∂t = (
-        + forcing(i, j, k, grid, clock, fields, evapotranspiration, hydrology, constants) # ET forcing
+        + forcing(i, j, k, grid, clock, fields, evtr, hydrology, constants) # ET forcing
         + forcing(i, j, k, grid, clock, fields, hydrology.vwc_forcing, hydrology) # generic user-defined forcing
     )
     return ∂θ∂t
+end
+
+""" $TYPEDSIGNATURES """
+@propagate_inbounds function compute_surface_excess_water_tendency!(
+    surface_excess_water_tendency, i, j, k, grid, clock, fields,
+    hydrology::SoilHydrology,
+    runoff::Optional{AbstractSurfaceRunoff}
+)
+    surface_excess_water_tendency[i, j, k] += compute_surface_excess_water_tendency(i, j, k, grid, clock, fields, hydrology, runoff)
+    return min(∂S∂t, S)
+end
+
+"""
+    $TYPEDSIGNATURES
+
+Kernel function for computing the tendency of the prognostic `surface_excess_water` variable in all grid cells.
+"""
+@propagate_inbounds function compute_surface_excess_water_tendency(
+    i, j, k, grid, clock, fields,
+    hydrology::SurfaceHydrology,
+    runoff::Optional{AbstractSurfaceRunoff}
+)
+    # Compute surface excess water tendency
+    S = fields.surface_excess_water[i, j, k]
+    ∂S∂t = isnothing(runoff) ? zero(S) : compute_surface_drainage(runoff, S)
+    return min(∂S∂t, S)
 end
 
 # Kernels
@@ -281,9 +304,16 @@ end
     compute_hydraulics!(out, i, j, k, grid, fields, hydrology, args...)
 end
 
-# Kernels
-
-@kernel inbounds=true function compute_saturation_tendency_kernel!(tend, grid, clock, fields, hydrology::SoilHydrology, args...) where {NF}
+@kernel inbounds=true function compute_tendencies_kernel!(
+    tend, grid, clock, fields,
+    hydrology::SoilHydrology,
+    strat::AbstractStratigraphy,
+    bgc::AbstractSoilBiogeochemistry,
+    constants::PhysicalConstants,
+    evtr::Optional{AbstractEvapotranspiration},
+    runoff::Optional{AbstractRunoff}
+)
     i, j, k = @index(Global, NTuple)
-    compute_saturation_tendency!(tend.saturation_water_ice, i, j, k, grid, clock, fields, hydrology, args...)
+    compute_saturation_tendency!(tend.saturation_water_ice, i, j, k, grid, clock, fields, hydrology, strat, bgc, constants, evtr)
+    compute_surface_excess_water_tendency!(tend.surface_excess_water, i, j, k, grid, clock, fields, hydrology, runoff)
 end

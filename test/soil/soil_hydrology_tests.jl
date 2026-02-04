@@ -1,5 +1,5 @@
 using Terrarium
-using Terrarium: forcing, volumetric_water_content_tendency, hydraulic_conductivity
+using Terrarium: forcing, compute_volumetric_water_content_tendency, hydraulic_conductivity
 using Test
 
 using FreezeCurves
@@ -228,7 +228,7 @@ end
     forcing_value.value = 0.01
     @test forcing(1, 1, Nz, grid, state.clock, fields, vwc_forcing, hydrology) == forcing_value.value
     # check tendency calculation
-    dθdt = volumetric_water_content_tendency(1, 1, Nz, grid, state.clock, fields, hydrology, model.constants, nothing)
+    dθdt = compute_volumetric_water_content_tendency(1, 1, Nz, grid, state.clock, fields, hydrology, model.constants, nothing)
     @test dθdt == forcing_value.value
     # take one timestep and check that water was removed
     dt = 60.0

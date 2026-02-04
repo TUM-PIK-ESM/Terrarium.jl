@@ -120,11 +120,11 @@ Compute the volumetric water content (VWC) tendency at grid cell `i, j k` accord
 Richardson-Richards equation. Note that the VWC tendency is not scaled by the porosity and
 is thus not the same as the saturation tendency.
 """
-@propagate_inbounds function volumetric_water_content_tendency(
+@propagate_inbounds function compute_volumetric_water_content_tendency(
     i, j, k, grid, clock, fields,
     hydrology::SoilHydrology{NF, RichardsEq},
     constants::PhysicalConstants,
-    evapotranspiration::Union{Nothing, AbstractEvapotranspiration}
+    evapotranspiration::Optional{AbstractEvapotranspiration}
 ) where {NF}
     # Operators require the underlying Oceananigans grid
     field_grid = get_field_grid(grid)
