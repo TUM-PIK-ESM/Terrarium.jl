@@ -56,8 +56,8 @@ end
 
 @testset "Soil hydrology: hydraulic_conductivity" begin
     por = 0.5
-    cond_unsat = UnsatKVanGenuchten(Float64)
-    hydraulic_properties = ConstantSoilHydraulics(Float64; porosity=por, cond_unsat)
+    unsat_hydraulic_cond = UnsatKVanGenuchten(Float64)
+    hydraulic_properties = ConstantSoilHydraulics(Float64; porosity=por, unsat_hydraulic_cond)
     # wrapper function for evaluating hydraulic conductivity
     function eval_hydraulic_cond((por, sat, liq))
         soil = SoilVolume(porosity=por, saturation=sat, liquid=liq, solid=MineralOrganic())

@@ -13,7 +13,7 @@ using Test
     # Initialize state variables
     grid = ColumnGrid(UniformSpacing(Δz = 0.2, N = 10))
     clock = Clock(time=zero(eltype(grid)))
-    hydraulic_properties = ConstantSoilHydraulics(cond_unsat=UnsatKLinear(eltype(grid)))
+    hydraulic_properties = ConstantSoilHydraulics(unsat_hydraulic_cond=UnsatKLinear(eltype(grid)))
     hydrology = SoilHydrology(eltype(grid); hydraulic_properties)
     model = SoilModel(grid; hydrology)
     allvars = merge(vars, Variables(model))

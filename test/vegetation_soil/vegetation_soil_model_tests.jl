@@ -6,7 +6,7 @@ using Oceananigans.BoundaryConditions: BoundaryCondition, Flux
 @testset "VegetationSoilModel" begin
     grid = ColumnGrid(CPU(), ExponentialSpacing(Δz_max=1.0, N=50))
     swrc = VanGenuchten(α=2.0, n=2.0)
-    hydraulic_properties = ConstantSoilHydraulics(eltype(grid), cond_unsat=UnsatKVanGenuchten(eltype(grid); swrc))
+    hydraulic_properties = ConstantSoilHydraulics(eltype(grid), unsat_hydraulic_cond=UnsatKVanGenuchten(eltype(grid); swrc))
     hydrology = SoilHydrology(eltype(grid), RichardsEq(); hydraulic_properties)
     # Variably saturated with water table
     initializer = FieldInitializers(

@@ -67,11 +67,11 @@ $TYPEDFIELDS
     "Soil water retention curve"
     swrc::RC
     
-    "Unsaturated hydraulic conductivity formulation; defaults to `cond_sat`"
-    cond_unsat::UnsatK 
+    "Unsaturated hydraulic conductivity formulation; defaults to `sat_hydraulic_cond`"
+    unsat_hydraulic_cond::UnsatK 
 
     "Hydraulic conductivity at saturation [m/s]"
-    cond_sat::NF = 1e-5
+    sat_hydraulic_cond::NF = 1e-5
 
     "Prescribed field capacity [-]"
     field_capacity::NF = 0.25
@@ -80,22 +80,22 @@ $TYPEDFIELDS
     wilting_point::NF = 0.05
 
     # TODO: Remove once FreezeCurves.jl allows for generic type bounds
-    function ConstantSoilHydraulics(swrc::SWRC, cond_unsat::AbstractUnsatK, args::NF...) where {NF}
+    function ConstantSoilHydraulics(swrc::SWRC, unsat_hydraulic_cond::AbstractUnsatK, args::NF...) where {NF}
         adapted_swrc = adapt(NumberFormatAdaptor{NF}(), ustrip(swrc))
-        return new{NF, typeof(adapted_swrc), typeof(cond_unsat)}(adapted_swrc, cond_unsat, args...)
+        return new{NF, typeof(adapted_swrc), typeof(unsat_hydraulic_cond)}(adapted_swrc, unsat_hydraulic_cond, args...)
     end
 end
 
 function ConstantSoilHydraulics(
     ::Type{NF};
     swrc = BrooksCorey(),
-    cond_unsat = UnsatKLinear(NF),
+    unsat_hydraulic_cond = UnsatKLinear(NF),
     kwargs...
 ) where {NF}
-    return ConstantSoilHydraulics(; swrc, cond_unsat, kwargs...)
+    return ConstantSoilHydraulics(; swrc, unsat_hydraulic_cond, kwargs...)
 end
 
-@inline saturated_hydraulic_conductivity(hydraulics::ConstantSoilHydraulics, args...) = hydraulics.cond_sat
+@inline saturated_hydraulic_conductivity(hydraulics::ConstantSoilHydraulics, args...) = hydraulics.sat_hydraulic_cond
 
 @inline wilting_point(hydraulics::ConstantSoilHydraulics, args...) = hydraulics.wilting_point
 
@@ -114,11 +114,11 @@ $TYPEDFIELDS
     "Soil water retention curve"
     swrc::RC
 
-    "Unsaturated hydraulic conductivity formulation; defaults to `cond_sat`"
-    cond_unsat::UnsatK
+    "Unsaturated hydraulic conductivity formulation; defaults to `sat_hydraulic_cond`"
+    unsat_hydraulic_cond::UnsatK
 
     "Hydraulic conductivity at saturation [m/s]"
-    cond_sat::NF = 1e-5
+    sat_hydraulic_cond::NF = 1e-5
     
     "Linear coeficient of wilting point adjustment due to clay content [-]"
     wilting_point_coef::NF = 37.13e-3
@@ -130,23 +130,23 @@ $TYPEDFIELDS
     field_capacity_exp::NF = 0.35
 
     # TODO: Remove once FreezeCurves.jl allows for generic type bounds
-    function SoilHydraulicsSURFEX(swrc::SWRC, cond_unsat::AbstractUnsatK, args::NF...) where {NF}
+    function SoilHydraulicsSURFEX(swrc::SWRC, unsat_hydraulic_cond::AbstractUnsatK, args::NF...) where {NF}
         adapted_swrc = adapt(NumberFormatAdaptor{NF}(), ustrip(swrc))
-        return new{NF, typeof(adapted_swrc), typeof(cond_unsat)}(adapted_swrc, cond_unsat, args...)
+        return new{NF, typeof(adapted_swrc), typeof(unsat_hydraulic_cond)}(adapted_swrc, unsat_hydraulic_cond, args...)
     end
 end
 
 function SoilHydraulicsSURFEX(
     ::Type{NF};
     swrc = BrooksCorey(),
-    cond_unsat = UnsatKLinear(NF),
+    unsat_hydraulic_cond = UnsatKLinear(NF),
     kwargs...
 ) where {NF}
-    return SoilHydraulicsSURFEX(; swrc, cond_unsat, kwargs...)
+    return SoilHydraulicsSURFEX(; swrc, unsat_hydraulic_cond, kwargs...)
 end
 
 # TODO: this is not quite correct, SURFEX uses a hydraulic conductivity function that decreases exponentially with depth
-@inline saturated_hydraulic_conductivity(hydraulics::SoilHydraulicsSURFEX, args...) = hydraulics.cond_sat
+@inline saturated_hydraulic_conductivity(hydraulics::SoilHydraulicsSURFEX, args...) = hydraulics.sat_hydraulic_cond
 
 @inline function wilting_point(hydraulics::SoilHydraulicsSURFEX, texture::SoilTexture)
     β_w = hydraulics.wilting_point_coef
@@ -212,7 +212,7 @@ function hydraulic_conductivity(
         θwi = fracs.water + fracs.ice, # total water + ice content
         θsat = porosity(soil), # porosity
         f = liquid_fraction(soil),
-        Ω = hydraulics.cond_unsat.impedance, # scaling parameter for ice impedance
+        Ω = hydraulics.unsat_hydraulic_cond.impedance, # scaling parameter for ice impedance
         I_ice = 10^(-Ω*(1 - f)), # ice impedance factor
         K_sat = saturated_hydraulic_conductivity(hydraulics, soil.solid.texture);
         # We use `complex` types here to permit illegal state values which may occur when using adaptive time steppers.

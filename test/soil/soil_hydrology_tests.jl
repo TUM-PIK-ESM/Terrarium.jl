@@ -10,11 +10,11 @@ using Oceananigans
     # match what was set.
     hydraulic_props = ConstantSoilHydraulics(
         Float64;
-        cond_sat = 1e-6,
+        sat_hydraulic_cond = 1e-6,
         field_capacity = 0.1,
         wilting_point = 0.02,
     )
-    @test saturated_hydraulic_conductivity(hydraulic_props) == hydraulic_props.cond_sat
+    @test saturated_hydraulic_conductivity(hydraulic_props) == hydraulic_props.sat_hydraulic_cond
     @test field_capacity(hydraulic_props) == hydraulic_props.field_capacity
     @test wilting_point(hydraulic_props) == hydraulic_props.wilting_point
 end
@@ -43,17 +43,17 @@ end
 end
 
 @testset "Unsaturated hydraulic conductivity (linear)" begin
-    hydraulics = ConstantSoilHydraulics(Float64; cond_unsat=UnsatKLinear(Float64))
+    hydraulics = ConstantSoilHydraulics(Float64; unsat_hydraulic_cond=UnsatKLinear(Float64))
 
     # saturated case
     soil = SoilVolume()
     K = hydraulic_conductivity(hydraulics, soil)
-    @test K ≈ hydraulics.cond_sat
+    @test K ≈ hydraulics.sat_hydraulic_cond
 
     # unsaturated
     soil = SoilVolume(saturation=0.5);
     K = hydraulic_conductivity(hydraulics, soil)
-    @test 0 < K < hydraulics.cond_sat
+    @test 0 < K < hydraulics.sat_hydraulic_cond
 
     # dry
     soil = SoilVolume(saturation=0.0);
@@ -67,17 +67,17 @@ end
 end
 
 @testset "Unsaturated hydraulic conductivity (Van Genuchten)" begin
-    hydraulics = ConstantSoilHydraulics(Float64; swrc=VanGenuchten(), cond_unsat=UnsatKVanGenuchten(Float64))
+    hydraulics = ConstantSoilHydraulics(Float64; swrc=VanGenuchten(), unsat_hydraulic_cond=UnsatKVanGenuchten(Float64))
 
     # saturated case
     soil = SoilVolume()
     K = hydraulic_conductivity(hydraulics, soil)
-    @test K ≈ hydraulics.cond_sat
+    @test K ≈ hydraulics.sat_hydraulic_cond
 
     # unsaturated
     soil = SoilVolume(saturation=0.5);
     K = hydraulic_conductivity(hydraulics, soil)
-    @test 0 < K < hydraulics.cond_sat
+    @test 0 < K < hydraulics.sat_hydraulic_cond
 
     # dry
     soil = SoilVolume(saturation=0.0);
@@ -93,7 +93,7 @@ end
 @testset "SoilHydrology: adjust_saturation_profile" begin
     grid = ColumnGrid(UniformSpacing(Δz=0.1, N=100))
     swrc = VanGenuchten(α=2.0, n=2.0)
-    hydraulic_properties = ConstantSoilHydraulics(Float64; swrc, cond_unsat=UnsatKVanGenuchten(Float64))
+    hydraulic_properties = ConstantSoilHydraulics(Float64; swrc, unsat_hydraulic_cond=UnsatKVanGenuchten(Float64))
     hydrology = SoilHydrology(eltype(grid), RichardsEq(); hydraulic_properties)
     state = initialize(hydrology, grid)
     
@@ -125,7 +125,7 @@ end
 @testset "SoilHydrology: Richardson-Richards' equation" begin
     grid = ColumnGrid(UniformSpacing(Δz=0.1, N=100))
     swrc = VanGenuchten(α=2.0, n=2.0)
-    hydraulic_properties = ConstantSoilHydraulics(Float64; swrc, cond_unsat=UnsatKVanGenuchten(Float64))
+    hydraulic_properties = ConstantSoilHydraulics(Float64; swrc, unsat_hydraulic_cond=UnsatKVanGenuchten(Float64))
     hydrology = SoilHydrology(eltype(grid), RichardsEq(); hydraulic_properties)
     soil = SoilEnergyHydrologyBGC(eltype(grid); hydrology)
 
@@ -143,7 +143,7 @@ end
     compute_auxiliary!(state, model)
     # check that all hydraulic conductivities are finite and equal to K_sat
     @test all(isfinite.(state.hydraulic_conductivity))
-    @test all(state.hydraulic_conductivity .≈ hydraulic_properties.cond_sat)
+    @test all(state.hydraulic_conductivity .≈ hydraulic_properties.sat_hydraulic_cond)
     compute_tendencies!(state, model)
     # check that all tendencies are zero
     @test all(iszero.(state.tendencies.saturation_water_ice))
@@ -203,7 +203,7 @@ end
     swrc = VanGenuchten(α=2.0, n=2.0)
     porosity = ConstantSoilPorosity(eltype(grid))
     strat = HomogeneousStratigraphy(eltype(grid); porosity)
-    hydraulic_properties = ConstantSoilHydraulics(eltype(grid); swrc, cond_unsat=UnsatKVanGenuchten(Float64))
+    hydraulic_properties = ConstantSoilHydraulics(eltype(grid); swrc, unsat_hydraulic_cond=UnsatKVanGenuchten(Float64))
     forcing_value = ForcingValue(0.0)
     vwc_forcing = Forcing(parameters=forcing_value, discrete_form=true) do i, j, k, grid, clock, fields, params
         params.value

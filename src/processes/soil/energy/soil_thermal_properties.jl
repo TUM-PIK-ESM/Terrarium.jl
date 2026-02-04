@@ -45,15 +45,15 @@ SoilHeatCapacities(::Type{NF}; kwargs...) where {NF} = SoilHeatCapacities{NF}(; 
 Properties:
 $TYPEDFIELDS
 """
-struct SoilThermalProperties{NF, FC, CondWeighting}
+struct SoilThermalProperties{NF, FC, CondBulk}
     "Thermal conductivities for all constituents"
-    cond::SoilThermalConductivities{NF}
+    conductivities::SoilThermalConductivities{NF}
 
-    "Thermal conductivity mixing scheme"
-    cond_bulk::CondWeighting
+    "Method for computing bulk thermal conductivity from constituents"
+    bulk_conductivity::CondBulk
 
     "Thermal conductivities for all constituents"
-    heatcap::SoilHeatCapacities{NF}
+    heat_capacity::SoilHeatCapacities{NF}
 
     "Freezing characteristic curve needed for energy-temperature closure"
     freezecurve::FC
@@ -61,11 +61,11 @@ end
 
 SoilThermalProperties(
     ::Type{NF};
-    cond::SoilThermalConductivities{NF} = SoilThermalConductivities(NF),
-    cond_bulk::AbstractBulkWeightingScheme = InverseQuadratic(),
-    heatcap::SoilHeatCapacities{NF} = SoilHeatCapacities(NF),
+    conductivities::SoilThermalConductivities{NF} = SoilThermalConductivities(NF),
+    bulk_conductivity::AbstractBulkWeightingScheme = InverseQuadratic(),
+    heat_capacity::SoilHeatCapacities{NF} = SoilHeatCapacities(NF),
     freezecurve::FreezeCurve = FreeWater()
-) where {NF} = SoilThermalProperties{NF, typeof(freezecurve), typeof(cond_bulk)}(cond, cond_bulk, heatcap, freezecurve)
+) where {NF} = SoilThermalProperties{NF, typeof(freezecurve), typeof(bulk_conductivity)}(conductivities, bulk_conductivity, heat_capacity, freezecurve)
 
 freezecurve(
     ::SoilThermalProperties{NF, FreeWater},
@@ -78,10 +78,10 @@ freezecurve(
 Compute the bulk thermal conductivity of the given soil volume.
 """
 @inline function compute_thermal_conductivity(props::SoilThermalProperties, soil::SoilVolume)
-    κs = getproperties(props.cond)
+    κs = getproperties(props.conductivities)
     fracs = volumetric_fractions(soil)
     # apply bulk conductivity weighting
-    return props.cond_bulk(κs, fracs)
+    return props.bulk_conductivity(κs, fracs)
 end
 
 """
@@ -90,7 +90,7 @@ end
 Compute the bulk heat capacity of the given soil volume.
 """
 @inline function heat_capacity(props::SoilThermalProperties, soil::SoilVolume)
-    cs = getproperties(props.heatcap)
+    cs = getproperties(props.heat_capacity)
     fracs = volumetric_fractions(soil)
     # for heat capacity, we just do a weighted average
     return sum(fastmap(*, cs, fracs))
