@@ -278,7 +278,7 @@ Kernel function for computing the tendency of the prognostic `surface_excess_wat
 """
 @propagate_inbounds function compute_surface_excess_water_tendency(
     i, j, k, grid, clock, fields,
-    hydrology::SurfaceHydrology,
+    hydrology::SoilHydrology,
     runoff::Optional{AbstractSurfaceRunoff}
 )
     # Compute surface excess water tendency
@@ -311,7 +311,7 @@ end
     bgc::AbstractSoilBiogeochemistry,
     constants::PhysicalConstants,
     evtr::Optional{AbstractEvapotranspiration},
-    runoff::Optional{AbstractRunoff}
+    runoff::Optional{AbstractSurfaceRunoff}
 )
     i, j, k = @index(Global, NTuple)
     compute_saturation_tendency!(tend.saturation_water_ice, i, j, k, grid, clock, fields, hydrology, strat, bgc, constants, evtr)

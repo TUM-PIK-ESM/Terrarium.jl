@@ -3,7 +3,7 @@
 """
 Base type for canopy hydrology processes.
 """
-abstract type AbstractCanopyHydrology{NF} <: AbstractComopnent{NF} end
+abstract type AbstractCanopyHydrology{NF} <: AbstractCoupledProcesses{NF} end
 
 """
     canopy_water(i, j, grid, state, ::AbstractCanopyHydrology)
