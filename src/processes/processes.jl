@@ -52,7 +52,7 @@ export SoilEnergyBalance, SoilEnergyTemperatureClosure
 include("soil/energy/soil_energy.jl")
 include("soil/energy/soil_energy_closures.jl")
 
-export SoilEnergyHydrologyBGC
+export SoilEnergyWaterCarbon
 include("soil/soil_coupled.jl")
 
 # Vegetation
@@ -81,7 +81,7 @@ include("vegetation/stomatal_conductance.jl")
 export PALADYNAutotrophicRespiration
 include("vegetation/autotrophic_respiration.jl")
 
-export DynamicVegetation
+export VegetationCarbon
 include("vegetation/vegetation_coupled.jl")
 
 # Surface Energy Balance

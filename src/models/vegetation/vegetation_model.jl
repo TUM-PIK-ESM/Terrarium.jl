@@ -23,7 +23,7 @@ $TYPEDFIELDS
     atmosphere::Atmosphere = PrescribedAtmosphere(eltype(grid))
 
     "Vegetation processes"
-    vegetation::Vegetation = DynamicVegetation(eltype(grid))
+    vegetation::Vegetation = VegetationCarbon(eltype(grid))
 
     "Physical constants"
     constants::Constants = PhysicalConstants(eltype(grid))

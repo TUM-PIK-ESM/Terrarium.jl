@@ -1,12 +1,17 @@
-@kwdef struct DynamicVegetation{
+"""
+    $TYPEDEF
+
+Represents a generic coupling of vegetation carbon processes.
+"""
+@kwdef struct VegetationCarbon{
     NF,
     Photosynthesis <: AbstractPhotosynthesis,
     StomatalConducatance <: AbstractStomatalConductance,
     AutotrophicRespiration <: AbstractAutotrophicRespiration,
     Phenology <: AbstractPhenology,
     CarbonDynamics <: AbstractVegetationCarbonDynamics,
-    VegetationDynamics <: AbstractVegetationDynamics,
-    RootDistribution <: AbstractRootDistribution
+    VegetationDynamics <: Optional{AbstractVegetationDynamics},
+    RootDistribution <: Optional{AbstractRootDistribution}
 } <: AbstractVegetation{NF}
     "Photosynthesis scheme"
     photosynthesis::Photosynthesis = LUEPhotosynthesis(eltype(grid)) # not prognostic
@@ -32,7 +37,7 @@ end
 
 function compute_auxiliary!(
     state, grid,
-    veg::DynamicVegetation,
+    veg::VegetationCarbon,
     atmos::AbstractAtmosphere,
     constants::PhysicalConstants,
     args...
@@ -60,7 +65,7 @@ function compute_auxiliary!(
     return nothing
 end
 
-function compute_tendencies!(state, veg::DynamicVegetation, args...)
+function compute_tendencies!(state, veg::VegetationCarbon, args...)
     # Needs NPP(t), C_veg(t-1), LAI_b(t-1) and computes tendency for C_veg
     compute_tendencies!(state, grid, veg.carbon_dynamics)
 

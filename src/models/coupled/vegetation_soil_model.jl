@@ -28,7 +28,7 @@
     plant_available_water::PAW = FieldCapacityLimitedPAW(eltype(grid))
 
     "Soil processes"
-    soil::SoilProcesses = SoilEnergyHydrologyBGC(eltype(grid))
+    soil::SoilProcesses = SoilEnergyWaterCarbon(eltype(grid))
 
     "Physical constants"
     constants::PhysicalConstants{NF} = PhysicalConstants(eltype(grid))

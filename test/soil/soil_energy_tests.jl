@@ -49,7 +49,7 @@ end
         heat_capacity=SoilHeatCapacities(mineral=c),
     )
     energy = SoilEnergyBalance(eltype(grid); thermal_properties)
-    soil = SoilEnergyHydrologyBGC(eltype(grid); energy, strat, biogeochem)
+    soil = SoilEnergyWaterCarbon(eltype(grid); energy, strat, biogeochem)
     model = SoilModel(grid; soil, initializer)
     # periodic upper boundary temperature
     upperbc(z, t) = T₀ + A*sin(2π*t/P)
@@ -88,7 +88,7 @@ end
     # this is just a hack to configure the model to simulate heat conduction in a fully solid medium
     soil_porosity = ConstantSoilPorosity(mineral_porosity=0.0)
     strat = HomogeneousStratigraphy(Float64; porosity = soil_porosity)
-    soil = SoilEnergyHydrologyBGC(eltype(grid); strat, biogeochem)
+    soil = SoilEnergyWaterCarbon(eltype(grid); strat, biogeochem)
     model = SoilModel(grid; soil, initializer)
     # constant upper boundary temperature set to T₁
     bcs = (temperature = (top = ValueBoundaryCondition(T₁),),)

@@ -17,7 +17,7 @@ $(TYPEDFIELDS)
     grid::GridType
 
     "Soil processes"
-    soil::Soil = SoilEnergyHydrologyBGC(eltype(grid))
+    soil::Soil = SoilEnergyWaterCarbon(eltype(grid))
 
     "Physical constants"
     constants::Constants = PhysicalConstants(eltype(grid))

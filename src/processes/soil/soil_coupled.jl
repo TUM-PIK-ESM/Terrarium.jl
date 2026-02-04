@@ -1,4 +1,4 @@
-struct SoilEnergyHydrologyBGC{
+struct SoilEnergyWaterCarbon{
     NF,
     Stratigraphy <: AbstractStratigraphy{NF},
     Energy <: AbstractSoilEnergyBalance{NF},
@@ -18,21 +18,21 @@ struct SoilEnergyHydrologyBGC{
     biogeochem::Biogeochemistry
 end
 
-function SoilEnergyHydrologyBGC(
+function SoilEnergyWaterCarbon(
     ::Type{NF};
     strat = HomogeneousStratigraphy(NF),
     energy = SoilEnergyBalance(NF),
     hydrology = SoilHydrology(NF),
     biogeochem = ConstantSoilCarbonDensity(NF)
 ) where {NF}
-    return SoilEnergyHydrologyBGC(strat, energy, hydrology, biogeochem)
+    return SoilEnergyWaterCarbon(strat, energy, hydrology, biogeochem)
 end
 
 # Process interface methods
 
 function initialize!(
     state, grid,
-    soil::SoilEnergyHydrologyBGC,
+    soil::SoilEnergyWaterCarbon,
     constants::PhysicalConstants
 )
     initialize!(state, grid, soil.hydrology, soil, constants)
@@ -43,7 +43,7 @@ end
 
 function compute_auxiliary!(
     state, grid,
-    soil::SoilEnergyHydrologyBGC,
+    soil::SoilEnergyWaterCarbon,
     constants::PhysicalConstants
 )
     # TODO: consider implementing fused kernel here?
@@ -55,7 +55,7 @@ end
 
 function compute_tendencies!(
     state, grid,
-    soil::SoilEnergyHydrologyBGC,
+    soil::SoilEnergyWaterCarbon,
     constants::PhysicalConstants
 )
     # TODO: consider implementing fused kernel here?
@@ -69,7 +69,7 @@ end
 
 function closure!(
     state, grid,
-    soil::SoilEnergyHydrologyBGC,
+    soil::SoilEnergyWaterCarbon,
     constants::PhysicalConstants
 )
     closure!(state, grid, soil.hydrology, soil)
@@ -78,7 +78,7 @@ end
 
 function invclosure!(
     state, grid,
-    soil::SoilEnergyHydrologyBGC,
+    soil::SoilEnergyWaterCarbon,
     constants::PhysicalConstants
 )
     invclosure!(state, grid, soil.hydrology, soil)

@@ -16,7 +16,7 @@
     surface_energy_balance::SurfaceEnergy = SurfaceEnergyBalance(eltype(grid))
 
     "Soil processes"
-    soil::SoilProcesses = SoilEnergyHydrologyBGC(eltype(grid))
+    soil::SoilProcesses = SoilEnergyWaterCarbon(eltype(grid))
 
     "Initializer for coupled model"
     initializer::Initializer = DefaultInitializer()

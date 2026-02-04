@@ -127,7 +127,7 @@ end
     swrc = VanGenuchten(α=2.0, n=2.0)
     hydraulic_properties = ConstantSoilHydraulics(Float64; swrc, unsat_hydraulic_cond=UnsatKVanGenuchten(Float64))
     hydrology = SoilHydrology(eltype(grid), RichardsEq(); hydraulic_properties)
-    soil = SoilEnergyHydrologyBGC(eltype(grid); hydrology)
+    soil = SoilEnergyWaterCarbon(eltype(grid); hydrology)
 
     # Fully saturated, steady state
     initializer = FieldInitializers(
@@ -209,7 +209,7 @@ end
         params.value
     end
     hydrology = SoilHydrology(eltype(grid), RichardsEq(); hydraulic_properties, vwc_forcing)
-    soil = SoilEnergyHydrologyBGC(eltype(grid); hydrology, strat)
+    soil = SoilEnergyWaterCarbon(eltype(grid); hydrology, strat)
     # Variably saturated with water table
     initializer = FieldInitializers(
         temperature = 10.0, # positive soil temperature
