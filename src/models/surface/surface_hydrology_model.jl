@@ -10,7 +10,7 @@ $TYPEDFIELDS
     NF,
     GridType<:AbstractLandGrid{NF},
     Atmosphere<:AbstractAtmosphere,
-    CanopyHydrology<:AbstractCanopyHydrology,
+    CanopyHydrology<:AbstractCanopyInterception,
     CanopyET<:AbstractEvapotranspiration,
     SurfaceRunoff<:AbstractSurfaceRunoff,
     Constants<:PhysicalConstants{NF},
@@ -23,7 +23,7 @@ $TYPEDFIELDS
     atmosphere::Atmosphere = PrescribedAtmosphere(eltype(grid))
 
     "Canopy hydrology scheme"
-    canopy_hydrology::CanopyHydrology = PALADYNCanopyHydrology(eltype(grid))
+    canopy_hydrology::CanopyHydrology = PALADYNCanopyInterception(eltype(grid))
 
     "Canopy evapotranspiration scheme"
     evapotranpsiration::CanopyET = PALADYNCanopyEvapotranspiration(eltype(grid))

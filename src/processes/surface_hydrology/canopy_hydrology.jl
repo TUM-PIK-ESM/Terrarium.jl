@@ -6,7 +6,7 @@ Canopy interception and storage implementation following PALADYN (Willeit 2016) 
 Properties:
 $FIELDS
 """
-@kwdef struct PALADYNCanopyHydrology{NF} <: AbstractCanopyHydrology{NF}
+@kwdef struct PALADYNCanopyInterception{NF} <: AbstractCanopyInterception{NF}
     "Canopy water interception factor for tree PFTs"
     α_int::NF = 0.2 
 
@@ -21,9 +21,9 @@ $FIELDS
     τ_w::NF = 86400.0
 end
 
-PALADYNCanopyHydrology(::Type{NF}; kwargs...) where {NF} = PALADYNCanopyHydrology{NF}(; kwargs...)
+PALADYNCanopyInterception(::Type{NF}; kwargs...) where {NF} = PALADYNCanopyInterception{NF}(; kwargs...)
 
-variables(::PALADYNCanopyHydrology) = (
+variables(::PALADYNCanopyInterception) = (
     prognostic(:canopy_water, XY(); desc="Canopy liquid water", units=u"kg/m^2"), 
     auxiliary(:canopy_water_interception, XY(); desc="Canopy rain interception rate", units=u"m/s"), 
     auxiliary(:canopy_water_removal, XY(); desc="Canopy water removal rate", units=u"m/s"),
@@ -33,18 +33,18 @@ variables(::PALADYNCanopyHydrology) = (
     input(:SAI, XY(); desc="Stem Area Index", units=u"m^2/m^2"),
 )
 
-@propagate_inbounds canopy_water(i, j, grid, fields, ::PALADYNCanopyHydrology) = fields.canopy_water[i, j]
+@propagate_inbounds canopy_water(i, j, grid, fields, ::PALADYNCanopyInterception) = fields.canopy_water[i, j]
 
-@propagate_inbounds saturation_canopy_water(i, j, grid, fields, ::PALADYNCanopyHydrology) = fields.saturation_canopy_water[i, j]
+@propagate_inbounds saturation_canopy_water(i, j, grid, fields, ::PALADYNCanopyInterception) = fields.saturation_canopy_water[i, j]
 
-@propagate_inbounds ground_precipitation(i, j, grid, fields, ::PALADYNCanopyHydrology) = fields.precip_ground[i, j]
+@propagate_inbounds ground_precipitation(i, j, grid, fields, ::PALADYNCanopyInterception) = fields.precip_ground[i, j]
 
 """
     $TYPEDSIGNATURES
 
 Compute `I_can`, the canopy rain interception, following Eq. 42, PALADYN (Willeit 2016).
 """
-@inline function compute_canopy_interception(canopy_hydrology::PALADYNCanopyHydrology{NF}, precip, LAI, SAI) where NF   
+@inline function compute_canopy_interception(canopy_hydrology::PALADYNCanopyInterception{NF}, precip, LAI, SAI) where NF   
     I_can = canopy_hydrology.α_int * precip * (one(NF) - exp(-canopy_hydrology.k_ext*(LAI + SAI))) 
     return I_can
 end
@@ -54,7 +54,7 @@ end
 
 Compute the canopy saturation fraction as `w_can / w_can_max`.
 """
-@inline function compute_canopy_saturation_fraction(canopy_hydrology::PALADYNCanopyHydrology{NF}, w_can, LAI, SAI) where NF
+@inline function compute_canopy_saturation_fraction(canopy_hydrology::PALADYNCanopyInterception{NF}, w_can, LAI, SAI) where NF
     # Compute the wet canopy fraction
     w_can_max = canopy_hydrology.w_can_max * (LAI + SAI)
     f_can = w_can_max > 0 ? w_can / w_can_max : zero(NF)
@@ -67,7 +67,7 @@ end
 Compute the canopy water removal rate as `w_can / ρw / τw`.
 """
 @inline function compute_canopy_water_removal(
-   canopy_hydrology::PALADYNCanopyHydrology{NF},
+   canopy_hydrology::PALADYNCanopyInterception{NF},
    constants::PhysicalConstants{NF},
    w_can
 ) where {NF}
@@ -82,7 +82,7 @@ end
 Compute the `w_can` tendency and removal rate following Eq. 41, PALADYN (Willeit 2016).
 """
 @inline function compute_w_can_tend(
-    ::PALADYNCanopyHydrology{NF},
+    ::PALADYNCanopyInterception{NF},
     I_can, E_can, R_can
 ) where NF
     # Canopy water storage tendency: interception - evaporation - removal
@@ -98,7 +98,7 @@ of Eq. 44, PALADYN (Willeit 2016). Instead of subtracting the tendency, we just 
 interception and add the removal rate `R_can`.
 """
 @inline function compute_precip_ground(
-    ::PALADYNCanopyHydrology{NF},
+    ::PALADYNCanopyInterception{NF},
     precip, I_can, R_can
 ) where NF
     # Compute the precipitation reaching the ground:
@@ -111,7 +111,7 @@ end
 
 function compute_auxiliary!(
     state, grid,
-    canopy_hydrology::PALADYNCanopyHydrology,
+    canopy_hydrology::PALADYNCanopyInterception,
     ::AbstractSurfaceHydrology,
     atmos::AbstractAtmosphere,
     constants::PhysicalConstants
@@ -123,7 +123,7 @@ end
 
 function compute_tendencies!(
     state, grid,
-    canopy_hydrology::PALADYNCanopyHydrology,
+    canopy_hydrology::PALADYNCanopyInterception,
     surface_hydrology::AbstractSurfaceHydrology,
     args...
 )
@@ -137,7 +137,7 @@ end
 
 @propagate_inbounds function compute_canopy_auxiliary!(
     out, i, j, grid, fields,
-    canopy_hydrology::PALADYNCanopyHydrology{NF},
+    canopy_hydrology::PALADYNCanopyInterception{NF},
     atmos::AbstractAtmosphere,
     constants::PhysicalConstants,
     args...
@@ -170,7 +170,7 @@ end
 
 @propagate_inbounds function compute_canopy_water_tendency!(
     out, i, j, grid, fields,
-    canopy_hydrology::PALADYNCanopyHydrology,
+    canopy_hydrology::PALADYNCanopyInterception,
     evtr::AbstractEvapotranspiration,
     args...
 )
@@ -186,12 +186,12 @@ end
 
 # Kernels
 
-@kernel inbounds=true function compute_auxiliary_kernel!(out, i, j, grid, fields, canopy_hydrology::AbstractCanopyHydrology, args...)
+@kernel inbounds=true function compute_auxiliary_kernel!(out, i, j, grid, fields, canopy_hydrology::AbstractCanopyInterception, args...)
     i, j = @index(Global, NTuple)
     compute_canopy_auxiliary!(out, i, j, grid, fields, canopy_hydrology, args...)
 end
 
-@kernel inbounds=true function compute_tendencies_kernel!(out, i, j, grid, fields, canopy_hydrology::AbstractCanopyHydrology, args...)
+@kernel inbounds=true function compute_tendencies_kernel!(out, i, j, grid, fields, canopy_hydrology::AbstractCanopyInterception, args...)
     i, j = @index(Global, NTuple)
     compute_canopy_water_tendency!(out, i, j, grid, fields, canopy_hydrology, args...)
 end

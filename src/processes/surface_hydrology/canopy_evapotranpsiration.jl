@@ -85,10 +85,10 @@ variables(::PALADYNCanopyEvapotranspiration{NF}) where {NF} = (
     input(:gw_can, XY(); default=NF(1), units=u"m/s", desc="Canopy stomatal conductance") # consider direct coupling in the future
 )
 
-function surface_humidity_flux(i, j, grid, state, evtr::PALADYNCanopyEvapotranspiration)
-    @inbounds let E_gnd = state.evaporation_ground[i, j]
-                  E_can = state.evaporation_canopy[i, j],
-                  T_can = state.transpiration[i, j];
+function surface_humidity_flux(i, j, grid, fields, evtr::PALADYNCanopyEvapotranspiration)
+    @inbounds let E_gnd = fields.evaporation_ground[i, j]
+                  E_can = fields.evaporation_canopy[i, j],
+                  T_can = fields.transpiration[i, j];
         return E_gnd + E_can + T_can
     end
 end
@@ -116,7 +116,7 @@ for the given scheme `evtr` and process dependencies.
 @propagate_inbounds function compute_evapotranspiration!(
     out, i, j, grid, fields,
     evtr::PALADYNCanopyEvapotranspiration,
-    canopy_hydrology::AbstractCanopyHydrology,
+    canopy_hydrology::AbstractCanopyInterception,
     atmos::AbstractAtmosphere,
     constants::PhysicalConstants,
     soil::Optional{AbstractSoil} = nothing

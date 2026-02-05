@@ -6,7 +6,7 @@ $FIELDS
 """
 struct SurfaceHydrology{
     NF,
-    CanopyHydrology<:AbstractCanopyHydrology{NF},
+    CanopyHydrology<:AbstractCanopyInterception{NF},
     Evapotranspiration<:AbstractEvapotranspiration{NF},
     SurfaceRunoff<:AbstractSurfaceRunoff{NF},
 } <: AbstractSurfaceHydrology{NF}
@@ -22,7 +22,7 @@ end
 
 function SurfaceHydrology(
     ::Type{NF};
-    canopy_hydrology = PALADYNCanopyHydrology(NF),
+    canopy_hydrology = PALADYNCanopyInterception(NF),
     canopy_ET = PALADYNCanopyEvapotranspiration(NF),
     surface_runoff = DirectSurfaceRunoff(NF)
 ) where {NF}

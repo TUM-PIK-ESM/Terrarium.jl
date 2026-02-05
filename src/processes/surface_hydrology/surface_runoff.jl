@@ -85,7 +85,7 @@ end
 @propagate_inbounds function compute_surface_runoff!(
     out, i, j, grid, fields,
     runoff::DirectSurfaceRunoff{NF},
-    canopy_hydrology::AbstractCanopyHydrology,
+    canopy_hydrology::AbstractCanopyInterception,
     soil_hydrology::AbstractSoilHydrology
 ) where {NF}
     fgrid = get_field_grid(grid)
