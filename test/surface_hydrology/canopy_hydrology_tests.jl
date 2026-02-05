@@ -8,7 +8,7 @@ using Terrarium:
 using Test
 
 @testset "compute_canopy_interception" begin
-    canopy_hydrology = PALADYNCanopyHydrology(Float64)
+    canopy_hydrology = PALADYNCanopyInterception(Float64)
     # Test interception is zero when there is no rain
     I_can = compute_canopy_interception(canopy_hydrology, 0.0, 1.0, 0.5)
     @test iszero(I_can)
@@ -22,7 +22,7 @@ using Test
 end
 
 @testset "compute_canopy_saturation_fraction" begin
-    canopy_hydrology = PALADYNCanopyHydrology(Float64)
+    canopy_hydrology = PALADYNCanopyInterception(Float64)
     # Test saturated fraction is zero when there is no water
     f_can = compute_canopy_saturation_fraction(canopy_hydrology, 0.0, 1.0, 0.5)
     @test iszero(f_can)
@@ -39,7 +39,7 @@ end
 end
 
 @testset "compute_canopy_water_removal" begin
-    canopy_hydrology = PALADYNCanopyHydrology(Float64)
+    canopy_hydrology = PALADYNCanopyInterception(Float64)
     constants = PhysicalConstants()
     # Test flux is zero when there is no stored water
     ∂w∂t = compute_canopy_water_removal(canopy_hydrology, constants, 0.0)
@@ -53,7 +53,7 @@ end
 end
 
 @testset "compute_w_can_tend" begin
-    canopy_hydrology = PALADYNCanopyHydrology(Float64)
+    canopy_hydrology = PALADYNCanopyInterception(Float64)
     constants = PhysicalConstants()
     # Test tendency is zero when all flux terms are zero
     ∂w∂t = compute_w_can_tend(canopy_hydrology, 0.0, 0.0, 0.0)
@@ -70,7 +70,7 @@ end
 end
 
 @testset "compute_precip_ground" begin
-    canopy_hydrology = PALADYNCanopyHydrology(Float64)
+    canopy_hydrology = PALADYNCanopyInterception(Float64)
     precip_ground = compute_precip_ground(canopy_hydrology, 0, 0, 0)
     @test iszero(precip_ground)
     # Test calculation of precip_ground
