@@ -25,7 +25,7 @@ variables(::SaturationPressureClosure) = (
     fgrid = get_field_grid(grid)
     ψ = fields.pressure_head[i, j, k] # assumed given
     # get the elevation (z-coord) of k'th layer and reference (surface)
-    z = znode(i, j, k, fields.pressure_head)
+    z = znode(i, j, k, fgrid, Center(), Center(), Center())
     # TODO: we need a more user friendly interface for this...
     z_ref = znode(i, j, fgrid.Nz+1, fgrid, Center(), Center(), Face())
     # elevation pressure head
@@ -53,7 +53,7 @@ end
     fgrid = get_field_grid(grid)
     sat = fields.saturation_water_ice[i, j, k] # assumed given
     # get the elevation (z-coord) of k'th layer and reference (surface)
-    z = znode(i, j, k, fields.saturation_water_ice)
+    z = znode(i, j, k, fgrid, Center(), Center(), Center())
     z_ref = znode(i, j, fgrid.Nz+1, fgrid, Center(), Center(), Face())
     # get inverse of SWRC
     inv_swrc = inv(get_swrc(hydrology))
