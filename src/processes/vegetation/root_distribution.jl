@@ -30,10 +30,13 @@ StaticExponentialRootDistribution(::Type{NF}; kwargs...) where {NF} = StaticExpo
 
 Compute the continuous density function of the root distirbution as a function of depth `z`.
 """
-@inline root_density(roots::StaticExponentialRootDistribution, z) = (p.a * exp(p.a * z) + p.b * exp(p.b * z)) / 2
+@inline function root_density(rd::StaticExponentialRootDistribution{NF}, z) where {NF}
+    ∂R∂z = NF(0.5) * (rd.a * exp(rd.a * z) + rd.b * exp(rd.b * z))
+    return ∂R∂z
+end
 
 variables(rootdist::StaticExponentialRootDistribution) = (
-    auxiliary(:root_fraction, XYZ(), root_fraction, roots), # Static root fraction defined as function
+    auxiliary(:root_fraction, XYZ(), root_fraction, rootdist), # Static root fraction defined as function
 )
 
 """
