@@ -61,6 +61,25 @@ function compute_auxiliary!(
     return nothing
 end
 
+function compute_tendencies!(
+    state, grid,
+    hydrology::SoilHydrology{NF, RichardsEq},
+    soil::AbstractSoil,
+    constants::PhysicalConstants,
+    evtr::Optional{AbstractEvapotranspiration} = nothing,
+    runoff::Optional{AbstractSurfaceRunoff} = nothing,
+    args...
+) where {NF}
+    strat = get_stratigraphy(soil)
+    bgc = get_biogeochemistry(soil)
+    tendencies = tendency_fields(state, hydrology)
+    fields = get_fields(state, hydrology, bgc, evtr)
+    clock = state.clock
+    launch!(grid, XYZ, compute_tendencies_kernel!,
+            tendencies, clock, fields, hydrology, strat, bgc, constants, evtr, runoff)
+    return nothing
+end
+
 """
     $TYPEDSIGNATURES
 
@@ -164,11 +183,27 @@ end
 Compute the hydraulic conductivity at the center of the grid cell `i, j, k`.
 """
 @propagate_inbounds function hydraulic_conductivity(
-    i, j, k, grid, state,
+    i, j, k, grid, fields,
     hydrology::SoilHydrology,
     strat::AbstractStratigraphy,
     bgc::AbstractSoilBiogeochemistry
 )
-    soil = soil_volume(i, j, k, grid, state, strat, hydrology, bgc)
+    soil = soil_volume(i, j, k, grid, fields, strat, hydrology, bgc)
     return hydraulic_conductivity(hydrology.hydraulic_properties, soil)
+end
+
+# Kernels
+
+@kernel inbounds=true function compute_tendencies_kernel!(
+    tend, grid, clock, fields,
+    hydrology::SoilHydrology{NF, RichardsEq},
+    strat::AbstractStratigraphy,
+    bgc::AbstractSoilBiogeochemistry,
+    constants::PhysicalConstants,
+    evtr::Optional{AbstractEvapotranspiration},
+    runoff::Optional{AbstractSurfaceRunoff}
+) where {NF}
+    i, j, k = @index(Global, NTuple)
+    compute_saturation_tendency!(tend.saturation_water_ice, i, j, k, grid, clock, fields, hydrology, strat, bgc, constants, evtr)
+    compute_surface_excess_water_tendency!(tend.surface_excess_water, i, j, k, grid, clock, fields, hydrology, runoff)
 end

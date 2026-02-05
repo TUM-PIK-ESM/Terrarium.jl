@@ -81,7 +81,7 @@ variables(hydrology::SoilHydrology{NF}) where {NF} = (
 
 @propagate_inbounds hydraulic_conductivity(i, j, k, grid, fields, ::SoilHydrology) = fields.hydraulic_conductivity[i, j, k]
 
-@propagate_inbounds liquid_water_fraction(i, j, k, grid, state, ::SoilHydrology) = fields.liquid_water_fraction[i, j, k]
+@propagate_inbounds liquid_water_fraction(i, j, k, grid, fields, ::SoilHydrology) = fields.liquid_water_fraction[i, j, k]
 
 @propagate_inbounds water_table(i, j, grid, fields, ::SoilHydrology) = fields.water_table[i, j]
 
@@ -116,27 +116,7 @@ end
 
 @inline compute_auxiliary!(state, grid, hydrology::SoilHydrology, args...) = nothing
 
-## Fallback dispatch for compute_tendencies!
 @inline compute_tendencies!(state, grid, hydrology::SoilHydrology, args...) = nothing
-
-function compute_tendencies!(
-    state, grid,
-    hydrology::SoilHydrology{NF},
-    soil::AbstractSoil,
-    constants::PhysicalConstants,
-    evtr::Optional{AbstractEvapotranspiration} = nothing,
-    runoff::Optional{AbstractSurfaceRunoff} = nothing,
-    args...
-) where {NF}
-    strat = get_stratigraphy(soil)
-    bgc = get_biogeochemistry(soil)
-    tendencies = tendency_fields(state, hydrology)
-    fields = get_fields(state, hydrology, bgc, evtr)
-    clock = state.clock
-    launch!(grid, XYZ, compute_tendencies_kernel!,
-            tendencies, clock, fields, hydrology, strat, bgc, constants, evtr, runoff)
-    return nothing
-end
 
 # Kernel functions
 
@@ -268,7 +248,7 @@ end
     runoff::Optional{AbstractSurfaceRunoff}
 )
     surface_excess_water_tendency[i, j, k] += compute_surface_excess_water_tendency(i, j, k, grid, clock, fields, hydrology, runoff)
-    return min(∂S∂t, S)
+    return surface_excess_water_tendency
 end
 
 """
@@ -302,18 +282,4 @@ end
 @kernel inbounds=true function compute_hydraulics_kernel!(out, grid, fields, hydrology::SoilHydrology, args...)
     i, j, k = @index(Global, NTuple)
     compute_hydraulics!(out, i, j, k, grid, fields, hydrology, args...)
-end
-
-@kernel inbounds=true function compute_tendencies_kernel!(
-    tend, grid, clock, fields,
-    hydrology::SoilHydrology,
-    strat::AbstractStratigraphy,
-    bgc::AbstractSoilBiogeochemistry,
-    constants::PhysicalConstants,
-    evtr::Optional{AbstractEvapotranspiration},
-    runoff::Optional{AbstractSurfaceRunoff}
-)
-    i, j, k = @index(Global, NTuple)
-    compute_saturation_tendency!(tend.saturation_water_ice, i, j, k, grid, clock, fields, hydrology, strat, bgc, constants, evtr)
-    compute_surface_excess_water_tendency!(tend.surface_excess_water, i, j, k, grid, clock, fields, hydrology, runoff)
 end
