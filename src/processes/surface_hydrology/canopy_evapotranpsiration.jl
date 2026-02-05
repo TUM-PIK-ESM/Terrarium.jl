@@ -116,7 +116,7 @@ for the given scheme `evtr` and process dependencies.
 @propagate_inbounds function compute_evapotranspiration!(
     out, i, j, grid, fields,
     evtr::PALADYNCanopyEvapotranspiration,
-    canopy_hydrology::AbstractCanopyInterception,
+    canopy_interception::AbstractCanopyInterception,
     atmos::AbstractAtmosphere,
     constants::PhysicalConstants,
     soil::Optional{AbstractSoil} = nothing
@@ -131,7 +131,7 @@ for the given scheme `evtr` and process dependencies.
     Δqg = compute_humidity_vpd(i, j, grid, fields, atmos, constants, Tg) # humidity gradient between ground and canopy
     rₐ = aerodynamic_resistance(i, j, grid, fields, atmos) # aerodynamic resistance
     rₑ = aerodynamic_resistance(i, j, grid, fields, atmos, evtr) # aerodynamic resistance between ground and canopy
-    f_can = saturation_canopy_water(i, j, grid, fields, canopy_hydrology)
+    f_can = saturation_canopy_water(i, j, grid, fields, canopy_interception)
     β = ground_evaporation_resistance_factor(i, j, grid, fields, evtr.ground_resistance, soil)
 
     # Compute and store ET fluxes

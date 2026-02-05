@@ -110,7 +110,7 @@ export PALADYNCanopyEvapotranspiration
 include("surface_hydrology/canopy_evapotranpsiration.jl")
 
 export PALADYNCanopyInterception
-include("surface_hydrology/canopy_hydrology.jl")
+include("surface_hydrology/canopy_interception.jl")
 
 export DirectSurfaceRunoff
 include("surface_hydrology/surface_runoff.jl")

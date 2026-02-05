@@ -44,8 +44,8 @@ variables(::PALADYNCanopyInterception) = (
 
 Compute `I_can`, the canopy rain interception, following Eq. 42, PALADYN (Willeit 2016).
 """
-@inline function compute_canopy_interception(canopy_hydrology::PALADYNCanopyInterception{NF}, precip, LAI, SAI) where NF   
-    I_can = canopy_hydrology.α_int * precip * (one(NF) - exp(-canopy_hydrology.k_ext*(LAI + SAI))) 
+@inline function compute_canopy_interception(canopy_interception::PALADYNCanopyInterception{NF}, precip, LAI, SAI) where NF   
+    I_can = canopy_interception.α_int * precip * (one(NF) - exp(-canopy_interception.k_ext*(LAI + SAI))) 
     return I_can
 end
 
@@ -54,9 +54,9 @@ end
 
 Compute the canopy saturation fraction as `w_can / w_can_max`.
 """
-@inline function compute_canopy_saturation_fraction(canopy_hydrology::PALADYNCanopyInterception{NF}, w_can, LAI, SAI) where NF
+@inline function compute_canopy_saturation_fraction(canopy_interception::PALADYNCanopyInterception{NF}, w_can, LAI, SAI) where NF
     # Compute the wet canopy fraction
-    w_can_max = canopy_hydrology.w_can_max * (LAI + SAI)
+    w_can_max = canopy_interception.w_can_max * (LAI + SAI)
     f_can = w_can_max > 0 ? w_can / w_can_max : zero(NF)
     return f_can
 end
@@ -67,12 +67,12 @@ end
 Compute the canopy water removal rate as `w_can / ρw / τw`.
 """
 @inline function compute_canopy_water_removal(
-   canopy_hydrology::PALADYNCanopyInterception{NF},
+   canopy_interception::PALADYNCanopyInterception{NF},
    constants::PhysicalConstants{NF},
    w_can
 ) where {NF}
     # Canopy water storage tendency: interception - evaporation - removal
-    R_can = max(w_can, zero(NF)) / constants.ρw / canopy_hydrology.τ_w
+    R_can = max(w_can, zero(NF)) / constants.ρw / canopy_interception.τ_w
     return R_can
 end
 
@@ -111,33 +111,31 @@ end
 
 function compute_auxiliary!(
     state, grid,
-    canopy_hydrology::PALADYNCanopyInterception,
-    ::AbstractSurfaceHydrology,
+    canopy_interception::PALADYNCanopyInterception,
     atmos::AbstractAtmosphere,
     constants::PhysicalConstants
 )
-    out = auxiliary_fields(state, canopy_hydrology)
-    fields = get_fields(state, canopy_hydrology, atmos; except = out)
-    launch!(grid, XY, compute_auxiliary_kernel!, out, fields, canopy_hydrology, atmos, constants)
+    out = auxiliary_fields(state, canopy_interception)
+    fields = get_fields(state, canopy_interception, atmos; except = out)
+    launch!(grid, XY, compute_auxiliary_kernel!, out, fields, canopy_interception, atmos, constants)
 end
 
 function compute_tendencies!(
     state, grid,
-    canopy_hydrology::PALADYNCanopyInterception,
-    surface_hydrology::AbstractSurfaceHydrology,
+    canopy_interception::PALADYNCanopyInterception,
+    evtr::AbstractEvapotranspiration,
     args...
 )
-    evtr = get_evapotranspiration(surface_hydrology)
-    out = auxiliary_fields(state, canopy_hydrology)
-    fields = get_fields(state, canopy_hydrology, evtr; except = out)
-    launch!(grid, XY, compute_tendencies_kernel!, out, fields, canopy_hydrology, evtr)
+    out = auxiliary_fields(state, canopy_interception)
+    fields = get_fields(state, canopy_interception, evtr; except = out)
+    launch!(grid, XY, compute_tendencies_kernel!, out, fields, canopy_interception, evtr)
 end
 
 # Kernel functions
 
 @propagate_inbounds function compute_canopy_auxiliary!(
     out, i, j, grid, fields,
-    canopy_hydrology::PALADYNCanopyInterception{NF},
+    canopy_interception::PALADYNCanopyInterception{NF},
     atmos::AbstractAtmosphere,
     constants::PhysicalConstants,
     args...
@@ -149,16 +147,16 @@ end
     w_can = fields.canopy_water[i, j]
 
     # Compute canopy saturation faction
-    f_can = compute_canopy_saturation_fraction(canopy_hydrology, w_can, LAI, SAI)
+    f_can = compute_canopy_saturation_fraction(canopy_interception, w_can, LAI, SAI)
 
     # Compute canopy rain interception
-    I_can = compute_canopy_interception(canopy_hydrology, precip, LAI, SAI)
+    I_can = compute_canopy_interception(canopy_interception, precip, LAI, SAI)
 
     # Compute canopy water removal
-    R_can = compute_canopy_water_removal(canopy_hydrology, constants, w_can)
+    R_can = compute_canopy_water_removal(canopy_interception, constants, w_can)
 
     # Compute precipitation reaching the ground
-    precip_ground = compute_precip_ground(canopy_hydrology, precip, I_can, R_can)
+    precip_ground = compute_precip_ground(canopy_interception, precip, I_can, R_can)
 
     # Store results
     out.canopy_water_interception[i, j, 1] = I_can
@@ -170,7 +168,7 @@ end
 
 @propagate_inbounds function compute_canopy_water_tendency!(
     out, i, j, grid, fields,
-    canopy_hydrology::PALADYNCanopyInterception,
+    canopy_interception::PALADYNCanopyInterception,
     evtr::AbstractEvapotranspiration,
     args...
 )
@@ -180,18 +178,18 @@ end
     R_can = fields.canopy_water_removal
 
     # Compute canopy water tendency
-    out.tendencies.w_can[i, j, 1] = compute_w_can_tend(canopy_hydrology, I_can, E_can, R_can)
+    out.tendencies.w_can[i, j, 1] = compute_w_can_tend(canopy_interception, I_can, E_can, R_can)
     return out
 end
 
 # Kernels
 
-@kernel inbounds=true function compute_auxiliary_kernel!(out, i, j, grid, fields, canopy_hydrology::AbstractCanopyInterception, args...)
+@kernel inbounds=true function compute_auxiliary_kernel!(out, i, j, grid, fields, canopy_interception::AbstractCanopyInterception, args...)
     i, j = @index(Global, NTuple)
-    compute_canopy_auxiliary!(out, i, j, grid, fields, canopy_hydrology, args...)
+    compute_canopy_auxiliary!(out, i, j, grid, fields, canopy_interception, args...)
 end
 
-@kernel inbounds=true function compute_tendencies_kernel!(out, i, j, grid, fields, canopy_hydrology::AbstractCanopyInterception, args...)
+@kernel inbounds=true function compute_tendencies_kernel!(out, i, j, grid, fields, canopy_interception::AbstractCanopyInterception, args...)
     i, j = @index(Global, NTuple)
-    compute_canopy_water_tendency!(out, i, j, grid, fields, canopy_hydrology, args...)
+    compute_canopy_water_tendency!(out, i, j, grid, fields, canopy_interception, args...)
 end

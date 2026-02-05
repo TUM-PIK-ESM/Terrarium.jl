@@ -71,13 +71,13 @@ variables(::DirectSurfaceRunoff) = (
 function compute_auxiliary!(
     state, grid,
     runoff::DirectSurfaceRunoff,
-    canopy_hydrology::AbstractSurfaceHydrology,
+    canopy_interception::AbstractSurfaceHydrology,
     soil_hydrology::AbstractSoilHydrology,
     args...
 )
     out = auxiliary_fields(state, runoff)
-    fields = get_fields(state, runoff, canopy_hydrology, soil_hydrology; except = out)
-    launch!(grid, XY, compute_auxiliary_kernel!, out, fields, runoff, canopy_hydrology, soil_hydrology)
+    fields = get_fields(state, runoff, canopy_interception, soil_hydrology; except = out)
+    launch!(grid, XY, compute_auxiliary_kernel!, out, fields, runoff, canopy_interception, soil_hydrology)
 end
 
 # Kernel function
@@ -85,13 +85,13 @@ end
 @propagate_inbounds function compute_surface_runoff!(
     out, i, j, grid, fields,
     runoff::DirectSurfaceRunoff{NF},
-    canopy_hydrology::AbstractCanopyInterception,
+    canopy_interception::AbstractCanopyInterception,
     soil_hydrology::AbstractSoilHydrology
 ) where {NF}
     fgrid = get_field_grid(grid)
 
     # Get inputs
-    precip_ground = ground_precipitation(i, j, grid, fields, canopy_hydrology)
+    precip_ground = ground_precipitation(i, j, grid, fields, canopy_interception)
     excess_water = surface_excess_water(i, j, grid, fields, soil_hydrology)
     k_unsat = hydraulic_conductivity(i, j, fgrid.Nz, grid, fields, soil_hydrology)
     sat_top = saturation_water_ice(i, j, fgrid.Nz, grid, fields, soil_hydrology)
