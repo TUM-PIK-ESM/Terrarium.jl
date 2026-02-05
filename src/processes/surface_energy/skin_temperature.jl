@@ -28,7 +28,7 @@ variables(::PrescribedSkinTemperature) = (
 
 ## Kernel functions
 
-@propagate_inbounds compute_skin_temperature(i, j, grid, state, skinT::PrescribedSkinTemperature) = state.skin_temperature[i, j]
+@propagate_inbounds compute_skin_temperature(i, j, grid, fields, skinT::PrescribedSkinTemperature) = fields.skin_temperature[i, j]
 
 # Implicit skin temperature
 

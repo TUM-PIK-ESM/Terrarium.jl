@@ -10,4 +10,4 @@ end
 
 ConstantAerodynamics(::Type{NF}; kwargs...) where {NF} = ConstantAerodynamics{NF}(; kwargs...)
 
-@inline drag_coefficient(i, j, grid, state, aero::ConstantAerodynamics) = aero.Cₕ
+@inline drag_coefficient(i, j, grid, fields, aero::ConstantAerodynamics) = aero.Cₕ

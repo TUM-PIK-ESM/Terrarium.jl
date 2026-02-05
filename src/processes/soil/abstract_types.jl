@@ -104,21 +104,21 @@ Base type for soil stratigraphy parameterizations.
 abstract type AbstractStratigraphy{NF} end
 
 """
-    soil_texture(i, j, k, grid, state, ::AbstractStratigraphy, args...)
+    soil_texture(i, j, k, grid, fields, ::AbstractStratigraphy, args...)
 
 Return the texture of the soil at index `i, j, k` for the given stratigraphy parameterization.
 """
 function soil_texture end
 
 """
-    soil_matrix(i, j, k, grid, state, ::AbstractStratigraphy, args...)
+    soil_matrix(i, j, k, grid, fields, ::AbstractStratigraphy, args...)
 
 Return the solid matrix of the soil at index `i, j, k` for the given stratigraphy parameterization.
 """
 function soil_matrix end
 
 """
-    soil_volume(i, j, k, grid, state, ::AbstractStratigraphy, args...)
+    soil_volume(i, j, k, grid, fields, ::AbstractStratigraphy, args...)
 
 Return a description of the full material composition of the soil volume at index `i, j, k` for the
 given stratigraphy parameterization.

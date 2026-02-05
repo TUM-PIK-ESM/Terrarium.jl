@@ -28,3 +28,7 @@ Calculate the organic solid fraction based on the prescribed SOC and natural por
 the organic material.
 """
 @propagate_inbounds density_soc(i, j, k, grid, fields, bgc::ConstantSoilCarbonDensity) = bgc.ρ_soc
+
+@inline compute_auxiliary!(state, grid, bgc::ConstantSoilCarbonDensity, args...) = nothing
+
+@inline compute_tendencies!(state, grid, bgc::ConstantSoilCarbonDensity, args...) = nothing

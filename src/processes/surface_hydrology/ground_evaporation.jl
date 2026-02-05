@@ -19,7 +19,7 @@ GroundEvaporation(
     ground_resistance::GR = ConstantEvaporationResistanceFactor(one(NF))
 ) where {NF, GR} = GroundEvaporation{NF, GR}(; ground_resistance)
 
-@propagate_inbounds surface_humidity_flux(i, j, grid, state, evtr::GroundEvaporation) = state.evaporation_ground[i, j]
+@propagate_inbounds surface_humidity_flux(i, j, grid, fields, evtr::GroundEvaporation) = fields.evaporation_ground[i, j]
 
 # Process methods
 

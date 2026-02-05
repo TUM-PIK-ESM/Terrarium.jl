@@ -24,7 +24,7 @@ variables(::MedlynStomatalConductance) = (
     auxiliary(:λc, XY()), # Ratio of leaf-internal and air CO2 concentration [-]
 )
 
-@inline @propagate_inbounds stomatal_conductance(i, j, grid, state, ::MedlynStomatalConductance) = state.gw_can[i, j]
+@inline @propagate_inbounds stomatal_conductance(i, j, grid, fields, ::MedlynStomatalConductance) = fields.gw_can[i, j]
 
 @inline function compute_gw_can(
     stomcond::MedlynStomatalConductance{NF},
