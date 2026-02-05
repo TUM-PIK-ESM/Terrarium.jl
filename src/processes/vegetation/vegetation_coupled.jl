@@ -5,34 +5,55 @@ Represents a generic coupling of vegetation carbon processes.
 """
 @kwdef struct VegetationCarbon{
     NF,
-    Photosynthesis <: AbstractPhotosynthesis,
-    StomatalConducatance <: AbstractStomatalConductance,
-    AutotrophicRespiration <: AbstractAutotrophicRespiration,
-    Phenology <: AbstractPhenology,
-    CarbonDynamics <: AbstractVegetationCarbonDynamics,
+    Photosynthesis <: AbstractPhotosynthesis{NF},
+    StomatalConducatance <: AbstractStomatalConductance{NF},
+    AutotrophicRespiration <: AbstractAutotrophicRespiration{NF},
+    Phenology <: AbstractPhenology{NF},
+    CarbonDynamics <: AbstractVegetationCarbonDynamics{NF},
     VegetationDynamics <: Optional{AbstractVegetationDynamics},
     RootDistribution <: Optional{AbstractRootDistribution}
 } <: AbstractVegetation{NF}
     "Photosynthesis scheme"
-    photosynthesis::Photosynthesis = LUEPhotosynthesis(eltype(grid)) # not prognostic
+    photosynthesis::Photosynthesis # not prognostic
 
     "Stomatal conducantance scheme"
-    stomatal_conductance::StomatalConducatance = MedlynStomatalConductance(eltype(grid)) # not prognostic
+    stomatal_conductance::StomatalConducatance # not prognostic
 
     "Autotrophic respiration scheme"
-    autotrophic_respiration::AutotrophicRespiration = PALADYNAutotrophicRespiration(eltype(grid)) # not prognostic
+    autotrophic_respiration::AutotrophicRespiration # not prognostic
 
     "Phenology scheme"
-    phenology::Phenology = PALADYNPhenology(eltype(grid)) # not prognostic
+    phenology::Phenology # not prognostic
 
     "Vegetation carbon pool dynamics"
-    carbon_dynamics::CarbonDynamics = PALADYNCarbonDynamics(eltype(grid)) # prognostic
+    carbon_dynamics::CarbonDynamics # prognostic
 
     "Vegetation population density or coverage fraction dynamics"
-    vegetation_dynamics::VegetationDynamics =  PALADYNVegetationDynamics(eltype(grid)) # prognostic
+    vegetation_dynamics::VegetationDynamics # prognostic
 
     "Vegetation root distribution"
-    root_distribution::RootDistribution = StaticExponentialRootDistribution(eltype(grid))
+    root_distribution::RootDistribution
+end
+
+function VegetationCarbon(
+    ::Type{NF};
+    photosynthesis = LUEPhotosynthesis(NF),
+    stomatal_conductance = MedlynStomatalConductance(NF),
+    autotrophic_respiration = PALADYNAutotrophicRespiration(NF),
+    phenology = PALADYNPhenology(NF),
+    carbon_dynamics = PALADYNCarbonDynamics(NF),
+    vegetation_dynamics =  PALADYNVegetationDynamics(NF),
+    root_distribution = StaticExponentialRootDistribution(NF)
+) where {NF}
+    return VegetationCarbon(;
+        photosynthesis,
+        stomatal_conductance,
+        autotrophic_respiration,
+        phenology,
+        carbon_dynamics,
+        vegetation_dynamics,
+        root_distribution
+    )
 end
 
 function compute_auxiliary!(

@@ -1,13 +1,13 @@
 @kwdef struct VegetationSoilModel{
     NF,
-    GridType<:AbstractLandGrid{NF},
-    Atmosphere<:AbstractAtmosphere,
-    SEB<:AbstractSurfaceEnergyBalance,
-    Hydrology<:AbstractSurfaceHydrology,
-    Vegetation<:AbstractVegetation{NF},
-    PAW<:AbstractPlantAvailableWater,
-    SoilProcesses<:AbstractSoil{NF},
-    Initializer<:AbstractInitializer,
+    GridType <: AbstractLandGrid{NF},
+    Atmosphere <: AbstractAtmosphere,
+    SEB <: AbstractSurfaceEnergyBalance,
+    Hydrology <: AbstractSurfaceHydrology,
+    Vegetation <: AbstractVegetation{NF},
+    PAW <: AbstractPlantAvailableWater,
+    Soil <: AbstractSoil{NF},
+    Initializer <: AbstractInitializer,
 } <: AbstractLandModel{NF, GridType}
     "Spatial discretization"
     grid::GridType
@@ -22,13 +22,13 @@
     surface_hydrology::Hydrology = SurfaceHydrology(eltype(grid))
 
     "Vegetation model"
-    vegetation::Vegetation = VegetationModel(grid; atmosphere)
+    vegetation::Vegetation = VegetationCarbon(eltype(grid))
 
     "Plant available water"
     plant_available_water::PAW = FieldCapacityLimitedPAW(eltype(grid))
 
     "Soil processes"
-    soil::SoilProcesses = SoilEnergyWaterCarbon(eltype(grid))
+    soil::Soil = SoilEnergyWaterCarbon(eltype(grid))
 
     "Physical constants"
     constants::PhysicalConstants{NF} = PhysicalConstants(eltype(grid))
@@ -62,35 +62,42 @@ function initialize(
 end
 
 function initialize!(state, model::VegetationSoilModel)
+    # model initializer
     initialize!(state, model, model.initializer)
-    initialize!(state, model, model.surface_energy_balance)
-    initialize!(state, model, model.surface_hydrology)
+    # process initializers
+    grid = get_grid(model)
+    initialize!(state, grid, model.surface_energy_balance)
+    initialize!(state, grid, model.surface_hydrology)
     # TODO: change when refactoring model/process types
-    initialize!(state, model.vegetation)
-    initialize!(state, model.soil)
+    initialize!(state, grid, model.vegetation, model.atmosphere, model.constants)
+    initialize!(state, grid, model.soil, model.constants)
 end
 
 function compute_auxiliary!(state, model::VegetationSoilModel)
-    compute_auxiliary!(state, model, model.atmosphere)
-    compute_auxiliary!(state, model.soil)
-    compute_auxiliary!(state, model, model.surface_energy_balance)
-    compute_auxiliary!(state, model, model.plant_available_water)
-    compute_auxiliary!(state, model.vegetation)
-    compute_auxiliary!(state, model, model.surface_hydrology)
+    grid = get_grid(model)
+    compute_auxiliary!(state, grid, model.atmosphere)
+    compute_auxiliary!(state, grid, model.soil)
+    compute_auxiliary!(state, grid, model.surface_energy_balance)
+    compute_auxiliary!(state, grid, model.plant_available_water)
+    compute_auxiliary!(state, grid, model.vegetation)
+    compute_auxiliary!(state, grid, model.surface_hydrology)
     # recompute surface energy fluxes
-    compute_surface_energy_fluxes!(state, model, model.surface_energy_balance)
+    compute_surface_energy_fluxes!(state, grid, model.surface_energy_balance)
 end
 
 function compute_tendencies!(state, model::VegetationSoilModel)
-    compute_tendencies!(state, model, model.surface_hydrology)
-    compute_tendencies!(state, model.soil)
-    compute_tendencies!(state, model, model.vegetation)
+    grid = get_grid(model)
+    compute_tendencies!(state, grid, model.surface_hydrology)
+    compute_tendencies!(state, grid, model.soil)
+    compute_tendencies!(state, grid, model.vegetation)
 end
 
 function closure!(state, model::VegetationSoilModel)
-    closure!(state, model.soil)
+    grid = get_grid(model)
+    closure!(state, grid, model.soil, model.constants)
 end
 
 function invclosure!(state, model::VegetationSoilModel)
-    invclosure!(state, model.soil)
+    grid = get_grid(model)
+    invclosure!(state, grid, model.soil, model.constants)
 end
