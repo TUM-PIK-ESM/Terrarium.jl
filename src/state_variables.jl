@@ -15,12 +15,12 @@ by the timestepping scheme.
 """
 struct StateVariables{
     NF,
-    prognames, tendnames, auxnames, inputnames, nsnames,
+    prognames, closurenames, auxnames, inputnames, nsnames,
     ProgFields, TendFields, AuxFields, InputFields, Namespaces,
     ClockType
 } <: AbstractStateVariables
     prognostic::NamedTuple{prognames, ProgFields}
-    tendencies::NamedTuple{tendnames, TendFields}
+    tendencies::NamedTuple{prognames, TendFields}
     auxiliary::NamedTuple{auxnames, AuxFields}
     inputs::NamedTuple{inputnames, InputFields}
     namespaces::NamedTuple{nsnames, Namespaces}
@@ -33,10 +33,11 @@ struct StateVariables{
         auxiliary::NamedTuple{auxnames, AuxFields},
         inputs::NamedTuple{inputnames, InputFields},
         namespaces::NamedTuple{nsnames, Namespaces},
-        clock::ClockType
+        clock::ClockType,
+        closurenames::Tuple{Vararg{Symbol}} = ()
     ) where {NF, prognames, tendnames, auxnames, inputnames, nsnames,
              ProgFields, TendFields, AuxFields, InputFields, Namespaces, ClockType}
-        return new{NF, prognames, tendnames, auxnames, inputnames, nsnames,
+        return new{NF, prognames, closurenames, auxnames, inputnames, nsnames,
                    ProgFields, TendFields, AuxFields, InputFields, Namespaces, ClockType}(
             prognostic,
             tendencies,
@@ -53,6 +54,7 @@ end
 @inline auxiliary_names(state::StateVariables) = keys(getfield(state, :auxiliary))
 @inline input_names(state::StateVariables) = keys(getfield(state, :inputs))
 @inline namespace_names(state::StateVariables) = keys(getfield(state, :namespaces))
+@inline closure_names(::StateVariables{NF, pnames, cnames}) where {NF, pnames, cnames} = cnames
 
 # Allow reconstruction from properties
 ConstructionBase.constructorof(::Type{StateVariables{NF}}) where {NF} = (args...) -> StateVariables(NF, args...)
@@ -74,17 +76,19 @@ function Oceananigans.TimeSteppers.update_state!(state::StateVariables, model::A
 end
 
 """
-Invoke `fill_halo_regions!` for all fields in `state`.
+Invoke `fill_halo_regions!` for all prognostic `Field`s in `state`.
 """
 function Oceananigans.BoundaryConditions.fill_halo_regions!(state::StateVariables)
     # fill_halo_regions! for all prognostic variables
-    for field in state.prognostic
-        fill_halo_regions!(field, state.clock, state)
+    for progname in prognostic_names(state)
+        fill_halo_regions!(getproperty(state.prognostic, progname), state.clock, state)
     end
-    # fill_halo_regions! for all auxiliary variables
-    for field in state.auxiliary
-        fill_halo_regions!(field, state.clock, state)
+
+    # fill_halo_regions! for all closure variables (stored in state.auxiliary)
+    for closurename in closure_names(state)
+        fill_halo_regions!(getproperty(state.auxiliary, closurename), state.clock, state)
     end
+
     # recurse over namespaces
     for ns in state.namespaces
         fill_halo_regions!(ns)
@@ -320,6 +324,8 @@ function initialize(
         ns_fields = get(fields, varname(ns), (;))
         initialize(ns.vars, grid; clock, boundary_conditions=ns_bcs, fields=ns_fields)
     end
+    # get closure variable names
+    closures = map(varname, closure_variables(values(vars.auxiliary)))
     # construct and return StateVariables
     return StateVariables(
         NF,
@@ -329,6 +335,7 @@ function initialize(
         input_fields,
         namespaces,
         clock,
+        closures
     )
 end
 
