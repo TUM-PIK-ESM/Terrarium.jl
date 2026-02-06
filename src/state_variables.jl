@@ -307,7 +307,7 @@ for all variables in `vars`. Any predefined `boundary_conditions` and `fields` w
 for each variable.
 """
 function initialize(
-    vars::Variables,
+    @nospecialize(vars::Variables),
     grid::AbstractLandGrid{NF};
     clock::Clock = Clock(time=0.0),
     boundary_conditions = (;),
@@ -356,7 +356,7 @@ Any predefined `boundary_conditions` and `fields` will be passed through to `ini
 for each variable.
 """
 function initialize(
-    vars::NamedTuple{names, <:Tuple{Vararg{AbstractVariable}}},
+    @nospecialize(vars::NamedTuple{names, <:Tuple{Vararg{AbstractVariable}}}),
     grid::AbstractLandGrid,
     clock::Clock,
     boundary_conditions::NamedTuple,
@@ -380,7 +380,7 @@ Initialize a `Field` on `grid` based on the given `var` metadata. The named tupl
 will be directly returned. Otherwise, the new `Field` is constructed using the given `boundary_conditions` with the other `fields` being
 made available to the constructor for auxiliary variables.
 """
-function initialize(var::AbstractVariable, grid::AbstractLandGrid, clock::Clock, boundary_conditions::NamedTuple, fields::NamedTuple)
+function initialize(@nospecialize(var::AbstractVariable), grid::AbstractLandGrid, clock::Clock, boundary_conditions::NamedTuple, fields::NamedTuple)
     if hasproperty(fields, varname(var))
         return getproperty(fields, varname(var))
     else

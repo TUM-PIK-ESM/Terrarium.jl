@@ -238,7 +238,7 @@ end
 
 Variables(obj) = Variables(variables(obj))
 Variables(vars::Union{AbstractProcessVariable, Namespace}...) = Variables(vars)
-function Variables(vars::Tuple{Vararg{Union{AbstractProcessVariable, Namespace}}})
+function Variables(@nospecialize(vars::Tuple{Vararg{Union{AbstractProcessVariable, Namespace}}}))
     # partition variables into prognostic, auxiliary, input, and namespace groups;
     # duplicates within each group are automatically merged
     varinfo(var::AbstractVariable) = (varname(var), vardims(var), varunits(var))
