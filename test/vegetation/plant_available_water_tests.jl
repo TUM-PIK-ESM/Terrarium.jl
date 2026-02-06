@@ -12,12 +12,12 @@ using Test
 
     # Initialize state variables
     grid = ColumnGrid(UniformSpacing(Δz = 0.2, N = 10))
-    clock = Clock(time=zero(eltype(grid)))
-    hydraulic_properties = ConstantSoilHydraulics(unsat_hydraulic_cond=UnsatKLinear(eltype(grid)))
+    hydraulic_properties = ConstantSoilHydraulics(eltype(grid), unsat_hydraulic_cond = UnsatKLinear(eltype(grid)))
     hydrology = SoilHydrology(eltype(grid); hydraulic_properties)
-    model = SoilModel(grid; hydrology)
-    allvars = merge(vars, Variables(model))
-    state = initialize(allvars, grid, clock)
+    strat = HomogeneousStratigraphy(eltype(grid), porosity = ConstantSoilPorosity(mineral_porosity = 0.5))
+    soil = SoilEnergyWaterCarbon(eltype(grid); hydrology, strat)
+    soilvars = Variables(soil)
+    state = initialize(merge(vars, soilvars), grid)
     set!(state.temperature, 10.0)
 
     # Soil moisture limiting factor
@@ -38,10 +38,9 @@ using Test
     θw = por * liq * sat
     θwp = hydraulic_properties.wilting_point
     θfc = hydraulic_properties.field_capacity
-    set!(state.porosity, por)
     set!(state.saturation_water_ice, sat)
     set!(state.liquid_water_fraction, liq)
-    compute_auxiliary!(state, model, paw)
+    compute_auxiliary!(state, grid, paw, soil)
     @test all(state.plant_available_water .≈ 1)
     @test all(state.SMLF .≈ 1)
 
@@ -50,34 +49,29 @@ using Test
     liq = 1.0
     sat = 0.0
     θw = por * liq * sat
-    set!(state.porosity, por)
     set!(state.saturation_water_ice, sat)
     set!(state.liquid_water_fraction, liq)
-    compute_auxiliary!(state, model, paw)
+    compute_auxiliary!(state, grid, paw, soil)
     @test all(state.plant_available_water .≈ 0)
     @test all(state.SMLF .≈ 0)
 
     ## Case 3: Frozen
-    por = 0.5
     liq = 0.0
     sat = 1.0
     θw = por * liq * sat
-    set!(state.porosity, por)
     set!(state.saturation_water_ice, sat)
     set!(state.liquid_water_fraction, liq)
-    compute_auxiliary!(state, model, paw)
+    compute_auxiliary!(state, grid, paw, soil)
     @test all(state.plant_available_water .≈ 0.0)
     @test all(state.SMLF .≈ 0)
 
     # Case 4: Unsaturated
-    por = 0.5
     liq = 1.0
     sat = 0.2
     θw = por * liq * sat
-    set!(state.porosity, por)
     set!(state.saturation_water_ice, sat)
     set!(state.liquid_water_fraction, liq)
-    compute_auxiliary!(state, model, paw)
+    compute_auxiliary!(state, grid, paw, soil)
     @test all(state.plant_available_water .≈ 0.25)
     @test all(state.SMLF .≈ sum(state.plant_available_water * state.root_fraction, dims=3))
 end

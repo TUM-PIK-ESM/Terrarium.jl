@@ -44,9 +44,14 @@ function compute_auxiliary!(
     soil::AbstractSoil,
     args...
 )
+    # Unpack soil processes
+    strat = get_stratigraphy(soil)
+    hydrology = get_hydrology(soil)
+    bgc = get_biogeochemistry(soil)
+    # Unpack necessary Fields
     out = auxiliary_fields(state, paw)
     fields = get_fields(state, paw, soil; except = out)
-    launch!(grid, XYZ, compute_paw_kernel!, out, fields, paw, soil)
+    launch!(grid, XYZ, compute_auxiliary_kernel!, out, fields, paw, strat, hydrology, bgc)
     # compute the derived soil moisture limiting factor field
     compute!(state.SMLF)
 end
@@ -56,12 +61,10 @@ end
 @propagate_inbounds function compute_paw(
     i, j, k, grid, fields,
     paw::FieldCapacityLimitedPAW{NF},
-    soil::AbstractSoil
+    strat::AbstractStratigraphy,
+    hydrology::AbstractSoilHydrology,
+    bgc::AbstractSoilBiogeochemistry
 ) where {NF}
-    # Unpack soil processes
-    strat = get_stratigraphy(soil)
-    hydrology = get_hydrology(soil)
-    bgc = get_biogeochemistry(soil)
     # Compute soil composition and hydraulic properties
     vol = soil_volume(i, j, k, grid, fields, strat, hydrology, bgc)
     θfc = field_capacity(hydrology.hydraulic_properties, vol.solid.texture)
@@ -76,17 +79,19 @@ end
 @propagate_inbounds function compute_paw!(
     out, i, j, k, grid, fields,
     paw::FieldCapacityLimitedPAW{NF},
-    soil::AbstractSoil,
+    strat::AbstractStratigraphy,
+    hydrology::AbstractSoilHydrology,
+    bgc::AbstractSoilBiogeochemistry,
     args...
 ) where {NF}
-    PAW = compute_paw(i, j, k, grid, fields, paw, soil)
+    PAW = compute_paw(i, j, k, grid, fields, paw, strat, hydrology, bgc)
     out.plant_available_water[i, j, k] = PAW
     return out
 end
 
 # Kernels
 
-@kernel inbounds=true function compute_paw_kernel!(out, grid, fields, paw::AbstractPlantAvailableWater, args...)
+@kernel inbounds=true function compute_auxiliary_kernel!(out, grid, fields, paw::AbstractPlantAvailableWater, args...)
     i, j, k = @index(Global, NTuple)
     compute_paw!(out, i, j, k, grid, fields, paw, args...)
 end

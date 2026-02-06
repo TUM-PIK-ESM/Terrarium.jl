@@ -6,15 +6,15 @@ using Oceananigans.BoundaryConditions: BoundaryCondition, Flux
 @testset "VegetationSoilModel" begin
     grid = ColumnGrid(CPU(), ExponentialSpacing(Δz_max=1.0, N=50))
     swrc = VanGenuchten(α=2.0, n=2.0)
-    hydraulic_properties = ConstantSoilHydraulics(eltype(grid), unsat_hydraulic_cond=UnsatKVanGenuchten(eltype(grid); swrc))
+    hydraulic_properties = ConstantSoilHydraulics(eltype(grid); swrc, unsat_hydraulic_cond=UnsatKVanGenuchten(eltype(grid)))
     hydrology = SoilHydrology(eltype(grid), RichardsEq(); hydraulic_properties)
+    soil = SoilEnergyWaterCarbon(eltype(grid); hydrology)
     # Variably saturated with water table
     initializer = FieldInitializers(
         temperature = (x, z) -> 1.0 - 0.02 * z,
         saturation_water_ice = (x, z) -> min(1, 0.8 - 0.05*z)
     )
-    soil = SoilModel(grid; hydrology, initializer)
-    vegetation = VegetationModel(grid)
+    vegetation = VegetationCarbon(eltype(grid))
     vegsoil = VegetationSoilModel(grid; soil, vegetation)
     integrator = initialize(vegsoil, ForwardEuler())
     # Check that infiltration is correctly coupled to soil hydrology
