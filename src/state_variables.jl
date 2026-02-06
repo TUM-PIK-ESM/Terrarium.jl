@@ -29,13 +29,13 @@ struct StateVariables{
     function StateVariables(
         ::Type{NF},
         prognostic::NamedTuple{prognames, ProgFields},
-        tendencies::NamedTuple{tendnames, TendFields},
+        tendencies::NamedTuple{prognames, TendFields},
         auxiliary::NamedTuple{auxnames, AuxFields},
         inputs::NamedTuple{inputnames, InputFields},
         namespaces::NamedTuple{nsnames, Namespaces},
         clock::ClockType,
         closurenames::Tuple{Vararg{Symbol}} = ()
-    ) where {NF, prognames, tendnames, auxnames, inputnames, nsnames,
+    ) where {NF, prognames, auxnames, inputnames, nsnames,
              ProgFields, TendFields, AuxFields, InputFields, Namespaces, ClockType}
         return new{NF, prognames, closurenames, auxnames, inputnames, nsnames,
                    ProgFields, TendFields, AuxFields, InputFields, Namespaces, ClockType}(

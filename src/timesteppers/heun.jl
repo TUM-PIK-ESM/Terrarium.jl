@@ -22,11 +22,11 @@ function initialize(timestepper::Heun, ::AbstractModel, state)
 end
 
 function average_tendencies!(
-    state::StateVariables{NF, prognames, tendnames},
-    stage::StateVariables{NF, prognames, tendnames}
-) where {NF, prognames, tendnames}
-    for tendname in tendnames
-        state.tendencies[tendname] .= (state.tendencies[tendname] + stage.tendencies[tendname]) / 2
+    state::StateVariables{NF, prognames},
+    stage::StateVariables{NF, prognames}
+) where {NF, prognames}
+    for name in prognames
+        state.tendencies[name] .= (state.tendencies[name] + stage.tendencies[name]) / 2
     end
 end
 
