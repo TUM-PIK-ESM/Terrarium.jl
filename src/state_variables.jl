@@ -80,17 +80,17 @@ Invoke `fill_halo_regions!` for all prognostic `Field`s in `state`.
 """
 function Oceananigans.BoundaryConditions.fill_halo_regions!(state::StateVariables)
     # fill_halo_regions! for all prognostic variables
-    for progname in prognostic_names(state)
-        fill_halo_regions!(getproperty(state.prognostic, progname), state.clock, state)
+    fastiterate(prognostic_names(state)) do progname
+        fill_halo_regions!(getproperty(state.prognostic, progname), state.clock, state.prognostic)
     end
 
     # fill_halo_regions! for all closure variables (stored in state.auxiliary)
-    for closurename in closure_names(state)
-        fill_halo_regions!(getproperty(state.auxiliary, closurename), state.clock, state)
+    fastiterate(closure_names(state)) do closurename
+        fill_halo_regions!(getproperty(state.auxiliary, closurename), state.clock, state.prognostic)
     end
 
     # recurse over namespaces
-    for ns in state.namespaces
+    fastiterate(state.namespaces) do ns
         fill_halo_regions!(ns)
     end
 end
@@ -253,7 +253,7 @@ initialized on its associated `grid`. Any predefined `boundary_conditions` and `
 through to `initialize` for each variable.
 """
 function initialize(
-    model::AbstractModel{NF};
+    @nospecialize(model::AbstractModel{NF});
     clock = Clock(time=zero(NF)),
     input_variables = (),
     boundary_conditions = (;),
@@ -395,7 +395,7 @@ function initialize(@nospecialize(var::AbstractVariable), grid::AbstractLandGrid
 end
 
 # Intialization for auxiliary variables that may define custom Field constructors
-function initialize(var::AuxiliaryVariable, grid::AbstractLandGrid, clock::Clock, boundary_conditions::NamedTuple, fields::NamedTuple)
+function initialize(@nospecialize(var::AuxiliaryVariable), grid::AbstractLandGrid, clock::Clock, boundary_conditions::NamedTuple, fields::NamedTuple)
     if hasproperty(fields, varname(var))
         return getproperty(fields, varname(var))
     elseif isnothing(var.ctor)
