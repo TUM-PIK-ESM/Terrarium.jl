@@ -28,13 +28,13 @@ struct StateVariables{
 
     function StateVariables(
         ::Type{NF},
+        closurenames::Tuple{Vararg{Symbol}},
         prognostic::NamedTuple{prognames, ProgFields},
         tendencies::NamedTuple{prognames, TendFields},
         auxiliary::NamedTuple{auxnames, AuxFields},
         inputs::NamedTuple{inputnames, InputFields},
         namespaces::NamedTuple{nsnames, Namespaces},
-        clock::ClockType,
-        closurenames::Tuple{Vararg{Symbol}} = ()
+        clock::ClockType
     ) where {NF, prognames, auxnames, inputnames, nsnames,
              ProgFields, TendFields, AuxFields, InputFields, Namespaces, ClockType}
         return new{NF, prognames, closurenames, auxnames, inputnames, nsnames,
@@ -57,7 +57,7 @@ end
 @inline closure_names(::StateVariables{NF, pnames, cnames}) where {NF, pnames, cnames} = cnames
 
 # Allow reconstruction from properties
-ConstructionBase.constructorof(::Type{StateVariables{NF}}) where {NF} = (args...) -> StateVariables(NF, args...)
+ConstructionBase.constructorof(::Type{StateVariables{NF, pnames, cnames}}) where {NF, pnames, cnames} = (args...) -> StateVariables(NF, cnames, args...)
 
 """
     update_state!(state::StateVariables, model::AbstractModel, inputs::InputSources; compute_tendencies = true)
@@ -325,17 +325,17 @@ function initialize(
         initialize(ns.vars, grid; clock, boundary_conditions=ns_bcs, fields=ns_fields)
     end
     # get closure variable names
-    closures = map(varname, closure_variables(values(vars.auxiliary)))
+    closurenames = map(varname, closure_variables(values(vars.prognostic)))
     # construct and return StateVariables
     return StateVariables(
         NF,
+        closurenames,
         prognostic_fields,
         tendency_fields,
         auxiliary_fields,
         input_fields,
         namespaces,
-        clock,
-        closures
+        clock
     )
 end
 
@@ -413,6 +413,7 @@ end
 function Adapt.adapt_structure(to, state::StateVariables{NF}) where {NF}
     return StateVariables(
         NF,
+        closure_names(state),
         Adapt.adapt_structure(to, state.prognostic),
         Adapt.adapt_structure(to, state.tendencies),
         Adapt.adapt_structure(to, state.auxiliary),
