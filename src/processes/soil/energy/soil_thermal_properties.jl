@@ -53,7 +53,7 @@ struct SoilThermalProperties{NF, FC, CondBulk}
     bulk_conductivity::CondBulk
 
     "Thermal conductivities for all constituents"
-    heat_capacity::SoilHeatCapacities{NF}
+    heat_capacities::SoilHeatCapacities{NF}
 
     "Freezing characteristic curve needed for energy-temperature closure"
     freezecurve::FC
@@ -63,9 +63,9 @@ SoilThermalProperties(
     ::Type{NF};
     conductivities::SoilThermalConductivities{NF} = SoilThermalConductivities(NF),
     bulk_conductivity::AbstractBulkWeightingScheme = InverseQuadratic(),
-    heat_capacity::SoilHeatCapacities{NF} = SoilHeatCapacities(NF),
+    heat_capacities::SoilHeatCapacities{NF} = SoilHeatCapacities(NF),
     freezecurve::FreezeCurve = FreeWater()
-) where {NF} = SoilThermalProperties{NF, typeof(freezecurve), typeof(bulk_conductivity)}(conductivities, bulk_conductivity, heat_capacity, freezecurve)
+) where {NF} = SoilThermalProperties{NF, typeof(freezecurve), typeof(bulk_conductivity)}(conductivities, bulk_conductivity, heat_capacities, freezecurve)
 
 freezecurve(
     ::SoilThermalProperties{NF, FreeWater},
@@ -90,7 +90,7 @@ end
 Compute the bulk heat capacity of the given soil volume.
 """
 @inline function heat_capacity(props::SoilThermalProperties, soil::SoilVolume)
-    cs = getproperties(props.heat_capacity)
+    cs = getproperties(props.heat_capacities)
     fracs = volumetric_fractions(soil)
     # for heat capacity, we just do a weighted average
     return sum(fastmap(*, cs, fracs))
