@@ -86,7 +86,7 @@ function compute_auxiliary!(
     return nothing
 end
 
-function compute_tendencies!(state, veg::VegetationCarbon, args...)
+function compute_tendencies!(state, grid, veg::VegetationCarbon, args...)
     # Needs NPP(t), C_veg(t-1), LAI_b(t-1) and computes tendency for C_veg
     compute_tendencies!(state, grid, veg.carbon_dynamics)
 

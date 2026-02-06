@@ -48,13 +48,11 @@ variables(seb::SurfaceEnergyBalance) = tuplejoin(
     seb::SurfaceEnergyBalance,
     atmos::AbstractAtmosphere,
     constants::PhysicalConstants,
-    evtr::Optional{AbstractEvapotranspiration} = nothing,
+    hydrology::Optional{AbstractSurfaceHydrology} = nothing,
     args...
 )
-    compute_surface_energy_fluxes!(state, grid, seb, atmos, constants, evtr, args...)
+    compute_surface_energy_fluxes!(state, grid, seb, atmos, constants, hydrology, args...)
 end
-
-@inline compute_tendencies!(state, grid, ::SurfaceEnergyBalance, args...) = nothing
 
 """
     $TYPEDSIGNATURES
@@ -66,9 +64,10 @@ function compute_surface_energy_fluxes!(
     seb::SurfaceEnergyBalance,
     atmos::AbstractAtmosphere,
     constants::PhysicalConstants,
-    evtr::Optional{AbstractEvapotranspiration} = nothing,
+    hydrology::Optional{AbstractSurfaceHydrology} = nothing,
     args...
 )
+    evtr = isnothing(hydrology) ? nothing : get_evapotranspiration(hydrology)
     # Construct outputs as auxiliaries + skin temperature (which is prognostic)
     out = (skin_temperature = state.skin_temperature, auxiliary_fields(state, seb)...)
     fields = get_fields(state, seb, atmos, evtr)

@@ -81,7 +81,7 @@ end
 
 Compute the `w_can` tendency and removal rate following Eq. 41, PALADYN (Willeit 2016).
 """
-@inline function compute_w_can_tend(
+@inline function compute_w_can_tendency(
     ::PALADYNCanopyInterception{NF},
     I_can, E_can, R_can
 ) where NF
@@ -126,7 +126,7 @@ function compute_tendencies!(
     evtr::AbstractEvapotranspiration,
     args...
 )
-    out = auxiliary_fields(state, canopy_interception)
+    out = tendency_fields(state, canopy_interception)
     fields = get_fields(state, canopy_interception, evtr; except = out)
     launch!(grid, XY, compute_tendencies_kernel!, out, fields, canopy_interception, evtr)
 end
@@ -167,29 +167,29 @@ end
 end
 
 @propagate_inbounds function compute_canopy_water_tendency!(
-    out, i, j, grid, fields,
+    tendencies, i, j, grid, fields,
     canopy_interception::PALADYNCanopyInterception,
     evtr::AbstractEvapotranspiration,
     args...
 )
     # Get inputs
-    E_can = evaporation_canopy(i, j, grid, fields, evtr)
+    E_can = fields.evaporation_canopy[i, j]
     I_can = fields.canopy_water_interception[i, j]
-    R_can = fields.canopy_water_removal
+    R_can = fields.canopy_water_removal[i, j]
 
     # Compute canopy water tendency
-    out.tendencies.w_can[i, j, 1] = compute_w_can_tend(canopy_interception, I_can, E_can, R_can)
-    return out
+    tendencies.canopy_water[i, j, 1] = compute_w_can_tendency(canopy_interception, I_can, E_can, R_can)
+    return tendencies
 end
 
 # Kernels
 
-@kernel inbounds=true function compute_auxiliary_kernel!(out, i, j, grid, fields, canopy_interception::AbstractCanopyInterception, args...)
+@kernel inbounds=true function compute_auxiliary_kernel!(out, grid, fields, canopy_interception::AbstractCanopyInterception, args...)
     i, j = @index(Global, NTuple)
     compute_canopy_auxiliary!(out, i, j, grid, fields, canopy_interception, args...)
 end
 
-@kernel inbounds=true function compute_tendencies_kernel!(out, i, j, grid, fields, canopy_interception::AbstractCanopyInterception, args...)
+@kernel inbounds=true function compute_tendencies_kernel!(out, grid, fields, canopy_interception::AbstractCanopyInterception, args...)
     i, j = @index(Global, NTuple)
     compute_canopy_water_tendency!(out, i, j, grid, fields, canopy_interception, args...)
 end

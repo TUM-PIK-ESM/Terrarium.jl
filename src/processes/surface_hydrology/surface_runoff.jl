@@ -71,10 +71,11 @@ variables(::DirectSurfaceRunoff) = (
 function compute_auxiliary!(
     state, grid,
     runoff::DirectSurfaceRunoff,
-    canopy_interception::AbstractSurfaceHydrology,
-    soil_hydrology::AbstractSoilHydrology,
+    canopy_interception::AbstractCanopyInterception,
+    soil::AbstractSoil,
     args...
 )
+    soil_hydrology = get_hydrology(soil)
     out = auxiliary_fields(state, runoff)
     fields = get_fields(state, runoff, canopy_interception, soil_hydrology; except = out)
     launch!(grid, XY, compute_auxiliary_kernel!, out, fields, runoff, canopy_interception, soil_hydrology)

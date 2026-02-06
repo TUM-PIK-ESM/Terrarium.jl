@@ -85,24 +85,24 @@ variables(::PALADYNCanopyEvapotranspiration{NF}) where {NF} = (
     input(:gw_can, XY(); default=NF(1), units=u"m/s", desc="Canopy stomatal conductance") # consider direct coupling in the future
 )
 
-function surface_humidity_flux(i, j, grid, fields, evtr::PALADYNCanopyEvapotranspiration)
-    @inbounds let E_gnd = fields.evaporation_ground[i, j]
-                  E_can = fields.evaporation_canopy[i, j],
-                  T_can = fields.transpiration[i, j];
-        return E_gnd + E_can + T_can
-    end
+@propagate_inbounds function surface_humidity_flux(i, j, grid, fields, ::PALADYNCanopyEvapotranspiration)
+    E_gnd = fields.evaporation_ground[i, j]
+    E_can = fields.evaporation_canopy[i, j]
+    T_can = fields.transpiration[i, j]
+    return E_gnd + E_can + T_can
 end
 
 function compute_auxiliary!(
     state, grid,
     evap::PALADYNCanopyEvapotranspiration,
+    canopy_interception::AbstractCanopyInterception,
     atmos::AbstractAtmosphere,
     constants::PhysicalConstants,
     soil::Optional{AbstractSoil} = nothing
 )
     out = auxiliary_fields(state, evap)
-    fields = get_fields(state, evap, atmos, soil; except = out)
-    launch!(grid, XY, compute_auxiliary_kernel!, out, fields, evap, atmos, constants, soil)
+    fields = get_fields(state, evap, canopy_interception, atmos, soil; except = out)
+    launch!(grid, XY, compute_auxiliary_kernel!, out, fields, evap, canopy_interception, atmos, constants, soil)
 end
 
 # Kernel functions

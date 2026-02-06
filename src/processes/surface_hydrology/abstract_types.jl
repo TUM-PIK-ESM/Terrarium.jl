@@ -5,6 +5,8 @@ Base type for coupled surface hydrology processes.
 """
 abstract type AbstractSurfaceHydrology{NF} <: AbstractCoupledProcesses{NF} end
 
+get_evapotranspiration(hydrology::AbstractSurfaceHydrology) = hydrology.evapotranspiration
+
 """
 Base type for canopy interception process implementations.
 """

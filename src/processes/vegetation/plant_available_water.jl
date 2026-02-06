@@ -88,5 +88,5 @@ end
 
 @kernel inbounds=true function compute_paw_kernel!(out, grid, fields, paw::AbstractPlantAvailableWater, args...)
     i, j, k = @index(Global, NTuple)
-    compute_paw!(out, i, j, k, grid, fields, paw, hydrology, args...)
+    compute_paw!(out, i, j, k, grid, fields, paw, args...)
 end

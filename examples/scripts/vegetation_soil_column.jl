@@ -1,8 +1,9 @@
 using Terrarium
 using CUDA
 
+arch = CPU()
 # Define a simple grid with 1 column
-grid = ColumnGrid(GPU(), ExponentialSpacing(Δz_max=1.0, N=30))
+grid = ColumnGrid(arch, ExponentialSpacing(Δz_max=1.0, N=30))
 # Set up Richards model for soil hydrology
 swrc = VanGenuchten(α=2.0, n=2.0)
 hydraulic_properties = ConstantSoilHydraulics(eltype(grid); swrc, unsat_hydraulic_cond=UnsatKVanGenuchten(eltype(grid)))
@@ -18,4 +19,4 @@ vegsoil = VegetationSoilModel(grid; soil, vegetation)
 # TODO: this is currently slow
 integrator = @time initialize(vegsoil, ForwardEuler());
 Δt = 60.0
-timestep!(integrator, Δt) # TODO: currently produces NaNs for some variables
+@time timestep!(integrator, Δt) # TODO: currently produces NaNs for some variables

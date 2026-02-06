@@ -26,6 +26,7 @@ PALADYNAutotrophicRespiration(::Type{NF}; kwargs...) where {NF} = PALADYNAutotro
 
 variables(::PALADYNAutotrophicRespiration) = (
     auxiliary(:Ra, XY()), # Autotrophic respiration [kgC/m²/day]
+    auxiliary(:NPP, XY()), # Net Primary Production [kgC/m²/day]
     input(:GPP, XY()), # Gross Primary Production [kgC/m²/day]
     input(:Rd, XY()), # Daily leaf respiration [gC/m²/day]
     input(:phen, XY()), # Phenology factor [-]
@@ -201,7 +202,7 @@ end
 
 # Kernels
 
-@kernel inbounds=true function compute_autotrophic_respiration_kernel!(out, grid, fields, autoresp::AbstractAutotrophicRespiration, args...)
+@kernel inbounds=true function compute_auxiliary_kernel!(out, grid, fields, autoresp::AbstractAutotrophicRespiration, args...)
     i, j = @index(Global, NTuple)
-    compute_autotrophic_respiration!(out, grid, fields, autoresp, args...)
+    compute_autotrophic_respiration!(out, i, j, grid, fields, autoresp, args...)
 end

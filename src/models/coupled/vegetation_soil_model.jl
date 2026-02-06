@@ -75,20 +75,24 @@ end
 
 function compute_auxiliary!(state, model::VegetationSoilModel)
     grid = get_grid(model)
+    # Compute auxiliary variables for atmosphere, if any
     compute_auxiliary!(state, grid, model.atmosphere)
-    compute_auxiliary!(state, grid, model.soil)
-    compute_auxiliary!(state, grid, model.surface_energy_balance)
-    compute_auxiliary!(state, grid, model.plant_available_water)
-    compute_auxiliary!(state, grid, model.vegetation)
-    compute_auxiliary!(state, grid, model.surface_hydrology)
+    # Compute auxiliary variables for soil
+    compute_auxiliary!(state, grid, model.soil, model.constants)
+    # Compute auxiliary variables for surface hydrology
+    compute_auxiliary!(state, grid, model.surface_hydrology, model.atmosphere, model.constants, model.soil)
+    # Compute auxiliary variables for surface energy balance
+    compute_auxiliary!(state, grid, model.surface_energy_balance, model.atmosphere, model.constants, model.surface_hydrology)
+    compute_auxiliary!(state, grid, model.plant_available_water, model.soil)
+    compute_auxiliary!(state, grid, model.vegetation, model.atmosphere, model.constants)
     # recompute surface energy fluxes
-    compute_surface_energy_fluxes!(state, grid, model.surface_energy_balance)
+    compute_surface_energy_fluxes!(state, grid, model.surface_energy_balance, model.atmosphere, model.constants, model.surface_hydrology)
 end
 
 function compute_tendencies!(state, model::VegetationSoilModel)
     grid = get_grid(model)
     compute_tendencies!(state, grid, model.surface_hydrology)
-    compute_tendencies!(state, grid, model.soil)
+    compute_tendencies!(state, grid, model.soil, model.constants)
     compute_tendencies!(state, grid, model.vegetation)
 end
 

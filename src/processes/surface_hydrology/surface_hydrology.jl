@@ -6,15 +6,15 @@ $FIELDS
 """
 struct SurfaceHydrology{
     NF,
-    CanopyHydrology<:AbstractCanopyInterception{NF},
+    CanopyInterception<:AbstractCanopyInterception{NF},
     Evapotranspiration<:AbstractEvapotranspiration{NF},
     SurfaceRunoff<:AbstractSurfaceRunoff{NF},
 } <: AbstractSurfaceHydrology{NF}
     "Canopy hydrology scheme"
-    canopy_interception::CanopyHydrology
+    canopy_interception::CanopyInterception
 
     "Canopy evapotranspiration scheme"
-    evapotranpsiration::Evapotranspiration
+    evapotranspiration::Evapotranspiration
     
     "Surface runoff scheme"
     surface_runoff::SurfaceRunoff
@@ -33,20 +33,19 @@ function compute_auxiliary!(
     state, grid,
     hydrology::SurfaceHydrology,
     atmos::AbstractAtmosphere,
-    constants::PhysicalConstants
+    constants::PhysicalConstants,
+    soil::AbstractSoil
 )
     compute_auxiliary!(state, grid, hydrology.canopy_interception, atmos, constants)
-    compute_auxiliary!(state, grid, hydrology.evapotranpsiration)
-    compute_auxiliary!(state, grid, hydrology.surface_runoff)
+    compute_auxiliary!(state, grid, hydrology.evapotranspiration, hydrology.canopy_interception, atmos, constants, soil)
+    compute_auxiliary!(state, grid, hydrology.surface_runoff, hydrology.canopy_interception, soil)
 end
 
 function compute_tendencies!(
     state, grid,
     hydrology::SurfaceHydrology,
-    atmos::AbstractAtmosphere,
-    constants::PhysicalConstants
+    args...,
 )
-    compute_tendencies!(state, grid, hydrology.canopy_interception)
-    compute_tendencies!(state, grid, hydrology.evapotranpsiration)
-    compute_tendencies!(state, grid, hydrology.surface_runoff)
+    # Compute tendencies for canopy interception
+    compute_tendencies!(state, grid, hydrology.canopy_interception, hydrology.evapotranspiration)
 end

@@ -80,7 +80,6 @@ variables(::LUEPhotosynthesis{NF}) where {NF} = (
     auxiliary(:Rd, XY()), # Daily leaf respiration [gC/m²/day]
     auxiliary(:GPP, XY()), # Gross Primary Production [kgC/m²/day]
     input(:SMLF, XY(), default=NF(1)), # soil moisture limiting factor with default value of 1
-    input(:λc, XY()), # Ratio of leaf-internal to air CO2 concentration [-]
     input(:LAI, XY()), # Leaf Area Index [m²/m²]
 )
 
@@ -308,11 +307,12 @@ end
 function compute_auxiliary!(
     state, grid,
     photo::LUEPhotosynthesis,
+    stomcond::AbstractStomatalConductance,
     atmos::AbstractAtmosphere,
     args...
 )
     out = auxiliary_fields(state, photo)
-    fields = get_fields(state, photo, atmos; except = out)
+    fields = get_fields(state, photo, stomcond, atmos; except = out)
     launch!(grid, XY, compute_photosynthesis_kernel!, out, fields, photo, atmos)
 end
 
