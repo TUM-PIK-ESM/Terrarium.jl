@@ -15,7 +15,7 @@ function build_soil_energy_model(arch, ::Type{NF}) where {NF}
         # saturated soil
         saturation_water_ice = 1.0,
     )
-    model = SoilModel(; grid, initializer)
+    model = SoilModel(grid; initializer)
     return model
 end
 

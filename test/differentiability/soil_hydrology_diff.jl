@@ -15,7 +15,8 @@ function build_soil_energy_hydrology_model(arch, ::Type{NF}, flow=RichardsEq(); 
         saturation_water_ice = (x,z) -> min(0.5 - 0.1*z, 1.0),
     )
     hydrology = SoilHydrology(eltype(grid), flow; hydrology_kwargs...)
-    model = SoilModel(grid; initializer, hydrology)
+    soil = SoilEnergyWaterCarbon(eltype(grid); hydrology)
+    model = SoilModel(grid; soil, initializer)
     return model
 end
 
