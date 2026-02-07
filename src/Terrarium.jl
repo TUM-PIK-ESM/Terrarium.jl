@@ -50,6 +50,7 @@ using Unitful: @u_str, uconvert, ustrip, upreferred
 # Explicit imports
 import Interpolations
 import Oceananigans
+import Oceananigans.Diagnostics
 import RingGrids
 
 """
@@ -81,6 +82,9 @@ export adapt
 
 # internal utility types and methods
 include("utils/utils.jl")
+
+# debugging utilities
+include("diagnostics/debugging.jl")
 
 export PrognosticVariable, AuxiliaryVariable, InputVariable, Input, XY, XYZ
 include("abstract_variables.jl")
