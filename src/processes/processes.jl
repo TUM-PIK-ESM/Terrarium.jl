@@ -117,3 +117,7 @@ include("surface_hydrology/surface_runoff.jl")
 
 export SurfaceHydrology
 include("surface_hydrology/surface_hydrology.jl")
+
+# Default debug hooks
+@inline debughook!(::typeof(compute_auxiliary_kernel!), out, args...) = nancheck!(out)
+@inline debughook!(::typeof(compute_tendencies_kernel!), out, args...) = nancheck!(out)
