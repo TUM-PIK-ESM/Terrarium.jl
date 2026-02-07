@@ -3,7 +3,7 @@
 
 Simple model wrapper for the `SurfaceEnergyBalance` that couples it with
 an `AbstractAtmosphere` to provide meteorological inputs. This model type
-is mostly intened for testing but could also be used for simple energy
+is mostly intended for testing but could also be used for simple energy
 balance calculations from prescribed meteorological and ground temperature
 conditions.
 """

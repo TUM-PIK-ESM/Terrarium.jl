@@ -278,7 +278,7 @@ end
 """
     $TYPEDSIGNATURES
 
-Removes duplicate variables from the given tuple of `vars` by name.
+Type-stable equivalent of [`deduplicate`](@ref) for tuples of `AbstractVariable`s.
 """
 @generated function deduplicate_vars(vars::Tuple{Vararg{AbstractVariable}})
     names = map(varname, vars.parameters)
