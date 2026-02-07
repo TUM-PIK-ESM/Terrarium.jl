@@ -96,14 +96,24 @@ function Oceananigans.BoundaryConditions.fill_halo_regions!(state::StateVariable
 end
 
 """
-Update input variables from the given input `sources`.
+Reset all `Field`s in `state` to zero.
 """
-function update_inputs!(state::StateVariables, sources::InputSources)
-    # update inputs in current namespace
-    update_inputs!(state.inputs, sources, state.clock)
-    # recursively update namespaces
-    for ns in state.namespaces
-        update_inputs!(ns, sources)
+function Oceananigans.TimeSteppers.reset!(state::StateVariables)
+    # reset all prognostic fields
+    fastiterate(state.prognostic) do field
+        set!(field, zero(eltype(field)))
+    end
+    fastiterate(state.auxiliary) do field
+        # TODO: technically we should apply auxiliary variable initializers here
+        isa(field, Field) && set!(field, zero(eltype(field)))
+    end
+    # reset all tendency fields
+    fastiterate(state.tendencies) do field
+        set!(field, zero(eltype(field)))
+    end
+    # recurse over namespaces
+    fastiterate(state.namespaces) do ns
+        reset!(ns)
     end
 end
 
@@ -118,6 +128,18 @@ function reset_tendencies!(state::StateVariables)
     # recurse over namespaces
     fastiterate(state.namespaces) do ns
         reset_tendencies!(ns)
+    end
+end
+
+"""
+Update input variables from the given input `sources`.
+"""
+function update_inputs!(state::StateVariables, sources::InputSources)
+    # update inputs in current namespace
+    update_inputs!(state.inputs, sources, state.clock)
+    # recursively update namespaces
+    for ns in state.namespaces
+        update_inputs!(ns, sources)
     end
 end
 
