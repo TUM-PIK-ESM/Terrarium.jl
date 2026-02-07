@@ -64,7 +64,7 @@ end
 @testset "Soil hydrology: hydraulic_conductivity" begin
     por = 0.5
     unsat_hydraulic_cond = UnsatKVanGenuchten(Float64)
-    hydraulic_properties = ConstantSoilHydraulics(Float64; porosity=por, unsat_hydraulic_cond)
+    hydraulic_properties = ConstantSoilHydraulics(Float64; unsat_hydraulic_cond)
     # wrapper function for evaluating hydraulic conductivity
     function eval_hydraulic_cond((por, sat, liq))
         soil = SoilVolume(porosity=por, saturation=sat, liquid=liq, solid=MineralOrganic())
@@ -88,7 +88,15 @@ end
     dstate = make_zero(state)
     set!(dstate.hydraulic_conductivity, 1.0) # seed hydraulic cond
     # then test gradient only on hydrology auxilairy variables
-    Enzyme.autodiff(set_runtime_activity(Reverse), compute_auxiliary!, Const, Duplicated(state, dstate), Const(model), Const(model.soil.hydrology))
+    Enzyme.autodiff(
+        set_runtime_activity(Reverse),
+        compute_auxiliary!,
+        Const,
+        Duplicated(state, dstate),
+        Const(model.grid),
+        Const(model.soil.hydrology),
+        Const(model.soil)
+    )
     @test all(isfinite.(dstate.saturation_water_ice))
     @test all(isfinite.(dstate.temperature))
 end
@@ -102,7 +110,16 @@ end
     compute_auxiliary!(state, model)
     dstate = make_zero(state)
     set!(dstate.tendencies.saturation_water_ice, 1.0) # seed tendencies
-    Enzyme.autodiff(set_runtime_activity(Reverse), compute_tendencies!, Const, Duplicated(state, dstate), Const(model), Const(model.soil.hydrology))
+    Enzyme.autodiff(
+        set_runtime_activity(Reverse),
+        compute_tendencies!,
+        Const,
+        Duplicated(state, dstate),
+        Const(model.grid),
+        Const(model.soil.hydrology),
+        Const(model.soil),
+        Const(model.constants)
+    )
     @test all(isfinite.(dstate.pressure_head))
     @test dstate.pressure_head[1,1,1] > 0 # higher pressure -> weaker gradient -> less outflow
 end
