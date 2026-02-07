@@ -18,7 +18,7 @@ State variables defined by the Richards' formulation of `SoilHydrology`:
 - `water_table``: elevation of the water table (m).
 - `liquid_water_fraction`: fraction of unfrozen liquid water in the pore space (dimensionless).
 
-See also [`SaturationPressureClosure`](@ref) and [`SoilHydraulics`](@ref) for details regarding the
+See also [`SaturationPressureClosure`](@ref) and [`AbstractSoilHydraulics`](@ref) for details regarding the
 closure relating saturtion and pressure head.
 """
 @kwdef struct RichardsEq <: AbstractVerticalFlow end

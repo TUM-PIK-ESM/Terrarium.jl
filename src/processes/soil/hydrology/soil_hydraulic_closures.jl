@@ -7,7 +7,7 @@ Represents a closure relating saturation of water/ice in soil pores to a corresp
 pressure (or hydraulic) head. Note that here "pressure head" is defined to be synonymous
 with hydraulic head, i.e. including all both elevation and hydrostatic pressure contributions.
 This relation is typically described by soil property-dependent *soil-water retention curve* (SWRC)
-which is here defined in [`SoilHydraulics`](@ref).
+which is here defined in implementations of [`AbstractSoilHydraulics`](@ref).
 """
 @kwdef struct SaturationPressureClosure <: AbstractSoilWaterClosure end
 
