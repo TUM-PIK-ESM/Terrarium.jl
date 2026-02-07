@@ -85,7 +85,7 @@ function compute_tendencies!(
     tendencies = tendency_fields(state, energy)
     # Get other fields (does not include tendencies)
     fields = get_fields(state, energy, procs...)
-    launch!(grid, XYZ, compute_energy_tendencies_kernel!, tendencies, fields, energy, procs...)
+    launch!(grid, XYZ, compute_tendencies_kernel!, tendencies, fields, energy, procs...)
     return nothing
 end
 
@@ -173,7 +173,7 @@ end
 
 # Kernels
 
-@kernel function compute_energy_tendencies_kernel!(tendencies, grid, fields, energy::SoilEnergyBalance, args...)
+@kernel inbounds=true function compute_tendencies_kernel!(tendencies, grid, fields, energy::SoilEnergyBalance, args...)
     i, j, k = @index(Global, NTuple)
     compute_energy_tendencies!(tendencies, i, j, k, grid, fields, energy, args...)
 end

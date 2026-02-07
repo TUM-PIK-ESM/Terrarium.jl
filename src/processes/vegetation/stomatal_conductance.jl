@@ -31,12 +31,19 @@ variables(::MedlynStomatalConductance) = (
     photo::LUEPhotosynthesis{NF},
     vpd, An, co2, LAI, β
 ) where NF
+    # Preconditions
+    @assert isfinite(vpd) && abs(vpd) > zero(NF) "vapor pressure deficit must be greater than zero"
+    @assert isfinite(An) "An must be finite"
+    @assert isfinite(co2) && co2 > zero(NF) "CO2 must be positive and finite"
+    @assert isfinite(LAI) "LAI must be finite"
+    @assert isfinite(β) && 0 <= β <= 1 "β must be finite and between 0 and 1"
+    # Compute stomatal conductance gw_can
     let g_min = stomcond.g_min / 1000, # convert mm/s to m/s
         g₁ = stomcond.g₁,
         k_ext = photo.k_ext;
         g₀ = g_min * (1 - exp(-k_ext * LAI)) * β
-        g_can = g₀ + (1 + g₁ / sqrt(vpd)) * An / co2 * NF(1e6)
-        return g_can
+        gw_can = g₀ + (1 + g₁ / sqrt(vpd)) * An / co2 * NF(1e6)
+        return gw_can
     end
 end
 
@@ -64,7 +71,7 @@ function compute_auxiliary!(
 )
     out = auxiliary_fields(state, stomcond)
     fields = get_fields(state, stomcond, photo, atmos, constants; except = out)
-    launch!(grid, XY, compute_stomatal_conductance_kernel!, out, fields, stomcond, photo, atmos, constants)
+    launch!(grid, XY, compute_auxiliary_kernel!, out, fields, stomcond, photo, atmos, constants)
 end
 
 # Kernel functions
@@ -95,7 +102,7 @@ end
 
 # Kernels
 
-@kernel function compute_stomatal_conductance_kernel!(out, grid, fields, stomcond::AbstractStomatalConductance, args...)
+@kernel function compute_auxiliary_kernel!(out, grid, fields, stomcond::AbstractStomatalConductance, args...)
     i, j = @index(Global, NTuple)
     compute_stomatal_conductance!(out, i, j, grid, fields, stomcond, args...)
 end

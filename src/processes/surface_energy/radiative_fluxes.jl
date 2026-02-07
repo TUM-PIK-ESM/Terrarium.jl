@@ -31,7 +31,7 @@ function compute_auxiliary!(
 )
     out = auxiliary_fields(state, rad)
     fields = get_fields(state, rad, atmos; except = out)
-    launch!(grid, XY, compute_radiative_fluxes_kernel!, out, fields, rad, atmos)
+    launch!(grid, XY, compute_auxiliary_kernel!, out, fields, rad, atmos)
 end
 
 ## Kernel functions
@@ -106,7 +106,7 @@ function compute_auxiliary!(
     (; skin_temperature, albedo) = seb
     out = auxiliary_fields(state, rad)
     fields = get_fields(state, rad, skin_temperature, albedo, atmos; except = out)
-    launch!(grid, XY, compute_radiative_fluxes_kernel!,
+    launch!(grid, XY, compute_auxiliary_kernel!,
             out, fields, rad, skin_temperature, albedo, atmos, consts)
 end
 
@@ -194,7 +194,7 @@ end
 
 ## Kernels
 
-@kernel inbounds=true function compute_radiative_fluxes_kernel!(out, grid, fields, rad::AbstractRadiativeFluxes, args...)
+@kernel inbounds=true function compute_auxiliary_kernel!(out, grid, fields, rad::AbstractRadiativeFluxes, args...)
     i, j = @index(Global, NTuple)
     compute_radiative_fluxes!(out, i, j, grid, fields, rad, args...)
 end

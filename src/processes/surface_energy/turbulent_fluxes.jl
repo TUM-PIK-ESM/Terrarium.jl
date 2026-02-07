@@ -67,7 +67,7 @@ function compute_auxiliary!(
     skinT = seb.skin_temperature
     out = auxiliary_fields(state, tur)
     fields = get_fields(state, tur, skinT, atmos; except = out)
-    launch!(grid, XY, compute_turbulent_fluxes_kernel!, out, fields,
+    launch!(grid, XY, compute_auxiliary_kernel!, out, fields,
             tur, skinT, atmos, constants)
 end
 
@@ -147,7 +147,7 @@ end
 
 # Kernels
 
-@kernel function compute_turbulent_fluxes_kernel!(
+@kernel function compute_auxiliary_kernel!(
     out, grid, fields,
     tur::DiagnosedTurbulentFluxes,
     skinT::AbstractSkinTemperature,
@@ -161,7 +161,8 @@ end
     out.latent_heat_flux[i, j, 1] = compute_latent_heat_flux(i, j, grid, fields, tur, skinT, atmos, constants)
 end
 
-@kernel function compute_turbulent_fluxes_kernel!(
+# TODO: Can these dispatches be standardized to reduce redundancy?
+@kernel function compute_auxiliary_kernel!(
     out, grid, fields,
     tur::DiagnosedTurbulentFluxes,
     skinT::AbstractSkinTemperature,

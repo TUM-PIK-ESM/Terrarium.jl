@@ -313,7 +313,7 @@ function compute_auxiliary!(
 )
     out = auxiliary_fields(state, photo)
     fields = get_fields(state, photo, stomcond, atmos; except = out)
-    launch!(grid, XY, compute_photosynthesis_kernel!, out, fields, photo, atmos)
+    launch!(grid, XY, compute_auxiliary_kernel!, out, fields, photo, atmos)
 end
 
 # Kernel functions
@@ -348,7 +348,7 @@ end
 
 # Kernels
 
-@kernel inbounds=true function compute_photosynthesis_kernel!(out, grid, fields, photo::AbstractPhotosynthesis, args...)
+@kernel inbounds=true function compute_auxiliary_kernel!(out, grid, fields, photo::AbstractPhotosynthesis, args...)
     i, j = @index(Global, NTuple)
     compute_photosynthesis!(out, i, j, grid, fields, photo, args...)
 end

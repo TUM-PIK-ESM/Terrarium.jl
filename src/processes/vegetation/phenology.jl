@@ -70,7 +70,7 @@ end
 function compute_auxiliary!(state, grid, phenol::PALADYNPhenology)
     out = auxiliary_fields(state, phenol)
     fields = get_fields(state, phenol; except = out)
-    launch!(grid, XY, compute_phenology_kernel!, out, fields, phenol)
+    launch!(grid, XY, compute_auxiliary_kernel!, out, fields, phenol)
 end
 
 # Kernel functions
@@ -97,7 +97,7 @@ end
 
 # Kernels
 
-@kernel function compute_phenology_kernel!(out, grid, fields, phenol::AbstractPhenology, args...)
+@kernel function compute_auxiliary_kernel!(out, grid, fields, phenol::AbstractPhenology, args...)
     i, j = @index(Global, NTuple)
     compute_phenology!(out, i, j, grid, fields, phenol, args...)
 end
