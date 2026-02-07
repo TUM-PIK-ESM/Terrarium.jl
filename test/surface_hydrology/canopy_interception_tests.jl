@@ -3,7 +3,7 @@ using Terrarium:
     compute_canopy_interception,
     compute_canopy_saturation_fraction,
     compute_canopy_water_removal,
-    compute_w_can_tend,
+    compute_w_can_tendency,
     compute_precip_ground
 using Test
 
@@ -52,20 +52,20 @@ end
     @test ∂w∂t > 0
 end
 
-@testset "compute_w_can_tend" begin
+@testset "compute_w_can_tendency" begin
     canopy_interception = PALADYNCanopyInterception(Float64)
     constants = PhysicalConstants()
     # Test tendency is zero when all flux terms are zero
-    ∂w∂t = compute_w_can_tend(canopy_interception, 0.0, 0.0, 0.0)
+    ∂w∂t = compute_w_can_tendency(canopy_interception, 0.0, 0.0, 0.0)
     @test iszero(∂w∂t)
     # Test tendency is negative when removal is positive
-    ∂w∂t = compute_w_can_tend(canopy_interception, 0.0, 0.0, 1.0)
+    ∂w∂t = compute_w_can_tendency(canopy_interception, 0.0, 0.0, 1.0)
     @test ∂w∂t < 0
     # Test that interception and evaporation cancel 
-    ∂w∂t = compute_w_can_tend(canopy_interception, 1e-6, 1e-6, 0.0)
+    ∂w∂t = compute_w_can_tendency(canopy_interception, 1e-6, 1e-6, 0.0)
     @test iszero(∂w∂t)
     # Test positive with incoming interception
-    ∂w∂t = compute_w_can_tend(canopy_interception, 1e-6, 1e-7, 1e-7)
+    ∂w∂t = compute_w_can_tendency(canopy_interception, 1e-6, 1e-7, 1e-7)
     @test ∂w∂t ≈ 1e-6 - 2e-7
 end
 

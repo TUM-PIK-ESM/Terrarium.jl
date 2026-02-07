@@ -2,7 +2,7 @@ using Terrarium
 using Test
 
 @testset "Canopy hydrology" begin
-    include("canopy_hydrology_tests.jl")
+    include("canopy_interception_tests.jl")
 end
 
 @testset "Canopy ET" begin

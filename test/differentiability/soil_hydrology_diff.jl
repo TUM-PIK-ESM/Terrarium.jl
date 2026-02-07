@@ -5,7 +5,11 @@ using Enzyme, FiniteDifferences
 using FreezeCurves
 using Statistics
 
-function build_soil_energy_hydrology_model(arch, ::Type{NF}, flow=RichardsEq(); hydrology_kwargs...) where {NF}
+function build_soil_energy_hydrology_model(
+    arch, ::Type{NF}, vertflow=RichardsEq();
+    porosity = ConstantSoilPorosity(NF),
+    hydrology_kwargs...
+) where {NF}
     grid = ColumnGrid(arch, Float64, ExponentialSpacing(N=10))
     # initial conditions
     initializer = FieldInitializers(
@@ -14,8 +18,9 @@ function build_soil_energy_hydrology_model(arch, ::Type{NF}, flow=RichardsEq(); 
         # saturated soil
         saturation_water_ice = (x,z) -> min(0.5 - 0.1*z, 1.0),
     )
-    hydrology = SoilHydrology(eltype(grid), flow; hydrology_kwargs...)
-    soil = SoilEnergyWaterCarbon(eltype(grid); hydrology)
+    hydrology = SoilHydrology(eltype(grid), vertflow; hydrology_kwargs...)
+    strat = HomogeneousStratigraphy(eltype(grid); porosity)
+    soil = SoilEnergyWaterCarbon(eltype(grid); hydrology, strat)
     model = SoilModel(grid; soil, initializer)
     return model
 end
@@ -23,9 +28,10 @@ end
 @testset "Soil water: Pressure-saturation closure" begin
     por = 0.5
     sat = 0.5
-    hydraulic_properties = ConstantSoilHydraulics(Float64, porosity=por)
-    model = build_soil_energy_hydrology_model(CPU(), Float64; hydraulic_properties)
-    swrc = Terrarium.get_swrc(model.soil.hydrology) # θ(ψₘ)
+    hydraulic_properties = ConstantSoilHydraulics(Float64)
+    porosity = ConstantSoilPorosity(mineral_porosity=por)
+    model = build_soil_energy_hydrology_model(CPU(), Float64; porosity, hydraulic_properties)
+    swrc = hydraulic_properties.swrc # θ(ψₘ)
     swrc_inv = inv(swrc) # ψₘ(θ)
     integrator = initialize(model, ForwardEuler())
     state = integrator.state
