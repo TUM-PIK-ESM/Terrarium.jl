@@ -45,7 +45,7 @@ variables(::PALADYNCanopyInterception) = (
 Compute `I_can`, the canopy rain interception, following Eq. 42, PALADYN (Willeit 2016).
 """
 @inline function compute_canopy_interception(canopy_interception::PALADYNCanopyInterception{NF}, precip, LAI, SAI) where NF   
-    I_can = canopy_interception.α_int * precip * (one(NF) - exp(-canopy_interception.k_ext*(LAI + SAI))) 
+    I_can = canopy_interception.α_int * precip * (one(NF) - exp(-canopy_interception.k_ext * (LAI + SAI))) 
     return I_can
 end
 

@@ -1,6 +1,8 @@
 using Terrarium
 using CUDA
 
+Terrarium.debug!(true)
+
 arch = CPU()
 # Define a simple grid with 1 column
 grid = ColumnGrid(arch, ExponentialSpacing(Δz_max=1.0, N=30))
@@ -12,11 +14,12 @@ soil = SoilEnergyWaterCarbon(eltype(grid); hydrology)
 vegetation = VegetationCarbon(eltype(grid))
 # Variably saturated with water table at roughly 5 m depth
 initializer = FieldInitializers(
-    saturation_water_ice = (x, z) -> min(1, 0.5 - 0.1*z)
+    saturation_water_ice = (x, z) -> min(1, 0.5 - 0.1*z),
+    C_veg = 0.1,
 )
 # Construct coupled model
-vegsoil = VegetationSoilModel(grid; soil, vegetation)
+vegsoil = VegetationSoilModel(grid; soil, vegetation, initializer)
 # TODO: this is currently slow
 integrator = @time initialize(vegsoil, ForwardEuler());
 Δt = 60.0
-@time timestep!(integrator, Δt) # TODO: currently produces NaNs for some variables
+@time timestep!(integrator, Δt)
