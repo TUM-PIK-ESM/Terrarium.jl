@@ -20,16 +20,16 @@ if MAIN_TESTS
     @testset "State variables" begin
         include("state_variables.jl")
     end
-    
-    @testset "Timestepping" begin
-        include("timestepping/explicit_step.jl")
-        include("timestepping/run_simulation.jl")
-        include("timestepping/heun.jl")
-    end
 
     @testset "Inputs" begin
         include("inputs/inputs.jl")
         include("inputs/input_forcing.jl")
+    end
+
+    @testset "Timestepping" begin
+        include("timestepping/explicit_step.jl")
+        include("timestepping/run_simulation.jl")
+        include("timestepping/heun.jl")
     end
     
     @testset "Soil model and processes" begin
@@ -40,15 +40,15 @@ if MAIN_TESTS
         include("vegetation/vegetation_model_tests.jl")
     end
 
-    @testset "Coupled vegetation-soil model" begin
-        include("vegetation_soil/vegetation_soil_model_tests.jl")
-    end
-
     @testset "Surface energy balance" begin
         include("surface_energy/seb_tests.jl")
     end
 
     @testset "Surface hydrology" begin
         include("surface_hydrology/surface_hydrology_tests.jl")
+    end
+
+    @testset "Coupled models" begin
+        include("coupled_models/vegetation_soil_model_tests.jl")
     end
 end 

@@ -25,7 +25,7 @@ end
     sat = 0.5
     hydraulic_properties = ConstantSoilHydraulics(Float64, porosity=por)
     model = build_soil_energy_hydrology_model(CPU(), Float64; hydraulic_properties)
-    swrc = Terrarium.get_swrc(model.hydrology) # θ(ψₘ)
+    swrc = Terrarium.get_swrc(model.soil.hydrology) # θ(ψₘ)
     swrc_inv = inv(swrc) # ψₘ(θ)
     integrator = initialize(model, ForwardEuler())
     state = integrator.state
@@ -82,7 +82,7 @@ end
     dstate = make_zero(state)
     set!(dstate.hydraulic_conductivity, 1.0) # seed hydraulic cond
     # then test gradient only on hydrology auxilairy variables
-    Enzyme.autodiff(set_runtime_activity(Reverse), compute_auxiliary!, Const, Duplicated(state, dstate), Const(model), Const(model.hydrology))
+    Enzyme.autodiff(set_runtime_activity(Reverse), compute_auxiliary!, Const, Duplicated(state, dstate), Const(model), Const(model.soil.hydrology))
     @test all(isfinite.(dstate.saturation_water_ice))
     @test all(isfinite.(dstate.temperature))
 end
@@ -96,7 +96,7 @@ end
     compute_auxiliary!(state, model)
     dstate = make_zero(state)
     set!(dstate.tendencies.saturation_water_ice, 1.0) # seed tendencies
-    Enzyme.autodiff(set_runtime_activity(Reverse), compute_tendencies!, Const, Duplicated(state, dstate), Const(model), Const(model.hydrology))
+    Enzyme.autodiff(set_runtime_activity(Reverse), compute_tendencies!, Const, Duplicated(state, dstate), Const(model), Const(model.soil.hydrology))
     @test all(isfinite.(dstate.pressure_head))
     @test dstate.pressure_head[1,1,1] > 0 # higher pressure -> weaker gradient -> less outflow
 end
