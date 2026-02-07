@@ -168,40 +168,34 @@ any remaining excess water is added to the `surface_excess_water` pool.
     surface_excess_water = out.surface_excess_water
     field_grid = get_field_grid(grid)
     N = field_grid.Nz
+    
     # First iterate over soil layers from bottom to top
-    # TODO: This function might perform badly on GPU....
-    # Can we optimize it somehow?
     for k in 1:N-1
-        if sat[i, j, k] > one(NF)
-            # calculate excess saturation
-            excess_sat = sat[i, j, k] - one(NF)
-            # subtract excess water and add to layer above;
-            # note that we need to rescale by the cell thickness to properly conserve mass
-            sat[i, j, k] -= excess_sat
-            sat[i, j, k+1] += excess_sat * Δzᵃᵃᶜ(i, j, k, field_grid) / Δzᵃᵃᶜ(i, j, k+1, field_grid)
-        end
+        # calculate excess saturation
+        excess_sat = max(sat[i, j, k] - one(NF), zero(NF))
+        # subtract excess water and add to layer above;
+        # note that we need to rescale by the cell thickness to properly conserve mass
+        sat[i, j, k] -= excess_sat
+        sat[i, j, k+1] += excess_sat * Δzᵃᵃᶜ(i, j, k, field_grid) / Δzᵃᵃᶜ(i, j, k+1, field_grid)
     end
+
     # then from top to bottom
     for k in N:-1:2
-        if sat[i, j, k] < zero(NF)
-            # calculate saturation deficit
-            deficit_sat = -sat[i, j, k]
-            # add back saturation deficit and subtract from layer below
-            sat[i, j, k] += deficit_sat
-            sat[i, j, k-1] -= deficit_sat * Δzᵃᵃᶜ(i, j, k, field_grid) / Δzᵃᵃᶜ(i, j, k-1, field_grid)
-        end
+        # calculate saturation deficit
+        deficit_sat = max(-sat[i, j, k], zero(NF))
+        # add back saturation deficit and subtract from layer below
+        sat[i, j, k] += deficit_sat
+        sat[i, j, k-1] -= deficit_sat * Δzᵃᵃᶜ(i, j, k, field_grid) / Δzᵃᵃᶜ(i, j, k-1, field_grid)
     end
-    if sat[i, j, N] > one(NF)
-        # If the uppermost (surface) layer is oversaturated, add to excess water pool
-        excess_sat = sat[i, j, N] - one(NF)
-        sat[i, j, N] -= excess_sat
-        surface_excess_water[i, j, 1] += excess_sat * Δzᵃᵃᶜ(i, j, N, field_grid)
-    end
-    if sat[i, j, 1] < zero(NF)
-        # If the uppermost (surface) layer has a deficit, just set to zero.
-        # This constitutes a mass balance violation but should not happen under realistic conditions.
-        sat[i, j, 1] = zero(NF)
-    end
+
+    # If the uppermost (surface) layer is oversaturated, add to excess water pool
+    excess_sat = max(sat[i, j, N] - one(NF), zero(NF))
+    sat[i, j, N] -= excess_sat
+    surface_excess_water[i, j, 1] += excess_sat * Δzᵃᵃᶜ(i, j, N, field_grid)
+
+    # If the lowermost (bottom) layer has a deficit, just set to zero.
+    # This constitutes a mass balance violation but should not happen under realistic conditions.
+    sat[i, j, 1] = max(sat[i, j, 1], zero(NF))
 end
 
 """ $TYPEDSIGNATURES """
