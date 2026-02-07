@@ -8,7 +8,7 @@ end
 Base.nameof(::TracerGas{name}) where {name} = name
 
 variables(::TracerGas{name}) where {name} = (
-    input(name, XY(), units=u"ppm", desc="Ambient atmospheric $(name) concentration in ppm"),
+    input(name, XY(), default=380, units=u"ppm", desc="Ambient atmospheric $(name) concentration in ppm"),
 )
 
 """
@@ -137,7 +137,7 @@ Retrieve or compute the windspeed at the current time step.
 struct SpecificHumidity <: AbstractHumidity end
 
 variables(::SpecificHumidity) = (
-    input(:specific_humidity, XY(), units=u"kg/kg", desc="Near-surface specific humidity in kg/kg"),
+    input(:specific_humidity, XY(), default=1e-3, units=u"kg/kg", desc="Near-surface specific humidity in kg/kg"),
 )
 
 """
