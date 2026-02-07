@@ -16,7 +16,7 @@ using Oceananigans.BoundaryConditions: BoundaryCondition, Flux
         C_veg = 0.1
     )
     vegetation = VegetationCarbon(eltype(grid))
-    vegsoil = VegetationSoilModel(grid; soil, vegetation)
+    vegsoil = VegetationSoilModel(grid; soil, vegetation, initializer)
     integrator = initialize(vegsoil, ForwardEuler())
     # Check that infiltration is correctly coupled to soil hydrology
     set!(integrator.state.infiltration, 1e-8)
