@@ -109,11 +109,22 @@ Note that this is a type-stable, `@generated` function that is compiled for each
 @generated function processes(obj::Union{AbstractCoupledProcesses, AbstractModel})
     names = fieldnames(obj)
     types = fieldtypes(obj)
-    procfields = filter(Tuple(zip(names, types))) do (name, type)
+    proc_fields = filter(Tuple(zip(names, types))) do (name, type)
         type <: AbstractProcess
     end
-    procnames = map(first, procfields)
-    accessors = map(name -> :(obj.$name), procnames)
+    proc_fieldnames = map(first, proc_fields)
+    accessors = map(name -> :(obj.$name), proc_fieldnames)
+    return :(tuple($(accessors...)))
+end
+
+@generated function closures(proc::AbstractProcess)
+    names = fieldnames(proc)
+    types = fieldtypes(proc)
+    closure_fields = filter(Tuple(zip(names, types))) do (name, type)
+        type <: AbstractClosureRelation
+    end
+    closure_fieldnames = map(first, closure_fields)
+    accessors = map(name -> :(obj.$name), closure_fieldnames)
     return :(tuple($(accessors...)))
 end
 
@@ -145,17 +156,31 @@ Return the `PhysicalConstants` associated with the given `model`.
     closure!(state, model::AbstractModel)
 
 Apply all closure relations defined for the given `model`.
+
+    closure!(state, grid, [closure,] process, args...)
+
+Apply the `closure` for `process` with the given `grid` and additional
+implementation-specific `args`. If `closure` is not specified, it is
+automatically inferred from `first(closures(process))`.
 """
 closure!(state, model::AbstractModel) = nothing
-closure!(state, grid, ::AbstractProcess, args...) = nothing
+closure!(state, grid, proc::AbstractProcess, args...) = closure!(state, grid, first(closures(proc)), proc, args...)
+closure!(state, grid, closure, ::AbstractProcess, args...) = nothing
 
 """
     invclosure!(state, model::AbstractModel)
 
 Apply the inverse of all closure relations defined for the given `model`.
+
+    invclosure!(state, grid, [closure,] process, args...)
+
+Apply the `closure` for `process` with the given `grid` and additional
+implementation-specific `args`. If `closure` is not specified, it is
+automatically inferred from `first(closures(process))`.
 """
 invclosure!(state, model::AbstractModel) = nothing
-invclosure!(state, grid, ::AbstractProcess, args...) = nothing
+invclosure!(state, grid, proc::AbstractProcess, args...) = invclosure!(state, grid, first(closures(proc)), proc, args...)
+invclosure!(state, grid, closure, ::AbstractProcess, args...) = nothing
 
 """
 Convenience constructor for all `AbstractModel` types that allows the `grid` to be passed

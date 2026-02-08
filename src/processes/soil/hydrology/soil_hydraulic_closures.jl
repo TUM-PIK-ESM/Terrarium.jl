@@ -9,15 +9,67 @@ with hydraulic head, i.e. including all both elevation and hydrostatic pressure 
 This relation is typically described by soil property-dependent *soil-water retention curve* (SWRC)
 which is here defined in implementations of [`AbstractSoilHydraulics`](@ref).
 """
-@kwdef struct SaturationPressureClosure <: AbstractSoilWaterClosure end
+@kwdef struct SoilSaturationPressureClosure <: AbstractSoilWaterClosure end
 
-variables(::SaturationPressureClosure) = (
+variables(::SoilSaturationPressureClosure) = (
     auxiliary(:pressure_head, XYZ(), units=u"m", desc="Total hydraulic pressure head in m water displaced at standard pressure"),
 )
 
+"""
+    $TYPEDSIGNATURES
+
+Computes `pressure_head` ``Ψ = ψm + ψz + ψh`` from the current `saturation_water_ice` state.
+"""
+function closure!(
+    state, grid,
+    closure::SoilSaturationPressureClosure,
+    hydrology::SoilHydrology{NF, RichardsEq},
+    soil::AbstractSoil,
+    args...
+) where {NF}
+    # apply saturation correction
+    adjust_saturation_profile!(state, grid, hydrology)
+    # update water table
+    compute_water_table!(state, grid, hydrology)
+    # determine pressure head from saturation
+    strat = get_stratigraphy(soil)
+    bgc = get_biogeochemistry(soil)
+    out = (pressure_head = state.pressure_head,)
+    fields = get_fields(state, hydrology, bgc; except = out)
+    launch!(grid, XYZ, saturation_to_pressure_kernel!,
+            out, fields, closure, hydrology, strat, bgc)
+    return nothing
+end
+
+"""
+    $TYPEDSIGNATURES
+
+Computes `saturation_water_ice` from the current `pressure_head` state.
+"""
+function invclosure!(
+    state, grid,
+    closure::SoilSaturationPressureClosure,
+    hydrology::SoilHydrology{NF, RichardsEq},
+    soil::AbstractSoil,
+    args...
+) where {NF}
+    strat = get_stratigraphy(soil)
+    bgc = get_biogeochemistry(soil)
+    out = (saturation_water_ice = state.saturation_water_ice,)
+    fields = get_fields(state, hydrology, bgc; except = out)
+    # determine saturation from pressure
+    launch!(grid, XYZ, pressure_to_saturation_kernel!,
+            out, fields, closure, hydrology, strat, bgc)
+    # apply saturation correctionh
+    adjust_saturation_profile!(state, grid, hydrology)
+    # update water table
+    compute_water_table!(state, grid, hydrology)
+    return nothing
+end
+
 @propagate_inbounds function pressure_to_saturation!(
     saturation_water_ice, i, j, k, grid, fields,
-    closure::SaturationPressureClosure,
+    closure::SoilSaturationPressureClosure,
     hydrology::SoilHydrology,
     strat::AbstractStratigraphy,
     bgc::AbstractSoilBiogeochemistry
@@ -45,7 +97,7 @@ end
 
 @propagate_inbounds function saturation_to_pressure!(
     pressure_head, i, j, k, grid, fields,
-    closure::SaturationPressureClosure,
+    closure::SoilSaturationPressureClosure,
     hydrology::SoilHydrology,
     strat::AbstractStratigraphy,
     bgc::AbstractSoilBiogeochemistry
@@ -76,7 +128,7 @@ end
 
 @kernel inbounds=true function pressure_to_saturation_kernel!(
     out, grid, fields,
-    closure::SaturationPressureClosure,
+    closure::SoilSaturationPressureClosure,
     args...
 )
     i, j, k = @index(Global, NTuple)
@@ -85,7 +137,7 @@ end
 
 @kernel inbounds=true function saturation_to_pressure_kernel!(
     out, grid, fields,
-    closure::SaturationPressureClosure,
+    closure::SoilSaturationPressureClosure,
     args...
 )
     i, j, k = @index(Global, NTuple)

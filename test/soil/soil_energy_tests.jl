@@ -67,7 +67,7 @@ end
     constants = PhysicalConstants(eltype(grid))
     state = initialize(soil, grid)
     set!(state.internal_energy, 1e6)
-    Terrarium.closure!(state, grid, energy, soil, constants)
+    Terrarium.closure!(state, grid, energy.closure, energy, soil, constants)
     @test all(state.temperature .> 0)
     @test all(state.liquid_water_fraction .≈ 1.0)
 end

@@ -18,7 +18,7 @@ State variables defined by the Richards' formulation of `SoilHydrology`:
 - `water_table``: elevation of the water table (m).
 - `liquid_water_fraction`: fraction of unfrozen liquid water in the pore space (dimensionless).
 
-See also [`SaturationPressureClosure`](@ref) and [`AbstractSoilHydraulics`](@ref) for details regarding the
+See also [`SoilSaturationPressureClosure`](@ref) and [`AbstractSoilHydraulics`](@ref) for details regarding the
 closure relating saturtion and pressure head.
 """
 @kwdef struct RichardsEq <: AbstractVerticalFlow end
@@ -42,7 +42,11 @@ function initialize!(
     constants::PhysicalConstants,
     args...
 ) where {NF}
-    closure!(state, grid, hydrology, soil)
+    # Assume saturation is given as initial condition and apply closure!
+    # TODO: Though rare, there may be cases where we want to set an initial
+    # condition for pressure instead of saturation. This would need to be
+    # refactored into another initialization method.
+    closure!(state, grid, hydrology.closure, hydrology, soil)
     compute_auxiliary!(state, grid, hydrology, soil, constants)
     return nothing
 end
@@ -77,56 +81,6 @@ function compute_tendencies!(
     clock = state.clock
     launch!(grid, XYZ, compute_tendencies_kernel!,
             tendencies, clock, fields, hydrology, strat, bgc, constants, evtr, runoff)
-    return nothing
-end
-
-"""
-    $TYPEDSIGNATURES
-
-Computes `pressure_head` ``Ψ = ψm + ψz + ψh`` from the current `saturation_water_ice` state.
-"""
-function closure!(
-    state, grid,
-    hydrology::SoilHydrology{NF, RichardsEq},
-    soil::AbstractSoil,
-    args...
-) where {NF}
-    # apply saturation correction
-    adjust_saturation_profile!(state, grid, hydrology)
-    # update water table
-    compute_water_table!(state, grid, hydrology)
-    # determine pressure head from saturation
-    strat = get_stratigraphy(soil)
-    bgc = get_biogeochemistry(soil)
-    out = (pressure_head = state.pressure_head,)
-    fields = get_fields(state, hydrology, bgc; except = out)
-    launch!(grid, XYZ, saturation_to_pressure_kernel!,
-            out, fields, hydrology.closure, hydrology, strat, bgc)
-    return nothing
-end
-
-"""
-    $TYPEDSIGNATURES
-
-Computes `saturation_water_ice` from the current `pressure_head` state.
-"""
-function invclosure!(
-    state, grid,
-    hydrology::SoilHydrology{NF, RichardsEq},
-    soil::AbstractSoil,
-    args...
-) where {NF}
-    strat = get_stratigraphy(soil)
-    bgc = get_biogeochemistry(soil)
-    out = (saturation_water_ice = state.saturation_water_ice,)
-    fields = get_fields(state, hydrology, bgc; except = out)
-    # determine saturation from pressure
-    launch!(grid, XYZ, pressure_to_saturation_kernel!,
-            out, fields, hydrology.closure, hydrology, strat, bgc)
-    # apply saturation correctionh
-    adjust_saturation_profile!(state, grid, hydrology)
-    # update water table
-    compute_water_table!(state, grid, hydrology)
     return nothing
 end
 

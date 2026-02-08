@@ -24,6 +24,43 @@ variables(::SoilEnergyTemperatureClosure) = (
     auxiliary(:liquid_water_fraction, XYZ(), domain=UnitInterval(), desc="Fraction of unfrozen water in the pore space"),
 )
 
+function closure!(
+    state, grid,
+    closure::SoilEnergyTemperatureClosure,
+    energy::SoilEnergyBalance,
+    ground::AbstractGround,
+    constants::PhysicalConstants,
+    args...
+)
+    (; hydrology, strat, biogeochem) = ground
+    fc = freezecurve(energy.thermal_properties, hydrology)
+    kernel_args = (closure, fc, energy, hydrology, strat, biogeochem, constants)
+    # get closure fields (outputs)
+    out = closure_fields(state, energy)
+    # collect state/input fields
+    fields = get_fields(state, kernel_args...; except = out)
+    launch!(grid, XYZ, energy_to_temperature_kernel!, out, fields, kernel_args...)
+    return nothing
+end
+
+function invclosure!(
+    state, grid,
+    closure::SoilEnergyTemperatureClosure,
+    energy::SoilEnergyBalance,
+    ground::AbstractGround,
+    constants::PhysicalConstants,
+    args...
+)
+    (; hydrology, strat, biogeochem) = ground
+    fc = freezecurve(energy.thermal_properties, hydrology)
+    kernel_args = (closure, fc, energy, hydrology, strat, biogeochem, constants)
+    # here we mannually collect the output fields since one is the prognostic variable
+    out = (internal_energy = state.internal_energy, liquid_water_fraction = state.liquid_water_fraction)
+    fields = get_fields(state, kernel_args...; except = out)
+    launch!(grid, XYZ, temperature_to_energy_kernel!, out, fields, kernel_args...)
+    return nothing
+end
+
 @propagate_inbounds function temperature_to_energy!(
     out, i, j, k, grid, fields,
     ::SoilEnergyTemperatureClosure,
