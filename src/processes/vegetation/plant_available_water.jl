@@ -58,7 +58,7 @@ end
 
 # Kernel functions
 
-@propagate_inbounds function compute_paw(
+@propagate_inbounds function compute_plant_available_water(
     i, j, k, grid, fields,
     paw::FieldCapacityLimitedPAW{NF},
     strat::AbstractStratigraphy,
@@ -76,7 +76,7 @@ end
     return max(min(NF(1), (θw - θwp) / (θfc - θwp)), NF(0))
 end
 
-@propagate_inbounds function compute_paw!(
+@propagate_inbounds function compute_plant_available_water!(
     out, i, j, k, grid, fields,
     paw::FieldCapacityLimitedPAW{NF},
     strat::AbstractStratigraphy,
@@ -84,7 +84,7 @@ end
     bgc::AbstractSoilBiogeochemistry,
     args...
 ) where {NF}
-    PAW = compute_paw(i, j, k, grid, fields, paw, strat, hydrology, bgc)
+    PAW = compute_plant_available_water(i, j, k, grid, fields, paw, strat, hydrology, bgc)
     out.plant_available_water[i, j, k] = PAW
     return out
 end
@@ -93,5 +93,5 @@ end
 
 @kernel inbounds=true function compute_auxiliary_kernel!(out, grid, fields, paw::AbstractPlantAvailableWater, args...)
     i, j, k = @index(Global, NTuple)
-    compute_paw!(out, i, j, k, grid, fields, paw, args...)
+    compute_plant_available_water!(out, i, j, k, grid, fields, paw, args...)
 end

@@ -120,7 +120,7 @@ Base type for processes that comptue the plant available water fraction in each 
 abstract type AbstractPlantAvailableWater{NF} <: AbstractProcess{NF} end
 
 """
-	compute_paw(
+	compute_plant_available_water(
         i, j, k, grid, fields,
         paw::AbstractPlantAvailableWater,
         soil::AbstractSoil
@@ -128,7 +128,7 @@ abstract type AbstractPlantAvailableWater{NF} <: AbstractProcess{NF} end
 
 Comptue the plant-available water fraction for grid cell `i, j` and soil layer `k`.
 """
-function compute_paw end
+function compute_plant_available_water end
 
 """
     $TYPEDEF
