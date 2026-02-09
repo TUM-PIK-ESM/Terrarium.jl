@@ -39,11 +39,11 @@ end
 
     @test integrator_heun.state.u[2] > integrator_euler.state.u[2]
 
-    # Euler: expected value: u = 0.1*Δt
+    # Euler: expected value: u = 0.1 * Δt
     dt_euler = default_dt(integrator_euler.timestepper)
     @test integrator_euler.state.u[2] == 0.1 * dt_euler
 
-    # Heun: expected value: u = (0.1Δt + (0.1*Δt+0.1)* Δt)/2
+    # Heun: expected value: u = (0.1Δt + (0.1 * Δt + 0.1) * Δt) / 2
     dt_heun = default_dt(integrator_heun.timestepper)
     @test integrator_heun.state.u[2] == (0.1 * dt_heun + (0.1 * dt_heun + 0.1) * dt_heun) / 2
 end 
