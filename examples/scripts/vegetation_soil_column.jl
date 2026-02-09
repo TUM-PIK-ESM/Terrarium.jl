@@ -13,7 +13,7 @@ vegetation = VegetationCarbon(eltype(grid))
 # Variably saturated with water table at roughly 5 m depth
 initializer = FieldInitializers(
     saturation_water_ice = (x, z) -> min(1, 0.5 - 0.1*z),
-    C_veg = 0.1,
+    carbon_vegetation = 0.1,
 )
 # Construct coupled model
 vegsoil = VegetationSoilModel(grid; soil, vegetation, initializer)
