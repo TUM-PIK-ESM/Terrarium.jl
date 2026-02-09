@@ -29,7 +29,7 @@ variables(::PALADYNCanopyInterception) = (
     auxiliary(:canopy_water_removal, XY(); desc="Canopy water removal rate", units=u"m/s"),
     auxiliary(:saturation_canopy_water, XY(); desc="Fraction of the canopy saturated with water"),
     auxiliary(:precip_ground, XY(); desc="Rainfall rate reaching the ground", units=u"m/s"),
-    input(:LAI, XY(); desc="Leaf Area Index", units=u"m^2/m^2"), 
+    input(:leaf_area_index, XY(); desc="Leaf Area Index", units=u"m^2/m^2"), 
     input(:SAI, XY(); desc="Stem Area Index", units=u"m^2/m^2"),
 )
 
@@ -142,7 +142,7 @@ end
 ) where NF
     # Get inputs 
     precip = rainfall(i, j, grid, fields, atmos)
-    LAI = fields.LAI[i, j]
+    LAI = fields.leaf_area_index[i, j]
     SAI = fields.SAI[i, j]
     w_can = fields.canopy_water[i, j]
 

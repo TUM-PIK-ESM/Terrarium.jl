@@ -16,9 +16,9 @@ end
 PALADYNPhenology(::Type{NF}; kwargs...) where {NF} = PALADYNPhenology{NF}(; kwargs...)
 
 variables(::PALADYNPhenology) = (
-    auxiliary(:phen, XY()), # Phenology factor [-]
-    auxiliary(:LAI, XY()), # Leaf Area Index [m²/m²]
-    input(:LAI_b, XY()), # Balanced Leaf Area Index [m²/m²]
+    auxiliary(:phenology_factor, XY()), # Phenology factor [-]
+    auxiliary(:leaf_area_index, XY()), # Leaf Area Index [m²/m²]
+    input(:balanced_leaf_area_index, XY()), # Balanced Leaf Area Index [m²/m²]
 )
 
 """
@@ -77,7 +77,7 @@ end
 
 @propagate_inbounds function compute_phenology(i, j, grid, fields, phenol::PALADYNPhenology)
     # Get input
-    LAI_b = fields.LAI_b[i, j]
+    LAI_b = fields.balanced_leaf_area_index[i, j]
 
     # Compute phen
     phen = compute_phen(phenol)
@@ -90,8 +90,8 @@ end
 
 @propagate_inbounds function compute_phenology!(out, i, j, grid, fields, phenol::PALADYNPhenology)
     phen, LAI = compute_phenology(i, j, grid, fields, phenol)
-    out.phen[i, j, 1] = phen
-    out.LAI[i, j, 1] = LAI
+    out.phenology_factor[i, j, 1] = phen
+    out.leaf_area_index[i, j, 1] = LAI
     return out
 end
 

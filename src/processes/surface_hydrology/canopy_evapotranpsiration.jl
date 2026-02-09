@@ -82,7 +82,7 @@ variables(::PALADYNCanopyEvapotranspiration{NF}) where {NF} = (
     auxiliary(:transpiration, XY(), units=u"m/s", desc="Transpiration contribution to surface humidity flux"),
     input(:skin_temperature, XY(); units=u"°C", desc="Skin temperature"),
     input(:ground_temperature, XY(); default=NF(1), units=u"°C", desc="Ground surface temperature"),
-    input(:gw_can, XY(); default=NF(1), units=u"m/s", desc="Canopy stomatal conductance") # consider direct coupling in the future
+    input(:canopy_water_conductance, XY(); default=NF(1), units=u"m/s", desc="Canopy stomatal conductance") # consider direct coupling in the future
 )
 
 @propagate_inbounds function surface_humidity_flux(i, j, grid, fields, ::PALADYNCanopyEvapotranspiration)
@@ -124,7 +124,7 @@ for the given scheme `evtr` and process dependencies.
     # Get inputs
     Ts = fields.skin_temperature[i, j] # skin temperature (top of canopy)
     Tg = fields.ground_temperature[i, j] # ground temeprature (top snow/soil layer)
-    gw_can = fields.gw_can[i, j] # stomatal conductance
+    gw_can = fields.canopy_water_conductance[i, j] # stomatal conductance
 
     # Compute VPD and resistance terms
     Δqs = compute_humidity_vpd(i, j, grid, fields, atmos, constants, Ts) # humidity gradient between canopy and atmosphere
@@ -147,7 +147,7 @@ end
 Compute the aerodynamic resistance between the ground and canopy as a function of LAI and SAI.
 """
 @inline function aerodynamic_resistance(i, j, grid, fields, atmos::AbstractAtmosphere, evtr::PALADYNCanopyEvapotranspiration)
-    @inbounds let LAI = fields.LAI[i, j],
+    @inbounds let LAI = fields.leaf_area_index[i, j],
                   SAI = fields.SAI[i, j],
                   Vₐ = windspeed(i, j, grid, fields, atmos),
                   C = evtr.C_can; # drag coefficient for the canopy

@@ -4,7 +4,7 @@
 Vegetation carbon dynamics implementation following PALADYN (Willeit 2016) but considering only the sum of the vegetation
 carbon pools. The subsequent splitting into C_leaf, C_stem, C_root is not implemented for now.
 
-Authors: Maha Badri 
+Authors: Maha Badri
 
 Properties:
 $TYPEDFIELDS
@@ -38,9 +38,9 @@ end
 PALADYNCarbonDynamics(::Type{NF}; kwargs...) where {NF} = PALADYNCarbonDynamics{NF}(; kwargs...)
 
 variables(::PALADYNCarbonDynamics) = (
-    prognostic(:C_veg, XY()), # Vegetation carbon pool [kgC/m²]
-    auxiliary(:LAI_b, XY()), # Balanced Leaf Area Index [m²/m²]
-    input(:NPP, XY()), # Net Primary Production [kgC/m²/day]
+    prognostic(:carbon_vegetation, XY(), units=u"kg/m^2"), # Vegetation carbon pool [kgC/m²]
+    auxiliary(:balanced_leaf_area_index, XY()), # Balanced Leaf Area Index [m²/m²]
+    input(:net_primary_production, XY(), units=u"kg/m^2/d"), # Net Primary Production [kgC/m²/day]
 )
 
 """
@@ -122,8 +122,8 @@ end
 
 @propagate_inbounds function compute_veg_carbon_tendency(i, j, grid, fields, vegcarbon_dynamics::PALADYNCarbonDynamics)
     # Get inputs
-    LAI_b = fields.LAI_b[i, j]
-    NPP = fields.NPP[i, j]
+    LAI_b = fields.balanced_leaf_area_index[i, j]
+    NPP = fields.net_primary_production[i, j]
     
     # Compute the vegetation carbon pool tendency
     C_veg_tendency = compute_C_veg_tend(vegcarbon_dynamics, LAI_b, NPP)
@@ -132,12 +132,12 @@ end
 
 @propagate_inbounds function compute_veg_carbon_auxiliary!(out, i, j, grid, fields, vegcarbon_dynamics::PALADYNCarbonDynamics)
     # Compute balanced Leaf Area Index 
-    out.LAI_b[i, j, 1] = compute_LAI_b(vegcarbon_dynamics, fields.C_veg[i, j])
+    out.balanced_leaf_area_index[i, j, 1] = compute_LAI_b(vegcarbon_dynamics, fields.carbon_vegetation[i, j])
 end
 
 @propagate_inbounds function compute_veg_carbon_tendencies!(tend, i, j, grid, fields, vegcarbon_dynamics::PALADYNCarbonDynamics)
     # Compute and store C_veg tendency
-    tend.C_veg[i, j, 1] = compute_veg_carbon_tendency(i, j,  grid, fields, vegcarbon_dynamics)
+    tend.carbon_vegetation[i, j, 1] = compute_veg_carbon_tendency(i, j,  grid, fields, vegcarbon_dynamics)
 end
 
 # Kernels

@@ -76,11 +76,11 @@ end
 LUEPhotosynthesis(::Type{NF}; kwargs...) where {NF} = LUEPhotosynthesis{NF}(; kwargs...)
 
 variables(::LUEPhotosynthesis{NF}) where {NF} = (
-    auxiliary(:An, XY()), # Daily net assimilation (photosynthesis) [gC/m²/day]
-    auxiliary(:Rd, XY()), # Daily leaf respiration [gC/m²/day]
-    auxiliary(:GPP, XY()), # Gross Primary Production [kgC/m²/day]
-    input(:SMLF, XY(), default=NF(1)), # soil moisture limiting factor with default value of 1
-    input(:LAI, XY()), # Leaf Area Index [m²/m²]
+    auxiliary(:net_assimilation, XY(), units=u"g/m^2/d"), # Daily net assimilation (photosynthesis) [gC/m²/day]
+    auxiliary(:daily_leaf_respiration, XY(), units=u"g/m^2/d"), # Daily leaf respiration [gC/m²/day]
+    auxiliary(:gross_primary_production, XY(), units=u"kg/m^2/d"), # Gross Primary Production [kgC/m²/day]
+    input(:soil_moisture_limiting_factor, XY(), default=NF(1)), # soil moisture limiting factor with default value of 1
+    input(:leaf_area_index, XY()), # Leaf Area Index [m²/m²]
 )
 
 """
@@ -324,9 +324,9 @@ end
     pres = air_pressure(i, j, grid, fields, atmos)
     swdown = shortwave_down(i, j, grid, fields, atmos)
     co2 = fields.CO2[i, j]
-    β = fields.SMLF[i, j]
-    LAI = fields.LAI[i, j]
-    λc = fields.λc[i, j]
+    β = fields.soil_moisture_limiting_factor[i, j]
+    LAI = fields.leaf_area_index[i, j]
+    λc = fields.leaf_to_air_co2_ratio[i, j]
 
     # Compute Rd, leaf respiration rate in [gC/m²/s],
     # An, daily net photosynthesis [gC/m²/s]
@@ -341,7 +341,7 @@ end
 @propagate_inbounds function compute_photosynthesis!(out, i, j, grid, fields, photo::LUEPhotosynthesis, atmos::AbstractAtmosphere)
     Rd, An, GPP = compute_photosynthesis(i, j, grid, fields, photo, atmos)
     out.Rd[i, j, 1] = Rd
-    out.An[i, j, 1] = An
+    out.net_assimilation[i, j, 1] = An
     out.GPP[i, j, 1] = GPP
     return out
 end

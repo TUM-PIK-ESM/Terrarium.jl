@@ -21,9 +21,9 @@ end
 PALADYNVegetationDynamics(::Type{NF}; kwargs...) where {NF} = PALADYNVegetationDynamics(; kwargs...)
 
 variables(::PALADYNVegetationDynamics) = (
-    prognostic(:ν, XY()), # PFT fractional area coverage [-]
-    input(:LAI_b, XY()),
-    input(:C_veg, XY()),
+    prognostic(:vegetation_area_fraction, XY()), # PFT fractional area coverage [-]
+    input(:balanced_leaf_area_index, XY()),
+    input(:carbon_vegetation, XY(), units=u"kg/m^2"),
 )
 
 """
@@ -101,11 +101,11 @@ end
     vegcarbon_dynamics::PALADYNCarbonDynamics
 )
     # Get inputs
-    LAI_b = fields.LAI_b[i, j]
-    C_veg = fields.C_veg[i, j]
+    LAI_b = fields.balanced_leaf_area_index[i, j]
+    C_veg = fields.carbon_vegetation[i, j]
 
     # Current state
-    ν = fields.ν[i, j]
+    ν = fields.vegetation_area_fraction[i, j]
 
     # Compute the vegetation fraction tendency
     ν_tendency = compute_ν_tendency(veg_dynamics, vegcarbon_dynamics, LAI_b, C_veg, ν)
@@ -117,7 +117,7 @@ end
     veg_dynamics::PALADYNVegetationDynamics,
     vegcarbon_dynamics::PALADYNCarbonDynamics
 )
-    tend.ν[i, j, 1] = compute_ν_tendency(i, j, grid, fields, veg_dynamics, vegcarbon_dynamics)
+    tend.vegetation_area_fraction[i, j, 1] = compute_ν_tendency(i, j, grid, fields, veg_dynamics, vegcarbon_dynamics)
     return tend
 end
 

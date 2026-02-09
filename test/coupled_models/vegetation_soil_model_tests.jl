@@ -13,7 +13,7 @@ using Oceananigans.BoundaryConditions: BoundaryCondition, Flux
     initializer = FieldInitializers(
         temperature = (x, z) -> 1.0 - 0.02 * z,
         saturation_water_ice = (x, z) -> min(1, 0.8 - 0.05*z),
-        C_veg = 0.1
+        carbon_vegetation = 0.1
     )
     vegetation = VegetationCarbon(eltype(grid))
     vegsoil = VegetationSoilModel(grid; soil, vegetation, initializer)
@@ -31,6 +31,6 @@ using Oceananigans.BoundaryConditions: BoundaryCondition, Flux
     timestep!(integrator, 60.0)
     @test all(isfinite.(integrator.state.saturation_water_ice))
     @test all(isfinite.(integrator.state.internal_energy))
-    @test all(isfinite.(integrator.state.C_veg))
+    @test all(isfinite.(integrator.state.carbon_vegetation))
     # TODO: also check ET and veg processes once they are working...
 end

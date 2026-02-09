@@ -20,11 +20,11 @@ end
 MedlynStomatalConductance(::Type{NF}; kwargs...) where {NF} = MedlynStomatalConductance(; kwargs...)
 
 variables(::MedlynStomatalConductance) = (
-    auxiliary(:gw_can, XY(), units=u"m/s"), # Canopy conducatance for water vapor
-    auxiliary(:λc, XY()), # Ratio of leaf-internal and air CO2 concentration [-]
+    auxiliary(:canopy_water_conductance, XY(), units=u"m/s"), # Canopy conducatance for water vapor
+    auxiliary(:leaf_to_air_co2_ratio, XY()), # Ratio of leaf-internal and air CO2 concentration [-]
 )
 
-@inline @propagate_inbounds stomatal_conductance(i, j, grid, fields, ::MedlynStomatalConductance) = fields.gw_can[i, j]
+@inline @propagate_inbounds stomatal_conductance(i, j, grid, fields, ::MedlynStomatalConductance) = fields.canopy_water_conductance[i, j]
 
 @inline function compute_gw_can(
     stomcond::MedlynStomatalConductance{NF},
@@ -78,10 +78,10 @@ end
 
 @propagate_inbounds function compute_stomatal_conductance(i, j, grid, fields, stomcond::MedlynStomatalConductance{NF}, photo::LUEPhotosynthesis{NF}, atmos::AbstractAtmosphere, constants::PhysicalConstants, args...) where NF
     # Get inputs
-    An = fields.An[i, j]
+    An = fields.net_assimilation[i, j]
     CO2 = fields.CO2[i, j]
-    LAI = fields.LAI[i, j]
-    β = fields.SMLF[i, j]
+    LAI = fields.leaf_area_index[i, j]
+    β = fields.soil_moisture_limiting_factor[i, j]
 
     # Compute vpd [Pa]
     vpd = compute_vpd(i, j, grid, fields, atmos, constants)
@@ -95,8 +95,8 @@ end
 
 @propagate_inbounds function compute_stomatal_conductance!(out, i, j, grid, fields, stomcond::MedlynStomatalConductance{NF}, photo::LUEPhotosynthesis{NF}, atmos::AbstractAtmosphere, constants::PhysicalConstants, args...) where NF
     gw_can, λc = compute_stomatal_conductance(i, j, grid, fields, stomcond, photo, atmos, constants, args...)
-    out.gw_can[i, j, 1] = gw_can
-    out.λc[i, j, 1] = λc
+    out.canopy_water_conductance[i, j, 1] = gw_can
+    out.leaf_to_air_co2_ratio[i, j, 1] = λc
     return out
 end
 

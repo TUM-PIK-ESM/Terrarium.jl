@@ -7,7 +7,7 @@ using Test
     paw = FieldCapacityLimitedPAW()
     vars = Variables(paw)
     @test hasproperty(vars.auxiliary, :plant_available_water)
-    @test hasproperty(vars.auxiliary, :SMLF)
+    @test hasproperty(vars.auxiliary, :soil_moisture_limiting_factor)
     @test hasproperty(vars.inputs, :root_fraction)
 
     # Initialize state variables
@@ -27,8 +27,8 @@ using Test
     ## set PAW to 50% in all layers
     PAW = set!(state.plant_available_water, 0.5)
     ## compute and check SMLF; should be approx. ∑ PAWᵢ * RFᵢ
-    compute!(state.SMLF)
-    @test all(state.SMLF .≈ sum(PAW * RF, dims=3))
+    compute!(state.soil_moisture_limiting_factor)
+    @test all(state.soil_moisture_limiting_factor .≈ sum(PAW * RF, dims=3))
 
     # Check PAW calculations
     ## Case 1: Fully saturated
@@ -42,7 +42,7 @@ using Test
     set!(state.liquid_water_fraction, liq)
     compute_auxiliary!(state, grid, paw, soil)
     @test all(state.plant_available_water .≈ 1)
-    @test all(state.SMLF .≈ 1)
+    @test all(state.soil_moisture_limiting_factor .≈ 1)
 
     ## Case 2: Dry
     por = 0.5
@@ -53,7 +53,7 @@ using Test
     set!(state.liquid_water_fraction, liq)
     compute_auxiliary!(state, grid, paw, soil)
     @test all(state.plant_available_water .≈ 0)
-    @test all(state.SMLF .≈ 0)
+    @test all(state.soil_moisture_limiting_factor .≈ 0)
 
     ## Case 3: Frozen
     liq = 0.0
@@ -63,7 +63,7 @@ using Test
     set!(state.liquid_water_fraction, liq)
     compute_auxiliary!(state, grid, paw, soil)
     @test all(state.plant_available_water .≈ 0.0)
-    @test all(state.SMLF .≈ 0)
+    @test all(state.soil_moisture_limiting_factor .≈ 0)
 
     # Case 4: Unsaturated
     liq = 1.0
@@ -73,5 +73,5 @@ using Test
     set!(state.liquid_water_fraction, liq)
     compute_auxiliary!(state, grid, paw, soil)
     @test all(state.plant_available_water .≈ 0.25)
-    @test all(state.SMLF .≈ sum(state.plant_available_water * state.root_fraction, dims=3))
+    @test all(state.soil_moisture_limiting_factor .≈ sum(state.plant_available_water * state.root_fraction, dims=3))
 end

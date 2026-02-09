@@ -25,11 +25,11 @@ end
 PALADYNAutotrophicRespiration(::Type{NF}; kwargs...) where {NF} = PALADYNAutotrophicRespiration{NF}(; kwargs...)
 
 variables(::PALADYNAutotrophicRespiration) = (
-    auxiliary(:Ra, XY()), # Autotrophic respiration [kgC/m²/day]
-    auxiliary(:NPP, XY()), # Net Primary Production [kgC/m²/day]
-    input(:GPP, XY()), # Gross Primary Production [kgC/m²/day]
-    input(:Rd, XY()), # Daily leaf respiration [gC/m²/day]
-    input(:phen, XY()), # Phenology factor [-]
+    auxiliary(:autotrophic_respiration, XY(), units=u"kg/m^2/d"), # Autotrophic respiration [kgC/m²/day]
+    auxiliary(:net_primary_production, XY(), units=u"kg/m^2/d"), # Net Primary Production [kgC/m²/day]
+    input(:gross_primary_production, XY(), units=u"kg/m^2/d"), # Gross Primary Production [kgC/m²/day]
+    input(:daily_leaf_respiration, XY(), units=u"g/m^2/d"), # Daily leaf respiration [gC/m²/day]
+    input(:phenology_factor, XY()), # Phenology factor [-]
     input(:ground_temperature, XY(), default=10.0, units=u"°C"), # Ground surface temperature [°C]
 )
 
@@ -177,10 +177,10 @@ Compute autotrophic respiration following the scheme of PALADYN (Willeit 2016).
     # Get inputs    
     T_air = air_temperature(i, j, grid, fields, atmos)
     T_soil = fields.ground_temperature[i, j]
-    Rd = fields.Rd[i, j]
-    phen = fields.phen[i, j]
-    C_veg = fields.C_veg[i, j]
-    GPP = fields.GPP[i, j]
+    Rd = fields.daily_leaf_respiration[i, j]
+    phen = fields.phenology_factor[i, j]
+    C_veg = fields.carbon_vegetation[i, j]
+    GPP = fields.gross_primary_production[i, j]
 
     # Compute autotrophic respiration Ra
     Ra = compute_Ra(autoresp, vegcarbon_dynamics, T_air, T_soil, Rd, phen, C_veg, GPP)
@@ -195,8 +195,8 @@ end
 @propagate_inbounds function compute_autotrophic_respiration!(out, i, j, grid, fields, autoresp::AbstractAutotrophicRespiration, args...)
     # Compute and store results
     Ra, NPP  = compute_autotrophic_respiration(i, j, grid, fields, autoresp, args...)
-    out.Ra[i, j, 1] = Ra
-    out.NPP[i, j, 1] = NPP
+    out.autotrophic_respiration[i, j, 1] = Ra
+    out.net_primary_production[i, j, 1] = NPP
     return out
 end
 
