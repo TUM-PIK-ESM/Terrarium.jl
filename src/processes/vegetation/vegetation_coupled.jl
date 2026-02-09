@@ -4,15 +4,15 @@
 Represents a generic coupling of vegetation carbon processes.
 """
 @kwdef struct VegetationCarbon{
-    NF,
-    Photosynthesis <: AbstractPhotosynthesis{NF},
-    StomatalConducatance <: AbstractStomatalConductance{NF},
-    AutotrophicRespiration <: AbstractAutotrophicRespiration{NF},
-    Phenology <: AbstractPhenology{NF},
-    CarbonDynamics <: AbstractVegetationCarbonDynamics{NF},
-    VegetationDynamics <: Optional{AbstractVegetationDynamics},
-    RootDistribution <: Optional{AbstractRootDistribution}
-} <: AbstractVegetation{NF}
+        NF,
+        Photosynthesis <: AbstractPhotosynthesis{NF},
+        StomatalConducatance <: AbstractStomatalConductance{NF},
+        AutotrophicRespiration <: AbstractAutotrophicRespiration{NF},
+        Phenology <: AbstractPhenology{NF},
+        CarbonDynamics <: AbstractVegetationCarbonDynamics{NF},
+        VegetationDynamics <: Optional{AbstractVegetationDynamics},
+        RootDistribution <: Optional{AbstractRootDistribution},
+    } <: AbstractVegetation{NF}
     "Photosynthesis scheme"
     photosynthesis::Photosynthesis # not prognostic
 
@@ -36,15 +36,15 @@ Represents a generic coupling of vegetation carbon processes.
 end
 
 function VegetationCarbon(
-    ::Type{NF};
-    photosynthesis = LUEPhotosynthesis(NF),
-    stomatal_conductance = MedlynStomatalConductance(NF),
-    autotrophic_respiration = PALADYNAutotrophicRespiration(NF),
-    phenology = PALADYNPhenology(NF),
-    carbon_dynamics = PALADYNCarbonDynamics(NF),
-    vegetation_dynamics =  PALADYNVegetationDynamics(NF),
-    root_distribution = StaticExponentialRootDistribution(NF)
-) where {NF}
+        ::Type{NF};
+        photosynthesis = LUEPhotosynthesis(NF),
+        stomatal_conductance = MedlynStomatalConductance(NF),
+        autotrophic_respiration = PALADYNAutotrophicRespiration(NF),
+        phenology = PALADYNPhenology(NF),
+        carbon_dynamics = PALADYNCarbonDynamics(NF),
+        vegetation_dynamics = PALADYNVegetationDynamics(NF),
+        root_distribution = StaticExponentialRootDistribution(NF)
+    ) where {NF}
     return VegetationCarbon(;
         photosynthesis,
         stomatal_conductance,
@@ -57,12 +57,12 @@ function VegetationCarbon(
 end
 
 function compute_auxiliary!(
-    state, grid,
-    veg::VegetationCarbon,
-    atmos::AbstractAtmosphere,
-    constants::PhysicalConstants,
-    args...
-)
+        state, grid,
+        veg::VegetationCarbon,
+        atmos::AbstractAtmosphere,
+        constants::PhysicalConstants,
+        args...
+    )
     # Compute auxiliary variables for each component
     # Veg. carbon dynamics: needs C_veg(t-1) and computes LAI_b(t-1)
     compute_auxiliary!(state, grid, veg.carbon_dynamics)
@@ -80,7 +80,7 @@ function compute_auxiliary!(
 
     # Autotrophic respiration: needs atm. inputs(t), GPP(t), Rd(t), C_veg(t-1), phen(t-1) and computes Ra(t) and NPP(t)
     compute_auxiliary!(state, grid, veg.autotrophic_respiration, veg.carbon_dynamics, atmos)
-    
+
     # Note: vegetation_dynamics compute_auxiliary! does nothing for now
     compute_auxiliary!(state, grid, veg.vegetation_dynamics)
     return nothing

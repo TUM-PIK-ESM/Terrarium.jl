@@ -1,14 +1,14 @@
 @kwdef struct VegetationSoilModel{
-    NF,
-    GridType <: AbstractLandGrid{NF},
-    Atmosphere <: AbstractAtmosphere,
-    SEB <: AbstractSurfaceEnergyBalance,
-    Hydrology <: AbstractSurfaceHydrology,
-    Vegetation <: AbstractVegetation{NF},
-    PAW <: AbstractPlantAvailableWater,
-    Soil <: AbstractSoil{NF},
-    Initializer <: AbstractInitializer,
-} <: AbstractLandModel{NF, GridType}
+        NF,
+        GridType <: AbstractLandGrid{NF},
+        Atmosphere <: AbstractAtmosphere,
+        SEB <: AbstractSurfaceEnergyBalance,
+        Hydrology <: AbstractSurfaceHydrology,
+        Vegetation <: AbstractVegetation{NF},
+        PAW <: AbstractPlantAvailableWater,
+        Soil <: AbstractSoil{NF},
+        Initializer <: AbstractInitializer,
+    } <: AbstractLandModel{NF, GridType}
     "Spatial discretization"
     grid::GridType
 
@@ -38,12 +38,12 @@
 end
 
 function initialize(
-    model::VegetationSoilModel{NF};
-    clock = Clock(time=zero(NF)),
-    boundary_conditions = (;),
-    fields = (;),
-    input_variables = ()
-) where {NF}
+        model::VegetationSoilModel{NF};
+        clock = Clock(time = zero(NF)),
+        boundary_conditions = (;),
+        fields = (;),
+        input_variables = ()
+    ) where {NF}
     grid = get_grid(model)
     # Create ground heat flux field for coupling
     vars = Variables(variables(model)..., input_variables...)
@@ -58,7 +58,7 @@ function initialize(
     # Merge user-defined fields with BC fields
     fields = merge((; ground_heat_flux, infiltration), fields)
     # Return the initialized model state
-    return initialize(vars, grid; clock, boundary_conditions=bcs, fields)
+    return initialize(vars, grid; clock, boundary_conditions = bcs, fields)
 end
 
 function initialize!(state, model::VegetationSoilModel)
@@ -70,7 +70,7 @@ function initialize!(state, model::VegetationSoilModel)
     initialize!(state, grid, model.surface_hydrology)
     # TODO: change when refactoring model/process types
     initialize!(state, grid, model.vegetation, model.atmosphere, model.constants)
-    initialize!(state, grid, model.soil, model.constants)
+    return initialize!(state, grid, model.soil, model.constants)
 end
 
 function compute_auxiliary!(state, model::VegetationSoilModel)
@@ -86,22 +86,22 @@ function compute_auxiliary!(state, model::VegetationSoilModel)
     compute_auxiliary!(state, grid, model.plant_available_water, model.soil)
     compute_auxiliary!(state, grid, model.vegetation, model.atmosphere, model.constants)
     # recompute surface energy fluxes
-    compute_surface_energy_fluxes!(state, grid, model.surface_energy_balance, model.atmosphere, model.constants, model.surface_hydrology)
+    return compute_surface_energy_fluxes!(state, grid, model.surface_energy_balance, model.atmosphere, model.constants, model.surface_hydrology)
 end
 
 function compute_tendencies!(state, model::VegetationSoilModel)
     grid = get_grid(model)
     compute_tendencies!(state, grid, model.surface_hydrology)
     compute_tendencies!(state, grid, model.soil, model.constants)
-    compute_tendencies!(state, grid, model.vegetation)
+    return compute_tendencies!(state, grid, model.vegetation)
 end
 
 function closure!(state, model::VegetationSoilModel)
     grid = get_grid(model)
-    closure!(state, grid, model.soil, model.constants)
+    return closure!(state, grid, model.soil, model.constants)
 end
 
 function invclosure!(state, model::VegetationSoilModel)
     grid = get_grid(model)
-    invclosure!(state, grid, model.soil, model.constants)
+    return invclosure!(state, grid, model.soil, model.constants)
 end

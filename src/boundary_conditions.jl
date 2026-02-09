@@ -7,7 +7,7 @@ const FieldBC = Union{FieldBoundaryConditions, NamedTuple{locs, <:Tuple{Vararg{B
 """
 Alias for a `NamedTuple` of `FieldBC` types where the keys correspond to field/variable names.
 """
-const FieldBCs{names, BCs} = NamedTuple{names, BCs} where {names, BCs<:Tuple{Vararg{FieldBC}}}
+const FieldBCs{names, BCs} = NamedTuple{names, BCs} where {names, BCs <: Tuple{Vararg{FieldBC}}}
 
 """
     merge_boundary_conditions(bcs::FieldBCs...)
@@ -30,5 +30,5 @@ Convenience alias for `Oceananigans.BoundaryConditions.compute_z_bcs!` that adds
 to its corresponding `tendency`.
 """
 @inline function BoundaryConditions.compute_z_bcs!(tendency, progvar, grid::AbstractLandGrid, state)
-    compute_z_bcs!(tendency, progvar, architecture(grid), state.clock, state)
+    return compute_z_bcs!(tendency, progvar, architecture(grid), state.clock, state)
 end

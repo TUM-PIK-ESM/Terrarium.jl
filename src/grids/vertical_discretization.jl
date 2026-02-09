@@ -21,7 +21,7 @@ end
 
 (spacing::UniformSpacing)(i::Int) = spacing.Δz
 
-Base.@kwdef struct ExponentialSpacing{NF,ST<:Union{Nothing,Integer}} <: AbstractVerticalSpacing{NF}
+Base.@kwdef struct ExponentialSpacing{NF, ST <: Union{Nothing, Integer}} <: AbstractVerticalSpacing{NF}
     Δz_min::NF = 0.05
     Δz_max::NF = 100.0
     sig::ST = 3
@@ -29,7 +29,7 @@ Base.@kwdef struct ExponentialSpacing{NF,ST<:Union{Nothing,Integer}} <: Abstract
 
     function ExponentialSpacing(Δz_min::NF, Δz_max::NF, sig, N) where {NF}
         @assert N > 1 "number of grid points for exponential spacing must be > 1"
-        return new{NF,typeof(sig)}(Δz_min, Δz_max, sig, N)
+        return new{NF, typeof(sig)}(Δz_min, Δz_max, sig, N)
     end
 end
 
@@ -37,11 +37,11 @@ function (spacing::ExponentialSpacing)(i::Int)
     @assert 0 < i <= num_layers(spacing) "index $i out of range"
     logΔz₀ = log2(spacing.Δz_min)
     logΔzₙ = log2(spacing.Δz_max)
-    logΔzᵢ = logΔz₀ + (i-1)*(logΔzₙ - logΔz₀) / (num_layers(spacing)-1)
+    logΔzᵢ = logΔz₀ + (i - 1) * (logΔzₙ - logΔz₀) / (num_layers(spacing) - 1)
     if isnothing(spacing.sig)
         return exp2(logΔzᵢ)
     else
-        return round(exp2(logΔzᵢ); sigdigits=spacing.sig)
+        return round(exp2(logΔzᵢ); sigdigits = spacing.sig)
     end
 end
 
@@ -52,4 +52,3 @@ end
 (spacing::PrescribedSpacing)(i::Int) = spacing.Δz[i]
 
 num_layers(spacing::PrescribedSpacing) = length(spacing.Δz)
-

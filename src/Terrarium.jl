@@ -33,10 +33,10 @@ using Oceananigans.Utils: launch!
 
 # Boundary conditions
 using Oceananigans.BoundaryConditions: BoundaryConditions, BoundaryCondition, DefaultBoundaryCondition, FieldBoundaryConditions,
-                                       ValueBoundaryCondition, FluxBoundaryCondition, GradientBoundaryCondition, NoFluxBoundaryCondition,
-                                       ContinuousBoundaryFunction, DiscreteBoundaryFunction,
-                                       AbstractBoundaryConditionClassification, Value, Flux, Gradient, # BC type classifications
-                                       fill_halo_regions!, regularize_field_boundary_conditions, getbc, compute_z_bcs!
+    ValueBoundaryCondition, FluxBoundaryCondition, GradientBoundaryCondition, NoFluxBoundaryCondition,
+    ContinuousBoundaryFunction, DiscreteBoundaryFunction,
+    AbstractBoundaryConditionClassification, Value, Flux, Gradient, # BC type classifications
+    fill_halo_regions!, regularize_field_boundary_conditions, getbc, compute_z_bcs!
 
 # Freeze curves for soil energy balance
 using FreezeCurves: FreezeCurves, FreezeCurve, SFCC, SWRC, FreeWater, VanGenuchten, BrooksCorey
@@ -56,7 +56,7 @@ import RingGrids
 """
 Alias for numeric `Quantity` with type `NF` and units `U`.
 """
-const LengthQuantity{NF, U} = Quantity{NF, 𝐋, U} where {NF, U<:Units}
+const LengthQuantity{NF, U} = Quantity{NF, 𝐋, U} where {NF, U <: Units}
 
 """
 Alias for Oceananigans `AbstractBoundaryConditionClassification`.

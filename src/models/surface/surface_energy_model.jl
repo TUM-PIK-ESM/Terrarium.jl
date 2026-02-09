@@ -8,12 +8,12 @@ balance calculations from prescribed meteorological and ground temperature
 conditions.
 """
 struct SurfaceEnergyModel{
-    NF,
-    GridType<:AbstractLandGrid{NF},
-    SEB<:AbstractSurfaceEnergyBalance,
-    Atmosphere<:AbstractAtmosphere,
-    Initializer<:AbstractInitializer,
-} <: AbstractSurfaceEnergyModel{NF, GridType}
+        NF,
+        GridType <: AbstractLandGrid{NF},
+        SEB <: AbstractSurfaceEnergyBalance,
+        Atmosphere <: AbstractAtmosphere,
+        Initializer <: AbstractInitializer,
+    } <: AbstractSurfaceEnergyModel{NF, GridType}
     "Spatial grid"
     grid::GridType
 
@@ -31,20 +31,20 @@ struct SurfaceEnergyModel{
 end
 
 function SurfaceEnergyModel(
-    grid::AbstractLandGrid{NF},
-    surface_energy_balance::AbstractSurfaceEnergyBalance = SurfaceEnergyBalance(NF);
-    atmosphere::AbstractAtmosphere = PrescribedAtmosphere(NF),
-    constants::PhysicalConstants = PhysicalConstants(NF),
-    initializer::AbstractInitializer = DefaultInitializer()
-) where {NF}
+        grid::AbstractLandGrid{NF},
+        surface_energy_balance::AbstractSurfaceEnergyBalance = SurfaceEnergyBalance(NF);
+        atmosphere::AbstractAtmosphere = PrescribedAtmosphere(NF),
+        constants::PhysicalConstants = PhysicalConstants(NF),
+        initializer::AbstractInitializer = DefaultInitializer()
+    ) where {NF}
     return SurfaceEnergyModel(grid, atmosphere, surface_energy_balance, constants, initializer)
 end
 
 function compute_auxiliary!(state, model::SurfaceEnergyModel)
     compute_auxiliary!(state, model, model.atmosphere)
-    compute_auxiliary!(state, model, model.surface_energy_balance)
+    return compute_auxiliary!(state, model, model.surface_energy_balance)
 end
 
 function compute_tendencies!(state, ::SurfaceEnergyModel)
-    compute_tendencies!(state, model, model.surface_energy_balance)
+    return compute_tendencies!(state, model, model.surface_energy_balance)
 end

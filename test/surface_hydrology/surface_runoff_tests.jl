@@ -18,7 +18,7 @@ using Test
     ∂S∂t = compute_surface_drainage(runoff, 0.1)
     @test ∂S∂t ≈ 0.1 / runoff.τ_r
     # Test with alternative value of τ_r
-    runoff = DirectSurfaceRunoff(τ_r = 24*3600)
+    runoff = DirectSurfaceRunoff(τ_r = 24 * 3600)
     ∂S∂t = compute_surface_drainage(runoff, 0.1)
     @test ∂S∂t ≈ 0.1 / runoff.τ_r
 end
@@ -27,7 +27,7 @@ end
     runoff = DirectSurfaceRunoff(Float64)
     # Test that infiltration is zero when there is no flux
     sat_top = 0.5
-    max_infil = 1e-5
+    max_infil = 1.0e-5
     influx = 0.0
     infil = compute_infiltration(runoff, influx, sat_top, max_infil)
     @test iszero(infil)
@@ -50,9 +50,9 @@ end
     R = compute_surface_runoff(runoff, 0, 0, 0)
     @test iszero(R)
     # Check that surface runoff is equal to the defined sum
-    precip = 1e-6
-    surface_drainage = 1e-7
-    infil = 1e-5
+    precip = 1.0e-6
+    surface_drainage = 1.0e-7
+    infil = 1.0e-5
     R = compute_surface_runoff(runoff, precip, surface_drainage, infil)
     @test R ≈ precip + surface_drainage - infil
 end

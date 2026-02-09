@@ -42,7 +42,7 @@ using Unitful
     S1.data .= randn(size(S1))
     ## check update_inputs!
     fields = (S1 = Field(grid, XY()), S2 = Field(grid, XY()))
-    clock = Clock(time=0)
+    clock = Clock(time = 0)
     update_inputs!(fields, fts_input, clock)
     @test all(fields.S1 .== S1[1])
     @test all(fields.S2 .== S2[1])

@@ -19,7 +19,7 @@ function get_swrc end
 
 Base type for soil hydraulic properties and parameterization schemes.
 """
-abstract type AbstractSoilHydraulics{NF, RC<:SWRC, UnsatK<:AbstractUnsatK} end
+abstract type AbstractSoilHydraulics{NF, RC <: SWRC, UnsatK <: AbstractUnsatK} end
 
 """
     $SIGNATURES
@@ -66,12 +66,12 @@ $TYPEDFIELDS
 @kwdef struct ConstantSoilHydraulics{NF, RC, UnsatK} <: AbstractSoilHydraulics{NF, RC, UnsatK}
     "Soil water retention curve"
     swrc::RC
-    
+
     "Unsaturated hydraulic conductivity formulation; defaults to `sat_hydraulic_cond`"
-    unsat_hydraulic_cond::UnsatK 
+    unsat_hydraulic_cond::UnsatK
 
     "Hydraulic conductivity at saturation [m/s]"
-    sat_hydraulic_cond::NF = 1e-5
+    sat_hydraulic_cond::NF = 1.0e-5
 
     "Prescribed field capacity [-]"
     field_capacity::NF = 0.25
@@ -87,11 +87,11 @@ $TYPEDFIELDS
 end
 
 function ConstantSoilHydraulics(
-    ::Type{NF};
-    swrc = BrooksCorey(),
-    unsat_hydraulic_cond = UnsatKLinear(NF),
-    kwargs...
-) where {NF}
+        ::Type{NF};
+        swrc = BrooksCorey(),
+        unsat_hydraulic_cond = UnsatKLinear(NF),
+        kwargs...
+    ) where {NF}
     return ConstantSoilHydraulics(; swrc, unsat_hydraulic_cond, kwargs...)
 end
 
@@ -118,14 +118,14 @@ $TYPEDFIELDS
     unsat_hydraulic_cond::UnsatK
 
     "Hydraulic conductivity at saturation [m/s]"
-    sat_hydraulic_cond::NF = 1e-5
-    
+    sat_hydraulic_cond::NF = 1.0e-5
+
     "Linear coeficient of wilting point adjustment due to clay content [-]"
     wilting_point_coef::NF = 37.13e-3
-    
+
     "Linear coeficient of field capacity adjustment due to clay content [-]"
     field_capacity_coef::NF = 89.0e-3
-    
+
     "Exponent of field capacity adjustment due to clay content [-]"
     field_capacity_exp::NF = 0.35
 
@@ -137,11 +137,11 @@ $TYPEDFIELDS
 end
 
 function SoilHydraulicsSURFEX(
-    ::Type{NF};
-    swrc = BrooksCorey(),
-    unsat_hydraulic_cond = UnsatKLinear(NF),
-    kwargs...
-) where {NF}
+        ::Type{NF};
+        swrc = BrooksCorey(),
+        unsat_hydraulic_cond = UnsatKLinear(NF),
+        kwargs...
+    ) where {NF}
     return SoilHydraulicsSURFEX(; swrc, unsat_hydraulic_cond, kwargs...)
 end
 
@@ -150,14 +150,14 @@ end
 
 @inline function wilting_point(hydraulics::SoilHydraulicsSURFEX, texture::SoilTexture)
     β_w = hydraulics.wilting_point_coef
-    wp = β_w*sqrt(texture.clay*100)
+    wp = β_w * sqrt(texture.clay * 100)
     return wp
 end
 
 @inline function field_capacity(hydraulics::SoilHydraulicsSURFEX, texture::SoilTexture)
     η = hydraulics.field_capacity_exp
     β_c = hydraulics.field_capacity_coef
-    fc = β_c*(texture.clay*100)^η
+    fc = β_c * (texture.clay * 100)^η
     return fc
 end
 
@@ -174,13 +174,13 @@ struct UnsatKLinear{NF} <: AbstractUnsatK end
 UnsatKLinear(::Type{NF}) where {NF} = UnsatKLinear{NF}()
 
 function hydraulic_conductivity(
-    hydraulics::AbstractSoilHydraulics{NF, RC, UnsatKLinear{NF}},
-    soil::SoilVolume
-) where {NF, RC}
+        hydraulics::AbstractSoilHydraulics{NF, RC, UnsatKLinear{NF}},
+        soil::SoilVolume
+    ) where {NF, RC}
     let fracs = volumetric_fractions(soil),
-        θw = fracs.water, # unfrozen water content
-        θsat = fracs.water + fracs.ice + fracs.air, # water + ice content at saturation (porosity)
-        K_sat = saturated_hydraulic_conductivity(hydraulics, soil.solid.texture);
+            θw = fracs.water, # unfrozen water content
+            θsat = fracs.water + fracs.ice + fracs.air, # water + ice content at saturation (porosity)
+            K_sat = saturated_hydraulic_conductivity(hydraulics, soil.solid.texture)
         K = K_sat * θw / θsat
         return K
     end
@@ -202,21 +202,21 @@ end
 UnsatKVanGenuchten(::Type{NF}; impedance::NF = NF(7)) where {NF} = UnsatKVanGenuchten(NF(impedance))
 
 function hydraulic_conductivity(
-    hydraulics::AbstractSoilHydraulics{NF, <:VanGenuchten, UnsatKVanGenuchten{NF}},
-    soil::SoilVolume
-) where {NF}
+        hydraulics::AbstractSoilHydraulics{NF, <:VanGenuchten, UnsatKVanGenuchten{NF}},
+        soil::SoilVolume
+    ) where {NF}
     # TODO: The SWRC parameters will need to also be spatially varying at some point
     let n = hydraulics.swrc.n, # van Genuchten parameter `n`
-        fracs = volumetric_fractions(soil),
-        θw = fracs.water, # unfrozen water content
-        θwi = fracs.water + fracs.ice, # total water + ice content
-        θsat = porosity(soil), # porosity
-        f = liquid_fraction(soil),
-        Ω = hydraulics.unsat_hydraulic_cond.impedance, # scaling parameter for ice impedance
-        I_ice = 10^(-Ω*(1 - f)), # ice impedance factor
-        K_sat = saturated_hydraulic_conductivity(hydraulics, soil.solid.texture);
+            fracs = volumetric_fractions(soil),
+            θw = fracs.water, # unfrozen water content
+            θwi = fracs.water + fracs.ice, # total water + ice content
+            θsat = porosity(soil), # porosity
+            f = liquid_fraction(soil),
+            Ω = hydraulics.unsat_hydraulic_cond.impedance, # scaling parameter for ice impedance
+            I_ice = 10^(-Ω * (1 - f)), # ice impedance factor
+            K_sat = saturated_hydraulic_conductivity(hydraulics, soil.solid.texture)
         # We use `complex` types here to permit illegal state values which may occur when using adaptive time steppers.
-        K = abs(K_sat*I_ice*sqrt(complex(θw/θsat))*(1 - complex(1 - complex(θw/θsat)^(n/(n+1)))^((n-1)/n))^2)
+        K = abs(K_sat * I_ice * sqrt(complex(θw / θsat)) * (1 - complex(1 - complex(θw / θsat)^(n / (n + 1)))^((n - 1) / n))^2)
         return K
     end
 end

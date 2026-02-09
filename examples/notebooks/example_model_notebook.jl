@@ -8,7 +8,7 @@ using InteractiveUtils
 begin
     import Pkg
     Pkg.activate(".")
-    Pkg.develop(Pkg.PackageSpec(path="../.."))
+    Pkg.develop(Pkg.PackageSpec(path = "../.."))
     Pkg.instantiate()
 end
 
@@ -17,8 +17,8 @@ using Terrarium
 
 # ╔═╡ 07c8a3a4-21aa-4213-a876-eadc8754d4a0
 begin # for reproducability set a random seed
-	using Random
-	Random.seed!(1234)
+    using Random
+    Random.seed!(1234)
 end
 
 # ╔═╡ eeb283fa-5360-4bab-83cf-dcbc0bee7949
@@ -71,7 +71,7 @@ For our current example, we are defining a simple linear ODE without any spatial
 """
 
 # ╔═╡ 78f268ef-5385-4c63-bc35-2c973de69da5
-grid = ColumnGrid(CPU(), Float64, UniformSpacing(N=1))
+grid = ColumnGrid(CPU(), Float64, UniformSpacing(N = 1))
 
 # ╔═╡ 054a8b11-250f-429f-966f-ca3c9a5dc2ef
 md"""
@@ -82,23 +82,23 @@ We start by defining a `struct` for our model that inherits from `AbstractModel`
 
 # ╔═╡ 407786db-607f-4508-b697-fe75b3ce0b25
 @kwdef struct LinearDynamics{NF} <: Terrarium.AbstractProcess{NF}
-	"Exponential growth rate"
-	alpha::NF = 0.01
+    "Exponential growth rate"
+    alpha::NF = 0.01
 
-	"Constant offset for exponential growth"
-	c::NF = 0.1
+    "Constant offset for exponential growth"
+    c::NF = 0.1
 end
 
 # ╔═╡ ecd92bff-a116-493d-9ce0-a2eb7d161dc6
 @kwdef struct ExpModel{NF, Grid <: Terrarium.AbstractLandGrid{NF}, Dyn, Init} <: Terrarium.AbstractModel{NF, Grid}
-	"Spatial grid on which state variables are discretized"
-	grid::Grid
+    "Spatial grid on which state variables are discretized"
+    grid::Grid
 
-	"Linear dynamics resulting in exponential growth/decay"
-	dynamics::Dyn = LinearDynamics()
+    "Linear dynamics resulting in exponential growth/decay"
+    dynamics::Dyn = LinearDynamics()
 
-	"Model initializer"
-	initializer::Init = DefaultInitializer()
+    "Model initializer"
+    initializer::Init = DefaultInitializer()
 end
 
 # ╔═╡ 575d920c-b12e-493f-95a7-5c962c3591fd
@@ -118,7 +118,7 @@ So, let's define those:
 Terrarium.variables(::ExpModel) = (
     Terrarium.prognostic(:u, Terrarium.XY()),
     Terrarium.auxiliary(:c, Terrarium.XY()),
-	Terrarium.input(:F, Terrarium.XY()),
+    Terrarium.input(:F, Terrarium.XY()),
 )
 
 # ╔═╡ d4d19de7-6f77-4873-9182-9832d1ca4381
@@ -130,12 +130,12 @@ We also need to define `compute_auxiliary!` and `compute_tendencies!` as discuss
 
 # ╔═╡ 5ea313fc-3fbb-4092-a2cc-e0cd1f2fe641
 function Terrarium.compute_auxiliary!(state, model::ExpModel)
-    compute_auxiliary!(state, model, model.dynamics)
+    return compute_auxiliary!(state, model, model.dynamics)
 end
 
 # ╔═╡ 3815424f-6210-470d-aef1-99c60c71072f
 function Terrarium.compute_tendencies!(state, model::ExpModel)
-    compute_tendencies!(state, model, model.dynamics)
+    return compute_tendencies!(state, model, model.dynamics)
 end
 
 # ╔═╡ 32373599-768f-4809-acdd-4704acc3f30b
@@ -172,7 +172,7 @@ function Terrarium.compute_tendencies!(
             α = dynamics.alpha,
             # note again that here we could also just use dynamics.c instead of defining an auxiliary variable!
             c = state.auxiliary.c
-			F = state.inputs.F
+        F = state.inputs.F
         # Write into tendency variable ∂u∂t
         ∂u∂t .= α * u + c + F
     end
@@ -200,11 +200,11 @@ Then, we define our forcing. For that, our time-dependent forcing is loaded in f
 """
 
 # ╔═╡ 252af6a1-73c8-4abe-8100-690564641b0d
-begin 
-	t_F = 0:1:300
-	F = FieldTimeSeries(grid, XY(), t_F)
-	F.data .= randn(size(F));
-	input = InputSource(; F)
+begin
+    t_F = 0:1:300
+    F = FieldTimeSeries(grid, XY(), t_F)
+    F.data .= randn(size(F))
+    input = InputSource(; F)
 end
 
 # ╔═╡ 452f95e1-3c6b-4e49-935f-1a6f96c96bbb
@@ -227,7 +227,7 @@ to `initialize` along with a suitable timestepper and our input/forcing data, wh
 """
 
 # ╔═╡ 7e38132b-d406-4863-b88f-90efe2a1bfa2
-integrator = initialize(model, Heun(Δt=1.0), input)
+integrator = initialize(model, Heun(Δt = 1.0), input)
 
 # ╔═╡ ab442662-9975-42e5-b5c7-48687f8cbe12
 md"""
@@ -276,20 +276,20 @@ begin
     Terrarium.initialize!(integrator)
 
     output_dir = mkpath(tempname())
-	output_file = joinpath(output_dir, "simulation.jld2")
+    output_file = joinpath(output_dir, "simulation.jld2")
     sim.output_writers[:snapshots] = JLD2Writer(
         integrator,
         (u = integrator.state.u,);
         filename = output_file,
         overwrite_existing = true,
-		including = [:grid],
+        including = [:grid],
         schedule = TimeInterval(10seconds)
     )
 
-	# Run the simulation
-	run!(sim)
-	@assert isfile(output_file) "Output file does not exist!"
-	display("Simulaton data saved to $(output_file)")
+    # Run the simulation
+    run!(sim)
+    @assert isfile(output_file) "Output file does not exist!"
+    display("Simulaton data saved to $(output_file)")
 end
 
 # ╔═╡ 081d0b29-927c-4a03-a3dd-4dcac043dcc1

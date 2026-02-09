@@ -9,13 +9,13 @@ Properties:
 $TYPEDFIELDS
 """
 @kwdef struct VegetationModel{
-    NF,
-    Vegetation<:AbstractVegetation{NF},
-    Atmosphere<:AbstractAtmosphere{NF},
-    GridType<:AbstractLandGrid{NF},
-    Constants<:PhysicalConstants{NF},
-    Initializer<:AbstractInitializer,
-} <: AbstractVegetationModel{NF, GridType}
+        NF,
+        Vegetation <: AbstractVegetation{NF},
+        Atmosphere <: AbstractAtmosphere{NF},
+        GridType <: AbstractLandGrid{NF},
+        Constants <: PhysicalConstants{NF},
+        Initializer <: AbstractInitializer,
+    } <: AbstractVegetationModel{NF, GridType}
     "Spatial grid type"
     grid::GridType
 
@@ -36,13 +36,12 @@ function compute_auxiliary!(state, model::VegetationModel)
     # Unpack vegetation model
     (; grid, atmosphere, vegetation, constants) = model
     # Compute auxiliary variables for coupled vegetation processes
-    compute_auxiliary!(state, grid, vegetation, atmosphere, constants)
+    return compute_auxiliary!(state, grid, vegetation, atmosphere, constants)
 end
 
 function compute_tendencies!(state, model::VegetationModel)
     # Unpack vegetation model
     (; grid, vegetation, constants) = model
     # Compute auxiliary variables for coupled vegetation processes
-    compute_tendencies!(state, grid, vegetation, constants)
+    return compute_tendencies!(state, grid, vegetation, constants)
 end
-

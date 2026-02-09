@@ -16,7 +16,7 @@ using Test
     I_can = compute_canopy_interception(canopy_interception, 1.0, 0.0, 0.0)
     @test iszero(I_can)
     # Test interception is between zero and the precipitation rate
-    P = 1e-8
+    P = 1.0e-8
     I_can = compute_canopy_interception(canopy_interception, P, 1.0, 0.5)
     @test 0 < I_can < P
 end
@@ -61,12 +61,12 @@ end
     # Test tendency is negative when removal is positive
     ∂w∂t = compute_w_can_tendency(canopy_interception, 0.0, 0.0, 1.0)
     @test ∂w∂t < 0
-    # Test that interception and evaporation cancel 
-    ∂w∂t = compute_w_can_tendency(canopy_interception, 1e-6, 1e-6, 0.0)
+    # Test that interception and evaporation cancel
+    ∂w∂t = compute_w_can_tendency(canopy_interception, 1.0e-6, 1.0e-6, 0.0)
     @test iszero(∂w∂t)
     # Test positive with incoming interception
-    ∂w∂t = compute_w_can_tendency(canopy_interception, 1e-6, 1e-7, 1e-7)
-    @test ∂w∂t ≈ 1e-6 - 2e-7
+    ∂w∂t = compute_w_can_tendency(canopy_interception, 1.0e-6, 1.0e-7, 1.0e-7)
+    @test ∂w∂t ≈ 1.0e-6 - 2.0e-7
 end
 
 @testset "compute_precip_ground" begin
@@ -74,9 +74,9 @@ end
     precip_ground = compute_precip_ground(canopy_interception, 0, 0, 0)
     @test iszero(precip_ground)
     # Test calculation of precip_ground
-    P = 1e-8
+    P = 1.0e-8
     I_can = P / 2
-    R_can = 1e-6
+    R_can = 1.0e-6
     precip_ground = compute_precip_ground(canopy_interception, P, I_can, R_can)
     @test precip_ground == P - I_can + R_can
 end

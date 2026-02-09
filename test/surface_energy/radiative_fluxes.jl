@@ -2,7 +2,7 @@ using Terrarium
 using Test
 
 @testset "Prescribed radiative fluxes" begin
-    grid = ColumnGrid(CPU(), Float64, ExponentialSpacing(N=10))
+    grid = ColumnGrid(CPU(), Float64, ExponentialSpacing(N = 10))
     radiative_fluxes = PrescribedRadiativeFluxes(eltype(grid))
     seb = SurfaceEnergyBalance(Float64; radiative_fluxes)
     model = SurfaceEnergyModel(grid, seb)
@@ -18,9 +18,9 @@ using Test
 end
 
 @testset "Diagnosed radiative fluxes" begin
-    grid = ColumnGrid(CPU(), Float64, ExponentialSpacing(N=10))
+    grid = ColumnGrid(CPU(), Float64, ExponentialSpacing(N = 10))
     radiative_fluxes = DiagnosedRadiativeFluxes(eltype(grid))
-    albedo = ConstantAlbedo(albedo=0.5, emissivity=0.9)
+    albedo = ConstantAlbedo(albedo = 0.5, emissivity = 0.9)
     seb = SurfaceEnergyBalance(Float64; radiative_fluxes, albedo)
     model = SurfaceEnergyModel(grid, seb)
     state = initialize(model)
@@ -33,7 +33,7 @@ end
     set!(state.surface_shortwave_down, surface_shortwave_down)
     set!(state.surface_longwave_down, surface_longwave_down)
     compute_auxiliary!(state, grid, radiative_fluxes, seb, model.atmosphere, model.constants)
-    @test all(state.surface_shortwave_up .≈ 0.5*surface_shortwave_down)
-    @test all(state.surface_longwave_up .≈ (1 - 0.9)*surface_longwave_down + Terrarium.stefan_boltzmann(model.constants, 273.15, 0.9))
+    @test all(state.surface_shortwave_up .≈ 0.5 * surface_shortwave_down)
+    @test all(state.surface_longwave_up .≈ (1 - 0.9) * surface_longwave_down + Terrarium.stefan_boltzmann(model.constants, 273.15, 0.9))
     @test all(state.surface_net_radiation .≈ state.surface_shortwave_up - surface_shortwave_down + state.surface_longwave_up - surface_longwave_down)
 end

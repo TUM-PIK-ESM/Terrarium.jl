@@ -18,8 +18,8 @@ PrescribedSkinTemperature(::Type{NF}; kwargs...) where {NF} = PrescribedSkinTemp
 ## Process methods
 
 variables(::PrescribedSkinTemperature) = (
-    auxiliary(:ground_heat_flux, XY(), units=u"W/m^2", desc="Ground heat flux"),
-    input(:skin_temperature, XY(), units=u"°C", desc="Longwave emission temperature of the land surface in °C"),
+    auxiliary(:ground_heat_flux, XY(), units = u"W/m^2", desc = "Ground heat flux"),
+    input(:skin_temperature, XY(), units = u"°C", desc = "Longwave emission temperature of the land surface in °C"),
 )
 
 @inline compute_auxiliary!(state, grid, ::PrescribedSkinTemperature, args...) = nothing
@@ -63,7 +63,7 @@ Compute the implicit update of the skin temperature from the given ground surfac
     # Compute new skin temperature T₀ by setting G equal to the half-cell heat flux
     # TODO: use thermal conductivity from the soil and/or canopy?
     κₛ = skinT.κₛ
-    Ts = Tg - G * Δz / (2*κₛ)
+    Ts = Tg - G * Δz / (2 * κₛ)
     return Ts
 end
 
@@ -82,44 +82,44 @@ end
 ## Process methods
 
 variables(::ImplicitSkinTemperature) = (
-    prognostic(:skin_temperature, XY(), units=u"°C", desc="Longwave emission temperature of the land surface in °C"),
-    auxiliary(:ground_heat_flux, XY(), units=u"W/m^2", desc="Ground heat flux"),
-    input(:ground_temperature, XY(), units=u"°C", desc="Temperature of the uppermost ground or soil grid cell in °C")
+    prognostic(:skin_temperature, XY(), units = u"°C", desc = "Longwave emission temperature of the land surface in °C"),
+    auxiliary(:ground_heat_flux, XY(), units = u"W/m^2", desc = "Ground heat flux"),
+    input(:ground_temperature, XY(), units = u"°C", desc = "Temperature of the uppermost ground or soil grid cell in °C"),
 )
 
 @inline function compute_auxiliary!(
-    state, grid,
-    skinT::ImplicitSkinTemperature,
-    seb::AbstractSurfaceEnergyBalance,
-    args...
-)
-    compute_ground_heat_flux!(state, grid, skinT, seb)
+        state, grid,
+        skinT::ImplicitSkinTemperature,
+        seb::AbstractSurfaceEnergyBalance,
+        args...
+    )
+    return compute_ground_heat_flux!(state, grid, skinT, seb)
 end
 
 function update_skin_temperature!(state, grid, skinT::ImplicitSkinTemperature)
     out = prognostic_fields(state, skinT)
     fields = get_fields(state, skinT; except = out)
-    launch!(grid, XY, compute_skin_temperature_kernel!, out, fields, skinT)
+    return launch!(grid, XY, compute_skin_temperature_kernel!, out, fields, skinT)
 end
 
 function compute_ground_heat_flux!(
-    state, grid,
-    skinT::AbstractSkinTemperature,
-    seb::AbstractSurfaceEnergyBalance
-)
-    rad =  get_radiative_fluxes(seb)
+        state, grid,
+        skinT::AbstractSkinTemperature,
+        seb::AbstractSurfaceEnergyBalance
+    )
+    rad = get_radiative_fluxes(seb)
     tur = get_turbulent_fluxes(seb)
     out = auxiliary_fields(state, skinT)
     fields = get_fields(state, skinT, rad, tur; except = out)
-    launch!(grid, XY, compute_ground_heat_flux_kernel!, out, fields, skinT, rad, tur)
+    return launch!(grid, XY, compute_ground_heat_flux_kernel!, out, fields, skinT, rad, tur)
 end
 
 ## Kernel functions
 
 @propagate_inbounds function compute_skin_temperature(
-    i, j, grid, fields,
-    skinT::ImplicitSkinTemperature
-)
+        i, j, grid, fields,
+        skinT::ImplicitSkinTemperature
+    )
     # Get thickness of topmost soil/ground grid cell
     field_grid = get_field_grid(grid)
     Δz₁ = Δzᵃᵃᶜ(i, j, field_grid.Nz, field_grid)
@@ -131,11 +131,11 @@ end
 end
 
 @propagate_inbounds function compute_ground_heat_flux(
-    i, j, grid, fields,
-    skinT::AbstractSkinTemperature,
-    ::AbstractRadiativeFluxes,
-    ::AbstractTurbulentFluxes
-)
+        i, j, grid, fields,
+        skinT::AbstractSkinTemperature,
+        ::AbstractRadiativeFluxes,
+        ::AbstractTurbulentFluxes
+    )
     # Get individual flux terms
     R_net = fields.surface_net_radiation[i, j]
     H_s = fields.sensible_heat_flux[i, j]
@@ -148,7 +148,7 @@ end
 
 @kernel function compute_skin_temperature_kernel!(out, grid, fields, skinT::ImplicitSkinTemperature, args...)
     i, j = @index(Global, NTuple)
-    
+
     # Compute and store skin temperature
     out.skin_temperature[i, j, 1] = compute_skin_temperature(i, j, grid, fields, skinT, args...)
 end

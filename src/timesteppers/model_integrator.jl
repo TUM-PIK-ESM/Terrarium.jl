@@ -8,14 +8,14 @@ The `ModelIntegrator` implements the `Oceananigans.AbstractModel` interface and 
 treated as a "model" in `Oceananigans` `Simulation`s and output reading/writing utilities.
 """
 struct ModelIntegrator{
-    NF,
-    Arch<:AbstractArchitecture,
-    Grid<:AbstractLandGrid{NF, Arch},
-    TimeStepper<:AbstractTimeStepper{NF},
-    Model<:AbstractModel{NF, Grid},
-    StateVars<:AbstractStateVariables,
-    Inputs<:InputSources,
-} <: Oceananigans.AbstractModel{TimeStepper, Arch}
+        NF,
+        Arch <: AbstractArchitecture,
+        Grid <: AbstractLandGrid{NF, Arch},
+        TimeStepper <: AbstractTimeStepper{NF},
+        Model <: AbstractModel{NF, Grid},
+        StateVars <: AbstractStateVariables,
+        Inputs <: InputSources,
+    } <: Oceananigans.AbstractModel{TimeStepper, Arch}
     "The clock holding all information about the current timestep/iteration of a simulation"
     clock::Clock
 
@@ -66,21 +66,21 @@ Oceananigans.Simulations.timestepper(integrator::ModelIntegrator) = integrator.t
 Run the simulation for `steps` or a given time `period` with timestep size `Δt` (in seconds or Dates.Period).
 """
 function Oceananigans.Simulations.run!(
-    integrator::ModelIntegrator;
-    steps::Union{Int, Nothing} = nothing,
-    period::Union{Period, Nothing} = nothing,
-    Δt = default_dt(timestepper(integrator))
-)
+        integrator::ModelIntegrator;
+        steps::Union{Int, Nothing} = nothing,
+        period::Union{Period, Nothing} = nothing,
+        Δt = default_dt(timestepper(integrator))
+    )
     Δt = convert_dt(Δt)
     steps = get_steps(steps, period, Δt)
 
     for _ in 1:steps
-        timestep!(integrator, Δt, finalize=false)
+        timestep!(integrator, Δt, finalize = false)
     end
 
     # Update auxiliary variables for final timestep
     compute_auxiliary!(integrator.state, integrator.model)
-    return integrator 
+    return integrator
 end
 
 """
@@ -129,16 +129,16 @@ This method allocates all necessary `Field`s for the state variables and calls `
 Note that this method is **not type stable** and should not be called in an Enzyme `autodiff` call.
 """
 function initialize(
-    model::AbstractModel{NF},
-    timestepper::AbstractTimeStepper,
-    inputs::InputSource...;
-    clock::Clock = Clock(time=zero(NF)),
-    boundary_conditions = (;),
-    fields = (;)
-) where {NF}
+        model::AbstractModel{NF},
+        timestepper::AbstractTimeStepper,
+        inputs::InputSource...;
+        clock::Clock = Clock(time = zero(NF)),
+        boundary_conditions = (;),
+        fields = (;)
+    ) where {NF}
     inputs = InputSources(inputs...)
     input_vars = variables(inputs)
-    state = initialize(model; clock, boundary_conditions, fields, input_variables=input_vars)
+    state = initialize(model; clock, boundary_conditions, fields, input_variables = input_vars)
     initialized_timestepper = initialize(timestepper, model, state)
     integrator = ModelIntegrator(clock, model, inputs, state, initialized_timestepper)
     initialize!(integrator)
@@ -156,6 +156,6 @@ function Base.show(io::IO, integrator::ModelIntegrator)
     tsstr = summary(integrator.timestepper)
     println(io, "Integrator of $modelstr with $tsstr")
     println(io, "├── Current time: $(current_time(integrator))")
-    println(io, "├── $statestr")
+    return println(io, "├── $statestr")
     # TODO: add more information?
 end

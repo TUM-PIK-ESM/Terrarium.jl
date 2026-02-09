@@ -19,9 +19,9 @@ solar radiation, tracer gas concentrations, wind speed, and near-surface aerodyn
 """
 abstract type AbstractAtmosphere{
     NF,
-    PR<:AbstractPrecipitation,
-    IR<:AbstractIncomingRadiation,
-    HM<:AbstractHumidity,
-    AD<:AbstractAerodynamics{NF}
+    PR <: AbstractPrecipitation,
+    IR <: AbstractIncomingRadiation,
+    HM <: AbstractHumidity,
+    AD <: AbstractAerodynamics{NF},
 } <: AbstractProcess{NF}
 end

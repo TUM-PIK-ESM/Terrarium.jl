@@ -8,13 +8,13 @@ returns a `NamedTuple` of initializer functions for individual state variable fi
 abstract type AbstractInitializer end
 
 # Default implementations of initialize!
-initialize!(state, model::AbstractModel, init::AbstractInitializer)  = nothing
+initialize!(state, model::AbstractModel, init::AbstractInitializer) = nothing
 initialize!(state, model::AbstractModel) = initialize!(state, model, get_initializer(model))
 
 """
 """
 function initialize!(state, inits::NamedTuple{names}) where {names}
-    fastiterate(names) do name
+    return fastiterate(names) do name
         set!(getproperty(state, name), inits[name])
     end
 end
@@ -39,7 +39,7 @@ Container type that bundles one or more initializer functions for individual sta
 a single `AbstractInitializer`. `FieldInitializers` can also optionally wrap another `AbstractInitializer`
 type whose field initializers will be merged with those in `vars`.
 """
-struct FieldInitializers{names, Init<:AbstractInitializer, FieldInits} <: AbstractInitializer
+struct FieldInitializers{names, Init <: AbstractInitializer, FieldInits} <: AbstractInitializer
     "Optional model initializer to wrap and invoke in `initialize!`"
     init::Init
 
@@ -57,13 +57,13 @@ Optionally, `FieldInitializers` can wrap another
 FieldInitializers(temperature=(x,z) -> sin(2π*z), saturation_water_ice=0)
 ```
 """
-FieldInitializers(init::AbstractInitializer=DefaultInitializer(); vars...) = FieldInitializers(init, (; vars...))
+FieldInitializers(init::AbstractInitializer = DefaultInitializer(); vars...) = FieldInitializers(init, (; vars...))
 
 function initialize!(state, model::AbstractModel, init::FieldInitializers)
     # apply variable initializers
     initialize!(state, init.vars)
     # invoke inner initializer
-    initialize!(state, model, init.init)
+    return initialize!(state, model, init.init)
 end
 
 """

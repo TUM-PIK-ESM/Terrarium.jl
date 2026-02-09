@@ -22,5 +22,5 @@ function timestep!(state, timestepper::ForwardEuler, model::AbstractModel, input
     # Apply closure relations
     closure!(state, model)
     # Update clock
-    tick!(state.clock, Δt)
+    return tick!(state.clock, Δt)
 end

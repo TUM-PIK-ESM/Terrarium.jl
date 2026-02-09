@@ -7,12 +7,12 @@ Properties:
 $(TYPEDFIELDS)
 """
 @kwdef struct SoilModel{
-    NF,
-    GridType <: AbstractLandGrid{NF},
-    Soil <: AbstractSoil{NF},
-    Constants <: PhysicalConstants{NF},
-    Initializer <: AbstractInitializer,
-} <: AbstractSoilModel{NF, GridType}
+        NF,
+        GridType <: AbstractLandGrid{NF},
+        Soil <: AbstractSoil{NF},
+        Constants <: PhysicalConstants{NF},
+        Initializer <: AbstractInitializer,
+    } <: AbstractSoilModel{NF, GridType}
     "Spatial grid type"
     grid::GridType
 
@@ -32,7 +32,7 @@ function initialize!(state, model::SoilModel)
     # run model/field initializers
     initialize!(state, model, model.initializer)
     # run process initializers
-    initialize!(state, model.grid, model.soil, model.constants)
+    return initialize!(state, model.grid, model.soil, model.constants)
 end
 
 function compute_auxiliary!(state, model::SoilModel)
@@ -48,9 +48,9 @@ end
 # Closures
 
 function closure!(state, model::SoilModel)
-    closure!(state, model.grid, model.soil, model.constants)
+    return closure!(state, model.grid, model.soil, model.constants)
 end
 
 function invclosure!(state, model::SoilModel)
-    invclosure!(state, model.grid, model.soil, model.constants)
+    return invclosure!(state, model.grid, model.soil, model.constants)
 end

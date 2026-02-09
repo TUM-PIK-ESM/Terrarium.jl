@@ -31,7 +31,7 @@ if MAIN_TESTS
         include("timestepping/run_simulation.jl")
         include("timestepping/heun.jl")
     end
-    
+
     @testset "Soil model and processes" begin
         include("soil/soil_model_tests.jl")
     end
@@ -51,4 +51,4 @@ if MAIN_TESTS
     @testset "Coupled models" begin
         include("coupled_models/vegetation_soil_model_tests.jl")
     end
-end 
+end
