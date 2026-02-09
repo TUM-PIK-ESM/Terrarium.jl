@@ -32,3 +32,11 @@ For AD, we rely primarily on reverse mode differentiation via [Enzyme.jl](https:
 There is one thing however, that is crucial for Enzyme to work: [type stability](https://docs.julialang.org/en/v1/manual/faq/#man-type-stability). The code absolutely has to be type stable, even in parts that are performance non-critical. Every occurrence of type instability may break differentiability with Enzyme. If this happens, we recommend first quickly checking for type instability of core function calls using `@code_warntype` and `@inferred` in unit tests. Then, if the issue is not yet apparent, debug the code using [Cthulhu.jl](https://github.com/JuliaDebug/Cthulhu.jl). Cthulhu is an awesome tool to interactively inspect your code for type instabilities and it is extremely easy to run: just preempt the function that you are trying to differentiate with `@descend` after loading the `Cthulhu` package.
 
 Enzyme does, however, have some disadvantages; it is still not fully mature and bugs do occur. As of the time of writing (August 2025), this is especially the case for Julia 1.11. We currently recommend staying on Julia 1.10.10 (LTS) for the time being. Other cryptic Enzyme error messages have become rarer with time, but they do still occasionally happen. In these cases, we, along with our AD team led by Valentin in the DELTA-ESM project, are happy to offer support to the best of our abilities.
+
+### Code style
+
+We use [Runic.jl](https://github.com/fredrikekre/Runic.jl) for automatted code formatting. If you submit a PR you probably have seen a comment from our CI that the code is not formatted according to the Runic style. To use runic, you have to run the install Runic install script and then you can choose to either format directly from the command line with `runic --inplace .` (don't forget the `.` at the end!), or configure it in your editor of choice or use a Git hook. All details are described in [Runic's readme](https://github.com/fredrikekre/Runic.jl). We recommend setting up Runic as a Git hook to automatically format your code on commit. For that purpose, we provide the Git hook in the `.githooks` directory of the repository. You can copy the hook from there to your local git hooks directory and make it executable to use like so: 
+```
+cp .githooks/pre-commit .git/hooks/pre-commit
+chmod +x .git/hooks/pre-commit
+```
