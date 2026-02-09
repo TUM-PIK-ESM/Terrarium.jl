@@ -1,10 +1,14 @@
+# Parameterization types
+
 abstract type AbstractHumidity end
 
 abstract type AbstractPrecipitation end
 
 abstract type AbstractIncomingRadiation end
 
-abstract type AbstractAerodynamics end
+abstract type AbstractAerodynamics{NF} end
+
+# Process types
 
 """
     $TYPEDEF
@@ -14,9 +18,10 @@ variables such as air temperature and pressure, humidity, precipitation, incomin
 solar radiation, tracer gas concentrations, wind speed, and near-surface aerodynamics.
 """
 abstract type AbstractAtmosphere{
+    NF,
     PR<:AbstractPrecipitation,
     IR<:AbstractIncomingRadiation,
     HM<:AbstractHumidity,
-    AD<:AbstractAerodynamics
-} <: AbstractProcess
+    AD<:AbstractAerodynamics{NF}
+} <: AbstractProcess{NF}
 end

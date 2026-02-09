@@ -16,22 +16,24 @@ include("vegetation/abstract_types.jl")
 
 export ConstantAerodynamicResistance
 include("atmosphere/aerodynamics.jl")
-export PrescribedAtmosphere, TwoPhasePrecipitation, LongShortWaveRadiation, TracerGas, TracerGases, AmbientCO2
+export PrescribedAtmosphere, RainSnow, LongShortWaveRadiation, TracerGas, TracerGases, AmbientCO2
 include("atmosphere/prescribed_atmosphere.jl")
 
 # Soil
 
 export SoilTexture
 include("soil/stratigraphy/soil_texture.jl")
+export ConstantSoilPorosity, SoilPorositySURFEX
+include("soil/stratigraphy/soil_porosity.jl")
 export SoilVolume, MineralOrganic, volumetric_fractions
 include("soil/stratigraphy/soil_volume.jl")
-export HomogeneousSoil
-include("soil/stratigraphy/homogeneous_soil.jl")
+export HomogeneousStratigraphy
+include("soil/stratigraphy/homogeneous_strat.jl")
 
 export ConstantSoilCarbonDensity
 include("soil/biogeochem/constant_soil_carbon.jl")
 
-export ConstantHydraulics, SoilHydraulicsSURFEX, UnsatKLinear, UnsatKVanGenuchten
+export ConstantSoilHydraulics, SoilHydraulicsSURFEX, UnsatKLinear, UnsatKVanGenuchten
 export saturated_hydraulic_conductivity, mineral_porosity, field_capacity, wilting_point
 include("soil/hydrology/soil_hydraulic_properties.jl")
 
@@ -39,12 +41,19 @@ export SoilHydrology, NoFlow
 include("soil/hydrology/soil_hydrology.jl")
 export RichardsEq
 include("soil/hydrology/soil_hydrology_rre.jl")
+export SoilSaturationPressureClosure
+include("soil/hydrology/soil_hydraulic_closures.jl")
 
 export SoilThermalConductivities, SoilHeatCapacities, SoilThermalProperties, InverseQuadratic
+export compute_thermal_conductivity, heat_capacity
 include("soil/energy/soil_thermal_properties.jl")
 
-export SoilEnergyBalance, EnergyTemperatureClosure
+export SoilEnergyBalance, SoilEnergyTemperatureClosure
 include("soil/energy/soil_energy.jl")
+include("soil/energy/soil_energy_closures.jl")
+
+export SoilEnergyWaterCarbon
+include("soil/soil_coupled.jl")
 
 # Vegetation
 
@@ -72,6 +81,9 @@ include("vegetation/stomatal_conductance.jl")
 export PALADYNAutotrophicRespiration
 include("vegetation/autotrophic_respiration.jl")
 
+export VegetationCarbon
+include("vegetation/vegetation_coupled.jl")
+
 # Surface Energy Balance
 
 export PrescribedAlbedo, ConstantAlbedo
@@ -97,11 +109,15 @@ include("surface_hydrology/ground_evaporation.jl")
 export PALADYNCanopyEvapotranspiration
 include("surface_hydrology/canopy_evapotranpsiration.jl")
 
-export PALADYNCanopyHydrology
-include("surface_hydrology/canopy_hydrology.jl")
+export PALADYNCanopyInterception
+include("surface_hydrology/canopy_interception.jl")
 
 export DirectSurfaceRunoff
 include("surface_hydrology/surface_runoff.jl")
 
 export SurfaceHydrology
 include("surface_hydrology/surface_hydrology.jl")
+
+# Default debug hooks
+@inline debughook!(::typeof(compute_auxiliary_kernel!), out, args...) = nancheck!(out)
+@inline debughook!(::typeof(compute_tendencies_kernel!), out, args...) = nancheck!(out)

@@ -4,12 +4,12 @@
 Vegetation carbon dynamics implementation following PALADYN (Willeit 2016) but considering only the sum of the vegetation
 carbon pools. The subsequent splitting into C_leaf, C_stem, C_root is not implemented for now.
 
-Authors: Maha Badri 
+Authors: Maha Badri
 
 Properties:
 $TYPEDFIELDS
 """
-@kwdef struct PALADYNCarbonDynamics{NF} <: AbstractVegetationCarbonDynamics
+@kwdef struct PALADYNCarbonDynamics{NF} <: AbstractVegetationCarbonDynamics{NF}
     "Specific leaf area (Kattge et al. 2011) [m²/kgC], PFT specific"
     SLA::NF = 10.0 # Value for Needleleaf tree PFT 
     
@@ -38,9 +38,9 @@ end
 PALADYNCarbonDynamics(::Type{NF}; kwargs...) where {NF} = PALADYNCarbonDynamics{NF}(; kwargs...)
 
 variables(::PALADYNCarbonDynamics) = (
-    prognostic(:C_veg, XY()), # Vegetation carbon pool [kgC/m²]
-    auxiliary(:LAI_b, XY()), # Balanced Leaf Area Index [m²/m²]
-    input(:NPP, XY()), # Net Primary Production [kgC/m²/day]
+    prognostic(:carbon_vegetation, XY(), units=u"kg/m^2"), # Vegetation carbon pool [kgC/m²]
+    auxiliary(:balanced_leaf_area_index, XY()), # Balanced Leaf Area Index [m²/m²]
+    input(:net_primary_production, XY(), units=u"kg/m^2/d"), # Net Primary Production [kgC/m²/day]
 )
 
 """
@@ -70,7 +70,7 @@ Eqs. 76-79, PALADYN (Willeit 2016).
 """
 
 @inline function compute_LAI_b(vegcarbon_dynamics::PALADYNCarbonDynamics{NF}, C_veg) where NF   
-    LAI_b = ((NF(2.0) / vegcarbon_dynamics.SLA) + vegcarbon_dynamics.awl) / C_veg
+    LAI_b = ((NF(2.0) / vegcarbon_dynamics.SLA) + vegcarbon_dynamics.awl) / (C_veg + eps(NF)) # division by zero risk
     return LAI_b
 end
 
@@ -104,34 +104,50 @@ Eq. 72, PALADYN (Willeit 2016)
     return C_veg_tendency
 end
 
+# Process methods
 
-function compute_auxiliary!(state, model, vegcarbon_dynamics::PALADYNCarbonDynamics)
-    grid = get_grid(model)
-    launch!(grid, XY, compute_auxiliary_kernel!, state, vegcarbon_dynamics)
+function compute_auxiliary!(state, grid, vegcarbon_dynamics::PALADYNCarbonDynamics, args...)
+    out = auxiliary_fields(state, vegcarbon_dynamics)
+    fields = get_fields(state, vegcarbon_dynamics; except = out)
+    launch!(grid, XY, compute_auxiliary_kernel!, out, fields, vegcarbon_dynamics)
 end
 
-@kernel function compute_auxiliary_kernel!(state, grid, vegcarbon_dynamics::PALADYNCarbonDynamics{NF}) where NF
-    i, j = @index(Global, NTuple)
-
-    # Compute balanced Leaf Area Index 
-    state.LAI_b[i, j, 1] = compute_LAI_b(vegcarbon_dynamics, state.C_veg[i, j])
+function compute_tendencies!(state, grid, vegcarbon_dynamics::PALADYNCarbonDynamics, args...)
+    out = tendency_fields(state, vegcarbon_dynamics)
+    fields = get_fields(state, vegcarbon_dynamics)
+    launch!(grid, XY, compute_tendencies_kernel!, out, fields, vegcarbon_dynamics)
 end
 
-function compute_tendencies!(state, model, vegcarbon_dynamics::PALADYNCarbonDynamics)
-    grid = get_grid(model)
-    launch!(grid, XY, compute_tendencies_kernel!, state, vegcarbon_dynamics)
-end
+# Kernel functions
 
-@kernel function compute_tendencies_kernel!(state, grid, vegcarbon_dynamics::PALADYNCarbonDynamics{NF}) where NF  
-    i, j = @index(Global, NTuple)
-
+@propagate_inbounds function compute_veg_carbon_tendency(i, j, grid, fields, vegcarbon_dynamics::PALADYNCarbonDynamics)
     # Get inputs
-    LAI_b = state.LAI_b[i, j]
-    NPP = state.NPP[i, j]
+    LAI_b = fields.balanced_leaf_area_index[i, j]
+    NPP = fields.net_primary_production[i, j]
     
     # Compute the vegetation carbon pool tendency
     C_veg_tendency = compute_C_veg_tend(vegcarbon_dynamics, LAI_b, NPP)
+    return C_veg_tendency
+end
 
-    # Store result
-    state.tendencies.C_veg[i, j, 1] = C_veg_tendency
+@propagate_inbounds function compute_veg_carbon_auxiliary!(out, i, j, grid, fields, vegcarbon_dynamics::PALADYNCarbonDynamics)
+    # Compute balanced Leaf Area Index 
+    out.balanced_leaf_area_index[i, j, 1] = compute_LAI_b(vegcarbon_dynamics, fields.carbon_vegetation[i, j])
+end
+
+@propagate_inbounds function compute_veg_carbon_tendencies!(tend, i, j, grid, fields, vegcarbon_dynamics::PALADYNCarbonDynamics)
+    # Compute and store C_veg tendency
+    tend.carbon_vegetation[i, j, 1] = compute_veg_carbon_tendency(i, j,  grid, fields, vegcarbon_dynamics)
+end
+
+# Kernels
+
+@kernel inbounds=true function compute_auxiliary_kernel!(out, grid, fields, vegcarbon_dynamics::AbstractVegetationCarbonDynamics, args...)
+    i, j = @index(Global, NTuple)
+    compute_veg_carbon_auxiliary!(out, i, j, grid, fields, vegcarbon_dynamics, args...)
+end
+
+@kernel inbounds=true function compute_tendencies_kernel!(tend, grid, fields, vegcarbon_dynamics::AbstractVegetationCarbonDynamics, args...) 
+    i, j = @index(Global, NTuple)
+    compute_veg_carbon_tendencies!(tend, i, j, grid, fields, vegcarbon_dynamics, args...)
 end

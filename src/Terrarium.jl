@@ -16,16 +16,14 @@ using DomainSets: RealLine, HalfLine, PositiveRealLine, UnitInterval, AbstractIn
 
 using Flatten: flatten, flattenable, reconstruct
 
-using Interpolations
-
 using KernelAbstractions: @kernel, @index
 
 # Oceananigans numerics
-using Oceananigans.AbstractOperations: Average, Integral, ConditionalOperation
+using Oceananigans.AbstractOperations: Average, Integral, ConditionalOperation, KernelFunctionOperation
 using Oceananigans.Architectures: Architectures, AbstractArchitecture, CPU, GPU, architecture, on_architecture, array_type
 using Oceananigans.Fields: Field, FunctionField, AbstractField, Center, Face, set!, compute!, interior, location
 using Oceananigans.Forcings: Forcing, ContinuousForcing, DiscreteForcing
-using Oceananigans.Grids: Periodic, Flat, Bounded, xnodes, ynodes, znodes, zspacings
+using Oceananigans.Grids: Periodic, Flat, Bounded, znodes, znode, zspacings
 using Oceananigans.Operators: ∂zᵃᵃᶜ, ∂zᵃᵃᶠ, ℑzᵃᵃᶠ, Δzᵃᵃᶜ
 using Oceananigans.OutputReaders: FieldTimeSeries
 using Oceananigans.Simulations: Simulation, run!, timestepper
@@ -50,7 +48,9 @@ using Unitful: Units, Quantity, AbstractQuantity, NoUnits
 using Unitful: @u_str, uconvert, ustrip, upreferred
 
 # Explicit imports
+import Interpolations
 import Oceananigans
+import Oceananigans.Diagnostics
 import RingGrids
 
 """
@@ -66,7 +66,7 @@ const BCType = AbstractBoundaryConditionClassification
 # Re-export selected types and methods from Oceananigans
 export Simulation, Field, FieldTimeSeries, CPU, GPU, Clock, Center, Face
 export Value, Flux, Gradient, ValueBoundaryCondition, GradientBoundaryCondition, FluxBoundaryCondition, NoFluxBoundaryCondition
-export run!, time_step!, set!, compute!, interior, architecture, on_architecture, xnodes, ynodes, znodes, zspacings, location
+export run!, time_step!, set!, compute!, interior, architecture, on_architecture, znodes, zspacings, location
 
 # Re-export selected types from FreezeCurves
 export SFCC, SWRC, FreeWater, VanGenuchten, BrooksCorey
@@ -82,6 +82,9 @@ export adapt
 
 # internal utility types and methods
 include("utils/utils.jl")
+
+# debugging utilities
+include("diagnostics/debugging.jl")
 
 export PrognosticVariable, AuxiliaryVariable, InputVariable, Input, XY, XYZ
 include("abstract_variables.jl")
@@ -102,7 +105,7 @@ export timestep!, default_dt, is_adaptive
 include("timesteppers/abstract_timestepper.jl")
 
 # process/model interface
-export get_grid, get_initializer, variables, compute_auxiliary!, compute_tendencies!
+export get_grid, get_initializer, variables, processes, compute_auxiliary!, compute_tendencies!
 include("abstract_model.jl")
 
 # state variables
@@ -113,11 +116,16 @@ include("state_variables.jl")
 export FieldInitializers, DefaultInitializer
 include("initializers.jl")
 
+# boundary condition helper functions
 export FieldBC, FieldBCs, boundary_conditions
 include("boundary_conditions.jl")
 
+# forcing helper functions
 export Forcings
 include("forcings.jl")
+
+# abstract model types
+include("models/abstract_types.jl")
 
 # physical processes
 include("processes/processes.jl")

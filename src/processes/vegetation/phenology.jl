@@ -9,16 +9,16 @@ Authors: Maha Badri and Matteo Willeit
 Properties:
 $TYPEDFIELDS
 """
-@kwdef struct PALADYNPhenology{NF} <: AbstractPhenology
+@kwdef struct PALADYNPhenology{NF} <: AbstractPhenology{NF}
     # TODO add phenology parameters
 end
 
 PALADYNPhenology(::Type{NF}; kwargs...) where {NF} = PALADYNPhenology{NF}(; kwargs...)
 
 variables(::PALADYNPhenology) = (
-    auxiliary(:phen, XY()), # Phenology factor [-]
-    auxiliary(:LAI, XY()), # Leaf Area Index [m²/m²]
-    input(:LAI_b, XY()), # Balanced Leaf Area Index [m²/m²]
+    auxiliary(:phenology_factor, XY()), # Phenology factor [-]
+    auxiliary(:leaf_area_index, XY()), # Leaf Area Index [m²/m²]
+    input(:balanced_leaf_area_index, XY()), # Balanced Leaf Area Index [m²/m²]
 )
 
 """
@@ -65,16 +65,19 @@ Computes `LAI`, based on the balanced Leaf Area Index `LAI_b`:
     return LAI
 end
 
-function compute_auxiliary!(state, model, phenol::PALADYNPhenology)
-    grid = get_grid(model)
-    launch!(grid, XY, compute_auxiliary_kernel!, state, phenol)
+# Process methods
+
+function compute_auxiliary!(state, grid, phenol::PALADYNPhenology)
+    out = auxiliary_fields(state, phenol)
+    fields = get_fields(state, phenol; except = out)
+    launch!(grid, XY, compute_auxiliary_kernel!, out, fields, phenol)
 end
 
-@kernel function compute_auxiliary_kernel!(state, grid, phenol::PALADYNPhenology)
-    i, j = @index(Global, NTuple)
+# Kernel functions
 
+@propagate_inbounds function compute_phenology(i, j, grid, fields, phenol::PALADYNPhenology)
     # Get input
-    LAI_b = state.LAI_b[i, j]
+    LAI_b = fields.balanced_leaf_area_index[i, j]
 
     # Compute phen
     phen = compute_phen(phenol)
@@ -82,8 +85,20 @@ end
     # Compute LAI
     LAI = compute_LAI(phenol, LAI_b)
 
-    # Store results
-    state.phen[i, j, 1] = phen
-    state.LAI[i, j, 1] = LAI
+    return phen, LAI
+end
+
+@propagate_inbounds function compute_phenology!(out, i, j, grid, fields, phenol::PALADYNPhenology)
+    phen, LAI = compute_phenology(i, j, grid, fields, phenol)
+    out.phenology_factor[i, j, 1] = phen
+    out.leaf_area_index[i, j, 1] = LAI
+    return out
+end
+
+# Kernels
+
+@kernel function compute_auxiliary_kernel!(out, grid, fields, phenol::AbstractPhenology, args...)
+    i, j = @index(Global, NTuple)
+    compute_phenology!(out, i, j, grid, fields, phenol, args...)
 end
    

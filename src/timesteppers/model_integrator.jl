@@ -90,8 +90,7 @@ Resets the simulation `clock` and calls `initialize!(state, model)` on the under
 should reset all state variables to their values as defiend by the model initializer.
 """
 function initialize!(integrator::ModelIntegrator)
-    # TODO: reset other variables too?
-    reset_tendencies!(integrator.state)
+    reset!(integrator.state)
     reset!(integrator.clock)
     update_inputs!(integrator.state, integrator.inputs)
     fill_halo_regions!(integrator.state)

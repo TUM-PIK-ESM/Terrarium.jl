@@ -9,7 +9,7 @@ Authors: Maha Badri and Matteo Willeit
 Properties:
 $TYPEDFIELDS
 """
-@kwdef struct LUEPhotosynthesis{NF} <: AbstractPhotosynthesis
+@kwdef struct LUEPhotosynthesis{NF} <: AbstractPhotosynthesis{NF}
     # TODO check physical meaning of this parameter + add unit
     "Value of τ at 25°C"
     τ25::NF = 2600.0 
@@ -76,12 +76,11 @@ end
 LUEPhotosynthesis(::Type{NF}; kwargs...) where {NF} = LUEPhotosynthesis{NF}(; kwargs...)
 
 variables(::LUEPhotosynthesis{NF}) where {NF} = (
-    auxiliary(:An, XY()), # Daily net assimilation (photosynthesis) [gC/m²/day]
-    auxiliary(:Rd, XY()), # Daily leaf respiration [gC/m²/day]
-    auxiliary(:GPP, XY()), # Gross Primary Production [kgC/m²/day]
-    input(:SMLF, XY(), default=NF(1)), # soil moisture limiting factor with default value of 1
-    input(:λc, XY()), # Ratio of leaf-internal to air CO2 concentration [-]
-    input(:LAI, XY()), # Leaf Area Index [m²/m²]
+    auxiliary(:net_assimilation, XY(), units=u"g/m^2/d"), # Daily net assimilation (photosynthesis) [gC/m²/day]
+    auxiliary(:daily_leaf_respiration, XY(), units=u"g/m^2/d"), # Daily leaf respiration [gC/m²/day]
+    auxiliary(:gross_primary_production, XY(), units=u"kg/m^2/d"), # Gross Primary Production [kgC/m²/day]
+    input(:soil_moisture_limiting_factor, XY(), default=NF(1)), # soil moisture limiting factor with default value of 1
+    input(:leaf_area_index, XY()), # Leaf Area Index [m²/m²]
 )
 
 """
@@ -303,29 +302,31 @@ function compute_GPP(::LUEPhotosynthesis{NF}, An::NF) where {NF}
     return GPP
 end
 
-function compute_auxiliary!(state, model, photo::LUEPhotosynthesis)
-    grid = get_grid(model)
-    atmos = get_atmosphere(model)
-    launch!(grid, XY, compute_photosynthesis_kernel!, state, photo, atmos)
+# Process methods
+
+function compute_auxiliary!(
+    state, grid,
+    photo::LUEPhotosynthesis,
+    stomcond::AbstractStomatalConductance,
+    atmos::AbstractAtmosphere,
+    args...
+)
+    out = auxiliary_fields(state, photo)
+    fields = get_fields(state, photo, stomcond, atmos; except = out)
+    launch!(grid, XY, compute_auxiliary_kernel!, out, fields, photo, atmos)
 end
 
-@kernel inbounds=true function compute_photosynthesis_kernel!(
-    state, grid,
-    photo::LUEPhotosynthesis{NF},
-    atmos::AbstractAtmosphere
-) where NF
-    # TODO checks for positive/negative values in the original PALADYN code ignored for now
-    i, j = @index(Global, NTuple)
+# Kernel functions
 
-    # Get inputs
-    T_air = air_temperature(i, j, grid, state, atmos)
-    pres = air_pressure(i, j, grid, state, atmos)
-    swdown = shortwave_in(i, j, grid, state, atmos)
-    # day_length = daytime_length(i, j, grid, state, atmos)
-    co2 = state.CO2[i, j] # no method for this currently...
-    β = state.SMLF[i, j]
-    LAI = state.LAI[i, j]
-    λc = state.λc[i, j]
+@propagate_inbounds function compute_photosynthesis(i, j, grid, fields, photo::LUEPhotosynthesis, atmos::AbstractAtmosphere)
+    # Get inputs from fields/atmosphere
+    T_air = air_temperature(i, j, grid, fields, atmos)
+    pres = air_pressure(i, j, grid, fields, atmos)
+    swdown = shortwave_down(i, j, grid, fields, atmos)
+    co2 = fields.CO2[i, j]
+    β = fields.soil_moisture_limiting_factor[i, j]
+    LAI = fields.leaf_area_index[i, j]
+    λc = fields.leaf_to_air_co2_ratio[i, j]
 
     # Compute Rd, leaf respiration rate in [gC/m²/s],
     # An, daily net photosynthesis [gC/m²/s]
@@ -334,8 +335,20 @@ end
     # Compute GPP, Gross Primary Production in [kgC/m²/s]
     GPP = compute_GPP(photo, An)
 
-    # Store results
-    state.GPP[i, j, 1] = GPP
-    state.Rd[i, j, 1] = Rd
-    state.An[i, j, 1] = An
+    return Rd, An, GPP
+end
+
+@propagate_inbounds function compute_photosynthesis!(out, i, j, grid, fields, photo::LUEPhotosynthesis, atmos::AbstractAtmosphere)
+    Rd, An, GPP = compute_photosynthesis(i, j, grid, fields, photo, atmos)
+    out.daily_leaf_respiration[i, j, 1] = Rd
+    out.net_assimilation[i, j, 1] = An
+    out.gross_primary_production[i, j, 1] = GPP
+    return out
+end
+
+# Kernels
+
+@kernel inbounds=true function compute_auxiliary_kernel!(out, grid, fields, photo::AbstractPhotosynthesis, args...)
+    i, j = @index(Global, NTuple)
+    compute_photosynthesis!(out, i, j, grid, fields, photo, args...)
 end

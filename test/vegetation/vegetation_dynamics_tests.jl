@@ -1,5 +1,5 @@
 using Terrarium
-using Terrarium: compute_γv, compute_ν_star, compute_ν_tend
+using Terrarium: compute_γv, compute_ν_star, compute_ν_tendency
 using Test
 
 @testset "γv test" begin
@@ -29,7 +29,7 @@ end
     # TODO ν should be between 0 and 1!
 
 end
-
+compute_ν_tendency
 @testset "ν_tend test" begin
     veg_dynamics = PALADYNVegetationDynamics()
     vegcarbon_dynamics = PALADYNCarbonDynamics()
@@ -37,7 +37,7 @@ end
     LAI_b = (vegcarbon_dynamics.LAI_min + vegcarbon_dynamics.LAI_max) / 2.0
     C_veg = 0.5 # Mock value
     ν = 0.3 # Mock value
-    ν_tendency = compute_ν_tend(veg_dynamics, vegcarbon_dynamics, LAI_b, C_veg, ν)
+    ν_tendency = compute_ν_tendency(veg_dynamics, vegcarbon_dynamics, LAI_b, C_veg, ν)
     @test isfinite(ν_tendency)
 end
 

@@ -2,6 +2,7 @@
 function Oceananigans.launch!(grid::AbstractLandGrid, workspec, kernel!::Function, first_arg, other_args...; kwargs...)
     fgrid = get_field_grid(grid)
     launch!(fgrid.architecture, fgrid, get_workspec(workspec), kernel!, first_arg, grid, other_args...; kwargs...)
+    debugsite!(kernel!, first_arg, other_args...)
 end
 
 """

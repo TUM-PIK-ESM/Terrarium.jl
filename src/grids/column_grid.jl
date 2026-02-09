@@ -40,7 +40,12 @@ end
 
 @adapt_structure ColumnGrid
 
-get_field_grid(grid::ColumnGrid) = grid.grid
+"""
+    get_field_grid(grid)
+
+Return the underlying Oceananigans `grid` stored in `ColumnGrid`.
+"""
+@inline get_field_grid(grid::ColumnGrid) = grid.grid
 
 Architectures.architecture(grid::ColumnGrid) = architecture(grid.grid)
 

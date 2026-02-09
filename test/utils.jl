@@ -2,7 +2,7 @@ using Terrarium
 using Test
 using Unitful
 
-using Terrarium: tuplejoin, merge_duplicates, merge_recursive, safediv, fastmap, piecewise_linear
+using Terrarium: tuplejoin, deduplicate, merge_recursive, safediv, fastmap, piecewise_linear
 
 @testset "Utilities" begin
     # tuplejoin
@@ -12,11 +12,11 @@ using Terrarium: tuplejoin, merge_duplicates, merge_recursive, safediv, fastmap,
     @test tuplejoin((1,),(1,)) == (1,1)
     @test tuplejoin((1,2),(3,4,5),(6,7,)) == (1,2,3,4,5,6,7)
 
-    # merge_duplicates
-    @test merge_duplicates(()) == ()
-    @test merge_duplicates((1,)) == (1,)
-    @test merge_duplicates((1,1,)) == (1,)
-    @test merge_duplicates((1,2,2,3,4)) == (1,2,3,4)
+    # deduplicate
+    @test deduplicate(()) == ()
+    @test deduplicate((1,)) == (1,)
+    @test deduplicate((1,1,)) == (1,)
+    @test deduplicate((1,2,2,3,4)) == (1,2,3,4)
 
     # merge recursive
     @test merge_recursive((;), (;)) == merge((;), (;)) == (;)

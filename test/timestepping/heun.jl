@@ -1,3 +1,6 @@
+using Terrarium
+using Test
+
 # mock a simple model with exponential dynamics (and a constant offset) to test time steppers 
 
 @kwdef struct ExpModel{NF, Grid<:Terrarium.AbstractLandGrid{NF}, I} <: Terrarium.AbstractModel{NF, Grid}
@@ -17,7 +20,7 @@ end
 
 # du/dt = u + c = u + 0.1
 function Terrarium.compute_tendencies!(state, model::ExpModel) 
-    state.tendencies.u .= state.prognostic.u + state.auxiliary.v
+    set!(state.tendencies.u, state.prognostic.u + state.auxiliary.v)
 end 
 
 @testset "ExpModel: Heun and Euler time steppers" begin 

@@ -13,8 +13,19 @@ tuplejoin(x, y, z...) = (x..., tuplejoin(y, z...)...)
     
 Filter out duplicates from the given tuple. Note that this method is not type stable or allocation-free!
 """
-merge_duplicates(values::Tuple) = Tuple(unique(values))
-merge_duplicates(f, values::Tuple) = Tuple(unique(f, values))
+deduplicate(values::Tuple) = Tuple(unique(values))
+deduplicate(f, values::Tuple) = Tuple(unique(f, values))
+
+"""
+    $TYPEDSIGNATURES
+
+Filters out all entries from `nt` that exist in `other`; like `setdiff` but for `NamedTuple`.
+"""
+@inline function ntdiff(nt::NamedTuple, other::NamedTuple{excluded}) where {excluded}
+    nt_keys = keys(nt)
+    filtered_keys = filter(∉(excluded), nt_keys)
+    return NamedTuple{filtered_keys}(map(k -> getproperty(nt, k), filtered_keys))
+end
 
 """
     merge_recursive(nt1::NamedTuple, nt2::NamedTuple)

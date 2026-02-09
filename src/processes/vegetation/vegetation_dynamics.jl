@@ -9,7 +9,7 @@ Authors: Maha Badri
 Properties:
 $TYPEDFIELDS
 """
-@kwdef struct PALADYNVegetationDynamics{NF} <: AbstractVegetationDynamics
+@kwdef struct PALADYNVegetationDynamics{NF} <: AbstractVegetationDynamics{NF}
     "Vegetation seed fraction [-]"
     ν_seed::NF = 0.001
 
@@ -21,9 +21,9 @@ end
 PALADYNVegetationDynamics(::Type{NF}; kwargs...) where {NF} = PALADYNVegetationDynamics(; kwargs...)
 
 variables(::PALADYNVegetationDynamics) = (
-    prognostic(:ν, XY()), # PFT fractional area coverage [-]
-    input(:LAI_b, XY()),
-    input(:C_veg, XY()),
+    prognostic(:vegetation_area_fraction, XY()), # PFT fractional area coverage [-]
+    input(:balanced_leaf_area_index, XY()),
+    input(:carbon_vegetation, XY(), units=u"kg/m^2"),
 )
 
 """
@@ -54,7 +54,7 @@ end
 Computes the vegetation fraction tendency for a single PFT,
 Eq. 73, PALADYN (Willeit 2016).
 """
-@inline function compute_ν_tend(
+@inline function compute_ν_tendency(
     veg_dynamics::PALADYNVegetationDynamics, 
     vegcarbon_dynamics::PALADYNCarbonDynamics{NF},
     LAI_b::NF,
@@ -75,33 +75,55 @@ Eq. 73, PALADYN (Willeit 2016).
     return ν_tendency
 end
 
-function compute_auxiliary!(state, model, veg_dynamics::PALADYNVegetationDynamics)
+# Process methods
+
+function compute_auxiliary!(state, grid, veg_dynamics::PALADYNVegetationDynamics, args...)
     # Nothing needed here for now
     return nothing
 end
 
-function compute_tendencies!(state, model, veg_dynamics::PALADYNVegetationDynamics)
-    grid = get_grid(model)
-    launch!(grid, XY, compute_tendencies_kernel!, state, veg_dynamics, get_vegetation_carbon_dynamics(model))
+function compute_tendencies!(
+    state, grid,
+    veg_dynamics::PALADYNVegetationDynamics,
+    vegcarbon_dynamics::PALADYNCarbonDynamics,
+    args...
+)
+    tend = tendency_fields(state, veg_dynamics)
+    fields = get_fields(state, veg_dynamics, vegcarbon_dynamics)
+    launch!(grid, XY, compute_tendencies_kernel!, tend, fields, veg_dynamics, vegcarbon_dynamics)
 end
 
-@kernel function compute_tendencies_kernel!(
-    state, grid,
-    veg_dynamics::PALADYNVegetationDynamics{NF},
-    vegcarbon_dynamics::PALADYNCarbonDynamics{NF}
-) where NF
-    i, j = @index(Global, NTuple)
+# Kernel functions
 
+@propagate_inbounds function compute_ν_tendency(
+    i, j, grid, fields,
+    veg_dynamics::PALADYNVegetationDynamics,
+    vegcarbon_dynamics::PALADYNCarbonDynamics
+)
     # Get inputs
-    LAI_b = state.LAI_b[i, j]
-    C_veg = state.C_veg[i, j]
+    LAI_b = fields.balanced_leaf_area_index[i, j]
+    C_veg = fields.carbon_vegetation[i, j]
 
     # Current state
-    ν = state.ν[i, j]
+    ν = fields.vegetation_area_fraction[i, j]
 
     # Compute the vegetation fraction tendency
-    ν_tendency = compute_ν_tend(veg_dynamics, vegcarbon_dynamics, LAI_b, C_veg, ν)
-    
-    # Store result
-    state.tendencies.ν[i, j, 1] = ν_tendency
+    ν_tendency = compute_ν_tendency(veg_dynamics, vegcarbon_dynamics, LAI_b, C_veg, ν)
+    return ν_tendency
+end
+
+@propagate_inbounds function compute_ν_tendencies!(
+    tend, i, j, grid, fields,
+    veg_dynamics::PALADYNVegetationDynamics,
+    vegcarbon_dynamics::PALADYNCarbonDynamics
+)
+    tend.vegetation_area_fraction[i, j, 1] = compute_ν_tendency(i, j, grid, fields, veg_dynamics, vegcarbon_dynamics)
+    return tend
+end
+
+# Kernels
+
+@kernel function compute_tendencies_kernel!(tend, grid, fields, veg_dynamics::AbstractVegetationDynamics, args...)
+    i, j = @index(Global, NTuple)
+    compute_ν_tendencies!(tend, i, j, grid, fields, veg_dynamics, args...)
 end

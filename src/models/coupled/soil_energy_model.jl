@@ -3,7 +3,7 @@
     GridType<:AbstractLandGrid{NF},
     Atmosphere<:AbstractAtmosphere,
     SurfaceEnergy<:AbstractSurfaceEnergyBalance,
-    SoilModel<:AbstractSoilModel{NF, GridType},
+    SoilProcesses<:AbstractSoil{NF},
     Initializer<:AbstractInitializer,
 } <: AbstractSoilModel{NF, GridType}
     "Spatial discretization"
@@ -15,22 +15,12 @@
     "Surface energy balance"
     surface_energy_balance::SurfaceEnergy = SurfaceEnergyBalance(eltype(grid))
 
-    "Soil model"
-    soil::SoilModel = SoilModel(eltype(grid))
+    "Soil processes"
+    soil::SoilProcesses = SoilEnergyWaterCarbon(eltype(grid))
 
     "Initializer for coupled model"
     initializer::Initializer = DefaultInitializer()
 end
-
-get_soil_energy_balance(model::CoupledSoilEnergyModel) = model.soil.energy
-
-get_soil_hydrology(model::CoupledSoilEnergyModel) = model.soil.hydrology
-
-get_soil_stratigraphy(model::CoupledSoilEnergyModel) = model.soil.strat
-
-get_soil_biogeochemistry(model::CoupledSoilEnergyModel) = model.soil.biogeochem
-
-get_constants(model::CoupledSoilEnergyModel) = model.soil.constants
 
 function processes(model::CoupledSoilEnergyModel)
     return (
@@ -58,33 +48,39 @@ function initialize(
     fields = (;),
     input_variables = ()
 ) where {NF}
-    grid = get_grid(model)
+    grid = model.grid
+    # Collect all model variables
     vars = Variables(variables(model)..., input_variables...)
+    # Create ground heat flux field for coupling
     ground_heat_flux = initialize(vars.auxiliary.ground_heat_flux, grid, clock)
     ground_heat_flux_bc = GroundHeatFlux(ground_heat_flux)
-    bcs = merge_recursive(boundary_conditions, ground_heat_flux_bc)
-    return initialize(vars, model.grid, clock, boundary_conditions=bcs)
+    # Merge with user-specified BCs and fields
+    boundary_conditions = merge_boundary_conditions(boundary_conditions, ground_heat_flux_bc)
+    fields = (; ground_heat_flux, fields...)
+    # Return the initialized model state
+    return initialize(vars, grid; clock, boundary_conditions, fields)
 end
 
 function initialize!(state, model::CoupledSoilEnergyModel)
     # Call initialize! with model initializer
     initialize!(state, model, model.initializer)
     # Then for soil model
-    initialize!(state, model.soil)
+    initialize!(state, model.grid, model.soil)
 end
 
 function compute_auxiliary!(state, model::CoupledSoilEnergyModel)
     grid = get_grid(model)
-    # set ground temperature field to uppermost soil temperature
-    # TODO: Probably the ground temperature field should be initialized as a
-    # view of the uppermost soil layer temperature to save memory
-    set!(state.ground_temperature, view(state.temperature, :, :, grid.grid.Nz))
-    compute_auxiliary!(state, model, model.atmosphere)
-    compute_auxiliary!(state, model, model.surface_energy_balance)
-    compute_auxiliary!(state, model.soil)
+    atmosphere = model.atmosphere
+    seb = model.surface_energy_balance
+    constants = model.constants
+    compute_auxiliary!(state, grid, atmosphere)
+    compute_auxiliary!(state, grid, seb, atmosphere, constants)
+    compute_auxiliary!(state, grid, soil, constants)
 end
 
 function compute_tendencies!(state, model::CoupledSoilEnergyModel)
-    compute_tendencies!(state, model, model.surface_energy_balance)
-    compute_tendencies!(state, model.soil)
+    grid = get_grid(model)
+    constants = model.constants
+    # Compute soil tendencies
+    compute_tendencies!(state, grid, soil, constants)
 end

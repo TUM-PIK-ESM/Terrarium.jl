@@ -8,13 +8,13 @@ using Terrarium: porosity, saturation, liquid_fraction, organic_fraction, minera
         sat = 0.5,
         liq = 0.5,
         org = 0.5,
-        texture = SoilTexture(sand=0.5, clay=0.5);
-        soil = SoilVolume(; porosity=por, saturation=sat, liquid=liq, organic=org, texture)
+        solid = MineralOrganic(texture = SoilTexture(sand=0.5, clay=0.5), organic=org);
+        soil = SoilVolume(; porosity=por, saturation=sat, liquid=liq, solid)
         @test porosity(soil) == por
         @test saturation(soil) == sat
         @test liquid_fraction(soil) == liq
         @test organic_fraction(soil) == org
-        @test mineral_texture(soil) == texture
+        @test mineral_texture(soil) == solid.texture
     end
 
     # check that argument bounds are enforced
@@ -24,8 +24,8 @@ using Terrarium: porosity, saturation, liquid_fraction, organic_fraction, minera
     @test_throws AssertionError SoilVolume(saturation=2.0)
     @test_throws AssertionError SoilVolume(liquid=-1.0)
     @test_throws AssertionError SoilVolume(liquid=2.0)
-    @test_throws AssertionError SoilVolume(organic=-1.0)
-    @test_throws AssertionError SoilVolume(organic=2.0)
+    @test_throws AssertionError MineralOrganic(organic=-1.0)
+    @test_throws AssertionError MineralOrganic(organic=2.0)
 end
 
 @testset "volumetric_fractions" begin

@@ -5,7 +5,11 @@ using Enzyme, FiniteDifferences
 using FreezeCurves
 using Statistics
 
-function build_soil_energy_hydrology_model(arch, ::Type{NF}, flow=RichardsEq(); hydrology_kwargs...) where {NF}
+function build_soil_energy_hydrology_model(
+    arch, ::Type{NF}, vertflow=RichardsEq();
+    porosity = ConstantSoilPorosity(NF),
+    hydrology_kwargs...
+) where {NF}
     grid = ColumnGrid(arch, Float64, ExponentialSpacing(N=10))
     # initial conditions
     initializer = FieldInitializers(
@@ -14,17 +18,20 @@ function build_soil_energy_hydrology_model(arch, ::Type{NF}, flow=RichardsEq(); 
         # saturated soil
         saturation_water_ice = (x,z) -> min(0.5 - 0.1*z, 1.0),
     )
-    hydrology = SoilHydrology(eltype(grid), flow; hydrology_kwargs...)
-    model = SoilModel(grid; initializer, hydrology)
+    hydrology = SoilHydrology(eltype(grid), vertflow; hydrology_kwargs...)
+    strat = HomogeneousStratigraphy(eltype(grid); porosity)
+    soil = SoilEnergyWaterCarbon(eltype(grid); hydrology, strat)
+    model = SoilModel(grid; soil, initializer)
     return model
 end
 
 @testset "Soil water: Pressure-saturation closure" begin
     por = 0.5
     sat = 0.5
-    hydraulic_properties = ConstantHydraulics(Float64, porosity=por)
-    model = build_soil_energy_hydrology_model(CPU(), Float64; hydraulic_properties)
-    swrc = Terrarium.get_swrc(model.hydrology) # θ(ψₘ)
+    hydraulic_properties = ConstantSoilHydraulics(Float64)
+    porosity = ConstantSoilPorosity(mineral_porosity=por)
+    model = build_soil_energy_hydrology_model(CPU(), Float64; porosity, hydraulic_properties)
+    swrc = hydraulic_properties.swrc # θ(ψₘ)
     swrc_inv = inv(swrc) # ψₘ(θ)
     integrator = initialize(model, ForwardEuler())
     state = integrator.state
@@ -32,9 +39,15 @@ end
     dstate = make_zero(state)
     set!(state.saturation_water_ice, sat)
     set!(dstate.pressure_head, 1.0) # seed pressure head (output)
-    closure = Terrarium.SaturationPressureClosure()
+    closure = Terrarium.SoilSaturationPressureClosure()
     # first check closure relation saturation -> pressure
-    Enzyme.autodiff(set_runtime_activity(Reverse), Terrarium.closure!, Const, Duplicated(state, dstate), Const(model), Const(closure))
+    Enzyme.autodiff(
+        set_runtime_activity(Reverse),
+        Terrarium.closure!,
+        Const,
+        Duplicated(state, dstate),
+        Const(model)
+    )
     # check that derivatives w.r.t saturation are finite
     @test all(isfinite.(dstate.saturation_water_ice))
     # check that they match analytical derivative (1 / ∂θ∂ψ by inverse function theorem)
@@ -45,7 +58,13 @@ end
     compute_auxiliary!(state, model)
     dstate = make_zero(state)
     set!(dstate.saturation_water_ice, 1.0) # seed saturation (output)
-    Enzyme.autodiff(set_runtime_activity(Reverse), Terrarium.invclosure!, Const, Duplicated(state, dstate), Const(model), Const(closure))
+    Enzyme.autodiff(
+        set_runtime_activity(Reverse),
+        Terrarium.invclosure!,
+        Const,
+        Duplicated(state, dstate),
+        Const(model)
+    )
     # check that gradients w.r.t saturation are finite
     @test all(isfinite.(dstate.pressure_head))
     # check that saturation is correct
@@ -56,8 +75,9 @@ end
 
 @testset "Soil hydrology: hydraulic_conductivity" begin
     por = 0.5
-    cond_unsat = UnsatKVanGenuchten(Float64)
-    hydraulic_properties = ConstantHydraulics(Float64; porosity=por, cond_unsat)
+    unsat_hydraulic_cond = UnsatKVanGenuchten(Float64)
+    swrc = VanGenuchten(α=1.0, n=2.0)
+    hydraulic_properties = ConstantSoilHydraulics(Float64; swrc, unsat_hydraulic_cond)
     # wrapper function for evaluating hydraulic conductivity
     function eval_hydraulic_cond((por, sat, liq))
         soil = SoilVolume(porosity=por, saturation=sat, liquid=liq, solid=MineralOrganic())
@@ -81,7 +101,15 @@ end
     dstate = make_zero(state)
     set!(dstate.hydraulic_conductivity, 1.0) # seed hydraulic cond
     # then test gradient only on hydrology auxilairy variables
-    Enzyme.autodiff(set_runtime_activity(Reverse), compute_auxiliary!, Const, Duplicated(state, dstate), Const(model), Const(model.hydrology))
+    Enzyme.autodiff(
+        set_runtime_activity(Reverse),
+        compute_auxiliary!,
+        Const,
+        Duplicated(state, dstate),
+        Const(model.grid),
+        Const(model.soil.hydrology),
+        Const(model.soil)
+    )
     @test all(isfinite.(dstate.saturation_water_ice))
     @test all(isfinite.(dstate.temperature))
 end
@@ -95,13 +123,22 @@ end
     compute_auxiliary!(state, model)
     dstate = make_zero(state)
     set!(dstate.tendencies.saturation_water_ice, 1.0) # seed tendencies
-    Enzyme.autodiff(set_runtime_activity(Reverse), compute_tendencies!, Const, Duplicated(state, dstate), Const(model), Const(model.hydrology))
+    Enzyme.autodiff(
+        set_runtime_activity(Reverse),
+        compute_tendencies!,
+        Const,
+        Duplicated(state, dstate),
+        Const(model.grid),
+        Const(model.soil.hydrology),
+        Const(model.soil),
+        Const(model.constants)
+    )
     @test all(isfinite.(dstate.pressure_head))
     @test dstate.pressure_head[1,1,1] > 0 # higher pressure -> weaker gradient -> less outflow
 end
 
 @testset "Soil energy/hydrology model: timestep!" begin
-    hydraulic_properties = ConstantHydraulics(Float64)
+    hydraulic_properties = ConstantSoilHydraulics(Float64)
     model = build_soil_energy_hydrology_model(CPU(), Float64; hydraulic_properties)
     integrator = initialize(model, ForwardEuler())
     inputs = integrator.inputs

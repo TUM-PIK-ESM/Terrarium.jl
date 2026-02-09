@@ -14,7 +14,7 @@ initialize!(state, model::AbstractModel) = initialize!(state, model, get_initial
 """
 """
 function initialize!(state, inits::NamedTuple{names}) where {names}
-    for name in names
+    fastiterate(names) do name
         set!(getproperty(state, name), inits[name])
     end
 end
