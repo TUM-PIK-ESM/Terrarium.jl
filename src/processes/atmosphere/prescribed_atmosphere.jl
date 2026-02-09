@@ -8,8 +8,10 @@ end
 Base.nameof(::TracerGas{name}) where {name} = name
 
 variables(::TracerGas{name}) where {name} = (
-    input(name, XY(), default=380, units=u"ppm", desc="Ambient atmospheric $(name) concentration in ppm"),
+    input(name, XY(), default=default_tracer_conc(Val(name)), units=u"ppm", desc="Ambient atmospheric $(name) concentration in ppm"),
 )
+
+default_tracer_conc(::Val{:CO2}) = 380 # in ppm
 
 """
 Creates a `TracerGas` for ambient CO2 with concentration prescribed by an input variable with
