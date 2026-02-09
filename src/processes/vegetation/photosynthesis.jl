@@ -340,9 +340,9 @@ end
 
 @propagate_inbounds function compute_photosynthesis!(out, i, j, grid, fields, photo::LUEPhotosynthesis, atmos::AbstractAtmosphere)
     Rd, An, GPP = compute_photosynthesis(i, j, grid, fields, photo, atmos)
-    out.Rd[i, j, 1] = Rd
+    out.daily_leaf_respiration[i, j, 1] = Rd
     out.net_assimilation[i, j, 1] = An
-    out.GPP[i, j, 1] = GPP
+    out.gross_primary_production[i, j, 1] = GPP
     return out
 end
 
