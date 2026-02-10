@@ -54,7 +54,7 @@ or clone the repository and start hacking directly!
 A natural first step with `Terrarium` is to set up and run your very first `SoilModel`. This represents a standalone model of transient heat, water, and carbon transport over a particular choice of `grid`. We start by chosing a `ColumnGrid` which represents one or more laterally independent vertical columns:
 
 ```julia
-using Terarrium
+using Terrarium
 
 # Set up a SoilModel on a ColumnGrid with 10 vertical soil layers that will run on the CPU with 32-bit precision
 num_columns = 1
@@ -63,7 +63,7 @@ grid = ColumnGrid(arch, Float32, ExponentialSpacing(N=10), num_columns)
 model = SoilModel(grid)
 # Prescribe a constant surface temperature of 1°C
 bcs = PrescribedSurfaceTemperature(:T_ub, 1.0)
-integrator = initialize(model, ForwardEuler(), boundary_conditions = bcs)
+integrator = initialize(model, ForwardEuler(eltype(grid)), boundary_conditions = bcs)
 # Run the simulation forward for 10 model days
 @time run!(integrator, period = Day(10))
 ```
@@ -84,7 +84,7 @@ grid = ColumnRingGrid(arch, Float32, ExponentialSpacing(N=10), rings)
 model = SoilModel(grid)
 # Prescribe a constant surface temperature of 1°C
 bcs = PrescribedSurfaceTemperature(:T_ub, 1.0)
-integrator = initialize(model, ForwardEuler(), boundary_conditions = bcs)
+integrator = initialize(model, ForwardEuler(eltype(grid)), boundary_conditions = bcs)
 # Run the simulation forward for 10 model days
 @time run!(integrator, period = Day(10))
 ```
