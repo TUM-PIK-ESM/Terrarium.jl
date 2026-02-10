@@ -5,7 +5,7 @@
 
 Base type for unsaturated hydraulic conductivity parameterizations.
 """
-abstract type AbstractUnsatK end
+abstract type AbstractUnsatK{NF} end
 
 """
     get_swrc(::AbstractUnsatK)
@@ -63,7 +63,7 @@ measurements of hydraulic properites are available.
 Properties:
 $TYPEDFIELDS
 """
-@kwdef struct ConstantSoilHydraulics{NF, RC, UnsatK} <: AbstractSoilHydraulics{NF, RC, UnsatK}
+@kwdef struct ConstantSoilHydraulics{NF, RC, UnsatK<:AbstractUnsatK{NF}} <: AbstractSoilHydraulics{NF, RC, UnsatK}
     "Soil water retention curve"
     swrc::RC
 
@@ -78,12 +78,6 @@ $TYPEDFIELDS
 
     "Prescribed wilting point [-]"
     wilting_point::NF = 0.05
-
-    # TODO: Remove once FreezeCurves.jl allows for generic type bounds
-    function ConstantSoilHydraulics(swrc::SWRC, unsat_hydraulic_cond::AbstractUnsatK, args::NF...) where {NF}
-        adapted_swrc = adapt(NumberFormatAdaptor{NF}(), ustrip(swrc))
-        return new{NF, typeof(adapted_swrc), typeof(unsat_hydraulic_cond)}(adapted_swrc, unsat_hydraulic_cond, args...)
-    end
 end
 
 function ConstantSoilHydraulics(
@@ -92,7 +86,8 @@ function ConstantSoilHydraulics(
         unsat_hydraulic_cond = UnsatKLinear(NF),
         kwargs...
     ) where {NF}
-    return ConstantSoilHydraulics(; swrc, unsat_hydraulic_cond, kwargs...)
+    swrc = adapt(NumberFormatAdaptor{NF}(), ustrip(swrc))
+    return ConstantSoilHydraulics{NF, typeof(swrc), typeof(unsat_hydraulic_cond)}(; swrc, unsat_hydraulic_cond, kwargs...)
 end
 
 @inline saturated_hydraulic_conductivity(hydraulics::ConstantSoilHydraulics, args...) = hydraulics.sat_hydraulic_cond
@@ -110,7 +105,7 @@ and wilting point as a function of soil texture.
 Properties:
 $TYPEDFIELDS
 """
-@kwdef struct SoilHydraulicsSURFEX{NF, RC, UnsatK} <: AbstractSoilHydraulics{NF, RC, UnsatK}
+@kwdef struct SoilHydraulicsSURFEX{NF, RC, UnsatK<:AbstractUnsatK{NF}} <: AbstractSoilHydraulics{NF, RC, UnsatK}
     "Soil water retention curve"
     swrc::RC
 
@@ -128,12 +123,6 @@ $TYPEDFIELDS
 
     "Exponent of field capacity adjustment due to clay content [-]"
     field_capacity_exp::NF = 0.35
-
-    # TODO: Remove once FreezeCurves.jl allows for generic type bounds
-    function SoilHydraulicsSURFEX(swrc::SWRC, unsat_hydraulic_cond::AbstractUnsatK, args::NF...) where {NF}
-        adapted_swrc = adapt(NumberFormatAdaptor{NF}(), ustrip(swrc))
-        return new{NF, typeof(adapted_swrc), typeof(unsat_hydraulic_cond)}(adapted_swrc, unsat_hydraulic_cond, args...)
-    end
 end
 
 function SoilHydraulicsSURFEX(
@@ -142,7 +131,8 @@ function SoilHydraulicsSURFEX(
         unsat_hydraulic_cond = UnsatKLinear(NF),
         kwargs...
     ) where {NF}
-    return SoilHydraulicsSURFEX(; swrc, unsat_hydraulic_cond, kwargs...)
+    swrc = adapt(NumberFormatAdaptor{NF}(), ustrip(swrc))
+    return SoilHydraulicsSURFEX{NF, typeof(swrc), typeof(unsat_hydraulic_cond)}(; swrc, unsat_hydraulic_cond, kwargs...)
 end
 
 # TODO: this is not quite correct, SURFEX uses a hydraulic conductivity function that decreases exponentially with depth
@@ -169,7 +159,7 @@ end
 Simple formulation of hydraulic conductivity as a linear function of the liquid water saturated fraction,
 i.e. `soil.water / (soil.water + soil.ice + soil.air)`.
 """
-struct UnsatKLinear{NF} <: AbstractUnsatK end
+struct UnsatKLinear{NF} <: AbstractUnsatK{NF} end
 
 UnsatKLinear(::Type{NF}) where {NF} = UnsatKLinear{NF}()
 
@@ -194,7 +184,7 @@ volumetric fractions, assumed to include those of water, ice, and air.
 
 See van Genuchten (1980) and Westermann et al. (2023).
 """
-struct UnsatKVanGenuchten{NF} <: AbstractUnsatK
+struct UnsatKVanGenuchten{NF} <: AbstractUnsatK{NF}
     "Exponential scaling factor for ice impedance"
     impedance::NF
 end
