@@ -5,12 +5,12 @@ using Markdown
 using InteractiveUtils
 
 # ╔═╡ 9dee9d2c-6493-474b-93b4-c76da8430c52
-begin 
-	import Pkg 
-	Pkg.activate(".")
-	Pkg.develop(Pkg.PackageSpec(path="../.."))
+begin
+    import Pkg
+    Pkg.activate(".")
+    Pkg.develop(Pkg.PackageSpec(path = "../.."))
     Pkg.instantiate()
-end 
+end
 
 # ╔═╡ 07a7fe5f-262e-4e00-b05b-77a9d3a9d1dc
 using Terrarium, Enzyme, Checkpointing
@@ -31,19 +31,19 @@ import CairoMakie as Makie
 
 
 # ╔═╡ 55e13705-70e4-4af0-a579-d9d9f01a28c5
-begin 
-	grid = ColumnGrid(ExponentialSpacing())
-	initializer = FieldInitializers(
-	    # steady-ish state initial condition for temperature
-	    temperature = (x,z) -> -1 - 0.01*z,
-	    # fully saturated soil pores
-	    saturation_water_ice = 1.0,
-	)
-	model = SoilModel(grid; initializer)
-	# constant surface temperature of 1°C
-	bcs = PrescribedSurfaceTemperature(:T_ub, 1.0)
-	integrator = initialize(model, ForwardEuler(), boundary_conditions=bcs)
-end 
+begin
+    grid = ColumnGrid(ExponentialSpacing())
+    initializer = FieldInitializers(
+        # steady-ish state initial condition for temperature
+        temperature = (x, z) -> -1 - 0.01 * z,
+        # fully saturated soil pores
+        saturation_water_ice = 1.0,
+    )
+    model = SoilModel(grid; initializer)
+    # constant surface temperature of 1°C
+    bcs = PrescribedSurfaceTemperature(:T_ub, 1.0)
+    integrator = initialize(model, ForwardEuler(), boundary_conditions = bcs)
+end
 
 # ╔═╡ 88953a7d-e208-40bb-a78e-58a7bc875722
 md"""
@@ -65,14 +65,14 @@ Enzyme's `autodiff` is it's core function that we can use to compute vector-Jaco
 """
 
 # ╔═╡ f7282395-c69a-45b5-b682-4cae0c586a9d
-begin 
-	dintegrator = make_zero(integrator)
-	# set a one hot seed for a sensitivity analysis of T for now 
-	interior(dintegrator.state.temperature)[1,1,2] = 1.0
+begin
+    dintegrator = make_zero(integrator)
+    # set a one hot seed for a sensitivity analysis of T for now
+    interior(dintegrator.state.temperature)[1, 1, 2] = 1.0
 
-	# how many steps we want to integrate for 
-	N_t = 200 
-end 
+    # how many steps we want to integrate for
+    N_t = 200
+end
 
 # ╔═╡ c0497f6a-1252-4c66-b9fe-4cfd9cf0d132
 md"""
@@ -88,27 +88,27 @@ Let's look at the results that were accumulated in our shadow memory `dintegrato
 """
 
 # ╔═╡ a9b7a5ab-67c4-45e1-9e9e-407b40936604
-begin 
-	dU = interior(dintegrator.state.internal_energy)[1,1,:]
-	dT = interior(dintegrator.state.temperature)[1,1,:]
-	zs = znodes(integrator.state.temperature)
-end 
+begin
+    dU = interior(dintegrator.state.internal_energy)[1, 1, :]
+    dT = interior(dintegrator.state.temperature)[1, 1, :]
+    zs = znodes(integrator.state.temperature)
+end
 
 # ╔═╡ e1ffda9b-5911-44f0-81c1-d727a323fbd5
-begin 
-	f = Makie.Figure()
-	Makie.Axis(f[1,1], ylabel="Soil depth", xlabel="Sensitivity dT_f/dU_0")
-	Makie.scatterlines!(f[1,1], dT, zs)
-	f
-end 
+begin
+    f = Makie.Figure()
+    Makie.Axis(f[1, 1], ylabel = "Soil depth", xlabel = "Sensitivity dT_f/dU_0")
+    Makie.scatterlines!(f[1, 1], dT, zs)
+    f
+end
 
 # ╔═╡ c5122a6c-09aa-4dba-8aca-f42e88b93f60
-begin 
-	f2 = Makie.Figure()
-	Makie.Axis(f2[1,1], ylabel="Soil depth", xlabel="Sensitivity dU_f/dU_0")
-	Makie.scatterlines!(f2[1,1], dU, zs)
-	f2
-end 
+begin
+    f2 = Makie.Figure()
+    Makie.Axis(f2[1, 1], ylabel = "Soil depth", xlabel = "Sensitivity dU_f/dU_0")
+    Makie.scatterlines!(f2[1, 1], dU, zs)
+    f2
+end
 
 # ╔═╡ c499163f-248e-451b-8fc6-4fcfefd26afe
 md"""

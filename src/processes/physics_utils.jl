@@ -13,7 +13,7 @@ seconds_per_hour(::Type{NF}) where {NF} = ustrip(u"s", NF(1)u"hr")
 
 Compute partial pressure of oxygen from surface pressure in Pa.
 """
-@inline function partial_pressure_O2(pres::NF) where NF
+@inline function partial_pressure_O2(pres::NF) where {NF}
     # TODO Shouldn't this be in physical constants?
     pres_O2 = NF(0.209) * pres
     return pres_O2
@@ -24,8 +24,8 @@ end
 
 Compute partial pressure of CO2 from surface pressure and CO2 concentration in Pa.
 """
-@inline function partial_pressure_CO2(pres::NF, conc_co2::NF) where NF
-    pres_co2 = conc_co2 * NF(1e-6) * pres
+@inline function partial_pressure_CO2(pres::NF, conc_co2::NF) where {NF}
+    pres_co2 = conc_co2 * NF(1.0e-6) * pres
     return pres_co2
 end
 
@@ -62,7 +62,7 @@ and unfrozen conditions.
 Coefficients taken from Alduchov and Eskridge (1997).
 """
 @inline function saturation_vapor_pressure(T::NF) where {NF}
-    if T <= zero(T)
+    return if T <= zero(T)
         saturation_vapor_pressure(T, NF(611.0), NF(22.46), NF(272.62))
     else
         saturation_vapor_pressure(T, NF(611.0), NF(17.62), NF(243.12))

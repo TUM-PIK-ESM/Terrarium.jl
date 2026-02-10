@@ -1,4 +1,4 @@
-global DEBUG::Bool = haskey(ENV,"TERRARIUM_DEBUG") && ENV["TERRARIUM_DEBUG"] == "true"
+global DEBUG::Bool = haskey(ENV, "TERRARIUM_DEBUG") && ENV["TERRARIUM_DEBUG"] == "true"
 
 """
     debug!(debug::Bool)
@@ -16,11 +16,12 @@ end
 
 Check whether the given `field` has any `NaN` values using `Diagnostics.hasnan` and raise an error if `NaN`s are detected.
 """
-nancheck!(field::AbstractField, name=nothing) = Diagnostics.hasnan(field) && error("Found NaNs in Field $name: $field")
+nancheck!(field::AbstractField, name = nothing) = Diagnostics.hasnan(field) && error("Found NaNs in Field $name: $field")
 function nancheck!(nt::NamedTuple)
     for key in keys(nt)
         nancheck!(nt[key], key)
     end
+    return
 end
 
 """

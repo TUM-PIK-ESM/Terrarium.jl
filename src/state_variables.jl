@@ -14,11 +14,11 @@ however, they are assigned their own category here since they need to be handled
 by the timestepping scheme.
 """
 struct StateVariables{
-    NF,
-    prognames, closurenames, auxnames, inputnames, nsnames,
-    ProgFields, TendFields, AuxFields, InputFields, Namespaces,
-    ClockType
-} <: AbstractStateVariables
+        NF,
+        prognames, closurenames, auxnames, inputnames, nsnames,
+        ProgFields, TendFields, AuxFields, InputFields, Namespaces,
+        ClockType,
+    } <: AbstractStateVariables
     prognostic::NamedTuple{prognames, ProgFields}
     tendencies::NamedTuple{prognames, TendFields}
     auxiliary::NamedTuple{auxnames, AuxFields}
@@ -27,18 +27,22 @@ struct StateVariables{
     clock::ClockType
 
     function StateVariables(
-        ::Type{NF},
-        closurenames::Tuple{Vararg{Symbol}},
-        prognostic::NamedTuple{prognames, ProgFields},
-        tendencies::NamedTuple{prognames, TendFields},
-        auxiliary::NamedTuple{auxnames, AuxFields},
-        inputs::NamedTuple{inputnames, InputFields},
-        namespaces::NamedTuple{nsnames, Namespaces},
-        clock::ClockType
-    ) where {NF, prognames, auxnames, inputnames, nsnames,
-             ProgFields, TendFields, AuxFields, InputFields, Namespaces, ClockType}
-        return new{NF, prognames, closurenames, auxnames, inputnames, nsnames,
-                   ProgFields, TendFields, AuxFields, InputFields, Namespaces, ClockType}(
+            ::Type{NF},
+            closurenames::Tuple{Vararg{Symbol}},
+            prognostic::NamedTuple{prognames, ProgFields},
+            tendencies::NamedTuple{prognames, TendFields},
+            auxiliary::NamedTuple{auxnames, AuxFields},
+            inputs::NamedTuple{inputnames, InputFields},
+            namespaces::NamedTuple{nsnames, Namespaces},
+            clock::ClockType
+        ) where {
+            NF, prognames, auxnames, inputnames, nsnames,
+            ProgFields, TendFields, AuxFields, InputFields, Namespaces, ClockType,
+        }
+        return new{
+            NF, prognames, closurenames, auxnames, inputnames, nsnames,
+            ProgFields, TendFields, AuxFields, InputFields, Namespaces, ClockType,
+        }(
             prognostic,
             tendencies,
             auxiliary,
@@ -70,7 +74,7 @@ function Oceananigans.TimeSteppers.update_state!(state::StateVariables, model::A
     update_inputs!(state, inputs)
     fill_halo_regions!(state)
     compute_auxiliary!(state, model)
-    if compute_tendencies
+    return if compute_tendencies
         compute_tendencies!(state, model)
     end
 end
@@ -90,7 +94,7 @@ function Oceananigans.BoundaryConditions.fill_halo_regions!(state::StateVariable
     end
 
     # recurse over namespaces
-    fastiterate(state.namespaces) do ns
+    return fastiterate(state.namespaces) do ns
         fill_halo_regions!(ns)
     end
 end
@@ -112,7 +116,7 @@ function Oceananigans.TimeSteppers.reset!(state::StateVariables)
         set!(field, zero(eltype(field)))
     end
     # recurse over namespaces
-    fastiterate(state.namespaces) do ns
+    return fastiterate(state.namespaces) do ns
         reset!(ns)
     end
 end
@@ -126,7 +130,7 @@ function reset_tendencies!(state::StateVariables)
         set!(field, zero(eltype(field)))
     end
     # recurse over namespaces
-    fastiterate(state.namespaces) do ns
+    return fastiterate(state.namespaces) do ns
         reset_tendencies!(ns)
     end
 end
@@ -141,6 +145,7 @@ function update_inputs!(state::StateVariables, sources::InputSources)
     for ns in state.namespaces
         update_inputs!(ns, sources)
     end
+    return
 end
 
 """
@@ -169,7 +174,8 @@ function get_fields(state, queries::Union{Symbol, Pair}...)
     fields = map(queries) do query
         if isa(query, Symbol)
             query => getproperty(state, query)
-        else isa(query, Pair)
+        else
+            isa(query, Pair)
             key, value = query
             @assert isa(value, Tuple) "namespaces queries must be given as tuples"
             key => get_fields(getproperty(state, key), value...)
@@ -204,8 +210,8 @@ end
 
 Retrieves all non-tendency `Field`s from `state` defined on the given `components`.
 """
-@inline function get_fields(state, components...; except=(;))
-    vars = mapreduce(tuplejoin, components, init=()) do component
+@inline function get_fields(state, components...; except = (;))
+    vars = mapreduce(tuplejoin, components, init = ()) do component
         allvars = variables(component)
         closurevars = closure_variables(component)
         tuplejoin(allvars, closurevars)
@@ -275,12 +281,12 @@ initialized on its associated `grid`. Any predefined `boundary_conditions` and `
 through to `initialize` for each variable.
 """
 function initialize(
-    @nospecialize(model::AbstractModel{NF});
-    clock = Clock(time=zero(NF)),
-    input_variables = (),
-    boundary_conditions = (;),
-    fields = (;)
-) where {NF}
+        @nospecialize(model::AbstractModel{NF});
+        clock = Clock(time = zero(NF)),
+        input_variables = (),
+        boundary_conditions = (;),
+        fields = (;)
+    ) where {NF}
     vars = Variables(tuplejoin(variables(model), input_variables))
     state = initialize(vars, model.grid; clock, boundary_conditions, fields)
     return state
@@ -301,13 +307,13 @@ for all variables defined by `process`. Any predefined `boundary_conditions` and
 for each variable.
 """
 function initialize(
-    process::AbstractProcess,
-    grid::AbstractLandGrid{NF};
-    clock = Clock(time=zero(NF)),
-    input_variables = (),
-    boundary_conditions = (;),
-    fields = (;)
-) where {NF}
+        process::AbstractProcess,
+        grid::AbstractLandGrid{NF};
+        clock = Clock(time = zero(NF)),
+        input_variables = (),
+        boundary_conditions = (;),
+        fields = (;)
+    ) where {NF}
     vars = Variables(tuplejoin(variables(process), input_variables))
     state = initialize(vars, grid; clock, boundary_conditions, fields)
     return state
@@ -329,12 +335,12 @@ for all variables in `vars`. Any predefined `boundary_conditions` and `fields` w
 for each variable.
 """
 function initialize(
-    @nospecialize(vars::Variables),
-    grid::AbstractLandGrid{NF};
-    clock::Clock = Clock(time=0.0),
-    boundary_conditions = (;),
-    fields = (;)
-) where {NF}
+        @nospecialize(vars::Variables),
+        grid::AbstractLandGrid{NF};
+        clock::Clock = Clock(time = 0.0),
+        boundary_conditions = (;),
+        fields = (;)
+    ) where {NF}
     # Initialize Fields for each variable group, if they are not already given in the user defined `fields`
     input_fields = initialize(vars.inputs, grid, clock, boundary_conditions, fields)
     tendency_fields = initialize(vars.tendencies, grid, clock, boundary_conditions, fields)
@@ -344,7 +350,7 @@ function initialize(
     namespaces = map(vars.namespaces) do ns
         ns_bcs = get(boundary_conditions, varname(ns), (;))
         ns_fields = get(fields, varname(ns), (;))
-        initialize(ns.vars, grid; clock, boundary_conditions=ns_bcs, fields=ns_fields)
+        initialize(ns.vars, grid; clock, boundary_conditions = ns_bcs, fields = ns_fields)
     end
     # get closure variable names
     closurenames = map(varname, closure_variables(values(vars.prognostic)))
@@ -378,16 +384,16 @@ Any predefined `boundary_conditions` and `fields` will be passed through to `ini
 for each variable.
 """
 function initialize(
-    @nospecialize(vars::NamedTuple{names, <:Tuple{Vararg{AbstractVariable}}}),
-    grid::AbstractLandGrid,
-    clock::Clock,
-    boundary_conditions::NamedTuple,
-    fields::NamedTuple
-) where {names}
+        @nospecialize(vars::NamedTuple{names, <:Tuple{Vararg{AbstractVariable}}}),
+        grid::AbstractLandGrid,
+        clock::Clock,
+        boundary_conditions::NamedTuple,
+        fields::NamedTuple
+    ) where {names}
     # Initialize or retrieve Fields for each variable in `var`, accumulating the newly created Fields in a named tuple;
     # Note that one major caveat to this approach is that the Fields visible to each constructor are dependent on the order
     # in which the variables were declared :/
-    return foldl(vars, init=(;)) do nt, var
+    return foldl(vars, init = (;)) do nt, var
         # note that we call initialize here with both the current accumualated named tuple of Fields + the context given by 'fields'
         field = initialize(var, grid, clock, boundary_conditions, merge(nt, fields))
         merge(nt, (; varname(var) => field))
@@ -470,7 +476,7 @@ function Base.getproperty(state::StateVariables, name::Symbol)
     end
 end
 
-# helper function e.g. for usage with Enzyme 
+# helper function e.g. for usage with Enzyme
 function Base.fill!(state::StateVariables{NF}, value) where {NF}
     for progname in prognostic_names(state)
         fill!(getproperty(state.prognostic, progname), NF(value))
@@ -484,7 +490,7 @@ function Base.fill!(state::StateVariables{NF}, value) where {NF}
     return nothing
 end
 
-function Base.copyto!(state::SV, other::SV) where {SV<:StateVariables}
+function Base.copyto!(state::SV, other::SV) where {SV <: StateVariables}
     for progname in prognostic_names(state)
         copyto!(getproperty(state.prognostic, progname), getproperty(other.prognostic, progname))
     end
@@ -523,5 +529,5 @@ function Base.show(io::IO, state::StateVariables{NF}) where {NF}
     print(io, "├─ Input: ")
     show(io, state.inputs)
     println(io)
-    print(io, "├─ Namespaces: $(keys(state.namespaces))")
+    return print(io, "├─ Namespaces: $(keys(state.namespaces))")
 end

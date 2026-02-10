@@ -114,7 +114,7 @@ abstract type AbstractProcessVariable{name, VD, UT} <: AbstractVariable{name, VD
 
 function Base.show(io::IO, ::MIME"text/plain", var::AbstractVariable)
     units = varunits(var)
-    if units != NoUnits
+    return if units != NoUnits
         println(io, "$(nameof(typeof(var))) $(varname(var)) with dimensions $(typeof(vardims(var))) and units $(string(varunits(var)))")
     else
         println(io, "$(nameof(typeof(var))) $(varname(var)) with dimensions $(typeof(vardims(var)))")
@@ -129,13 +129,13 @@ and spatial `dims`. Auxiliary variables are those which are diagnosed directly o
 indirectly from the values of one or more prognostic variables.
 """
 struct AuxiliaryVariable{
-    name,
-    VD<:VarDims,
-    UT<:Units,
-    Var<:Variable{name, VD, UT},
-    DT<:AbstractInterval,
-    FC<:Union{Nothing, Function}
-} <: AbstractProcessVariable{name, VD, UT}
+        name,
+        VD <: VarDims,
+        UT <: Units,
+        Var <: Variable{name, VD, UT},
+        DT <: AbstractInterval,
+        FC <: Union{Nothing, Function},
+    } <: AbstractProcessVariable{name, VD, UT}
     "State variable"
     var::Var
 
@@ -155,13 +155,13 @@ end
 Represents an input (e.g. forcing) variable with the given `name` and spatial `dims`.
 """
 struct InputVariable{
-    name,
-    VD<:VarDims,
-    UT<:Units,
-    Var<:Variable{name, VD, UT},
-    DT<:AbstractInterval,
-    Def<:Union{Nothing, Number, Function}
-} <: AbstractProcessVariable{name, VD, UT}
+        name,
+        VD <: VarDims,
+        UT <: Units,
+        Var <: Variable{name, VD, UT},
+        DT <: AbstractInterval,
+        Def <: Union{Nothing, Number, Function},
+    } <: AbstractProcessVariable{name, VD, UT}
     "State variable"
     var::Var
 
@@ -181,14 +181,14 @@ end
 Represents a prognostic state variable with the given `name` and spatial `dims`.
 """
 struct PrognosticVariable{
-    name,
-    VD<:VarDims,
-    UT<:Units,
-    Var<:Variable{name, VD, UT},
-    CL<:Union{Nothing, AbstractClosureRelation},
-    TV<:Union{Nothing, AuxiliaryVariable},
-    DT<:AbstractInterval
-} <: AbstractProcessVariable{name, VD, UT}
+        name,
+        VD <: VarDims,
+        UT <: Units,
+        Var <: Variable{name, VD, UT},
+        CL <: Union{Nothing, AbstractClosureRelation},
+        TV <: Union{Nothing, AuxiliaryVariable},
+        DT <: AbstractInterval,
+    } <: AbstractProcessVariable{name, VD, UT}
     "State variable"
     var::Var
 
@@ -254,7 +254,7 @@ function Variables(@nospecialize(vars::Tuple{Vararg{Union{AbstractProcessVariabl
     # create closure variables and prepend to tuple of auxiliary variables;
     # note that the order matters here since Field constructors will be called in the order
     # that they appear in the var tuples.
-    closure_vars = mapreduce(var -> variables(var.closure), tuplejoin, filter(hasclosure, prognostic_vars), init=())
+    closure_vars = mapreduce(var -> variables(var.closure), tuplejoin, filter(hasclosure, prognostic_vars), init = ())
     auxiliary_vars = deduplicate(varinfo, tuplejoin(closure_vars, auxiliary_vars))
     # drop inputs with matching prognostic or auxiliary variables
     input_vars = filter(var -> var ∉ prognostic_vars && var ∉ auxiliary_vars, input_vars)
@@ -298,6 +298,7 @@ function check_duplicates(vars::Union{AbstractVariable, Namespace}...)
             error("Found conflicting variable/namespace definitions for $key:\n$(join(groups[key], "\n"))")
         end
     end
+    return
 end
 
 """
@@ -327,8 +328,8 @@ Convenience constructor for `Variable`.
 
 Convenience constructors for `PrognosticVariable`.
 """
-@inline prognostic(name::Symbol, dims::VarDims; units=NoUnits, closure=nothing, domain=RealLine(), desc="") = prognostic(var(name, dims, units); closure, domain, desc)
-@inline prognostic(var::Variable; closure=nothing, domain=RealLine(), desc="") = PrognosticVariable(var, closure, tendency(var), domain, desc)
+@inline prognostic(name::Symbol, dims::VarDims; units = NoUnits, closure = nothing, domain = RealLine(), desc = "") = prognostic(var(name, dims, units); closure, domain, desc)
+@inline prognostic(var::Variable; closure = nothing, domain = RealLine(), desc = "") = PrognosticVariable(var, closure, tendency(var), domain, desc)
 
 """
     $SIGNATURES
@@ -336,16 +337,16 @@ Convenience constructors for `PrognosticVariable`.
 Convenience constructor method for `AuxiliaryVariable`.
 """
 @inline auxiliary(name::Symbol, dims::VarDims, ctor = nothing, params = nothing; units = NoUnits, domain = RealLine(), desc = "") = auxiliary(var(name, dims, units), ctor, params; domain, desc)
-@inline auxiliary(var::Variable, ::Nothing, ::Nothing; domain=RealLine(), desc="") = AuxiliaryVariable(var, nothing, domain, desc)
-@inline auxiliary(var::Variable, ctor::Function, params; domain=RealLine(), desc="") = AuxiliaryVariable(var, (args...) -> ctor(params, args...), domain, desc)
+@inline auxiliary(var::Variable, ::Nothing, ::Nothing; domain = RealLine(), desc = "") = AuxiliaryVariable(var, nothing, domain, desc)
+@inline auxiliary(var::Variable, ctor::Function, params; domain = RealLine(), desc = "") = AuxiliaryVariable(var, (args...) -> ctor(params, args...), domain, desc)
 
 """
     $SIGNATURES
 
 Convenience constructor method for `InputVariable`.
 """
-@inline input(name::Symbol, dims::VarDims; default = nothing, units = NoUnits, domain = RealLine(), desc="") = input(var(name, dims, units); default, domain, desc)
-@inline input(var::Variable; default = nothing, domain = RealLine(), desc="") = InputVariable(var, default, domain, desc)
+@inline input(name::Symbol, dims::VarDims; default = nothing, units = NoUnits, domain = RealLine(), desc = "") = input(var(name, dims, units); default, domain, desc)
+@inline input(var::Variable; default = nothing, domain = RealLine(), desc = "") = InputVariable(var, default, domain, desc)
 
 """
     $SIGNATURES
@@ -353,7 +354,7 @@ Convenience constructor method for `InputVariable`.
 Creates an `AuxiliaryVariable` for the tendency of a prognostic variable with the given name, dimensions, and physical units.
 This constructor is primarily used internally by other constructors and does not usually need to be called by implementations of `variables`.
 """
-@inline tendency(var::Variable) = auxiliary(varname(var), vardims(var), units=upreferred(varunits(var))/u"s")
+@inline tendency(var::Variable) = auxiliary(varname(var), vardims(var), units = upreferred(varunits(var)) / u"s")
 
 """
     $SIGNATURES
@@ -392,7 +393,7 @@ Helper method that selects only closure (auxiliary) variables declared on `obj`.
 @inline closure_variables(obj) = closure_variables(variables(obj))
 @inline function closure_variables(vars::Tuple)
     progvars = prognostic_variables(vars)
-    closure_vars = mapreduce(var -> variables(var.closure), tuplejoin, progvars, init=())
+    closure_vars = mapreduce(var -> variables(var.closure), tuplejoin, progvars, init = ())
     return deduplicate_vars(closure_vars)
 end
 

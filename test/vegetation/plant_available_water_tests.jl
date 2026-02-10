@@ -28,7 +28,7 @@ using Test
     PAW = set!(state.plant_available_water, 0.5)
     ## compute and check SMLF; should be approx. ∑ PAWᵢ * RFᵢ
     compute!(state.soil_moisture_limiting_factor)
-    @test all(state.soil_moisture_limiting_factor .≈ sum(PAW * RF, dims=3))
+    @test all(state.soil_moisture_limiting_factor .≈ sum(PAW * RF, dims = 3))
 
     # Check PAW calculations
     ## Case 1: Fully saturated
@@ -73,5 +73,5 @@ using Test
     set!(state.liquid_water_fraction, liq)
     compute_auxiliary!(state, grid, paw, soil)
     @test all(state.plant_available_water .≈ 0.25)
-    @test all(state.soil_moisture_limiting_factor .≈ sum(state.plant_available_water * state.root_fraction, dims=3))
+    @test all(state.soil_moisture_limiting_factor .≈ sum(state.plant_available_water * state.root_fraction, dims = 3))
 end

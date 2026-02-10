@@ -24,11 +24,11 @@ closure relating saturtion and pressure head.
 @kwdef struct RichardsEq <: AbstractVerticalFlow end
 
 variables(hydrology::SoilHydrology{NF, RichardsEq}) where {NF} = (
-    prognostic(:saturation_water_ice, XYZ(); closure=get_closure(hydrology), domain=UnitInterval(), desc="Saturation level of water and ice in the pore space"),
-    prognostic(:surface_excess_water, XY(), units=u"m", desc="Excess water at the soil surface in m³/m²"),
-    auxiliary(:hydraulic_conductivity, XYZ(z=Face()), units=u"m/s", desc="Hydraulic conductivity of soil volumes in m/s"),
-    auxiliary(:water_table, XY(), units=u"m", desc="Elevation of the water table in meters"),
-    input(:liquid_water_fraction, XYZ(), default=NF(1), domain=UnitInterval(), desc="Fraction of unfrozen water in the pore space"), 
+    prognostic(:saturation_water_ice, XYZ(); closure = get_closure(hydrology), domain = UnitInterval(), desc = "Saturation level of water and ice in the pore space"),
+    prognostic(:surface_excess_water, XY(), units = u"m", desc = "Excess water at the soil surface in m³/m²"),
+    auxiliary(:hydraulic_conductivity, XYZ(z = Face()), units = u"m/s", desc = "Hydraulic conductivity of soil volumes in m/s"),
+    auxiliary(:water_table, XY(), units = u"m", desc = "Elevation of the water table in meters"),
+    input(:liquid_water_fraction, XYZ(), default = NF(1), domain = UnitInterval(), desc = "Fraction of unfrozen water in the pore space"),
 )
 
 @propagate_inbounds surface_excess_water(i, j, grid, fields, ::SoilHydrology{NF, RichardsEq}) where {NF} = fields.surface_excess_water[i, j]
@@ -36,12 +36,12 @@ variables(hydrology::SoilHydrology{NF, RichardsEq}) where {NF} = (
 # Process methods
 
 function initialize!(
-    state, grid,
-    hydrology::SoilHydrology{NF, RichardsEq},
-    soil::AbstractSoil,
-    constants::PhysicalConstants,
-    args...
-) where {NF}
+        state, grid,
+        hydrology::SoilHydrology{NF, RichardsEq},
+        soil::AbstractSoil,
+        constants::PhysicalConstants,
+        args...
+    ) where {NF}
     # Assume saturation is given as initial condition and apply closure!
     # TODO: Though rare, there may be cases where we want to set an initial
     # condition for pressure instead of saturation. This would need to be
@@ -52,35 +52,37 @@ function initialize!(
 end
 
 function compute_auxiliary!(
-    state, grid,
-    hydrology::SoilHydrology{NF, RichardsEq},
-    soil::AbstractSoil,
-    args...
-) where {NF}
+        state, grid,
+        hydrology::SoilHydrology{NF, RichardsEq},
+        soil::AbstractSoil,
+        args...
+    ) where {NF}
     strat = get_stratigraphy(soil)
     bgc = get_biogeochemistry(soil)
     out = auxiliary_fields(state, hydrology)
-    fields = get_fields(state, hydrology, bgc; except=out)
+    fields = get_fields(state, hydrology, bgc; except = out)
     launch!(grid, XYZ, compute_hydraulics_kernel!, out, fields, hydrology, strat, bgc)
     return nothing
 end
 
 function compute_tendencies!(
-    state, grid,
-    hydrology::SoilHydrology{NF, RichardsEq},
-    soil::AbstractSoil,
-    constants::PhysicalConstants,
-    evtr::Optional{AbstractEvapotranspiration} = nothing,
-    runoff::Optional{AbstractSurfaceRunoff} = nothing,
-    args...
-) where {NF}
+        state, grid,
+        hydrology::SoilHydrology{NF, RichardsEq},
+        soil::AbstractSoil,
+        constants::PhysicalConstants,
+        evtr::Optional{AbstractEvapotranspiration} = nothing,
+        runoff::Optional{AbstractSurfaceRunoff} = nothing,
+        args...
+    ) where {NF}
     strat = get_stratigraphy(soil)
     bgc = get_biogeochemistry(soil)
     tendencies = tendency_fields(state, hydrology)
     fields = get_fields(state, hydrology, bgc, evtr)
     clock = state.clock
-    launch!(grid, XYZ, compute_tendencies_kernel!,
-            tendencies, clock, fields, hydrology, strat, bgc, constants, evtr, runoff)
+    launch!(
+        grid, XYZ, compute_tendencies_kernel!,
+        tendencies, clock, fields, hydrology, strat, bgc, constants, evtr, runoff
+    )
     return nothing
 end
 
@@ -94,11 +96,11 @@ Richardson-Richards equation. Note that the VWC tendency is not scaled by the po
 is thus not the same as the saturation tendency.
 """
 @propagate_inbounds function compute_volumetric_water_content_tendency(
-    i, j, k, grid, clock, fields,
-    hydrology::SoilHydrology{NF, RichardsEq},
-    constants::PhysicalConstants,
-    evapotranspiration::Optional{AbstractEvapotranspiration}
-) where {NF}
+        i, j, k, grid, clock, fields,
+        hydrology::SoilHydrology{NF, RichardsEq},
+        constants::PhysicalConstants,
+        evapotranspiration::Optional{AbstractEvapotranspiration}
+    ) where {NF}
     # Operators require the underlying Oceananigans grid
     field_grid = get_field_grid(grid)
 
@@ -106,8 +108,8 @@ is thus not the same as the saturation tendency.
     # ∂θ∂t = ∇⋅K(θ)∇Ψ + forcing, where Ψ = ψₘ + ψₕ + ψz, and "forcing" represents sources and sinks such as ET losses
     ∂θ∂t = (
         - ∂zᵃᵃᶜ(i, j, k, field_grid, darcy_flux, fields.pressure_head, fields.hydraulic_conductivity)
-        + forcing(i, j, k, grid, clock, fields, evapotranspiration, hydrology, constants) # ET forcing
-        + forcing(i, j, k, grid, clock, fields, hydrology.vwc_forcing, hydrology) # generic user-defined forcing
+            + forcing(i, j, k, grid, clock, fields, evapotranspiration, hydrology, constants) # ET forcing
+            + forcing(i, j, k, grid, clock, fields, hydrology.vwc_forcing, hydrology) # generic user-defined forcing
     )
     return ∂θ∂t
 end
@@ -123,11 +125,11 @@ conductivity `K`.
     # TODO: also account for effect of temperature on matric potential
     ∇ψ = ∂zᵃᵃᶠ(i, j, k, grid, ψ)
     ## Take minimum of hydraulic conductivities in the direction of flow
-    Kₖ = (∇ψ < 0)*min(K[i, j, k-1], K[i, j, k]) +
-         (∇ψ >= 0)*min(K[i, j, k], K[i, j, k+1])
+    Kₖ = (∇ψ < 0) * min(K[i, j, k - 1], K[i, j, k]) +
+        (∇ψ >= 0) * min(K[i, j, k], K[i, j, k + 1])
     ## Note that elevation and hydrostatic pressure are assumed to be accounted
     ## for in the computation of ψ, so we don't need any additional terms.
-    q = -Kₖ*∇ψ
+    q = -Kₖ * ∇ψ
     return q
 end
 
@@ -137,26 +139,26 @@ end
 Compute the hydraulic conductivity at the center of the grid cell `i, j, k`.
 """
 @propagate_inbounds function hydraulic_conductivity(
-    i, j, k, grid, fields,
-    hydrology::SoilHydrology,
-    strat::AbstractStratigraphy,
-    bgc::AbstractSoilBiogeochemistry
-)
+        i, j, k, grid, fields,
+        hydrology::SoilHydrology,
+        strat::AbstractStratigraphy,
+        bgc::AbstractSoilBiogeochemistry
+    )
     soil = soil_volume(i, j, k, grid, fields, strat, hydrology, bgc)
     return hydraulic_conductivity(hydrology.hydraulic_properties, soil)
 end
 
 # Kernels
 
-@kernel inbounds=true function compute_tendencies_kernel!(
-    tend, grid, clock, fields,
-    hydrology::SoilHydrology{NF, RichardsEq},
-    strat::AbstractStratigraphy,
-    bgc::AbstractSoilBiogeochemistry,
-    constants::PhysicalConstants,
-    evtr::Optional{AbstractEvapotranspiration},
-    runoff::Optional{AbstractSurfaceRunoff}
-) where {NF}
+@kernel inbounds = true function compute_tendencies_kernel!(
+        tend, grid, clock, fields,
+        hydrology::SoilHydrology{NF, RichardsEq},
+        strat::AbstractStratigraphy,
+        bgc::AbstractSoilBiogeochemistry,
+        constants::PhysicalConstants,
+        evtr::Optional{AbstractEvapotranspiration},
+        runoff::Optional{AbstractSurfaceRunoff}
+    ) where {NF}
     i, j, k = @index(Global, NTuple)
     compute_saturation_tendency!(tend.saturation_water_ice, i, j, k, grid, clock, fields, hydrology, strat, bgc, constants, evtr)
     compute_surface_excess_water_tendency!(tend.surface_excess_water, i, j, k, grid, clock, fields, hydrology, runoff)

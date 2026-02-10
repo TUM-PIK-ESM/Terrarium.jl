@@ -2,7 +2,7 @@
 function Oceananigans.launch!(grid::AbstractLandGrid, workspec, kernel!::Function, first_arg, other_args...; kwargs...)
     fgrid = get_field_grid(grid)
     launch!(fgrid.architecture, fgrid, get_workspec(workspec), kernel!, first_arg, grid, other_args...; kwargs...)
-    debugsite!(kernel!, first_arg, other_args...)
+    return debugsite!(kernel!, first_arg, other_args...)
 end
 
 """
@@ -22,7 +22,7 @@ field locations.
 field_matches_grid(field, grid) = field.grid == grid
 
 function assert_field_matches_grid(field::Union{RingGrids.AbstractField, AbstractField}, grid)
-    @assert field_matches_grid(field, grid) "Field grid $(typeof(field.grid)) does not match $(typeof(grid))"
+    return @assert field_matches_grid(field, grid) "Field grid $(typeof(field.grid)) does not match $(typeof(grid))"
 end
 
 const RingGridOrField = Union{RingGrids.AbstractGrid, RingGrids.AbstractField}
@@ -46,12 +46,12 @@ Additional arguments are passed direclty to the `Field` constructor. The locatio
 is determined by `VarDims` defined on `var`.
 """
 function Oceananigans.Field(
-    grid::AbstractLandGrid,
-    dims::VarDims,
-    boundary_conditions = nothing,
-    args...;
-    kwargs...
-)
+        grid::AbstractLandGrid,
+        dims::VarDims,
+        boundary_conditions = nothing,
+        args...;
+        kwargs...
+    )
     # infer the location of the Field on the Oceananigans grid from `dims`
     loc = location(dims)
     FT = Field{map(typeof, loc)...}
@@ -78,10 +78,10 @@ end
 Construct a `FieldTimeSeries` on the given land `grid` with the given `dims` and `times`.
 """
 function Oceananigans.FieldTimeSeries(
-    grid::AbstractLandGrid,
-    dims::VarDims,
-    times=eltype(grid)[]
-)
+        grid::AbstractLandGrid,
+        dims::VarDims,
+        times = eltype(grid)[]
+    )
     loc = location(dims)
     return FieldTimeSeries(loc, get_field_grid(grid), times)
 end

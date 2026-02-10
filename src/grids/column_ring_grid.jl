@@ -5,12 +5,12 @@ Represents a global (spherical) grid of independent, vertical columns where the
 spatial discretization in the horizontal direction is defined by a `RingGrids.AbstractGrid`.
 """
 struct ColumnRingGrid{
-    NF,
-    Arch,
-    RingGrid<:RingGrids.AbstractGrid,
-    RectGrid<:Oceananigans.Grids.RectilinearGrid,
-    Mask<:Union{AbstractArray, RingGrids.AbstractField}
-} <: AbstractColumnGrid{NF, Arch}
+        NF,
+        Arch,
+        RingGrid <: RingGrids.AbstractGrid,
+        RectGrid <: Oceananigans.Grids.RectilinearGrid,
+        Mask <: Union{AbstractArray, RingGrids.AbstractField},
+    } <: AbstractColumnGrid{NF, Arch}
     "RingGrid specfying the lateral spatial discretization of the globe"
     rings::RingGrid
 
@@ -21,12 +21,12 @@ struct ColumnRingGrid{
     grid::RectGrid
 
     function ColumnRingGrid(
-        rings::RingGrids.AbstractGrid,
-        mask::AbstractArray,
-        grid::Oceananigans.Grids.RectilinearGrid
-    )
+            rings::RingGrids.AbstractGrid,
+            mask::AbstractArray,
+            grid::Oceananigans.Grids.RectilinearGrid
+        )
         arch = architecture(grid)
-        new{eltype(grid), typeof(arch), typeof(rings), typeof(grid), typeof(mask)}(rings, mask, grid)
+        return new{eltype(grid), typeof(arch), typeof(rings), typeof(grid), typeof(mask)}(rings, mask, grid)
     end
 
     """
@@ -35,12 +35,12 @@ struct ColumnRingGrid{
     Constructs a `ColumnRingGrid` over the given `rings`.
     """
     function ColumnRingGrid(
-        arch::AbstractArchitecture,
-        ::Type{NF},
-        vert::AbstractVerticalSpacing,
-        rings::RingGrids.AbstractGrid,
-        mask::RingGrids.AbstractField{Bool}=convert.(Bool, ones(rings))
-    ) where {NF<:AbstractFloat}
+            arch::AbstractArchitecture,
+            ::Type{NF},
+            vert::AbstractVerticalSpacing,
+            rings::RingGrids.AbstractGrid,
+            mask::RingGrids.AbstractField{Bool} = convert.(Bool, ones(rings))
+        ) where {NF <: AbstractFloat}
         assert_field_matches_grid(mask, rings)
         # get number of horizontal grid poitns by summing over mask
         Nh = sum(mask)
@@ -51,7 +51,7 @@ struct ColumnRingGrid{
         # since most or all land computations will be along this axis
         z_thick = get_spacing(vert)
         z_coords = convert.(NF, vcat(-reverse(cumsum(z_thick)), zero(eltype(z_thick))))
-        grid = Oceananigans.Grids.RectilinearGrid(arch, NF, size=(Nh, Nz), x=(1, Nh), z=z_coords, topology=(Periodic, Flat, Bounded))
+        grid = Oceananigans.Grids.RectilinearGrid(arch, NF, size = (Nh, Nz), x = (1, Nh), z = z_coords, topology = (Periodic, Flat, Bounded))
         # adapt ring grid and mask
         rings = on_architecture(arch, rings)
         mask = on_architecture(arch, mask)
@@ -62,7 +62,7 @@ struct ColumnRingGrid{
         arch::AbstractArchitecture,
         vert::AbstractVerticalSpacing,
         rings::RingGrids.AbstractGrid,
-        mask::RingGrids.AbstractField{Bool}=convert.(Bool, ones(rings))
+        mask::RingGrids.AbstractField{Bool} = convert.(Bool, ones(rings))
     ) = ColumnRingGrid(arch, Float32, vert, rings, mask)
 
     ColumnRingGrid(
@@ -81,7 +81,7 @@ struct ColumnRingGrid{
     ColumnRingGrid(
         vert::AbstractVerticalSpacing,
         rings::RingGrids.AbstractGrid,
-        mask::RingGrids.AbstractField{Bool}=convert.(Bool, ones(rings))
+        mask::RingGrids.AbstractField{Bool} = convert.(Bool, ones(rings))
     ) = ColumnRingGrid(CPU(), Float32, vert, rings, mask)
 
     ColumnRingGrid(
@@ -99,10 +99,10 @@ get_field_grid(grid::ColumnRingGrid) = grid.grid
 
 Converts the given Oceananigans `Field` to a `RingGrids.Field` with a ring grid matching that of the given `ColumnRingGrid`.
 """
-RingGrids.Field(field::Field{LX,LY,Nothing}, grid::ColumnRingGrid; fill_value=NaN) where {LX,LY} = RingGrids.Field(architecture(field), interior(field), grid; fill_value)
-RingGrids.Field(field::Field{LX,LY,LZ}, grid::ColumnRingGrid; fill_value=NaN) where {LX,LY,LZ} = RingGrids.Field(architecture(field), dropdims(interior(field), dims=2), grid; fill_value)
-RingGrids.Field(field::AbstractVecOrMat, grid::ColumnRingGrid; fill_value=NaN) = RingGrids.Field(architecture(grid), field, grid; fill_value)
-function RingGrids.Field(arch::AbstractArchitecture, field::AbstractVecOrMat, grid::ColumnRingGrid; fill_value=NaN)
+RingGrids.Field(field::Field{LX, LY, Nothing}, grid::ColumnRingGrid; fill_value = NaN) where {LX, LY} = RingGrids.Field(architecture(field), interior(field), grid; fill_value)
+RingGrids.Field(field::Field{LX, LY, LZ}, grid::ColumnRingGrid; fill_value = NaN) where {LX, LY, LZ} = RingGrids.Field(architecture(field), dropdims(interior(field), dims = 2), grid; fill_value)
+RingGrids.Field(field::AbstractVecOrMat, grid::ColumnRingGrid; fill_value = NaN) = RingGrids.Field(architecture(grid), field, grid; fill_value)
+function RingGrids.Field(arch::AbstractArchitecture, field::AbstractVecOrMat, grid::ColumnRingGrid; fill_value = NaN)
     # need to be on CPU to do the copying
     grid = on_architecture(arch, grid)
     field = on_architecture(arch, field)
@@ -127,5 +127,5 @@ function Base.show(io::IO, mime::MIME"text/plain", grid::ColumnRingGrid{NF}) whe
     println(io, "ColumnRingGrid{$NF} on $(architecture(grid)) with")
     show(io, mime, grid.rings)
     println(io)
-    show(io, mime, grid.grid)
+    return show(io, mime, grid.grid)
 end

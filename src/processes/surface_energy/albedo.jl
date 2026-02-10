@@ -9,8 +9,8 @@ $TYPEDFIELDS
 PrescribedAlbedo(::Type{NF}) where {NF} = PrescribedAlbedo{NF}()
 
 variables(::PrescribedAlbedo) = (
-    input(:albedo, XY(), domain=UnitInterval(), desc="Surface albedo, i.e. ratio of outgoing to incoming shortwave radiation [-]"),
-    input(:emissivity, XY(), domain=UnitInterval(), desc="Surface emissivity, i.e. efficiency of longwave emission [-]"),
+    input(:albedo, XY(), domain = UnitInterval(), desc = "Surface albedo, i.e. ratio of outgoing to incoming shortwave radiation [-]"),
+    input(:emissivity, XY(), domain = UnitInterval(), desc = "Surface emissivity, i.e. efficiency of longwave emission [-]"),
 )
 
 """

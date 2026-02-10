@@ -22,11 +22,11 @@ using Test
     Δq = 0.01
     E_trp1 = compute_transpiration(canopy_ET, Δq, rₐ, 0.0)
     @test isfinite(E_trp1)
-    @test 0 < E_trp1 < 1e-8
+    @test 0 < E_trp1 < 1.0e-8
     @test E_trp1 < E_trp
-    E_trp2 = compute_transpiration(canopy_ET, Δq, 1000.0, 1e-4)
+    E_trp2 = compute_transpiration(canopy_ET, Δq, 1000.0, 1.0e-4)
     @test isfinite(E_trp2)
-    @test 0 < E_trp2 < 1e-6
+    @test 0 < E_trp2 < 1.0e-6
 end
 
 @testset "compute_evaporation_ground" begin

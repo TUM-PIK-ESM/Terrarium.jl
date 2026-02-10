@@ -26,7 +26,7 @@ variables(::PALADYNPhenology) = (
 
 Computes `f_deciduous`, a factor for smooth transition between evergreen and deciduous [-].
 """
-@inline function compute_f_deciduous(phenol::PALADYNPhenology{NF}) where NF
+@inline function compute_f_deciduous(phenol::PALADYNPhenology{NF}) where {NF}
     # TODO add phenology implementation from PALADYN
     # For now, set f_deciduous to 0.0 (evergreen PFT)
     f_deciduous = zero(NF)
@@ -39,7 +39,7 @@ end
 
 Computes `phen`, the phenology factor [-].
 """
-@inline function compute_phen(phenol::PALADYNPhenology{NF}) where NF
+@inline function compute_phen(phenol::PALADYNPhenology{NF}) where {NF}
     # TODO add phenology implementation from PALADYN
     # For now, set phen to 1.0 (full leaf-out, evergreen PFT)
     phen = NF(1.0)
@@ -52,11 +52,11 @@ end
 
 Computes `LAI`, based on the balanced Leaf Area Index `LAI_b`:
 """
-@inline function compute_LAI(phenol::PALADYNPhenology{NF}, LAI_b::NF) where NF
- # Compute f_deciduous
+@inline function compute_LAI(phenol::PALADYNPhenology{NF}, LAI_b::NF) where {NF}
+    # Compute f_deciduous
     f_deciduous = compute_f_deciduous(phenol)
 
-    # Compute phen 
+    # Compute phen
     phen = compute_phen(phenol)
 
     # Compute LAI
@@ -71,6 +71,7 @@ function compute_auxiliary!(state, grid, phenol::PALADYNPhenology)
     out = auxiliary_fields(state, phenol)
     fields = get_fields(state, phenol; except = out)
     launch!(grid, XY, compute_auxiliary_kernel!, out, fields, phenol)
+    return nothing
 end
 
 # Kernel functions
@@ -101,4 +102,3 @@ end
     i, j = @index(Global, NTuple)
     compute_phenology!(out, i, j, grid, fields, phenol, args...)
 end
-   

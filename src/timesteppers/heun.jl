@@ -22,12 +22,13 @@ function initialize(timestepper::Heun, ::AbstractModel, state)
 end
 
 function average_tendencies!(
-    state::StateVariables{NF, prognames},
-    stage::StateVariables{NF, prognames}
-) where {NF, prognames}
+        state::StateVariables{NF, prognames},
+        stage::StateVariables{NF, prognames}
+    ) where {NF, prognames}
     for name in prognames
         state.tendencies[name] .= (state.tendencies[name] + stage.tendencies[name]) / 2
     end
+    return
 end
 
 function timestep!(state, timestepper::Heun, model::AbstractModel, inputs::InputSources, Δt = default_dt(timestepper))
@@ -49,7 +50,7 @@ function timestep!(state, timestepper::Heun, model::AbstractModel, inputs::Input
 
     # Final improved Euler step call that steps `state` forward but averages `state.tendencies`
     average_tendencies!(state, stage)
-    explicit_step!(state, grid, timestepper, Δt) 
+    explicit_step!(state, grid, timestepper, Δt)
     # Apply closure relations
     closure!(state, model)
     # Update clock

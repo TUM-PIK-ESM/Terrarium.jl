@@ -38,7 +38,7 @@ Implementations of `AbstractModel` are required to implement, at minimum, three 
 Note that a default implementation of `variables` is provided which automatically collects all
 variables declared by `AbstractProcess`es defined as fields (properties) of `struct`s that subtype `AbstractModel`.
 """
-abstract type AbstractModel{NF, Grid<:AbstractLandGrid{NF}}  end
+abstract type AbstractModel{NF, Grid <: AbstractLandGrid{NF}}  end
 
 # Method interface for AbstractModel and AbstractProcess
 
@@ -186,11 +186,12 @@ invclosure!(state, grid, closure, ::AbstractProcess, args...) = nothing
 Convenience constructor for all `AbstractModel` types that allows the `grid` to be passed
 as the first positional argument.
 """
-(::Type{Model})(grid::AbstractLandGrid, args...; kwargs...) where {Model<:AbstractModel} = Model(args...; grid, kwargs...)
+(::Type{Model})(grid::AbstractLandGrid, args...; kwargs...) where {Model <: AbstractModel} = Model(args...; grid, kwargs...)
 
 function Base.show(io::IO, model::AbstractModel{NF}) where {NF}
     println(io, "$(nameof(typeof(model))){$NF} on $(architecture(get_grid(model)))")
     for name in propertynames(model)
         print(io, "├── $name:  $(summary(getproperty(model, name)))\n")
     end
+    return
 end

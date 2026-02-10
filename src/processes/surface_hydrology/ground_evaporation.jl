@@ -9,7 +9,7 @@ E = \\beta \\frac{\\Delta q}{r_a}
 where `Δq` is the vapor pressure deficit in terms of specific humidity, `rₐ` is aerodynamic resistance,
 and `β` is an evaporation limiting factor.
 """
-struct GroundEvaporation{NF, GR<:AbstractGroundEvaporationResistanceFactor} <: AbstractEvapotranspiration{NF}
+struct GroundEvaporation{NF, GR <: AbstractGroundEvaporationResistanceFactor} <: AbstractEvapotranspiration{NF}
     "Parameterization for ground resistance to evaporation/sublimation"
     ground_resistance::GR
 end
@@ -24,38 +24,39 @@ GroundEvaporation(
 # Process methods
 
 variables(::GroundEvaporation) = (
-    auxiliary(:evaporation_ground, XY(), units=u"m/s", desc="Ground evaporation contribution to surface humidity flux"),
-    input(:skin_temperature, XY(), units=u"°C", desc="Skin temperature of the surface")
+    auxiliary(:evaporation_ground, XY(), units = u"m/s", desc = "Ground evaporation contribution to surface humidity flux"),
+    input(:skin_temperature, XY(), units = u"°C", desc = "Skin temperature of the surface"),
 )
 
 function compute_auxiliary!(
-    state, grid,
-    evap::GroundEvaporation,
-    atmos::AbstractAtmosphere,
-    constants::PhysicalConstants,
-    soil::Optional{AbstractSoil} = nothing
-)
+        state, grid,
+        evap::GroundEvaporation,
+        atmos::AbstractAtmosphere,
+        constants::PhysicalConstants,
+        soil::Optional{AbstractSoil} = nothing
+    )
     out = auxiliary_fields(state, evap)
     fields = get_fields(state, evap, atmos, soil; except = out)
     launch!(grid, XY, compute_evaporation_kernel!, out, fields, evap, atmos, constants, soil)
+    return nothing
 end
 
 # Kernel functions
 
 @propagate_inbounds function compute_evaporation_kernel!(
-    out, i, j, grid, fields,
-    evap::GroundEvaporation,
-    atmos::AbstractAtmosphere,
-    constants::PhysicalConstants,
-    soil::Optional{AbstractSoil} = nothing
-)
+        out, i, j, grid, fields,
+        evap::GroundEvaporation,
+        atmos::AbstractAtmosphere,
+        constants::PhysicalConstants,
+        soil::Optional{AbstractSoil} = nothing
+    )
     i, j = @index(Global, NTuple)
     Ts = fields.skin_temperature[i, j]
     rₐ = aerodynamic_resistance(i, j, grid, fields, aerodynamic_resistance) # aerodynamic resistance
     β = ground_evaporation_resistance_factor(i, j, grid, fields, evap.ground_resistance, soil)
     Δq = compute_humidity_vpd(i, j, grid, fields, atmos, constants, Ts)
     # Calculate water evaporation flux in m/s (positive upwards)
-    out.evaporation_ground[i, j, 1] = β * Δq / rₐ
+    return out.evaporation_ground[i, j, 1] = β * Δq / rₐ
 end
 
 # Ground resistance to evaporation
@@ -89,10 +90,10 @@ SoilMoistureResistanceFactor(::Type{NF}) where {NF} = SoilMoistureResistanceFact
 ground_evaporation_resistance_factor(i, j, grid, fields, ::SoilMoistureResistanceFactor{NF}, args...) where {NF} = one(NF)
 
 @inline function ground_evaporation_resistance_factor(
-    i, j, grid, fields,
-    ::SoilMoistureResistanceFactor{NF},
-    soil::AbstractSoil
-) where {NF}
+        i, j, grid, fields,
+        ::SoilMoistureResistanceFactor{NF},
+        soil::AbstractSoil
+    ) where {NF}
     fgrid = get_field_grid(grid)
     strat = get_stratigraphy(soil)
     hydrology = get_hydrology(soil)
@@ -118,7 +119,7 @@ The ET forcing is just the `surface_humidity_flux` rescaled by the thickness of 
 """
 @inline function forcing(i, j, k, grid, clock, fields, evtr::AbstractEvapotranspiration, ::AbstractSoilHydrology)
     let Δz = Δzᵃᵃᶜ(i, j, k, grid),
-        Qh = surface_humidity_flux(i, j, grid, fields, evtr);
+            Qh = surface_humidity_flux(i, j, grid, fields, evtr)
         ∂θ∂t = -Qh / Δz # rescale by layer thickness to get water content flux
         return ∂θ∂t * (k == grid.Nz)
     end
@@ -126,7 +127,7 @@ end
 
 # Kernels
 
-@kernel inbounds=true function compute_auxiliary_kernel!(out, grid, fields, evtr::AbstractEvapotranspiration, args...)
+@kernel inbounds = true function compute_auxiliary_kernel!(out, grid, fields, evtr::AbstractEvapotranspiration, args...)
     i, j = @index(Global, NTuple)
     compute_evapotranspiration!(out, i, j, grid, fields, evtr, args...)
 end

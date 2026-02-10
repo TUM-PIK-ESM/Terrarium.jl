@@ -11,8 +11,8 @@ struct PrescribedTurbulentFluxes{NF} <: AbstractTurbulentFluxes{NF} end
 PrescribedTurbulentFluxes(::Type{NF}) where {NF} = PrescribedTurbulentFluxes{NF}()
 
 variables(::PrescribedTurbulentFluxes) = (
-    input(:sensible_heat_flux, XY(), units=u"W/m^2", desc="Sensible heat flux at the surface [W m⁻²]"),
-    input(:latent_heat_flux, XY(), units=u"W/m^2", desc="Latent heat flux at the surface [W m⁻²]")
+    input(:sensible_heat_flux, XY(), units = u"W/m^2", desc = "Sensible heat flux at the surface [W m⁻²]"),
+    input(:latent_heat_flux, XY(), units = u"W/m^2", desc = "Latent heat flux at the surface [W m⁻²]"),
 )
 
 # Diagnosed turbulent fluxes
@@ -52,23 +52,26 @@ end
 ## Process methods
 
 variables(::DiagnosedTurbulentFluxes) = (
-    auxiliary(:sensible_heat_flux, XY(), units=u"W/m^2", desc="Sensible heat flux at the surface [W m⁻²]"),
-    auxiliary(:latent_heat_flux, XY(), units=u"W/m^2", desc="Latent heat flux at the surface [W m⁻²]"),
+    auxiliary(:sensible_heat_flux, XY(), units = u"W/m^2", desc = "Sensible heat flux at the surface [W m⁻²]"),
+    auxiliary(:latent_heat_flux, XY(), units = u"W/m^2", desc = "Latent heat flux at the surface [W m⁻²]"),
 )
 
 function compute_auxiliary!(
-    state, grid,
-    tur::DiagnosedTurbulentFluxes,
-    seb::AbstractSurfaceEnergyBalance,
-    atmos::AbstractAtmosphere,
-    constants::PhysicalConstants,
-    args...
-)
+        state, grid,
+        tur::DiagnosedTurbulentFluxes,
+        seb::AbstractSurfaceEnergyBalance,
+        atmos::AbstractAtmosphere,
+        constants::PhysicalConstants,
+        args...
+    )
     skinT = seb.skin_temperature
     out = auxiliary_fields(state, tur)
     fields = get_fields(state, tur, skinT, atmos; except = out)
-    launch!(grid, XY, compute_auxiliary_kernel!, out, fields,
-            tur, skinT, atmos, constants)
+    launch!(
+        grid, XY, compute_auxiliary_kernel!, out, fields,
+        tur, skinT, atmos, constants
+    )
+    return nothing
 end
 
 ## Kernel functions
@@ -79,18 +82,18 @@ end
 Compute the sensible heat flux at `i, j` based on the current skin temperature and atmospheric conditions.
 """
 @inline function compute_sensible_heat_flux(
-    i, j, grid, fields,
-    tur::DiagnosedTurbulentFluxes,
-    skinT::AbstractSkinTemperature,
-    atmos::AbstractAtmosphere,
-    constants::PhysicalConstants
-)
+        i, j, grid, fields,
+        tur::DiagnosedTurbulentFluxes,
+        skinT::AbstractSkinTemperature,
+        atmos::AbstractAtmosphere,
+        constants::PhysicalConstants
+    )
     let ρₐ = constants.ρₐ, # density of air
-        cₐ = constants.cₐ, # specific heat capacity of air
-        rₐ = aerodynamic_resistance(i, j, grid, fields, atmos), # aerodynamic resistance
-        Tₛ = skin_temperature(i, j, grid, fields, skinT), # skin temperature
-        Tₐ = air_temperature(i, j, grid, fields, atmos), # air temperature
-        Q_T = (Tₛ - Tₐ) / rₐ; # bulk aerodynamic temperature-gradient
+            cₐ = constants.cₐ, # specific heat capacity of air
+            rₐ = aerodynamic_resistance(i, j, grid, fields, atmos), # aerodynamic resistance
+            Tₛ = skin_temperature(i, j, grid, fields, skinT), # skin temperature
+            Tₐ = air_temperature(i, j, grid, fields, atmos), # air temperature
+            Q_T = (Tₛ - Tₐ) / rₐ  # bulk aerodynamic temperature-gradient
         # Calculate sensible heat flux (positive upwards)
         Hₛ = compute_sensible_heat_flux(tur, Q_T, ρₐ, cₐ)
         return Hₛ
@@ -105,18 +108,18 @@ and atmospheric conditions. This imlementation assumes that evaporation is the o
 to the latent heat flux.
 """
 @inline function compute_latent_heat_flux(
-    i, j, grid, fields,
-    tur::DiagnosedTurbulentFluxes,
-    skinT::AbstractSkinTemperature,
-    atmos::AbstractAtmosphere,
-    constants::PhysicalConstants
-)
-    let L  = constants.Llg, # specific latent heat of vaporization of water
-        ρₐ = constants.ρₐ, # density of air
-        Tₛ = skin_temperature(i, j, grid, fields, skinT),
-        rₐ = aerodynamic_resistance(i, j, grid, fields, atmos), # aerodynamic resistance
-        Δq = compute_humidity_vpd(i, j, grid, fields, atmos, constants, Tₛ),
-        Q_h  = Δq / rₐ; # humidity flux
+        i, j, grid, fields,
+        tur::DiagnosedTurbulentFluxes,
+        skinT::AbstractSkinTemperature,
+        atmos::AbstractAtmosphere,
+        constants::PhysicalConstants
+    )
+    let L = constants.Llg, # specific latent heat of vaporization of water
+            ρₐ = constants.ρₐ, # density of air
+            Tₛ = skin_temperature(i, j, grid, fields, skinT),
+            rₐ = aerodynamic_resistance(i, j, grid, fields, atmos), # aerodynamic resistance
+            Δq = compute_humidity_vpd(i, j, grid, fields, atmos, constants, Tₛ),
+            Q_h = Δq / rₐ  # humidity flux
         # Calculate latent heat flux (positive upwards)
         Hₗ = compute_latent_heat_flux(tur, Q_h, ρₐ, L)
         return Hₗ
@@ -131,14 +134,14 @@ This implementation derives the latent heat flux from the [`surface_humidity_flu
 defined by `evtr` which is assumed to be already computed.
 """
 @inline function compute_latent_heat_flux(
-    i, j, grid, fields,
-    tur::DiagnosedTurbulentFluxes,
-    evtr::AbstractEvapotranspiration,
-    constants::PhysicalConstants
-)
+        i, j, grid, fields,
+        tur::DiagnosedTurbulentFluxes,
+        evtr::AbstractEvapotranspiration,
+        constants::PhysicalConstants
+    )
     let L = constants.Llg, # specific latent heat of vaporization of water
-        ρₐ = constants.ρₐ, # density of air
-        Q_h = surface_humidity_flux(i, j, grid, fields, evtr);  # humidity flux
+            ρₐ = constants.ρₐ, # density of air
+            Q_h = surface_humidity_flux(i, j, grid, fields, evtr)   # humidity flux
         # Calculate latent heat flux (positive upwards)
         Hₗ = compute_latent_heat_flux(tur, Q_h, ρₐ, L)
         return Hₗ
@@ -148,12 +151,12 @@ end
 # Kernels
 
 @kernel function compute_auxiliary_kernel!(
-    out, grid, fields,
-    tur::DiagnosedTurbulentFluxes,
-    skinT::AbstractSkinTemperature,
-    atmos::AbstractAtmosphere,
-    constants::PhysicalConstants
-)
+        out, grid, fields,
+        tur::DiagnosedTurbulentFluxes,
+        skinT::AbstractSkinTemperature,
+        atmos::AbstractAtmosphere,
+        constants::PhysicalConstants
+    )
     i, j = @index(Global, NTuple)
     # compute sensible heat flux
     out.sensible_heat_flux[i, j, 1] = compute_sensible_heat_flux(i, j, grid, fields, tur, skinT, atmos, constants)
@@ -163,13 +166,13 @@ end
 
 # TODO: Can these dispatches be standardized to reduce redundancy?
 @kernel function compute_auxiliary_kernel!(
-    out, grid, fields,
-    tur::DiagnosedTurbulentFluxes,
-    skinT::AbstractSkinTemperature,
-    atmos::AbstractAtmosphere,
-    constants::PhysicalConstants,
-    evtr::AbstractEvapotranspiration
-)
+        out, grid, fields,
+        tur::DiagnosedTurbulentFluxes,
+        skinT::AbstractSkinTemperature,
+        atmos::AbstractAtmosphere,
+        constants::PhysicalConstants,
+        evtr::AbstractEvapotranspiration
+    )
     i, j = @index(Global, NTuple)
     # compute sensible heat flux
     out.sensible_heat_flux[i, j, 1] = compute_sensible_heat_flux(i, j, grid, fields, tur, skinT, atmos, constants)

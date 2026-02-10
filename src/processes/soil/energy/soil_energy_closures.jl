@@ -20,18 +20,18 @@ struct SoilEnergyTemperatureClosure <: AbstractSoilEnergyClosure end
 Defines `temperature` as the closure variable for `SoilEnergyTemperatureClosure`.
 """
 variables(::SoilEnergyTemperatureClosure) = (
-    auxiliary(:temperature, XYZ(), units=u"°C", desc="Temperature of the soil volume in °C"),
-    auxiliary(:liquid_water_fraction, XYZ(), domain=UnitInterval(), desc="Fraction of unfrozen water in the pore space"),
+    auxiliary(:temperature, XYZ(), units = u"°C", desc = "Temperature of the soil volume in °C"),
+    auxiliary(:liquid_water_fraction, XYZ(), domain = UnitInterval(), desc = "Fraction of unfrozen water in the pore space"),
 )
 
 function closure!(
-    state, grid,
-    closure::SoilEnergyTemperatureClosure,
-    energy::SoilEnergyBalance,
-    ground::AbstractGround,
-    constants::PhysicalConstants,
-    args...
-)
+        state, grid,
+        closure::SoilEnergyTemperatureClosure,
+        energy::SoilEnergyBalance,
+        ground::AbstractGround,
+        constants::PhysicalConstants,
+        args...
+    )
     (; hydrology, strat, biogeochem) = ground
     fc = freezecurve(energy.thermal_properties, hydrology)
     kernel_args = (closure, fc, energy, hydrology, strat, biogeochem, constants)
@@ -44,13 +44,13 @@ function closure!(
 end
 
 function invclosure!(
-    state, grid,
-    closure::SoilEnergyTemperatureClosure,
-    energy::SoilEnergyBalance,
-    ground::AbstractGround,
-    constants::PhysicalConstants,
-    args...
-)
+        state, grid,
+        closure::SoilEnergyTemperatureClosure,
+        energy::SoilEnergyBalance,
+        ground::AbstractGround,
+        constants::PhysicalConstants,
+        args...
+    )
     (; hydrology, strat, biogeochem) = ground
     fc = freezecurve(energy.thermal_properties, hydrology)
     kernel_args = (closure, fc, energy, hydrology, strat, biogeochem, constants)
@@ -62,17 +62,17 @@ function invclosure!(
 end
 
 @propagate_inbounds function temperature_to_energy!(
-    out, i, j, k, grid, fields,
-    ::SoilEnergyTemperatureClosure,
-    ::FreeWater,
-    energy::SoilEnergyBalance{NF, OP, SoilEnergyTemperatureClosure},
-    hydrology::AbstractSoilHydrology,
-    strat::AbstractStratigraphy,
-    bgc::AbstractSoilBiogeochemistry,
-    constants::PhysicalConstants
-) where {NF, OP}
+        out, i, j, k, grid, fields,
+        ::SoilEnergyTemperatureClosure,
+        ::FreeWater,
+        energy::SoilEnergyBalance{NF, OP, SoilEnergyTemperatureClosure},
+        hydrology::AbstractSoilHydrology,
+        strat::AbstractStratigraphy,
+        bgc::AbstractSoilBiogeochemistry,
+        constants::PhysicalConstants
+    ) where {NF, OP}
     T = fields.temperature[i, j, k] # assumed given
-    L = constants.ρw*constants.Lsl
+    L = constants.ρw * constants.Lsl
     por = porosity(i, j, k, grid, fields, strat, bgc)
     sat = saturation_water_ice(i, j, k, grid, fields, hydrology)
     # calculate unfrozen water content from temperature
@@ -97,21 +97,21 @@ end
 end
 
 @propagate_inbounds function energy_to_temperature!(
-    out, i, j, k, grid, fields,
-    ::SoilEnergyTemperatureClosure,
-    fc::FreeWater,
-    energy::SoilEnergyBalance,
-    hydrology::AbstractSoilHydrology,
-    strat::AbstractStratigraphy,
-    bgc::AbstractSoilBiogeochemistry,
-    constants::PhysicalConstants
-)
+        out, i, j, k, grid, fields,
+        ::SoilEnergyTemperatureClosure,
+        fc::FreeWater,
+        energy::SoilEnergyBalance,
+        hydrology::AbstractSoilHydrology,
+        strat::AbstractStratigraphy,
+        bgc::AbstractSoilBiogeochemistry,
+        constants::PhysicalConstants
+    )
 
     U = fields.internal_energy[i, j, k] # assumed given
-    L = constants.ρw*constants.Lsl
+    L = constants.ρw * constants.Lsl
     por = porosity(i, j, k, grid, fields, strat, bgc)
     sat = saturation_water_ice(i, j, k, grid, fields, hydrology)
-    Lθ = L*sat*por
+    Lθ = L * sat * por
     # calculate unfrozen water content
     liq = out.liquid_water_fraction[i, j, k] = liquid_water_fraction(fc, U, Lθ, sat)
     # add liquid water fraction to fields
@@ -135,7 +135,7 @@ Calculate the unfrozen water content from the given internal energy, latent heat
     else
         # Case 2a: -Lθ ≤ U ≤ 0 -> phase change
         # Case 2b: U < -Lθ -> frozen (zero)
-        (U >= -Lθ)*(one(sat) - safediv(U, -Lθ))
+        (U >= -Lθ) * (one(sat) - safediv(U, -Lθ))
     end
 end
 
@@ -160,12 +160,12 @@ end
 
 # Kernels
 
-@kernel inbounds=true function temperature_to_energy_kernel!(out, grid, fields, args...)
+@kernel inbounds = true function temperature_to_energy_kernel!(out, grid, fields, args...)
     i, j, k = @index(Global, NTuple)
     temperature_to_energy!(out, i, j, k, grid, fields, args...)
 end
 
-@kernel inbounds=true function energy_to_temperature_kernel!(out, grid, fields, args...)
+@kernel inbounds = true function energy_to_temperature_kernel!(out, grid, fields, args...)
     i, j, k = @index(Global, NTuple)
     energy_to_temperature!(out, i, j, k, grid, fields, args...)
 end

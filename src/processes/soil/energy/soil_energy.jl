@@ -21,11 +21,11 @@ Properties:
 $TYPEDFIELDS
 """
 struct SoilEnergyBalance{
-    NF,
-    HeatOperator<:AbstractHeatOperator,
-    EnergyClosure<:AbstractSoilEnergyClosure,
-    ThermalProps<:SoilThermalProperties{NF}
-} <: AbstractSoilEnergyBalance{NF}
+        NF,
+        HeatOperator <: AbstractHeatOperator,
+        EnergyClosure <: AbstractSoilEnergyClosure,
+        ThermalProps <: SoilThermalProperties{NF},
+    } <: AbstractSoilEnergyBalance{NF}
     "Heat transport operator"
     operator::HeatOperator
 
@@ -44,8 +44,8 @@ SoilEnergyBalance(
 ) where {NF} = SoilEnergyBalance(operator, closure, thermal_properties)
 
 variables(energy::SoilEnergyBalance) = (
-    prognostic(:internal_energy, XYZ(); closure=energy.closure, units=u"J/m^3", desc="Internal energy of the soil volume, including both latent and sensible components"),
-    auxiliary(:ground_temperature, XY(), ground_temperature, energy, units=u"°C", desc="Temperature of the uppermost ground or soil grid cell in °C"),
+    prognostic(:internal_energy, XYZ(); closure = energy.closure, units = u"J/m^3", desc = "Internal energy of the soil volume, including both latent and sensible components"),
+    auxiliary(:ground_temperature, XY(), ground_temperature, energy, units = u"°C", desc = "Temperature of the uppermost ground or soil grid cell in °C"),
 )
 
 # Field constructor for ground_temperature that returns a view of the uppermost soil layer
@@ -59,12 +59,12 @@ end
 get_closure(energy::SoilEnergyBalance) = energy.closure
 
 function initialize!(
-    state, grid,
-    energy::SoilEnergyBalance,
-    ground::AbstractGround,
-    constants::PhysicalConstants,
-    args...
-)
+        state, grid,
+        energy::SoilEnergyBalance,
+        ground::AbstractGround,
+        constants::PhysicalConstants,
+        args...
+    )
     # Initialize by evaluating inverse closure (temperature -> energy)
     # Note that this assumes the temperature state to have already been initialized!
     # TODO: We may need to generalize this for rare cases where energy is specified as
@@ -76,11 +76,11 @@ end
 compute_auxiliary!(state, grid, energy::SoilEnergyBalance, args...) = nothing
 
 function compute_tendencies!(
-    state, grid,
-    energy::SoilEnergyBalance,
-    ground::AbstractGround,
-    args...
-)
+        state, grid,
+        energy::SoilEnergyBalance,
+        ground::AbstractGround,
+        args...
+    )
     # Get dependencies
     procs = (get_hydrology(ground), get_stratigraphy(ground), get_biogeochemistry(ground))
     # Get output (tendency) fields
@@ -94,20 +94,20 @@ end
 # Kernel functions
 
 @propagate_inbounds function compute_energy_tendencies!(
-    tendencies, i, j, k, grid, fields,
-    energy::SoilEnergyBalance,
-    args...
-)
-    tendencies.internal_energy[i, j, k] += compute_energy_tendency(i, j, k, grid, fields, energy, args...)
+        tendencies, i, j, k, grid, fields,
+        energy::SoilEnergyBalance,
+        args...
+    )
+    return tendencies.internal_energy[i, j, k] += compute_energy_tendency(i, j, k, grid, fields, energy, args...)
 end
 
 @propagate_inbounds function compute_energy_tendency(
-    i, j, k, grid, fields,
-    energy::SoilEnergyBalance{NF, <:ExplicitTwoPhaseHeatConduction},
-    hydrology::AbstractSoilHydrology,
-    strat::AbstractStratigraphy,
-    bgc::AbstractSoilBiogeochemistry
-) where {NF}
+        i, j, k, grid, fields,
+        energy::SoilEnergyBalance{NF, <:ExplicitTwoPhaseHeatConduction},
+        hydrology::AbstractSoilHydrology,
+        strat::AbstractStratigraphy,
+        bgc::AbstractSoilBiogeochemistry
+    ) where {NF}
     # Operators require the underlying Oceananigans grid
     field_grid = get_field_grid(grid)
 
@@ -117,12 +117,12 @@ end
 end
 
 @propagate_inbounds function compute_thermal_conductivity(
-    i, j, k, grid, fields,
-    energy::SoilEnergyBalance,
-    hydrology::AbstractSoilHydrology,
-    strat::AbstractStratigraphy,
-    bgc::AbstractSoilBiogeochemistry
-)
+        i, j, k, grid, fields,
+        energy::SoilEnergyBalance,
+        hydrology::AbstractSoilHydrology,
+        strat::AbstractStratigraphy,
+        bgc::AbstractSoilBiogeochemistry
+    )
     soil = soil_volume(i, j, k, grid, fields, strat, hydrology, bgc)
     return compute_thermal_conductivity(energy.thermal_properties, soil)
 end
@@ -140,7 +140,7 @@ end
 
 # Kernels
 
-@kernel inbounds=true function compute_tendencies_kernel!(tendencies, grid, fields, energy::SoilEnergyBalance, args...)
+@kernel inbounds = true function compute_tendencies_kernel!(tendencies, grid, fields, energy::SoilEnergyBalance, args...)
     i, j, k = @index(Global, NTuple)
     compute_energy_tendencies!(tendencies, i, j, k, grid, fields, energy, args...)
 end

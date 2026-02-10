@@ -1,11 +1,11 @@
 @kwdef struct CoupledSoilEnergyModel{
-    NF,
-    GridType<:AbstractLandGrid{NF},
-    Atmosphere<:AbstractAtmosphere,
-    SurfaceEnergy<:AbstractSurfaceEnergyBalance,
-    SoilProcesses<:AbstractSoil{NF},
-    Initializer<:AbstractInitializer,
-} <: AbstractSoilModel{NF, GridType}
+        NF,
+        GridType <: AbstractLandGrid{NF},
+        Atmosphere <: AbstractAtmosphere,
+        SurfaceEnergy <: AbstractSurfaceEnergyBalance,
+        SoilProcesses <: AbstractSoil{NF},
+        Initializer <: AbstractInitializer,
+    } <: AbstractSoilModel{NF, GridType}
     "Spatial discretization"
     grid::GridType
 
@@ -42,12 +42,12 @@ function variables(model::CoupledSoilEnergyModel)
 end
 
 function initialize(
-    model::CoupledSoilEnergyModel{NF};
-    clock = Clock(time=zero(NF)),
-    boundary_conditions = (;),
-    fields = (;),
-    input_variables = ()
-) where {NF}
+        model::CoupledSoilEnergyModel{NF};
+        clock = Clock(time = zero(NF)),
+        boundary_conditions = (;),
+        fields = (;),
+        input_variables = ()
+    ) where {NF}
     grid = model.grid
     # Collect all model variables
     vars = Variables(variables(model)..., input_variables...)
@@ -66,6 +66,7 @@ function initialize!(state, model::CoupledSoilEnergyModel)
     initialize!(state, model, model.initializer)
     # Then for soil model
     initialize!(state, model.grid, model.soil)
+    return nothing
 end
 
 function compute_auxiliary!(state, model::CoupledSoilEnergyModel)
@@ -76,6 +77,7 @@ function compute_auxiliary!(state, model::CoupledSoilEnergyModel)
     compute_auxiliary!(state, grid, atmosphere)
     compute_auxiliary!(state, grid, seb, atmosphere, constants)
     compute_auxiliary!(state, grid, soil, constants)
+    return nothing
 end
 
 function compute_tendencies!(state, model::CoupledSoilEnergyModel)
@@ -83,4 +85,5 @@ function compute_tendencies!(state, model::CoupledSoilEnergyModel)
     constants = model.constants
     # Compute soil tendencies
     compute_tendencies!(state, grid, soil, constants)
+    return nothing
 end

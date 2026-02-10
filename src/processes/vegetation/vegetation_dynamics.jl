@@ -15,7 +15,7 @@ $TYPEDFIELDS
 
     "Minimum vegetation disturbance rate [1/year]"
     # TODO this parameter is yearly, should be changed to daily for now
-    γv_min::NF = 0.002 
+    γv_min::NF = 0.002
 end
 
 PALADYNVegetationDynamics(::Type{NF}; kwargs...) where {NF} = PALADYNVegetationDynamics(; kwargs...)
@@ -23,7 +23,7 @@ PALADYNVegetationDynamics(::Type{NF}; kwargs...) where {NF} = PALADYNVegetationD
 variables(::PALADYNVegetationDynamics) = (
     prognostic(:vegetation_area_fraction, XY()), # PFT fractional area coverage [-]
     input(:balanced_leaf_area_index, XY()),
-    input(:carbon_vegetation, XY(), units=u"kg/m^2"),
+    input(:carbon_vegetation, XY(), units = u"kg/m^2"),
 )
 
 """
@@ -44,7 +44,7 @@ end
 Computes `ν_star` which is the maximum between the current vegetation fraction `ν` and the seed fraction `ν_seed` [-],
 to ensure that a PFT is always seeded.
 """
-@inline function compute_ν_star(veg_dynamics::PALADYNVegetationDynamics, ν) 
+@inline function compute_ν_star(veg_dynamics::PALADYNVegetationDynamics, ν)
     return max(ν, veg_dynamics.ν_seed)
 end
 
@@ -55,11 +55,12 @@ Computes the vegetation fraction tendency for a single PFT,
 Eq. 73, PALADYN (Willeit 2016).
 """
 @inline function compute_ν_tendency(
-    veg_dynamics::PALADYNVegetationDynamics, 
-    vegcarbon_dynamics::PALADYNCarbonDynamics{NF},
-    LAI_b::NF,
-    C_veg::NF,
-    ν::NF) where NF
+        veg_dynamics::PALADYNVegetationDynamics,
+        vegcarbon_dynamics::PALADYNCarbonDynamics{NF},
+        LAI_b::NF,
+        C_veg::NF,
+        ν::NF
+    ) where {NF}
 
     # Compute λ_NPP
     λ_NPP = compute_λ_NPP(vegcarbon_dynamics, LAI_b)
@@ -70,8 +71,8 @@ Eq. 73, PALADYN (Willeit 2016).
     # Compute ν_star
     ν_star = compute_ν_star(veg_dynamics, ν)
 
-    # Compute the vegetation fraction tendency 
-    ν_tendency =  (λ_NPP * C_veg / ν_star) * (NF(1.0) - ν) - γv * ν_star
+    # Compute the vegetation fraction tendency
+    ν_tendency = (λ_NPP * C_veg / ν_star) * (NF(1.0) - ν) - γv * ν_star
     return ν_tendency
 end
 
@@ -83,23 +84,24 @@ function compute_auxiliary!(state, grid, veg_dynamics::PALADYNVegetationDynamics
 end
 
 function compute_tendencies!(
-    state, grid,
-    veg_dynamics::PALADYNVegetationDynamics,
-    vegcarbon_dynamics::PALADYNCarbonDynamics,
-    args...
-)
+        state, grid,
+        veg_dynamics::PALADYNVegetationDynamics,
+        vegcarbon_dynamics::PALADYNCarbonDynamics,
+        args...
+    )
     tend = tendency_fields(state, veg_dynamics)
     fields = get_fields(state, veg_dynamics, vegcarbon_dynamics)
     launch!(grid, XY, compute_tendencies_kernel!, tend, fields, veg_dynamics, vegcarbon_dynamics)
+    return nothing
 end
 
 # Kernel functions
 
 @propagate_inbounds function compute_ν_tendency(
-    i, j, grid, fields,
-    veg_dynamics::PALADYNVegetationDynamics,
-    vegcarbon_dynamics::PALADYNCarbonDynamics
-)
+        i, j, grid, fields,
+        veg_dynamics::PALADYNVegetationDynamics,
+        vegcarbon_dynamics::PALADYNCarbonDynamics
+    )
     # Get inputs
     LAI_b = fields.balanced_leaf_area_index[i, j]
     C_veg = fields.carbon_vegetation[i, j]
@@ -113,10 +115,10 @@ end
 end
 
 @propagate_inbounds function compute_ν_tendencies!(
-    tend, i, j, grid, fields,
-    veg_dynamics::PALADYNVegetationDynamics,
-    vegcarbon_dynamics::PALADYNCarbonDynamics
-)
+        tend, i, j, grid, fields,
+        veg_dynamics::PALADYNVegetationDynamics,
+        vegcarbon_dynamics::PALADYNCarbonDynamics
+    )
     tend.vegetation_area_fraction[i, j, 1] = compute_ν_tendency(i, j, grid, fields, veg_dynamics, vegcarbon_dynamics)
     return tend
 end

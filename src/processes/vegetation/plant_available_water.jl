@@ -19,9 +19,9 @@ $TYPEDFIELDS
 FieldCapacityLimitedPAW(::Type{NF} = Float32) where {NF} = FieldCapacityLimitedPAW{NF}()
 
 variables(paw::FieldCapacityLimitedPAW{NF}) where {NF} = (
-    auxiliary(:plant_available_water, XYZ(), desc="Fraction of soil water available for plant root water uptake"),
+    auxiliary(:plant_available_water, XYZ(), desc = "Fraction of soil water available for plant root water uptake"),
     auxiliary(:soil_moisture_limiting_factor, XY(), soil_moisture_limiting_factor, paw), # soil moisture limiting factor
-    input(:root_fraction, XYZ(), desc="Fraction of roots in each soil layer")
+    input(:root_fraction, XYZ(), desc = "Fraction of roots in each soil layer"),
 )
 
 """
@@ -32,18 +32,18 @@ the integral of `W(z) * r(z)` where `W` is the water availability coefficient an
 """
 function soil_moisture_limiting_factor(::FieldCapacityLimitedPAW, grid, clock, fields)
     Δz = zspacings(get_field_grid(grid), Center(), Center(), Center())
-    PAW = Integral(fields.plant_available_water * fields.root_fraction / Δz, dims=3)
+    PAW = Integral(fields.plant_available_water * fields.root_fraction / Δz, dims = 3)
     return Field(PAW)
 end
 
 # Process methods
 
 function compute_auxiliary!(
-    state, grid,
-    paw::FieldCapacityLimitedPAW,
-    soil::AbstractSoil,
-    args...
-)
+        state, grid,
+        paw::FieldCapacityLimitedPAW,
+        soil::AbstractSoil,
+        args...
+    )
     # Unpack soil processes
     strat = get_stratigraphy(soil)
     hydrology = get_hydrology(soil)
@@ -53,18 +53,18 @@ function compute_auxiliary!(
     fields = get_fields(state, paw, soil; except = out)
     launch!(grid, XYZ, compute_auxiliary_kernel!, out, fields, paw, strat, hydrology, bgc)
     # compute the derived soil moisture limiting factor field
-    compute!(state.soil_moisture_limiting_factor)
+    return compute!(state.soil_moisture_limiting_factor)
 end
 
 # Kernel functions
 
 @propagate_inbounds function compute_plant_available_water(
-    i, j, k, grid, fields,
-    paw::FieldCapacityLimitedPAW{NF},
-    strat::AbstractStratigraphy,
-    hydrology::AbstractSoilHydrology,
-    bgc::AbstractSoilBiogeochemistry
-) where {NF}
+        i, j, k, grid, fields,
+        paw::FieldCapacityLimitedPAW{NF},
+        strat::AbstractStratigraphy,
+        hydrology::AbstractSoilHydrology,
+        bgc::AbstractSoilBiogeochemistry
+    ) where {NF}
     # Compute soil composition and hydraulic properties
     vol = soil_volume(i, j, k, grid, fields, strat, hydrology, bgc)
     θfc = field_capacity(hydrology.hydraulic_properties, vol.solid.texture)
@@ -77,13 +77,13 @@ end
 end
 
 @propagate_inbounds function compute_plant_available_water!(
-    out, i, j, k, grid, fields,
-    paw::FieldCapacityLimitedPAW{NF},
-    strat::AbstractStratigraphy,
-    hydrology::AbstractSoilHydrology,
-    bgc::AbstractSoilBiogeochemistry,
-    args...
-) where {NF}
+        out, i, j, k, grid, fields,
+        paw::FieldCapacityLimitedPAW{NF},
+        strat::AbstractStratigraphy,
+        hydrology::AbstractSoilHydrology,
+        bgc::AbstractSoilBiogeochemistry,
+        args...
+    ) where {NF}
     PAW = compute_plant_available_water(i, j, k, grid, fields, paw, strat, hydrology, bgc)
     out.plant_available_water[i, j, k] = PAW
     return out
@@ -91,7 +91,7 @@ end
 
 # Kernels
 
-@kernel inbounds=true function compute_auxiliary_kernel!(out, grid, fields, paw::AbstractPlantAvailableWater, args...)
+@kernel inbounds = true function compute_auxiliary_kernel!(out, grid, fields, paw::AbstractPlantAvailableWater, args...)
     i, j, k = @index(Global, NTuple)
     compute_plant_available_water!(out, i, j, k, grid, fields, paw, args...)
 end

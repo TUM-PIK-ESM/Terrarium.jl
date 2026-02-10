@@ -1,9 +1,9 @@
 @kwdef struct SoilInitializer{
-    EnergyInit,
-    HydrologyInit,
-    StratInit,
-    BGCInit
-} <: AbstractInitializer
+        EnergyInit,
+        HydrologyInit,
+        StratInit,
+        BGCInit,
+    } <: AbstractInitializer
     "Soil energy/temperature state initializer"
     energy::EnergyInit = DefaultInitializer()
 
@@ -22,6 +22,7 @@ function initialize!(state, model::AbstractModel, init::SoilInitializer)
     initialize!(state, model, init.hydrology)
     initialize!(state, model, init.strat)
     initialize!(state, model, init.biogeochem)
+    return nothing
 end
 
 function get_field_initializers(inits::SoilInitializer)
@@ -45,7 +46,7 @@ ConstantInitialSoilTemperature(T₀) = FieldInitializers(temperature = T₀)
 Computes a linear temperature profile in quasi-steady state based on the given
 surface temperature, geothermal heat flux, and bulk thermal conductivity.
 """
-QuasiThermalSteadyState(T₀, Qgeo, k_eff) = FieldInitializers(temperature = (x,z) -> T₀ + Qgeo / k_eff*z)
+QuasiThermalSteadyState(T₀, Qgeo, k_eff) = FieldInitializers(temperature = (x, z) -> T₀ + Qgeo / k_eff * z)
 
 """
 Creates a piecwise linear temperature initializer from the given knots.

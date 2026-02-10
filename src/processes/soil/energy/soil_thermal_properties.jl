@@ -110,6 +110,6 @@ https://doi.org/10.1046/j.1365-2389.2003.00539.x, 2003.
 """
 struct InverseQuadratic <: AbstractBulkWeightingScheme end
 
-(f::InverseQuadratic)(x::Real, weight::Real) = sqrt(x)*weight
+(f::InverseQuadratic)(x::Real, weight::Real) = sqrt(x) * weight
 # we use fastmap here so that the ordering of named tuples can be arbitrary
 (f::InverseQuadratic)(xs, weights) = sum(fastmap(f, xs, weights))^2

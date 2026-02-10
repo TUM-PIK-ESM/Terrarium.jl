@@ -8,7 +8,7 @@ end
 Base.nameof(::TracerGas{name}) where {name} = name
 
 variables(::TracerGas{name}) where {name} = (
-    input(name, XY(), default=default_tracer_conc(Val(name)), units=u"ppm", desc="Ambient atmospheric $(name) concentration in ppm"),
+    input(name, XY(), default = default_tracer_conc(Val(name)), units = u"ppm", desc = "Ambient atmospheric $(name) concentration in ppm"),
 )
 
 default_tracer_conc(::Val{:CO2}) = 380 # in ppm
@@ -17,7 +17,7 @@ default_tracer_conc(::Val{:CO2}) = 380 # in ppm
 Creates a `TracerGas` for ambient CO2 with concentration prescribed by an input variable with
 the given name.
 """
-AmbientCO2(name=:CO2) = TracerGas(name)
+AmbientCO2(name = :CO2) = TracerGas(name)
 
 """
 Creates a `NamedTuple` from the given tracer gas types.
@@ -43,14 +43,14 @@ rain- and snowfall given as separate inputs, while for solar radiation, the defa
 wave lengths representing solar and thermal (infrared) radiation.
 """
 struct PrescribedAtmosphere{
-    NF,
-    tracernames,
-    Precip <: AbstractPrecipitation,
-    IncomingRad <: AbstractIncomingRadiation,
-    Humidity <: AbstractHumidity,
-    Aerodynamics <: AbstractAerodynamics,
-    Tracers<:NamedTuple{tracernames,<:Tuple{Vararg{TracerGas}}}
-} <: AbstractAtmosphere{NF, Precip, IncomingRad, Humidity, Aerodynamics}
+        NF,
+        tracernames,
+        Precip <: AbstractPrecipitation,
+        IncomingRad <: AbstractIncomingRadiation,
+        Humidity <: AbstractHumidity,
+        Aerodynamics <: AbstractAerodynamics,
+        Tracers <: NamedTuple{tracernames, <:Tuple{Vararg{TracerGas}}},
+    } <: AbstractAtmosphere{NF, Precip, IncomingRad, Humidity, Aerodynamics}
     "Surface-relative altitude in meters at which the atmospheric forcings are assumed to be applied"
     altitude::NF
 
@@ -74,22 +74,22 @@ struct PrescribedAtmosphere{
 end
 
 function PrescribedAtmosphere(
-    ::Type{NF};
-    altitude::NF = NF(10), # Default to 10 m
-    min_windspeed::NF = NF(0.01), # Default to 0.01 m/s
-    precip::AbstractPrecipitation = RainSnow(),
-    radiation::AbstractIncomingRadiation = LongShortWaveRadiation(),
-    humidity::AbstractHumidity = SpecificHumidity(),
-    aerodynamics::AbstractAerodynamics = ConstantAerodynamics(),
-    tracers::NamedTuple = TracerGases(AmbientCO2()),
-) where {NF}
+        ::Type{NF};
+        altitude::NF = NF(10), # Default to 10 m
+        min_windspeed::NF = NF(0.01), # Default to 0.01 m/s
+        precip::AbstractPrecipitation = RainSnow(),
+        radiation::AbstractIncomingRadiation = LongShortWaveRadiation(),
+        humidity::AbstractHumidity = SpecificHumidity(),
+        aerodynamics::AbstractAerodynamics = ConstantAerodynamics(),
+        tracers::NamedTuple = TracerGases(AmbientCO2()),
+    ) where {NF}
     return PrescribedAtmosphere(altitude, min_windspeed, precip, radiation, humidity, aerodynamics, tracers)
 end
 
 variables(atmos::PrescribedAtmosphere{NF}) where {NF} = (
-    input(:air_temperature, XY(), default=NF(10), units=u"°C", desc="Near-surface air temperature in °C"),
-    input(:air_pressure, XY(), default=NF(101_325), units=u"Pa", desc="Atmospheric pressure at the surface in Pa"),
-    input(:windspeed, XY(), default=NF(0.1), units=u"m/s", desc="Wind speed in m/s"),
+    input(:air_temperature, XY(), default = NF(10), units = u"°C", desc = "Near-surface air temperature in °C"),
+    input(:air_pressure, XY(), default = NF(101_325), units = u"Pa", desc = "Atmospheric pressure at the surface in Pa"),
+    input(:windspeed, XY(), default = NF(0.1), units = u"m/s", desc = "Wind speed in m/s"),
     variables(atmos.humidity)...,
     variables(atmos.precip)...,
     variables(atmos.radiation)...,
@@ -109,7 +109,7 @@ Compute the aerodynamic resistance (inverse conductance) at grid cell `i, j`.
 """
 @inline function aerodynamic_resistance(i, j, grid, fields, atmos::PrescribedAtmosphere)
     let C = drag_coefficient(i, j, grid, fields, atmos.aerodynamics),
-        Vₐ = max(windspeed(i, j, grid, fields, atmos), 1e-6); # clip windspeed to small value
+            Vₐ = max(windspeed(i, j, grid, fields, atmos), 1.0e-6)  # clip windspeed to small value
         rₐ = 1 / (C * Vₐ)
         return rₐ
     end
@@ -139,7 +139,7 @@ Retrieve or compute the windspeed at the current time step.
 struct SpecificHumidity <: AbstractHumidity end
 
 variables(::SpecificHumidity) = (
-    input(:specific_humidity, XY(), default=1e-3, units=u"kg/kg", desc="Near-surface specific humidity in kg/kg"),
+    input(:specific_humidity, XY(), default = 1.0e-3, units = u"kg/kg", desc = "Near-surface specific humidity in kg/kg"),
 )
 
 """
@@ -156,7 +156,7 @@ Computes the specific humidity (vapor pressure) deficit over a surface at temper
 """
 @propagate_inbounds function compute_humidity_vpd(i, j, grid, fields, atmos::AbstractAtmosphere, c::PhysicalConstants, Ts = nothing)
     let Δe = compute_vpd(i, j, grid, fields, atmos, c, Ts),
-        p = air_pressure(i, j, grid, fields, atmos);
+            p = air_pressure(i, j, grid, fields, atmos)
         Δq = vapor_pressure_to_specific_humidity(Δe, p, c.ε)
         return Δq
     end
@@ -178,8 +178,8 @@ end
 struct RainSnow <: AbstractPrecipitation end
 
 variables(::RainSnow) = (
-    input(:rainfall, XY(), units=u"m/s", desc="Liquid precipitation (rainfall) rate"),
-    input(:snowfall, XY(), units=u"m/s", desc="Frozen precipitation (snowfall) rate"),
+    input(:rainfall, XY(), units = u"m/s", desc = "Liquid precipitation (rainfall) rate"),
+    input(:snowfall, XY(), units = u"m/s", desc = "Frozen precipitation (snowfall) rate"),
 )
 
 """
@@ -199,9 +199,9 @@ Retrieve or compute the frozen precipitation (snowfall) at the current time step
 struct LongShortWaveRadiation <: AbstractIncomingRadiation end
 
 variables(::LongShortWaveRadiation) = (
-    input(:surface_shortwave_down, XY(), units=u"W/m^2", desc="Incoming (downwelling) shortwave solar radiation"),
-    input(:surface_longwave_down, XY(), units=u"W/m^2", desc="Incoming (downwelling) longwave thermal radiation"),
-    input(:daytime_length, XY(), default=12, units=u"hr", desc="Number of daytime hours varying with the season and orbital parameters")
+    input(:surface_shortwave_down, XY(), units = u"W/m^2", desc = "Incoming (downwelling) shortwave solar radiation"),
+    input(:surface_longwave_down, XY(), units = u"W/m^2", desc = "Incoming (downwelling) longwave thermal radiation"),
+    input(:daytime_length, XY(), default = 12, units = u"hr", desc = "Number of daytime hours varying with the season and orbital parameters"),
 )
 
 """
