@@ -313,7 +313,8 @@ function compute_auxiliary!(
     )
     out = auxiliary_fields(state, photo)
     fields = get_fields(state, photo, stomcond, atmos; except = out)
-    return launch!(grid, XY, compute_auxiliary_kernel!, out, fields, photo, atmos)
+    launch!(grid, XY, compute_auxiliary_kernel!, out, fields, photo, atmos)
+    return nothing
 end
 
 # Kernel functions

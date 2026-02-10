@@ -70,7 +70,8 @@ function initialize!(state, model::VegetationSoilModel)
     initialize!(state, grid, model.surface_hydrology)
     # TODO: change when refactoring model/process types
     initialize!(state, grid, model.vegetation, model.atmosphere, model.constants)
-    return initialize!(state, grid, model.soil, model.constants)
+    initialize!(state, grid, model.soil, model.constants)
+    return nothing
 end
 
 function compute_auxiliary!(state, model::VegetationSoilModel)
@@ -86,22 +87,26 @@ function compute_auxiliary!(state, model::VegetationSoilModel)
     compute_auxiliary!(state, grid, model.plant_available_water, model.soil)
     compute_auxiliary!(state, grid, model.vegetation, model.atmosphere, model.constants)
     # recompute surface energy fluxes
-    return compute_surface_energy_fluxes!(state, grid, model.surface_energy_balance, model.atmosphere, model.constants, model.surface_hydrology)
+    compute_surface_energy_fluxes!(state, grid, model.surface_energy_balance, model.atmosphere, model.constants, model.surface_hydrology)
+    return nothing
 end
 
 function compute_tendencies!(state, model::VegetationSoilModel)
     grid = get_grid(model)
     compute_tendencies!(state, grid, model.surface_hydrology)
     compute_tendencies!(state, grid, model.soil, model.constants)
-    return compute_tendencies!(state, grid, model.vegetation)
+    compute_tendencies!(state, grid, model.vegetation)
+    return nothing
 end
 
 function closure!(state, model::VegetationSoilModel)
     grid = get_grid(model)
-    return closure!(state, grid, model.soil, model.constants)
+    closure!(state, grid, model.soil, model.constants)
+    return nothing
 end
 
 function invclosure!(state, model::VegetationSoilModel)
     grid = get_grid(model)
-    return invclosure!(state, grid, model.soil, model.constants)
+    invclosure!(state, grid, model.soil, model.constants)
+    return nothing
 end

@@ -88,17 +88,19 @@ variables(hydrology::SoilHydrology{NF}) where {NF} = (
 @propagate_inbounds surface_excess_water(i, j, grid, fields, ::SoilHydrology{NF}) where {NF} = zero(NF)
 
 function compute_water_table!(state, grid, hydrology::SoilHydrology)
-    return launch!(
+    launch!(
         grid, XY, compute_water_table_kernel!,
         state.water_table, state.saturation_water_ice, hydrology
     )
+    return nothing
 end
 
 function adjust_saturation_profile!(state, grid, hydrology::SoilHydrology)
     saturation_water_ice = state.saturation_water_ice
     surface_excess_water = state.surface_excess_water
     out = (; saturation_water_ice, surface_excess_water)
-    return launch!(grid, XY, adjust_saturation_profile_kernel!, out, hydrology)
+    launch!(grid, XY, adjust_saturation_profile_kernel!, out, hydrology)
+    return nothing
 end
 
 function compute_hydraulics!(state, grid, hydrology::SoilHydrology, soil::AbstractSoil, args...)
@@ -106,14 +108,16 @@ function compute_hydraulics!(state, grid, hydrology::SoilHydrology, soil::Abstra
     bgc = get_biogeochemistry(soil)
     out = (hydraulic_conductivity = state.hydraulic_conductivity,)
     fields = get_fields(state, hydrology, bgc; except = out)
-    return launch!(grid, XYZ, compute_hydraulics_kernel!, out, fields, hydrology, strat, bgc)
+    launch!(grid, XYZ, compute_hydraulics_kernel!, out, fields, hydrology, strat, bgc)
+    return nothing
 end
 
 # Immobile soil water (NoFlow)
 
 function initialize!(state, grid, hydrology::SoilHydrology, soil::AbstractSoil, args...)
     compute_hydraulics!(state, grid, hydrology, soil)
-    return compute_water_table!(state, grid, hydrology)
+    compute_water_table!(state, grid, hydrology)
+    return nothing
 end
 
 @inline compute_auxiliary!(state, grid, hydrology::SoilHydrology, args...) = nothing

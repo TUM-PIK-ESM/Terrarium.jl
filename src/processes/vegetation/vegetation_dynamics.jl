@@ -91,7 +91,8 @@ function compute_tendencies!(
     )
     tend = tendency_fields(state, veg_dynamics)
     fields = get_fields(state, veg_dynamics, vegcarbon_dynamics)
-    return launch!(grid, XY, compute_tendencies_kernel!, tend, fields, veg_dynamics, vegcarbon_dynamics)
+    launch!(grid, XY, compute_tendencies_kernel!, tend, fields, veg_dynamics, vegcarbon_dynamics)
+    return nothing
 end
 
 # Kernel functions

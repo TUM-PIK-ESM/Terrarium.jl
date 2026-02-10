@@ -93,13 +93,15 @@ variables(::ImplicitSkinTemperature) = (
         seb::AbstractSurfaceEnergyBalance,
         args...
     )
-    return compute_ground_heat_flux!(state, grid, skinT, seb)
+    compute_ground_heat_flux!(state, grid, skinT, seb)
+    return nothing
 end
 
 function update_skin_temperature!(state, grid, skinT::ImplicitSkinTemperature)
     out = prognostic_fields(state, skinT)
     fields = get_fields(state, skinT; except = out)
-    return launch!(grid, XY, compute_skin_temperature_kernel!, out, fields, skinT)
+    launch!(grid, XY, compute_skin_temperature_kernel!, out, fields, skinT)
+    return nothing
 end
 
 function compute_ground_heat_flux!(
@@ -111,7 +113,8 @@ function compute_ground_heat_flux!(
     tur = get_turbulent_fluxes(seb)
     out = auxiliary_fields(state, skinT)
     fields = get_fields(state, skinT, rad, tur; except = out)
-    return launch!(grid, XY, compute_ground_heat_flux_kernel!, out, fields, skinT, rad, tur)
+    launch!(grid, XY, compute_ground_heat_flux_kernel!, out, fields, skinT, rad, tur)
+    return nothing
 end
 
 ## Kernel functions

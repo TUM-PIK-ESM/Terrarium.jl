@@ -102,7 +102,8 @@ function compute_auxiliary!(
     )
     out = auxiliary_fields(state, evap)
     fields = get_fields(state, evap, canopy_interception, atmos, soil; except = out)
-    return launch!(grid, XY, compute_auxiliary_kernel!, out, fields, evap, canopy_interception, atmos, constants, soil)
+    launch!(grid, XY, compute_auxiliary_kernel!, out, fields, evap, canopy_interception, atmos, constants, soil)
+    return nothing
 end
 
 # Kernel functions

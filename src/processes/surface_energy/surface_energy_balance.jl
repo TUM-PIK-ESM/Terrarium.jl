@@ -51,7 +51,8 @@ variables(seb::SurfaceEnergyBalance) = tuplejoin(
         hydrology::Optional{AbstractSurfaceHydrology} = nothing,
         args...
     )
-    return compute_surface_energy_fluxes!(state, grid, seb, atmos, constants, hydrology, args...)
+    compute_surface_energy_fluxes!(state, grid, seb, atmos, constants, hydrology, args...)
+    return nothing
 end
 
 """
@@ -71,7 +72,8 @@ function compute_surface_energy_fluxes!(
     # Construct outputs as auxiliaries + skin temperature (which is prognostic)
     out = (skin_temperature = state.skin_temperature, auxiliary_fields(state, seb)...)
     fields = get_fields(state, seb, atmos, evtr)
-    return launch!(grid, XY, compute_surface_energy_fluxes_kernel!, out, fields, seb, atmos, constants, evtr, args...)
+    launch!(grid, XY, compute_surface_energy_fluxes_kernel!, out, fields, seb, atmos, constants, evtr, args...)
+    return nothing
 end
 
 # Kernels (fused)

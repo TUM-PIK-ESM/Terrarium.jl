@@ -117,7 +117,8 @@ function compute_auxiliary!(
     )
     out = auxiliary_fields(state, canopy_interception)
     fields = get_fields(state, canopy_interception, atmos; except = out)
-    return launch!(grid, XY, compute_auxiliary_kernel!, out, fields, canopy_interception, atmos, constants)
+    launch!(grid, XY, compute_auxiliary_kernel!, out, fields, canopy_interception, atmos, constants)
+    return nothing
 end
 
 function compute_tendencies!(
@@ -128,7 +129,8 @@ function compute_tendencies!(
     )
     out = tendency_fields(state, canopy_interception)
     fields = get_fields(state, canopy_interception, evtr; except = out)
-    return launch!(grid, XY, compute_tendencies_kernel!, out, fields, canopy_interception, evtr)
+    launch!(grid, XY, compute_tendencies_kernel!, out, fields, canopy_interception, evtr)
+    return nothing
 end
 
 # Kernel functions

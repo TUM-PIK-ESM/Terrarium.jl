@@ -37,7 +37,8 @@ function compute_auxiliary!(
     )
     out = auxiliary_fields(state, evap)
     fields = get_fields(state, evap, atmos, soil; except = out)
-    return launch!(grid, XY, compute_evaporation_kernel!, out, fields, evap, atmos, constants, soil)
+    launch!(grid, XY, compute_evaporation_kernel!, out, fields, evap, atmos, constants, soil)
+    return nothing
 end
 
 # Kernel functions

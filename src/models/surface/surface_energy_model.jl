@@ -42,9 +42,11 @@ end
 
 function compute_auxiliary!(state, model::SurfaceEnergyModel)
     compute_auxiliary!(state, model, model.atmosphere)
-    return compute_auxiliary!(state, model, model.surface_energy_balance)
+    compute_auxiliary!(state, model, model.surface_energy_balance)
+    return nothing
 end
 
 function compute_tendencies!(state, ::SurfaceEnergyModel)
-    return compute_tendencies!(state, model, model.surface_energy_balance)
+    compute_tendencies!(state, model, model.surface_energy_balance)
+    return nothing
 end

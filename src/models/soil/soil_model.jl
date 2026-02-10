@@ -32,7 +32,8 @@ function initialize!(state, model::SoilModel)
     # run model/field initializers
     initialize!(state, model, model.initializer)
     # run process initializers
-    return initialize!(state, model.grid, model.soil, model.constants)
+    initialize!(state, model.grid, model.soil, model.constants)
+    return nothing
 end
 
 function compute_auxiliary!(state, model::SoilModel)
@@ -48,9 +49,11 @@ end
 # Closures
 
 function closure!(state, model::SoilModel)
-    return closure!(state, model.grid, model.soil, model.constants)
+    closure!(state, model.grid, model.soil, model.constants)
+    return nothing
 end
 
 function invclosure!(state, model::SoilModel)
-    return invclosure!(state, model.grid, model.soil, model.constants)
+    invclosure!(state, model.grid, model.soil, model.constants)
+    return nothing
 end

@@ -21,7 +21,8 @@ function initialize!(state, model::AbstractModel, init::SoilInitializer)
     initialize!(state, model, init.energy)
     initialize!(state, model, init.hydrology)
     initialize!(state, model, init.strat)
-    return initialize!(state, model, init.biogeochem)
+    initialize!(state, model, init.biogeochem)
+    return nothing
 end
 
 function get_field_initializers(inits::SoilInitializer)

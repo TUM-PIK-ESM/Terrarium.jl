@@ -44,12 +44,14 @@ function compute_auxiliary!(state, model::SurfaceHydrologyModel)
     compute_auxiliary!(state, model, model.atmosphere)
     compute_auxiliary!(state, model, model.canopy_interception)
     compute_auxiliary!(state, model, model.evapotranspiration)
-    return compute_auxiliary!(state, model, model.surface_runoff)
+    compute_auxiliary!(state, model, model.surface_runoff)
+    return nothing
 end
 
 function compute_tendencies!(state, model::SurfaceHydrologyModel)
     compute_tendencies!(state, model, model.atmosphere)
     compute_tendencies!(state, model, model.canopy_interception)
     compute_tendencies!(state, model, model.evapotranspiration)
-    return compute_tendencies!(state, model, model.surface_runoff)
+    compute_tendencies!(state, model, model.surface_runoff)
+    return nothing
 end

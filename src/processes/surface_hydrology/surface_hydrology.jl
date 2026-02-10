@@ -38,7 +38,8 @@ function compute_auxiliary!(
     )
     compute_auxiliary!(state, grid, hydrology.canopy_interception, atmos, constants)
     compute_auxiliary!(state, grid, hydrology.evapotranspiration, hydrology.canopy_interception, atmos, constants, soil)
-    return compute_auxiliary!(state, grid, hydrology.surface_runoff, hydrology.canopy_interception, soil)
+    compute_auxiliary!(state, grid, hydrology.surface_runoff, hydrology.canopy_interception, soil)
+    return nothing
 end
 
 function compute_tendencies!(
@@ -47,5 +48,6 @@ function compute_tendencies!(
         args...,
     )
     # Compute tendencies for canopy interception
-    return compute_tendencies!(state, grid, hydrology.canopy_interception, hydrology.evapotranspiration)
+    compute_tendencies!(state, grid, hydrology.canopy_interception, hydrology.evapotranspiration)
+    return nothing
 end

@@ -31,7 +31,8 @@ function compute_auxiliary!(
     )
     out = auxiliary_fields(state, rad)
     fields = get_fields(state, rad, atmos; except = out)
-    return launch!(grid, XY, compute_auxiliary_kernel!, out, fields, rad, atmos)
+    launch!(grid, XY, compute_auxiliary_kernel!, out, fields, rad, atmos)
+    return nothing
 end
 
 ## Kernel functions
@@ -106,10 +107,11 @@ function compute_auxiliary!(
     (; skin_temperature, albedo) = seb
     out = auxiliary_fields(state, rad)
     fields = get_fields(state, rad, skin_temperature, albedo, atmos; except = out)
-    return launch!(
+    launch!(
         grid, XY, compute_auxiliary_kernel!,
         out, fields, rad, skin_temperature, albedo, atmos, consts
     )
+    return nothing
 end
 
 ## Kernel functions

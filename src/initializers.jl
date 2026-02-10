@@ -63,7 +63,8 @@ function initialize!(state, model::AbstractModel, init::FieldInitializers)
     # apply variable initializers
     initialize!(state, init.vars)
     # invoke inner initializer
-    return initialize!(state, model, init.init)
+    initialize!(state, model, init.init)
+    return nothing
 end
 
 """

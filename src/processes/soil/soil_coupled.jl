@@ -73,7 +73,8 @@ function closure!(
         constants::PhysicalConstants
     )
     closure!(state, grid, get_closure(soil.hydrology), soil.hydrology, soil)
-    return closure!(state, grid, get_closure(soil.energy), soil.energy, soil, constants)
+    closure!(state, grid, get_closure(soil.energy), soil.energy, soil, constants)
+    return nothing
 end
 
 function invclosure!(
@@ -82,5 +83,6 @@ function invclosure!(
         constants::PhysicalConstants
     )
     invclosure!(state, grid, get_closure(soil.hydrology), soil.hydrology, soil)
-    return invclosure!(state, grid, get_closure(soil.energy), soil.energy, soil, constants)
+    invclosure!(state, grid, get_closure(soil.energy), soil.energy, soil, constants)
+    return nothing
 end

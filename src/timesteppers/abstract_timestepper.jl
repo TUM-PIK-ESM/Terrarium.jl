@@ -80,10 +80,11 @@ function explicit_step!(
         Δt,
         args...
     ) where {LX, LY, LZ}
-    return launch!(
+    launch!(
         grid, XYZ, explicit_step_xyz_kernel!,
         field, tendency, timestepper, Δt, args...
     )
+    return nothing
 end
 
 function explicit_step!(
@@ -94,10 +95,11 @@ function explicit_step!(
         Δt,
         args...
     ) where {LX, LY}
-    return launch!(
+    launch!(
         grid, XY, explicit_step_xy_kernel!,
         field, tendency, timestepper, Δt, args...
     )
+    return nothing
 end
 
 @kernel function explicit_step_xyz_kernel!(

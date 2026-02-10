@@ -65,7 +65,8 @@ function initialize!(state, model::CoupledSoilEnergyModel)
     # Call initialize! with model initializer
     initialize!(state, model, model.initializer)
     # Then for soil model
-    return initialize!(state, model.grid, model.soil)
+    initialize!(state, model.grid, model.soil)
+    return nothing
 end
 
 function compute_auxiliary!(state, model::CoupledSoilEnergyModel)
@@ -75,12 +76,14 @@ function compute_auxiliary!(state, model::CoupledSoilEnergyModel)
     constants = model.constants
     compute_auxiliary!(state, grid, atmosphere)
     compute_auxiliary!(state, grid, seb, atmosphere, constants)
-    return compute_auxiliary!(state, grid, soil, constants)
+    compute_auxiliary!(state, grid, soil, constants)
+    return nothing
 end
 
 function compute_tendencies!(state, model::CoupledSoilEnergyModel)
     grid = get_grid(model)
     constants = model.constants
     # Compute soil tendencies
-    return compute_tendencies!(state, grid, soil, constants)
+    compute_tendencies!(state, grid, soil, constants)
+    return nothing
 end

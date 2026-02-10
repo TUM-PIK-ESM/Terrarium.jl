@@ -130,12 +130,14 @@ We also need to define `compute_auxiliary!` and `compute_tendencies!` as discuss
 
 # ╔═╡ 5ea313fc-3fbb-4092-a2cc-e0cd1f2fe641
 function Terrarium.compute_auxiliary!(state, model::ExpModel)
-    return compute_auxiliary!(state, model, model.dynamics)
+    compute_auxiliary!(state, model, model.dynamics)
+    return nothing
 end
 
 # ╔═╡ 3815424f-6210-470d-aef1-99c60c71072f
 function Terrarium.compute_tendencies!(state, model::ExpModel)
-    return compute_tendencies!(state, model, model.dynamics)
+    compute_tendencies!(state, model, model.dynamics)
+    return nothing
 end
 
 # ╔═╡ 32373599-768f-4809-acdd-4704acc3f30b

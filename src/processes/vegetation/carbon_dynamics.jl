@@ -111,13 +111,15 @@ end
 function compute_auxiliary!(state, grid, vegcarbon_dynamics::PALADYNCarbonDynamics, args...)
     out = auxiliary_fields(state, vegcarbon_dynamics)
     fields = get_fields(state, vegcarbon_dynamics; except = out)
-    return launch!(grid, XY, compute_auxiliary_kernel!, out, fields, vegcarbon_dynamics)
+    launch!(grid, XY, compute_auxiliary_kernel!, out, fields, vegcarbon_dynamics)
+    return nothing
 end
 
 function compute_tendencies!(state, grid, vegcarbon_dynamics::PALADYNCarbonDynamics, args...)
     out = tendency_fields(state, vegcarbon_dynamics)
     fields = get_fields(state, vegcarbon_dynamics)
-    return launch!(grid, XY, compute_tendencies_kernel!, out, fields, vegcarbon_dynamics)
+    launch!(grid, XY, compute_tendencies_kernel!, out, fields, vegcarbon_dynamics)
+    return nothing
 end
 
 # Kernel functions

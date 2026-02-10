@@ -67,10 +67,11 @@ function compute_auxiliary!(
     skinT = seb.skin_temperature
     out = auxiliary_fields(state, tur)
     fields = get_fields(state, tur, skinT, atmos; except = out)
-    return launch!(
+    launch!(
         grid, XY, compute_auxiliary_kernel!, out, fields,
         tur, skinT, atmos, constants
     )
+    return nothing
 end
 
 ## Kernel functions

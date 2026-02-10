@@ -78,7 +78,8 @@ function compute_auxiliary!(
     soil_hydrology = get_hydrology(soil)
     out = auxiliary_fields(state, runoff)
     fields = get_fields(state, runoff, canopy_interception, soil_hydrology; except = out)
-    return launch!(grid, XY, compute_auxiliary_kernel!, out, fields, runoff, canopy_interception, soil_hydrology)
+    launch!(grid, XY, compute_auxiliary_kernel!, out, fields, runoff, canopy_interception, soil_hydrology)
+    return nothing
 end
 
 # Kernel function

@@ -70,7 +70,8 @@ end
 function compute_auxiliary!(state, grid, phenol::PALADYNPhenology)
     out = auxiliary_fields(state, phenol)
     fields = get_fields(state, phenol; except = out)
-    return launch!(grid, XY, compute_auxiliary_kernel!, out, fields, phenol)
+    launch!(grid, XY, compute_auxiliary_kernel!, out, fields, phenol)
+    return nothing
 end
 
 # Kernel functions
