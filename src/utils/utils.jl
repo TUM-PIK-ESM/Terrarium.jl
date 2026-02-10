@@ -22,7 +22,7 @@ convert_dt(Δt::Period) = Second(Δt).value
 
 Evaluates `x / (y + eps(NF))` if and only if `y != zero(y)`; returns `Inf` otherwise.
 """
-safediv(x::NF, y::NF) where {NF} = ifelse(iszero(y), Inf, x / (y + eps(NF)))
+safediv(x::NF, y::NF) where {NF} = ifelse(iszero(y), NF(Inf), x / (y + eps(NF)))
 
 # fastmap and fastiterate
 
