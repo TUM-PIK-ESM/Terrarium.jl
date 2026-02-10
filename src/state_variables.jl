@@ -211,11 +211,12 @@ end
 Retrieves all non-tendency `Field`s from `state` defined on the given `components`.
 """
 @inline function get_fields(state, components...; except = (;))
-    vars = mapreduce(tuplejoin, components, init = ()) do component
+    component_vars = fastmap(components) do component
         allvars = variables(component)
         closurevars = closure_variables(component)
         tuplejoin(allvars, closurevars)
     end
+    vars = tuplejoin(component_vars...)
     return ntdiff(get_fields(state, vars), except)
 end
 
@@ -225,7 +226,9 @@ end
 Retrieves all `Field`s from `state` corresponding to prognostic variables defined on the given `components`.
 """
 @inline function prognostic_fields(state, components...)
-    return get_fields(state, mapreduce(prognostic_variables, tuplejoin, components))
+    component_progvars = fastmap(prognostic_variables, components)
+    progvars = tuplejoin(component_progvars...)
+    return get_fields(state, progvars)
 end
 
 """
@@ -234,7 +237,9 @@ end
 Retrieves all `Field`s from `state` corresponding to tendencies defined on the given `components`.
 """
 @inline function tendency_fields(state, components...)
-    return get_fields(state.tendencies, mapreduce(prognostic_variables, tuplejoin, components))
+    component_progvars = fastmap(prognostic_variables, components)
+    progvars = tuplejoin(component_progvars...)
+    return get_fields(state.tendencies, progvars)
 end
 
 """
@@ -243,7 +248,9 @@ end
 Retrieves all `Field`s from `state` corresponding to auxiliary variables defined on the given `components`.
 """
 @inline function auxiliary_fields(state, components...)
-    return get_fields(state, mapreduce(auxiliary_variables, tuplejoin, components))
+    component_auxvars = fastmap(auxiliary_variables, components)
+    auxvars = tuplejoin(component_auxvars...)
+    return get_fields(state, auxvars)
 end
 
 """
@@ -252,7 +259,9 @@ end
 Retrieves all `Field`s from `state` corresponding to closure variables defined on the given `components`.
 """
 @inline function closure_fields(state, components...)
-    return get_fields(state, mapreduce(closure_variables, tuplejoin, components))
+    component_closurevars = fastmap(closure_variables, components)
+    closurevars = tuplejoin(component_closurevars...)
+    return get_fields(state, closurevars)
 end
 
 """
@@ -261,7 +270,9 @@ end
 Retrieves all `Field`s from `state` corresponding to input variables defined on the given `components`.
 """
 @inline function input_fields(state, components...)
-    return get_fields(state, mapreduce(input_variables, tuplejoin, components))
+    component_inputvars = fastmap(input_variables, components)
+    inputvars = tuplejoin(component_inputvars...)
+    return get_fields(state, inputvars)
 end
 
 # Initialization of StateVariables from models and processes
