@@ -46,4 +46,4 @@ end
     # Heun: expected value: u = (0.1Δt + (0.1 * Δt + 0.1) * Δt) / 2
     dt_heun = default_dt(integrator_heun.timestepper)
     @test integrator_heun.state.u[2] == (0.1 * dt_heun + (0.1 * dt_heun + 0.1) * dt_heun) / 2
-end 
+end
