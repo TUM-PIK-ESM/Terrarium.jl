@@ -88,7 +88,7 @@ $TYPEDFIELDS
     organic::NF = zero(eltype(texture))
 
     function MineralOrganic(texture::SoilTexture{NF}, organic::NF) where {NF}
-        @assert 0 <= organic <= 1 "organic content must be between zero and one"
+        @assert zero(NF) <= organic <= one(NF) "organic content must be between zero and one"
         return new{NF}(texture, organic)
     end
 end

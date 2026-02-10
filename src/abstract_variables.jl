@@ -393,10 +393,9 @@ Helper method that selects only closure (auxiliary) variables declared on `obj`.
 @inline closure_variables(obj) = closure_variables(variables(obj))
 @inline function closure_variables(vars::Tuple)
     progvars = prognostic_variables(vars)
-    closure_vars = mapreduce(var -> variables(var.closure), tuplejoin, progvars, init = ())
-    return deduplicate_vars(closure_vars)
+    all_closure_vars = fastmap(var -> variables(var.closure), progvars)
+    return deduplicate_vars(tuplejoin(all_closure_vars...))
 end
-
 
 function Base.NamedTuple(vars::Tuple{Vararg{Union{AbstractVariable, Namespace}}})
     keys = map(varname, vars)
