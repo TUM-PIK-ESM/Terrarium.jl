@@ -63,7 +63,7 @@ measurements of hydraulic properites are available.
 Properties:
 $TYPEDFIELDS
 """
-@kwdef struct ConstantSoilHydraulics{NF, RC, UnsatK<:AbstractUnsatK{NF}} <: AbstractSoilHydraulics{NF, RC, UnsatK}
+@kwdef struct ConstantSoilHydraulics{NF, RC, UnsatK <: AbstractUnsatK{NF}} <: AbstractSoilHydraulics{NF, RC, UnsatK}
     "Soil water retention curve"
     swrc::RC
 
@@ -105,7 +105,7 @@ and wilting point as a function of soil texture.
 Properties:
 $TYPEDFIELDS
 """
-@kwdef struct SoilHydraulicsSURFEX{NF, RC, UnsatK<:AbstractUnsatK{NF}} <: AbstractSoilHydraulics{NF, RC, UnsatK}
+@kwdef struct SoilHydraulicsSURFEX{NF, RC, UnsatK <: AbstractUnsatK{NF}} <: AbstractSoilHydraulics{NF, RC, UnsatK}
     "Soil water retention curve"
     swrc::RC
 
