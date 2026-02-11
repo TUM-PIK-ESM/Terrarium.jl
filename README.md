@@ -68,11 +68,11 @@ integrator = initialize(model, ForwardEuler(eltype(grid)), boundary_conditions =
 @time run!(integrator, period = Day(10))
 ```
 
-That's it! You already succesfully ran a simulation with Terrarium!
+That's it! You already succesfully ran a (very simple) simulation with Terrarium!
 
-Note, however, that this corresponds to a simple point simulation for a single vertical column. You can easily scale this up by set `num_columns` to any positive integer (up to the memory limit of your system, of course).
+Note that setting `num_columns = 1` here corresponds to a point simulation for a single vertical column. However, we can easily scale this up by set `num_columns` to any positive integer (up to the memory limit of your system, of course).
 
-But point simulations are boring! Let's run a global simulation instead. For this, we'll need to have [`RingGrids`](https://github.com/SpeedyWeather/RingGrids.jl) installed. Optionally, if a GPU is available, we can ensure that [CUDA.jl](https://github.com/JuliaGPU/CUDA.jl) is installed in the current project or in the global Julia environment and then accelerate the global simulations simply changing `CPU` to `GPU`:
+We can also easily adapt this code to run a *global* simulation over a suitable spatial grid. For this, we'll need to have [`RingGrids`](https://github.com/SpeedyWeather/RingGrids.jl) installed (or import it directly from Terrarium with `using Terrarium.RingGrids`). Optionally, if a GPU is available and [CUDA.jl](https://github.com/JuliaGPU/CUDA.jl) is installed in the current project or global Julia environment, we can accelerate the global simulation by simply changing `CPU` to `GPU`:
 
 ```julia
 using RingGrids: FullGaussianGrid
@@ -88,7 +88,7 @@ integrator = initialize(model, ForwardEuler(eltype(grid)), boundary_conditions =
 # Run the simulation forward for 10 model days
 @time run!(integrator, period = Day(10))
 ```
-and voila! We have just run a global-scale simulation of soil thermal dynamics with minimal additional effort. While more realistic simulations are of course more involved, this simple example demonstrates the core of what we aim to accomplish with Terrarium; a fast, user-friendly, and highly adaptable land model that can easily be configured to run on local, regional, and global scales.
+and voila! We have just run a GPU-accelerated, global-scale simulation of soil thermal dynamics with minimal additional effort. While more realistic simulations are of course more involved, this simple example demonstrates the core of what we aim to accomplish with Terrarium; a fast, user-friendly, and highly adaptable land model that can easily be configured to run on local, regional, and global scales.
 
 ## Why Oceananigans?
 It might initially seem strange that a land model would be built on top of a framework for ocean modeling. There are, however, some key advantages in doing so:
