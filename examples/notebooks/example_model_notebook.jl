@@ -116,9 +116,9 @@ So, let's define those:
 
 # ╔═╡ 82e45724-ba16-4806-9470-5cb4c43ea734
 Terrarium.variables(::ExpModel) = (
-    Terrarium.prognostic(:u, Terrarium.XY()),
-    Terrarium.auxiliary(:c, Terrarium.XY()),
-    Terrarium.input(:F, Terrarium.XY()),
+    Terrarium.prognostic(:u, Terrarium.XY(), desc = "Exponential growth variable"),
+    Terrarium.auxiliary(:c, Terrarium.XY(), desc = "Constant offset for exponential growth"),
+    Terrarium.input(:F, Terrarium.XY(), desc = "External forcing"),
 )
 
 # ╔═╡ d4d19de7-6f77-4873-9182-9832d1ca4381
