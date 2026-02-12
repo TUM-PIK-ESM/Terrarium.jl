@@ -313,8 +313,22 @@ plot(1:length(fts), [fts[i][1, 1, 1] for i in 1:length(fts)])
 
 # ╔═╡ 25e22154-946f-4c32-a1fa-73d86e935ff3
 md"""
-Well that's it. We defined and ran a simple exponential model with external forcing following the Terrarium `AbstractModel` interface! Stay tuned for more!
+Well, this was a simple way to define and run a simple exponential model with external forcing following the Terrarium `AbstractModel` interface. 
+
+But typically, our computations will be a bit more complicated than that and we can't easily assign them with a broadcastable operation like with done here in `compute_tendencies!`. So what do we have to do in these cases? 
+
+## Writing kernelized-code for Terrarium 
+
+Terrarium is a device-agnostic model that runs across different architectures like x86 CPUs, ARM CPUs, but also GPUs. To achieve this wide compability, we rely on KernelAbstractions to write our compute code in kernels. Kernels can be thought of But don't panic! We provide a lot of utilities and functions that help you with that and ensure that our models are fast and efficient as well. In simple terms, kernels can be thought of as the inner body of a for-loop. The kernel function implements one iteration of that loop, in Terrarium the kernel function implements the computation for a single column / grid point. To execute the computation the kernel is 'launched' on the device we set up when constructing the model. In this launch we also set the range this kernel should iterate over, and hand over all arguemtns the kernel function needs. 
+
+To demonstrate this process and all tools we have availble to help you with that, we will reimplement our exponential dynamics from before, but now use kernels to do so. 
+
+### Your first kernel model 
+
 """
+
+# ╔═╡ dfc52b4e-a015-4295-b47f-1dd2b10abeb2
+
 
 # ╔═╡ Cell order:
 # ╟─5630efd5-2482-463d-913f-9addb120beec
@@ -358,4 +372,5 @@ Well that's it. We defined and ran a simple exponential model with external forc
 # ╟─0f607788-53e7-4a55-95f0-3690e9867099
 # ╠═dbe8d0fa-893f-4c05-9e46-220ab41636f3
 # ╠═c06502ff-c021-488c-a333-36233091d046
-# ╟─25e22154-946f-4c32-a1fa-73d86e935ff3
+# ╠═25e22154-946f-4c32-a1fa-73d86e935ff3
+# ╠═dfc52b4e-a015-4295-b47f-1dd2b10abeb2
