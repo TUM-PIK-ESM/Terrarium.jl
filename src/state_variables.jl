@@ -189,7 +189,7 @@ end
 
 Retrieves the `Field` from `state` matching the `name` of the given variable.
 """
-@inline get_field(state, ::AbstractVariable{name}) where {name} = getproperty(state, name)
+@inline get_field(state, var::AbstractVariable{name}) where {name} = getproperty(state, name)
 
 """
     $TYPEDSIGNATURES
@@ -206,7 +206,7 @@ Retrieves all `Field`s from `state` matching the names of the given variables.
 end
 
 """
-    $TYPEDSIGNATURES
+    $SIGNATURES
 
 Retrieves all non-tendency `Field`s from `state` defined on the given `components`.
 """
@@ -221,7 +221,7 @@ Retrieves all non-tendency `Field`s from `state` defined on the given `component
 end
 
 """
-    $TYPEDSIGNATURES
+    $SIGNATURES
 
 Retrieves all `Field`s from `state` corresponding to prognostic variables defined on the given `components`.
 """
@@ -232,7 +232,7 @@ Retrieves all `Field`s from `state` corresponding to prognostic variables define
 end
 
 """
-    $TYPEDSIGNATURES
+    $SIGNATURES
 
 Retrieves all `Field`s from `state` corresponding to tendencies defined on the given `components`.
 """
@@ -243,7 +243,7 @@ Retrieves all `Field`s from `state` corresponding to tendencies defined on the g
 end
 
 """
-    $TYPEDSIGNATURES
+    $SIGNATURES
 
 Retrieves all `Field`s from `state` corresponding to auxiliary variables defined on the given `components`.
 """
@@ -254,7 +254,7 @@ Retrieves all `Field`s from `state` corresponding to auxiliary variables defined
 end
 
 """
-    $TYPEDSIGNATURES
+    $SIGNATURES
 
 Retrieves all `Field`s from `state` corresponding to closure variables defined on the given `components`.
 """
@@ -265,7 +265,7 @@ Retrieves all `Field`s from `state` corresponding to closure variables defined o
 end
 
 """
-    $TYPEDSIGNATURES
+    $SIGNATURES
 
 Retrieves all `Field`s from `state` corresponding to input variables defined on the given `components`.
 """

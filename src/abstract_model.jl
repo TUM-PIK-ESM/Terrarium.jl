@@ -101,7 +101,7 @@ variables(::Any) = ()
 variables(obj::Union{AbstractCoupledProcesses, AbstractModel}) = mapreduce(variables, tuplejoin, processes(obj))
 
 """
-    $TYPEDSIGNATURES
+    processes(obj::Union{AbstractCoupledProcesses, AbstractModel})
 
 Return a tuple of `AbstractProces`es contained in the given model or coupled processes type.
 Note that this is a type-stable, `@generated` function that is compiled for each argument type.
@@ -117,6 +117,12 @@ Note that this is a type-stable, `@generated` function that is compiled for each
     return :(tuple($(accessors...)))
 end
 
+"""
+    closures(process::AbstractProcess)
+
+Return a tuple of `AbstractClosureRelation`s defined by the given processes type.
+Note that this is a type-stable, `@generated` function that is compiled for each argument type.
+"""
 @generated function closures(proc::AbstractProcess)
     names = fieldnames(proc)
     types = fieldtypes(proc)

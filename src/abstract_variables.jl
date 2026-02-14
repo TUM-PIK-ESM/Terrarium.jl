@@ -276,7 +276,7 @@ function Variables(@nospecialize(vars::Tuple{Vararg{Union{AbstractProcessVariabl
 end
 
 """
-    $TYPEDSIGNATURES
+    deduplicate_vars(vars::Tuple{Vararg{AbstractVariable}})
 
 Type-stable equivalent of [`deduplicate`](@ref) for tuples of `AbstractVariable`s.
 """
