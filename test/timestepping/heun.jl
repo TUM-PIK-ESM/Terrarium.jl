@@ -5,7 +5,7 @@ using Test
 
 @kwdef struct ExpModel{NF, Grid <: Terrarium.AbstractLandGrid{NF}, I} <: Terrarium.AbstractModel{NF, Grid}
     grid::Grid
-    initializer::I = DefaultInitializer()
+    initializer::I = DefaultInitializer(eltype(grid))
 end
 
 Terrarium.variables(::ExpModel) = (
@@ -26,11 +26,11 @@ end
 @testset "ExpModel: Heun and Euler time steppers" begin
 
     grid = ColumnGrid(CPU(), Float64, UniformSpacing(N = 1))
-    initializer = FieldInitializers(u = 0.0, v = 0.1)
-    model = ExpModel(grid, initializer)
+    model = ExpModel(grid)
 
-    integrator_heun = initialize(model, Heun())
-    integrator_euler = initialize(model, ForwardEuler())
+    initializers = (u = 0.0, v = 0.1)
+    integrator_heun = initialize(model, Heun(); initializers)
+    integrator_euler = initialize(model, ForwardEuler(); initializers)
 
     # test that Heun estimate is more accurate (larger value than Euler here)
     # test that both are what we expect

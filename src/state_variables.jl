@@ -355,6 +355,7 @@ function initialize(
         grid::AbstractLandGrid{NF};
         clock::Clock = Clock(time = 0.0),
         boundary_conditions = (;),
+        initializers = (;),
         fields = (;)
     ) where {NF}
     # Initialize Fields for each variable group, if they are not already given in the user defined `fields`

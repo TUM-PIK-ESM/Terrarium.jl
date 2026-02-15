@@ -19,7 +19,7 @@
     soil::SoilProcesses = SoilEnergyWaterCarbon(eltype(grid))
 
     "Initializer for coupled model"
-    initializer::Initializer = DefaultInitializer()
+    initializer::Initializer = DefaultInitializer(eltype(grid))
 end
 
 function processes(model::CoupledSoilEnergyModel)

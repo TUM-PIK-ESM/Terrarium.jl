@@ -9,12 +9,7 @@ using Statistics
 function build_soil_energy_model(arch, ::Type{NF}) where {NF}
     grid = ColumnGrid(arch, Float64, ExponentialSpacing(N = 10))
     # initial conditions
-    initializer = FieldInitializers(
-        # steady-ish state initial condition for temperature
-        temperature = (x, z) -> -1 - 0.02 * z,
-        # saturated soil
-        saturation_water_ice = 1.0,
-    )
+    initializer = SoilInitializer(eltype(grid))
     model = SoilModel(grid; initializer)
     return model
 end

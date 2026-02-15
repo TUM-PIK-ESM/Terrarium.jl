@@ -2,17 +2,18 @@ using Terrarium
 
 import CairoMakie as Makie
 
-grid = ColumnGrid(ExponentialSpacing())
-initializer = FieldInitializers(
-    # steady-ish state initial condition for temperature
-    temperature = (x, z) -> -1 - 0.01 * z,
-    # fully saturated soil pores
-    saturation_water_ice = 1.0,
+# run on GPU if available
+arch = CUDA.functional() ? GPU() : CPU()
+# create single column grid
+grid = ColumnGrid(arch, Float32, ExponentialSpacing(N = 10))
+# initializer for soil model with quasi thermal steady-state
+initializer = SoilInitializer(
+    energy = QuasiThermalSteadyState(T₀ = -1.0)
 )
 model = SoilModel(grid; initializer)
 # constant surface temperature of 1°C
-bcs = PrescribedSurfaceTemperature(:T_ub, 1.0)
-integrator = initialize(model, ForwardEuler(), boundary_conditions = bcs)
+boundary_conditions = PrescribedSurfaceTemperature(:T_ub, 1.0)
+integrator = initialize(model, ForwardEuler(); boundary_conditions)
 # test one timestep
 @time timestep!(integrator)
 # run simulation forward for a set period of time

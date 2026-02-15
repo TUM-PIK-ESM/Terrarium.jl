@@ -129,12 +129,10 @@ end
     hydrology = SoilHydrology(eltype(grid), RichardsEq(); hydraulic_properties)
     soil = SoilEnergyWaterCarbon(eltype(grid); hydrology)
 
+    model = SoilModel(grid; soil)
     # Fully saturated, steady state
-    initializer = FieldInitializers(
-        saturation_water_ice = (x, z) -> 1.0
-    )
-    model = SoilModel(grid; soil, initializer)
-    integrator = initialize(model, ForwardEuler())
+    initializers = (saturation_water_ice = (x, z) -> 1.0,)
+    integrator = initialize(model, ForwardEuler(); initializers)
     state = integrator.state
     # check that initial water table depth is correctly calculated from initial condition
     @test all(isapprox.(state.water_table, 0, atol = 1.0e-12))
@@ -152,11 +150,8 @@ end
     @test all(state.saturation_water_ice .≈ 1)
 
     # Variably saturated with water table
-    initializer = FieldInitializers(
-        saturation_water_ice = (x, z) -> min(1, 0.5 - 0.1 * z)
-    )
-    model = SoilModel(grid; soil, initializer)
-    integrator = initialize(model, ForwardEuler())
+    initializers = (saturation_water_ice = (x, z) -> min(1, 0.5 - 0.1 * z),)
+    integrator = initialize(model, ForwardEuler(); initializers)
     state = integrator.state
     water_table = state.water_table
     hydraulic_cond = state.hydraulic_conductivity
@@ -210,13 +205,13 @@ end
     end
     hydrology = SoilHydrology(eltype(grid), RichardsEq(); hydraulic_properties, vwc_forcing)
     soil = SoilEnergyWaterCarbon(eltype(grid); hydrology, strat)
+    model = SoilModel(grid; soil)
     # Variably saturated with water table
-    initializer = FieldInitializers(
+    initializers = (
         temperature = 10.0, # positive soil temperature
         saturation_water_ice = 1.0 # fully saturated
     )
-    model = SoilModel(grid; soil, initializer)
-    integrator = initialize(model, ForwardEuler())
+    integrator = initialize(model, ForwardEuler(); initializers)
     state = integrator.state
     fields = get_fields(state, hydrology)
     # check that forcing_ET is zero when no latent heat flux is supplied

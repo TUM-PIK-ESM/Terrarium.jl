@@ -98,7 +98,7 @@ end
     dynamics::Dyn = LinearDynamics()
 
     "Model initializer"
-    initializer::Init = DefaultInitializer()
+    initializer::Init = DefaultInitializer(eltype(grid))
 end
 
 # ╔═╡ 575d920c-b12e-493f-95a7-5c962c3591fd
@@ -188,13 +188,13 @@ However, now we have everything our model needs and we can finally use it!
 
 ## Running our model 
 
-First, we will define our initial conditions using `FieldInitializer`.
+First, we will define our initial conditions.
 
-`FieldInitializer` can take in functions `(x,z)->val`, arrays or values. It uses `Oceananigans.set!(field, x)`, and allows all input arguments for `x` that `set!` allows: 
+User-specified `Field` initializers passed to `initialize` can be provided in any form supported by `Oceananigans.set!`, including constants, arrays, and functions of the form `(x,z) -> val`: 
 """
 
 # ╔═╡ fad517e2-9d3a-43cd-8e4d-0b72ca55b8c8
-initializer = FieldInitializers(u = 1.0)
+initializers = (u = 1.0,)
 
 # ╔═╡ f2d02218-76f6-4b3a-84ca-38772f55d428
 md"""
@@ -216,11 +216,11 @@ Here we constructed a 2D (`XY()`) time series on our `grid` at times `t_F` with 
 
 # ╔═╡ 4b483c23-9e15-4d03-b275-8f530854669e
 md"""
-Then, we construct our model from the chosen `grid` and `initializer`
+Then, we construct our model from the chosen `grid`
 """
 
 # ╔═╡ 2a4234c5-f529-4166-94c3-0556565348ea
-model = ExpModel(grid; initializer)
+model = ExpModel(grid)
 
 # ╔═╡ 4c36fdc0-5120-46b9-86ca-e875e23a6c1d
 md"""
@@ -229,7 +229,7 @@ to `initialize` along with a suitable timestepper and our input/forcing data, wh
 """
 
 # ╔═╡ 7e38132b-d406-4863-b88f-90efe2a1bfa2
-integrator = initialize(model, Heun(Δt = 1.0), input)
+integrator = initialize(model, Heun(Δt = 1.0), input; initializers)
 
 # ╔═╡ ab442662-9975-42e5-b5c7-48687f8cbe12
 md"""

@@ -113,7 +113,7 @@ export StateVariables, get_fields
 include("state_variables.jl")
 
 # default initializers
-export FieldInitializers, DefaultInitializer
+export DefaultInitializer
 include("initializers.jl")
 
 # boundary condition helper functions

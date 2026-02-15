@@ -102,7 +102,7 @@ function initialize!(integrator::ModelIntegrator)
     # fill halo regions
     fill_halo_regions!(integrator.state)
     # evaluate user-specified field initializers
-    initialize!(integrator.state, integrator.inits)
+    initialize!(integrator.state, integrator.initializers)
     # evaluate model initializer
     initialize!(integrator.state, integrator.model)
     return integrator

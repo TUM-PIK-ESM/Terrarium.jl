@@ -34,7 +34,7 @@
     constants::PhysicalConstants{NF} = PhysicalConstants(eltype(grid))
 
     "Initializer for coupled model"
-    initializer::Initializer = DefaultInitializer()
+    initializer::Initializer = DefaultInitializer(eltype(grid))
 end
 
 function initialize(

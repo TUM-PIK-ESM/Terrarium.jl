@@ -8,7 +8,7 @@ DEFAULT_NF = Float32
 
 @kwdef struct TestModel{NF, Grid <: AbstractLandGrid{NF}} <: Terrarium.AbstractModel{NF, Grid}
     grid::Grid
-    initializer = DefaultInitializer()
+    initializer = DefaultInitializer(eltype(grid))
 end
 
 Terrarium.variables(model::TestModel) = (

@@ -76,7 +76,7 @@ end
 QuasiThermalSteadyState(::Type{NF}; kwargs...) where {NF} = QuasiThermalSteadyState{NF}(; kwargs...)
 
 function initialize!(state, ::AbstractModel, init::QuasiThermalSteadyState)
-    set!(state.temperature, (x, z) -> init.T₀ + init.Qgeo / init.k_eff * z)
+    set!(state.temperature, (x, z) -> init.T₀ - init.Qgeo / init.k_eff * z)
 end
 
 """
