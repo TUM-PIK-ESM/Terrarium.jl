@@ -1,4 +1,5 @@
 using Terrarium
+using CUDA
 
 import CairoMakie as Makie
 
@@ -8,7 +9,8 @@ arch = CUDA.functional() ? GPU() : CPU()
 grid = ColumnGrid(arch, Float32, ExponentialSpacing(N = 10))
 # initializer for soil model with quasi thermal steady-state
 initializer = SoilInitializer(
-    energy = QuasiThermalSteadyState(T₀ = -1.0)
+    eltype(grid),
+    energy = QuasiThermalSteadyState(eltype(grid), T₀ = -1.0)
 )
 model = SoilModel(grid; initializer)
 # constant surface temperature of 1°C

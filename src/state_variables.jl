@@ -546,7 +546,7 @@ function Base.show(io::IO, state::StateVariables{NF}) where {NF}
     print(io, "├─ Auxiliary: ")
     show(io, state.auxiliary)
     println(io)
-    print(io, "├─ Input: ")
+    print(io, "├─ Inputs: ")
     show(io, state.inputs)
     println(io)
     return print(io, "├─ Namespaces: $(keys(state.namespaces))")
