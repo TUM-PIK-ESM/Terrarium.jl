@@ -90,15 +90,21 @@ makedocs(
     pages = [
         "Home" => "index.md",
         "Overview" => [
-            "Numerical core" => "overview/numerical_core.md",
-            "Software architecture" => "overview/software_architecture.md",
-            "Mathematical formulation" => "overview/mathematical_formulation.md",
+            "Baisc concepts" => "introduction/basic_concepts.jl",
+            "Numerical core" => "introduction/numerical_core.md",
+            "Mathematical formulation" => "introduction/mathematical_formulation.md",
         ],
-        "Physics" => [
+        "Extending Terrarium" => [
+            "Core interfaces" => "extending/core_interfaces.md"
+        ],
+        "Processes" => [
             "Soil physics" => [
                 "Energy and water balance" => "physics/soil_energy_water.md",
             ],
             "Vegetation" => "physics/vegetation.md",
+        ],
+        "Models" => [
+
         ],
         "Examples" => notebook_docpages,
         "Contributing" => "contributing.md",
