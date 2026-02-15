@@ -284,6 +284,7 @@ end
         clock = Clock(time=zero(NF)),
         input_variables = (),
         boundary_conditions = (;),
+        initializers = (;),
         fields = (;)
     ) where {NF}
 
@@ -296,10 +297,11 @@ function initialize(
         clock = Clock(time = zero(NF)),
         input_variables = (),
         boundary_conditions = (;),
+        initializers = (;),
         fields = (;)
     ) where {NF}
     vars = Variables(tuplejoin(variables(model), input_variables))
-    state = initialize(vars, model.grid; clock, boundary_conditions, fields)
+    state = initialize(vars, model.grid; clock, boundary_conditions, initializers, fields)
     return state
 end
 
@@ -310,6 +312,7 @@ end
         clock = Clock(time=zero(NF)),
         input_variables = (),
         boundary_conditions = (;),
+        initializers = (;),
         fields = (;)
     ) where {NF}
 
@@ -323,10 +326,11 @@ function initialize(
         clock = Clock(time = zero(NF)),
         input_variables = (),
         boundary_conditions = (;),
+        initializers = (;),
         fields = (;)
     ) where {NF}
     vars = Variables(tuplejoin(variables(process), input_variables))
-    state = initialize(vars, grid; clock, boundary_conditions, fields)
+    state = initialize(vars, grid; clock, boundary_conditions, initializers, fields)
     return state
 end
 
@@ -338,6 +342,7 @@ end
         grid::AbstractLandGrid{NF};
         clock::Clock = Clock(time=0.0),
         boundary_conditions = (;),
+        initializers = (;),
         fields = (;)
     ) where {NF}
 
@@ -366,7 +371,7 @@ function initialize(
     # get closure variable names
     closurenames = map(varname, closure_variables(values(vars.prognostic)))
     # construct and return StateVariables
-    return StateVariables(
+    state = StateVariables(
         NF,
         closurenames,
         prognostic_fields,
@@ -376,6 +381,9 @@ function initialize(
         namespaces,
         clock
     )
+    # Apply Field initializers
+    initialize!(state, initializers)
+    return state
 end
 
 # Base case: empty named tuples

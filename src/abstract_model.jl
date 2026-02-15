@@ -134,9 +134,6 @@ Note that this is a type-stable, `@generated` function that is compiled for each
     return :(tuple($(accessors...)))
 end
 
-# Fallback dispatch for initialize!
-initialize!(state, grid, process::AbstractProcess, args...) = nothing
-
 """
     get_grid(model::AbstractModel)::AbstractLandGrid
 
