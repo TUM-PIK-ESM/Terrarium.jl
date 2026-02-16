@@ -127,3 +127,7 @@ $TYPEDFIELDS
 end
 
 SaturationWaterTable(::Type{NF}; kwargs...) where {NF} = SaturationWaterTable{NF}(; kwargs...)
+
+function initialize!(state, ::AbstractModel, init::SaturationWaterTable{NF}) where {NF}
+    set!(state.saturation_water_ice, (x,z) -> z <= init.water_table_depth ? one(NF) : init.vadose_zone_saturation)
+end
