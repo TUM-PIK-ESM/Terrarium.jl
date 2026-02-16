@@ -31,7 +31,7 @@ For a more detailed overview of `Field`s, we recommend checking out the [corresp
 
 ## Parallel programming with KernelAbstractions.jl
 
-Like Oceananigans and SpeedyWeather, the numerical core of Terrarium is based on around [KernelAbstractions.jl](https://github.com/JuliaGPU/KernelAbstractions.jl) which allows for device-agnostic *paralell programming* via computational *kernels*. The purpose of htis design is to allow for highly efficient, scalable, and cross-architecture (e.g. CPU/GPU/TPU) parallelization of all numerical computations. Kernels are defined using the `@kernel` macro from KernelAbstractions:
+Like Oceananigans and SpeedyWeather, the numerical core of Terrarium is based on [KernelAbstractions.jl](https://github.com/JuliaGPU/KernelAbstractions.jl) which allows for device-agnostic *parallel programming* via computational *kernels*. The purpose of this design is to allow for highly efficient, scalable, and cross-architecture (e.g. CPU/GPU/TPU) parallelization of all numerical computations. Kernels are defined using the `@kernel` macro from KernelAbstractions:
 
 ```julia
 @kernel function square_kernel!(output, input, other_args...)
@@ -41,7 +41,7 @@ end
 ```
 where `input` and `output` are here assumed to be 3D `Array`s or `Field`s. Note that kernels can also accept any arbitrary number of arguments of any plain data type (including immutable `struct`s) for which `isbits(arg)` is true.
 
-Kernels represent self-contained programs that can be execute in parallel by large number of worker threads or processes. The [`@index`](https://juliagpu.github.io/KernelAbstractions.jl/stable/api/#KernelAbstractions.@index) macro extracts the index of the executing thread within the parallel kernel; `Global` here refers to the index across all workgroups (or "blocks" in CUDA language).
+Kernels represent self-contained programs that can be execute in parallel by large number of worker threads or processes. Intuitively, you can think of the kernel function as the body of a `for` loop that executes over all finite volumes defined on the grid. The [`@index`](https://juliagpu.github.io/KernelAbstractions.jl/stable/api/#KernelAbstractions.@index) macro extracts the index of the executing thread within the parallel kernel; `Global` here refers to the index across all workgroups (or "blocks" in CUDA language).
 
 Terrarium and Oceananigans kernels are typically launched over a `grid` (or some subset thereof) via `launch!`,
 ```julia
@@ -52,7 +52,10 @@ where `:xyz` indicates the dimensions of the grid over which the kernel should b
 ```julia
 launch!(grid, XYZ, square_kernel!, output_field, input_field)
 ```
-which automatically passes `grid` as the second argument to the kernel. So the above kernel would need to be modified to have the signature `square_kernel!(output, grid, input, other_args...)`. We generally find this convenient since it makes the kernel's dependence on the `grid` more explicit. However, it comes with a small amount of runtime overhead in cases where the `grid` is not needed. As such, this convention may change in the future.
+which automatically passes `grid` as the second argument to the kernel. Note that, in order to make use of this convenience dispatch of `launch!`, the above kernel would need to be modified to have the signature `square_kernel!(output, grid, input, other_args...)`. We generally find this convenient since it makes the kernel's dependence on the `grid` more explicit. However, it comes with a small amount of runtime overhead in cases where the `grid` is not needed. Note also the argument `XYZ` (or `XY` for 2D) corresponds to a `VarDims` type used to define Terrarium state variables; this syntax can be used interchangeably with the Oceananigans `Symbol` syntax.
+
+!!! warning
+    The kernel launching patterns used in Terrarium are still in an early stage of development and may change in the future.
 
 ## Numeric types
 
