@@ -82,7 +82,7 @@ end
 """
     $TYPEDEF
 
-Represents a piecwise linear temperature initializer from the given knots.
+Represents a piecewise linear temperature initializer specified from the given knots.
 
 ```julia
 initializer = PiecewiseLinearInitialSoilTemperature(
