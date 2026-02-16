@@ -15,7 +15,8 @@ initializer = SoilInitializer(
 model = SoilModel(grid; initializer)
 # constant surface temperature of 1°C
 boundary_conditions = PrescribedSurfaceTemperature(:T_ub, 1.0)
-integrator = initialize(model, ForwardEuler(); boundary_conditions)
+timestepper = ForwardEuler(eltype(grid))
+integrator = initialize(model, timestepper; boundary_conditions)
 # test one timestep
 @time timestep!(integrator)
 # run simulation forward for a set period of time
