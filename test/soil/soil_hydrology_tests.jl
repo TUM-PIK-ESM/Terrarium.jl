@@ -209,7 +209,7 @@ end
     # Variably saturated with water table
     initializers = (
         temperature = 10.0, # positive soil temperature
-        saturation_water_ice = 1.0 # fully saturated
+        saturation_water_ice = 1.0, # fully saturated
     )
     integrator = initialize(model, ForwardEuler(); initializers)
     state = integrator.state

@@ -351,11 +351,12 @@ end
 # Automatically forward dispatches for `show` on tuples of variables to Variables;
 # This is for the convenience of the user such that `variables(model)` pretty prints
 function Base.show(
-    io::IO,
-    vartup::Tuple{Union{AbstractVariable, Namespace}, Vararg{Union{AbstractVariable, Namespace}}}
-)
+        io::IO,
+        vartup::Tuple{Union{AbstractVariable, Namespace}, Vararg{Union{AbstractVariable, Namespace}}}
+    )
     vars = Variables(vartup)
     show(io, vars)
+    return nothing
 end
 
 """

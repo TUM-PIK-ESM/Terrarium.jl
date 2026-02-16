@@ -15,7 +15,7 @@ using Oceananigans.BoundaryConditions: BoundaryCondition, Flux
     initializers = (
         temperature = (x, z) -> 1.0 - 0.02 * z,
         saturation_water_ice = (x, z) -> min(1, 0.8 - 0.05 * z),
-        carbon_vegetation = 0.1
+        carbon_vegetation = 0.1,
     )
     integrator = initialize(vegsoil, ForwardEuler(); initializers)
     # Check that infiltration is correctly coupled to soil hydrology

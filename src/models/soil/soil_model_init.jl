@@ -7,7 +7,7 @@ struct SoilInitializer{
         NF,
         EnergyInit <: AbstractInitializer{NF},
         HydrologyInit <: AbstractInitializer{NF},
-        BGCInit <: AbstractInitializer{NF}
+        BGCInit <: AbstractInitializer{NF},
     } <: AbstractInitializer{NF}
     "Soil energy/temperature state initializer"
     energy::EnergyInit
@@ -20,11 +20,11 @@ struct SoilInitializer{
 end
 
 function SoilInitializer(
-    ::Type{NF};
-    energy = QuasiThermalSteadyState(NF),
-    hydrology = SaturationWaterTable(NF),
-    biogeochem = DefaultInitializer(NF)
-) where {NF}
+        ::Type{NF};
+        energy = QuasiThermalSteadyState(NF),
+        hydrology = SaturationWaterTable(NF),
+        biogeochem = DefaultInitializer(NF)
+    ) where {NF}
     return SoilInitializer(energy, hydrology, biogeochem)
 end
 
@@ -76,7 +76,7 @@ end
 QuasiThermalSteadyState(::Type{NF}; kwargs...) where {NF} = QuasiThermalSteadyState{NF}(; kwargs...)
 
 function initialize!(state, ::AbstractModel, init::QuasiThermalSteadyState)
-    set!(state.temperature, (x, z) -> init.T₀ - init.Qgeo / init.k_eff * z)
+    return set!(state.temperature, (x, z) -> init.T₀ - init.Qgeo / init.k_eff * z)
 end
 
 """
@@ -107,7 +107,7 @@ end
 
 function initialize!(state, ::AbstractModel, init::PiecewiseLinearInitialSoilTemperature)
     f = piecewise_linear(init.knots...)
-    set!(state.temperature, (x, z) -> f(z))
+    return set!(state.temperature, (x, z) -> f(z))
 end
 
 # Soil hydrology initializers
@@ -129,5 +129,5 @@ end
 SaturationWaterTable(::Type{NF}; kwargs...) where {NF} = SaturationWaterTable{NF}(; kwargs...)
 
 function initialize!(state, ::AbstractModel, init::SaturationWaterTable{NF}) where {NF}
-    set!(state.saturation_water_ice, (x,z) -> z <= init.water_table_depth ? one(NF) : init.vadose_zone_saturation)
+    return set!(state.saturation_water_ice, (x, z) -> z <= init.water_table_depth ? one(NF) : init.vadose_zone_saturation)
 end
