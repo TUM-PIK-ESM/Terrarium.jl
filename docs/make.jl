@@ -90,8 +90,9 @@ makedocs(
     pages = [
         "Home" => "index.md",
         "Overview" => [
-            "Mathematical formulation" => "overview/mathematical_formulation.md",
+            "Numerical core" => "overview/numerical_core.md",
             "Software architecture" => "overview/software_architecture.md",
+            "Mathematical formulation" => "overview/mathematical_formulation.md",
         ],
         "Physics" => [
             "Soil physics" => [

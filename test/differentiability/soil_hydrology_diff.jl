@@ -12,12 +12,7 @@ function build_soil_energy_hydrology_model(
     ) where {NF}
     grid = ColumnGrid(arch, Float64, ExponentialSpacing(N = 10))
     # initial conditions
-    initializer = FieldInitializers(
-        # steady-ish state initial condition for temperature
-        temperature = (x, z) -> 1.0,
-        # saturated soil
-        saturation_water_ice = (x, z) -> min(0.5 - 0.1 * z, 1.0),
-    )
+    initializer = SoilInitializer(eltype(grid))
     hydrology = SoilHydrology(eltype(grid), vertflow; hydrology_kwargs...)
     strat = HomogeneousStratigraphy(eltype(grid); porosity)
     soil = SoilEnergyWaterCarbon(eltype(grid); hydrology, strat)

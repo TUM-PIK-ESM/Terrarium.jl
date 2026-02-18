@@ -35,7 +35,7 @@ function SurfaceEnergyModel(
         surface_energy_balance::AbstractSurfaceEnergyBalance = SurfaceEnergyBalance(NF);
         atmosphere::AbstractAtmosphere = PrescribedAtmosphere(NF),
         constants::PhysicalConstants = PhysicalConstants(NF),
-        initializer::AbstractInitializer = DefaultInitializer()
+        initializer::AbstractInitializer = DefaultInitializer(eltype(grid))
     ) where {NF}
     return SurfaceEnergyModel(grid, atmosphere, surface_energy_balance, constants, initializer)
 end

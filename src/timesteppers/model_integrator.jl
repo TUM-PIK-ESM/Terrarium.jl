@@ -14,6 +14,7 @@ struct ModelIntegrator{
         TimeStepper <: AbstractTimeStepper{NF},
         Model <: AbstractModel{NF, Grid},
         StateVars <: AbstractStateVariables,
+        Inits <: NamedTuple,
         Inputs <: InputSources,
     } <: Oceananigans.AbstractModel{TimeStepper, Arch}
     "The clock holding all information about the current timestep/iteration of a simulation"
@@ -27,6 +28,9 @@ struct ModelIntegrator{
 
     "Collection of all state variables defined on the simulation `model`"
     state::StateVars
+
+    "Optional named tuple of user-specified field initializers"
+    initializers::Inits
 
     "Time stepper"
     timestepper::TimeStepper
@@ -90,10 +94,16 @@ Resets the simulation `clock` and calls `initialize!(state, model)` on the under
 should reset all state variables to their values as defiend by the model initializer.
 """
 function initialize!(integrator::ModelIntegrator)
+    # reset state variables and clock
     reset!(integrator.state)
     reset!(integrator.clock)
+    # set inptus based on updated clock/state
     update_inputs!(integrator.state, integrator.inputs)
+    # fill halo regions
     fill_halo_regions!(integrator.state)
+    # evaluate user-specified field initializers
+    initialize!(integrator.state, integrator.initializers)
+    # evaluate model initializer
     initialize!(integrator.state, integrator.model)
     return integrator
 end
@@ -134,13 +144,14 @@ function initialize(
         inputs::InputSource...;
         clock::Clock = Clock(time = zero(NF)),
         boundary_conditions = (;),
+        initializers = (;),
         fields = (;)
     ) where {NF}
     inputs = InputSources(inputs...)
     input_vars = variables(inputs)
     state = initialize(model; clock, boundary_conditions, fields, input_variables = input_vars)
     initialized_timestepper = initialize(timestepper, model, state)
-    integrator = ModelIntegrator(clock, model, inputs, state, initialized_timestepper)
+    integrator = ModelIntegrator(clock, model, inputs, state, initializers, initialized_timestepper)
     initialize!(integrator)
     return integrator
 end

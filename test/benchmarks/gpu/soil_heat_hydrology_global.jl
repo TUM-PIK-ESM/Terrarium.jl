@@ -39,12 +39,7 @@ end
 function set_up_model(arch, ::Type{NF}, ring_grid::RingGrids.AbstractGrid) where {NF}
     grid = ColumnRingGrid(arch, NF, ExponentialSpacing(N = 30), ring_grid)
     # Initial conditions
-    initializer = FieldInitializers(
-        # steady-ish state initial condition for soil temperature
-        temperature = (x, z) -> -1 - NF(0.02) * z,
-        # variably saturated soil
-        saturation_water_ice = (x, z) -> min(NF(1), NF(0.8) - NF(0.1) * z),
-    )
+    initializer = SoilInitializer(eltype(grid))
     energy = SoilEnergyBalance(NF)
     hydrology = SoilHydrology(NF, RichardsEq())
     # Periodic surface temperature with annual cycle

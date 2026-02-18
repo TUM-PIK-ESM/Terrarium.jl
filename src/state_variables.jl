@@ -189,7 +189,7 @@ end
 
 Retrieves the `Field` from `state` matching the `name` of the given variable.
 """
-@inline get_field(state, ::AbstractVariable{name}) where {name} = getproperty(state, name)
+@inline get_field(state, var::AbstractVariable{name}) where {name} = getproperty(state, name)
 
 """
     $TYPEDSIGNATURES
@@ -206,7 +206,7 @@ Retrieves all `Field`s from `state` matching the names of the given variables.
 end
 
 """
-    $TYPEDSIGNATURES
+    $SIGNATURES
 
 Retrieves all non-tendency `Field`s from `state` defined on the given `components`.
 """
@@ -221,7 +221,7 @@ Retrieves all non-tendency `Field`s from `state` defined on the given `component
 end
 
 """
-    $TYPEDSIGNATURES
+    $SIGNATURES
 
 Retrieves all `Field`s from `state` corresponding to prognostic variables defined on the given `components`.
 """
@@ -232,7 +232,7 @@ Retrieves all `Field`s from `state` corresponding to prognostic variables define
 end
 
 """
-    $TYPEDSIGNATURES
+    $SIGNATURES
 
 Retrieves all `Field`s from `state` corresponding to tendencies defined on the given `components`.
 """
@@ -243,7 +243,7 @@ Retrieves all `Field`s from `state` corresponding to tendencies defined on the g
 end
 
 """
-    $TYPEDSIGNATURES
+    $SIGNATURES
 
 Retrieves all `Field`s from `state` corresponding to auxiliary variables defined on the given `components`.
 """
@@ -254,7 +254,7 @@ Retrieves all `Field`s from `state` corresponding to auxiliary variables defined
 end
 
 """
-    $TYPEDSIGNATURES
+    $SIGNATURES
 
 Retrieves all `Field`s from `state` corresponding to closure variables defined on the given `components`.
 """
@@ -265,7 +265,7 @@ Retrieves all `Field`s from `state` corresponding to closure variables defined o
 end
 
 """
-    $TYPEDSIGNATURES
+    $SIGNATURES
 
 Retrieves all `Field`s from `state` corresponding to input variables defined on the given `components`.
 """
@@ -284,6 +284,7 @@ end
         clock = Clock(time=zero(NF)),
         input_variables = (),
         boundary_conditions = (;),
+        initializers = (;),
         fields = (;)
     ) where {NF}
 
@@ -296,10 +297,11 @@ function initialize(
         clock = Clock(time = zero(NF)),
         input_variables = (),
         boundary_conditions = (;),
+        initializers = (;),
         fields = (;)
     ) where {NF}
     vars = Variables(tuplejoin(variables(model), input_variables))
-    state = initialize(vars, model.grid; clock, boundary_conditions, fields)
+    state = initialize(vars, model.grid; clock, boundary_conditions, initializers, fields)
     return state
 end
 
@@ -310,6 +312,7 @@ end
         clock = Clock(time=zero(NF)),
         input_variables = (),
         boundary_conditions = (;),
+        initializers = (;),
         fields = (;)
     ) where {NF}
 
@@ -323,10 +326,11 @@ function initialize(
         clock = Clock(time = zero(NF)),
         input_variables = (),
         boundary_conditions = (;),
+        initializers = (;),
         fields = (;)
     ) where {NF}
     vars = Variables(tuplejoin(variables(process), input_variables))
-    state = initialize(vars, grid; clock, boundary_conditions, fields)
+    state = initialize(vars, grid; clock, boundary_conditions, initializers, fields)
     return state
 end
 
@@ -338,6 +342,7 @@ end
         grid::AbstractLandGrid{NF};
         clock::Clock = Clock(time=0.0),
         boundary_conditions = (;),
+        initializers = (;),
         fields = (;)
     ) where {NF}
 
@@ -350,6 +355,7 @@ function initialize(
         grid::AbstractLandGrid{NF};
         clock::Clock = Clock(time = 0.0),
         boundary_conditions = (;),
+        initializers = (;),
         fields = (;)
     ) where {NF}
     # Initialize Fields for each variable group, if they are not already given in the user defined `fields`
@@ -366,7 +372,7 @@ function initialize(
     # get closure variable names
     closurenames = map(varname, closure_variables(values(vars.prognostic)))
     # construct and return StateVariables
-    return StateVariables(
+    state = StateVariables(
         NF,
         closurenames,
         prognostic_fields,
@@ -376,6 +382,9 @@ function initialize(
         namespaces,
         clock
     )
+    # Apply Field initializers
+    initialize!(state, initializers)
+    return state
 end
 
 # Base case: empty named tuples
@@ -537,7 +546,7 @@ function Base.show(io::IO, state::StateVariables{NF}) where {NF}
     print(io, "├─ Auxiliary: ")
     show(io, state.auxiliary)
     println(io)
-    print(io, "├─ Input: ")
+    print(io, "├─ Inputs: ")
     show(io, state.inputs)
     println(io)
     return print(io, "├─ Namespaces: $(keys(state.namespaces))")

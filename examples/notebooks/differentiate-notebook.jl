@@ -33,12 +33,7 @@ import CairoMakie as Makie
 # ╔═╡ 55e13705-70e4-4af0-a579-d9d9f01a28c5
 begin
     grid = ColumnGrid(ExponentialSpacing())
-    initializer = FieldInitializers(
-        # steady-ish state initial condition for temperature
-        temperature = (x, z) -> -1 - 0.01 * z,
-        # fully saturated soil pores
-        saturation_water_ice = 1.0,
-    )
+    initializer = SoilInitializer(eltype(grid))
     model = SoilModel(grid; initializer)
     # constant surface temperature of 1°C
     bcs = PrescribedSurfaceTemperature(:T_ub, 1.0)

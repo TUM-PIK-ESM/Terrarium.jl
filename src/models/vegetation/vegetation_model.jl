@@ -29,7 +29,7 @@ $TYPEDFIELDS
     constants::Constants = PhysicalConstants(eltype(grid))
 
     "State variable initializer"
-    initializer::Initializer = DefaultInitializer()
+    initializer::Initializer = DefaultInitializer(eltype(grid))
 end
 
 function compute_auxiliary!(state, model::VegetationModel)
