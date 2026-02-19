@@ -37,12 +37,14 @@ function timestep!(integrator::ModelIntegrator, timestepper::Heun, Δt = default
     (; model, state, inputs) = integrator
     grid = get_grid(model)
 
+    # Update current state
+    update_state!(state, model, inputs, compute_tendencies = true)
+
     # Copy current state to stage
     stage = timestepper.stage
     copyto!(stage, state)
 
     # Compute stage
-    update_state!(stage, model, inputs, compute_tendencies = true)
     explicit_step!(stage, grid, timestepper, Δt)
     # Call timestep! on model
     timestep!(stage, model, timestepper, Δt)
