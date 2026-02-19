@@ -23,11 +23,6 @@ function Terrarium.compute_tendencies!(state, model::TestModel)
     return state.tendencies.x .= state.F
 end
 
-function Terrarium.timestep!(state, model::TestModel, euler::ForwardEuler, Δt)
-    Terrarium.compute_tendencies!(state, model)
-    return @. state.x += Δt * state.tendencies.x
-end
-
 @testset "Forcing input" begin
     grid = ColumnGrid(CPU(), DEFAULT_NF, ExponentialSpacing())
     model = TestModel(grid)

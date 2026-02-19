@@ -100,10 +100,6 @@ export InputSource, InputSources, FieldInputSource, FieldTimeSeriesInputSource
 export update_inputs!
 include("input_output/input_sources.jl")
 
-# timestepping
-export timestep!, default_dt, is_adaptive
-include("timesteppers/abstract_timestepper.jl")
-
 # process/model interface
 export get_grid, get_initializer, variables, processes, compute_auxiliary!, compute_tendencies!
 include("abstract_model.jl")
@@ -124,6 +120,10 @@ include("boundary_conditions.jl")
 export Forcings
 include("forcings.jl")
 
+# timestepping
+export timestep!, default_dt, is_adaptive
+include("timesteppers/abstract_timestepper.jl")
+
 # abstract model types
 include("models/abstract_types.jl")
 
@@ -133,14 +133,14 @@ include("processes/processes.jl")
 # concrete model implementations
 include("models/models.jl")
 
-# timestepper implementations
+# model integrator/simulation types and methods
+export ModelIntegrator, initialize, current_time, iteration
+include("timesteppers/model_integrator.jl")
+
+# Concrete timestepper implementations
 export ForwardEuler
 include("timesteppers/forward_euler.jl")
 export Heun
 include("timesteppers/heun.jl")
-
-# model integrator/simulation types and methods
-export ModelIntegrator, initialize, current_time, iteration
-include("timesteppers/model_integrator.jl")
 
 end # module Terrarium

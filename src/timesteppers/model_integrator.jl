@@ -123,8 +123,7 @@ variables.
 """
 timestep!(integrator::ModelIntegrator; finalize = true) = timestep!(integrator, default_dt(timestepper(integrator)); finalize)
 function timestep!(integrator::ModelIntegrator, Δt; finalize = true)
-    update_state!(integrator, compute_tendencies = true)
-    timestep!(integrator.state, integrator.timestepper, integrator.model, integrator.inputs, convert_dt(Δt))
+    timestep!(integrator, integrator.timestepper, convert_dt(Δt))
     if finalize
         compute_auxiliary!(integrator.state, integrator.model)
     end
