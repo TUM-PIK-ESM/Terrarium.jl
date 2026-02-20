@@ -1,7 +1,7 @@
 using Terrarium
 using Terrarium: compute_kinetic_parameters, compute_Γ_star, compute_PAR, compute_APAR, compute_pres_i
-using Terrarium: compute_t_stress, compute_c1_c2, compute_Vc_max, compute_JE_JC, compute_β
-using Terrarium: compute_Rd, compute_Ag, compute_And, compute_photosynthesis
+using Terrarium: compute_t_stress, compute_c1_c2, compute_Vc_max, compute_JE_JC
+using Terrarium: compute_Rd, compute_Ag, compute_photosynthesis
 using Test
 
 
@@ -17,14 +17,14 @@ using Test
     # Test temperature dependence, kinetic parameters should increase/decrease with T_air
     T_air_warm = 30.0 # °C
     τ_warm, Kc_warm, Ko_warm = compute_kinetic_parameters(photo, T_air_warm)
-    @test τ_warm < τ  
-    @test Kc_warm > Kc  
-    @test Ko_warm > Ko  
+    @test τ_warm < τ
+    @test Kc_warm > Kc
+    @test Ko_warm > Ko
 end
 
 @testset "Γ_star test" begin
     photo = LUEPhotosynthesis()
-    # Test Γ_star should be positive 
+    # Test Γ_star should be positive
     τ = 3000.0 # Value for T_air = 20.0 °C
     pres_O2 = 20.9e3 # Pa
     Γ_star = compute_Γ_star(photo, τ, pres_O2)
@@ -43,7 +43,7 @@ end
     PAR = compute_PAR(photo, swdown)
     @test isfinite(PAR) && PAR > 0
 
-    # Test swdown = 0 (PAR should be 0)  
+    # Test swdown = 0 (PAR should be 0)
     swdown = 0.0 # W/m²
     PAR = compute_PAR(photo, swdown)
     @test PAR == 0
@@ -88,7 +88,7 @@ end
     pres_i = compute_pres_i(photo, λc, pres_a)
     @test pres_i == pres_a
 
-    # Test pi should be positive and less than pres_a for positive λc 
+    # Test pi should be positive and less than pres_a for positive λc
     λc = 0.5
     pres_a = 40.0 # Pa
     pres_i = compute_pres_i(photo, λc, pres_a)
@@ -103,7 +103,7 @@ end
     @test t_stress == 0.0
 
     # Test T_air = T_CO2_low (t_stress should be 0)
-    T_air = photo.t_CO2_low 
+    T_air = photo.t_CO2_low
     t_stress = compute_t_stress(photo, T_air)
     @test t_stress == 0.0
 
@@ -153,7 +153,7 @@ end
 
 @testset "Vc_max test" begin
     photo = LUEPhotosynthesis()
-    c_1 = 0.5 
+    c_1 = 0.5
     Kc = 20.0 # Value for T_air = 20.0 °C
     Ko = 3.0e4 # Value for T_air = 20.0 °C
     Γ_star = 3.0 # Value for T_air = 20.0 °C and pres_O2 = 20.9e3 Pa
@@ -176,7 +176,7 @@ end
 
 @testset "JE and JC test" begin
     photo = LUEPhotosynthesis()
-    # Test c1 = c2 = 0 (JE and JC should be 0) 
+    # Test c1 = c2 = 0 (JE and JC should be 0)
     c_1 = 0.0
     c_2 = 0.0
     APAR = 4.0 # Value for swdown = 50 W/m² and LAI = 5
@@ -204,13 +204,6 @@ end
     @test isfinite(JC)
 
     # TODO JE, JC can be negative?
-end
-
-@testset "β test" begin
-    photo = LUEPhotosynthesis()
-    # For now, test β should be 1
-    β = compute_β(photo)
-    @test β == 1.0
 end
 
 @testset "Rd test" begin
@@ -251,24 +244,25 @@ end
     # Test Ag should be finite for all other cases
     β = 0.5
     Ag = compute_Ag(photo, c_1, c_2, APAR, Vc_max, β)
-    @test isfinite(Ag)   
+    @test isfinite(Ag)
 
     # TODO Ag can be negative?
 end
 
-@testset "And test" begin
-    photo = LUEPhotosynthesis()
-    c_1 = 0.5 # Mock value
-    c_2 = 0.5 # Mock value
-    β = 0.5 # Mock value
-    APAR = 4.0 # Value for swdown = 50 W/m² and LAI = 5
-    Vc_max = 5.0 # Mock value
-    Rd = 0.2 # Value for β = 0.5 and Vc_max = 5
-    And = compute_And(photo, c_1, c_2, APAR, Vc_max, β, Rd)
-    @test isfinite(And)
+# Temporarily disabled since And is no longer computed
+# @testset "And test" begin
+#     photo = LUEPhotosynthesis()
+#     c_1 = 0.5 # Mock value
+#     c_2 = 0.5 # Mock value
+#     β = 0.5 # Mock value
+#     APAR = 4.0 # Value for swdown = 50 W/m² and LAI = 5
+#     Vc_max = 5.0 # Mock value
+#     Rd = 0.2 # Value for β = 0.5 and Vc_max = 5
+#     And = compute_And(photo, c_1, c_2, APAR, Vc_max, β, Rd)
+#     @test isfinite(And)
 
-    # TODO And can be negative?
-end
+#     # TODO And can be negative?
+# end
 
 @testset "Photosynthesis (GPP and Rd) test" begin
     photo = LUEPhotosynthesis()
@@ -276,26 +270,27 @@ end
     pres = 1.0e5 # Pa
     co2 = 400.0 # ppm
     λc = 0.5 # Mock value
+    β = 1.0 # full soil moisture availability
 
     # Test T_air < -3 (GPP and Rd should be 0)
     T_air = -5.0 # °C
-    LAI= 5.0 # Mock value
-    GPP, Rd = compute_photosynthesis(photo, T_air, swdown, pres, co2, LAI, λc)
+    LAI = 5.0 # Mock value
+    GPP, Rd = compute_photosynthesis(photo, T_air, swdown, pres, co2, LAI, λc, β)
     @test GPP == 0.0
     @test Rd == 0.0
 
     # Test T_air > -3 and LAI=0 (GPP and Rd should be 0)
     T_air = 20.0 # °C
-    LAI= 0.0
-    GPP, Rd = compute_photosynthesis(photo, T_air, swdown, pres, co2, LAI, λc)
+    LAI = 0.0
+    GPP, Rd = compute_photosynthesis(photo, T_air, swdown, pres, co2, LAI, λc, β)
     @test GPP == 0.0
     @test Rd == 0.0
 
     # Test T_air > -3 and LAI > 0 (GPP and Rd should be finite)
     T_air = 20.0 # °C
     LAI = 5.0 # Mock value
-    GPP, Rd = compute_photosynthesis(photo, T_air, swdown, pres, co2, LAI, λc)
-    @test isfinite(GPP) 
+    GPP, Rd = compute_photosynthesis(photo, T_air, swdown, pres, co2, LAI, λc, β)
+    @test isfinite(GPP)
     @test isfinite(Rd)
 
     # TODO GPP, Rd can be negative?

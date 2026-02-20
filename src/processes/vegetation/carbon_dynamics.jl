@@ -4,41 +4,43 @@
 Vegetation carbon dynamics implementation following PALADYN (Willeit 2016) but considering only the sum of the vegetation
 carbon pools. The subsequent splitting into C_leaf, C_stem, C_root is not implemented for now.
 
-Authors: Maha Badri 
+Authors: Maha Badri
 
 Properties:
 $TYPEDFIELDS
 """
-@kwdef struct PALADYNCarbonDynamics{NF} <: AbstractVegetationCarbonDynamics
+@kwdef struct PALADYNCarbonDynamics{NF} <: AbstractVegetationCarbonDynamics{NF}
     "Specific leaf area (Kattge et al. 2011) [m²/kgC], PFT specific"
-    SLA::NF = 10.0 # Value for Needleleaf tree PFT 
-    
+    SLA::NF = 10.0 # Value for Needleleaf tree PFT
+
     "Allometric coefficient, modified from Cox 2001 to account for bwl=1 [kgC/m²], PFT specific"
-    awl::NF = 2.0 # Value for Needleleaf tree PFT 
-    
+    awl::NF = 2.0 # Value for Needleleaf tree PFT
+
     "Minimum Leaf Area Index modified from Clark et al. 2011 [m²/m²], PFT specific"
-    LAI_min::NF = 1.0 # Value for Needleleaf tree PFT 
-    
+    LAI_min::NF = 1.0 # Value for Needleleaf tree PFT
+
     "Maximum Leaf Area Index modified from Clark et al. 2011 [m²/m²], PFT specific"
-    LAI_max::NF = 6.0 # Value for Needleleaf tree PFT 
-    
+    LAI_max::NF = 6.0 # Value for Needleleaf tree PFT
+
     "Leaf turnover rate (Kattge et al. 2011) [1/year], PFT specific"
     # TODO this parameter is yearly, should be changed to daily for now
-    γL::NF = 0.3 # Value for Needleleaf tree PFT 
-    
+    γL::NF = 0.3 # Value for Needleleaf tree PFT
+
     "Root turnover rate [1/year], PFT specific"
     # TODO this parameter is yearly, should be changed to daily for now
-    γR::NF = 0.3 # Value for Needleleaf tree PFT 
-    
+    γR::NF = 0.3 # Value for Needleleaf tree PFT
+
     "Stem turnover rate modified from Clark et al. 2011 [1/year], PFT specific"
     # TODO this parameter is yearly, should be changed to daily for now
-    γS::NF = 0.05 # Value for Needleleaf tree PFT 
+    γS::NF = 0.05 # Value for Needleleaf tree PFT
 end
 
+PALADYNCarbonDynamics(::Type{NF}; kwargs...) where {NF} = PALADYNCarbonDynamics{NF}(; kwargs...)
+
 variables(::PALADYNCarbonDynamics) = (
-    prognostic(:C_veg, XY()), # Vegetation carbon pool [kgC/m²]
-    auxiliary(:LAI_b, XY()), # Balanced Leaf Area Index [m²/m²]
-    auxiliary(:NPP, XY()), # Net Primary Production [kgC/m²/day]
+    prognostic(:carbon_vegetation, XY(), units = u"kg/m^2"), # Vegetation carbon pool [kgC/m²]
+    auxiliary(:balanced_leaf_area_index, XY()), # Balanced Leaf Area Index [m²/m²]
+    input(:net_primary_production, XY(), units = u"kg/m^2/d"), # Net Primary Production [kgC/m²/day]
 )
 
 """
@@ -48,12 +50,12 @@ Computes `λ_NPP`,a factor determining the partitioning of NPP between increase 
 vegetated area and spreading of the given PFT based on the balanced Leaf Area Index `LAI_b`,
 Eq. 74, PALADYN (Willeit 2016).
 """
-@inline function compute_λ_NPP(vegcarbon_dynamics::PALADYNCarbonDynamics{NF}, LAI_b) where NF
+@inline function compute_λ_NPP(vegcarbon_dynamics::PALADYNCarbonDynamics{NF}, LAI_b) where {NF}
     if LAI_b < vegcarbon_dynamics.LAI_min
         λ_NPP = zero(NF)
     elseif LAI_b <= vegcarbon_dynamics.LAI_max
-        λ_NPP = (LAI_b - vegcarbon_dynamics.LAI_min) /  
-                (vegcarbon_dynamics.LAI_max - vegcarbon_dynamics.LAI_min)
+        λ_NPP = (LAI_b - vegcarbon_dynamics.LAI_min) /
+            (vegcarbon_dynamics.LAI_max - vegcarbon_dynamics.LAI_min)
     else
         λ_NPP = NF(1.0)
     end
@@ -67,8 +69,8 @@ Computes `LAI_b`, the balanced Leaf Area Index based on the vegetation carbon po
 Eqs. 76-79, PALADYN (Willeit 2016).
 """
 
-@inline function compute_LAI_b(vegcarbon_dynamics::PALADYNCarbonDynamics{NF}, C_veg) where NF   
-    LAI_b = ((NF(2.0) / vegcarbon_dynamics.SLA) + vegcarbon_dynamics.awl) / C_veg
+@inline function compute_LAI_b(vegcarbon_dynamics::PALADYNCarbonDynamics{NF}, C_veg) where {NF}
+    LAI_b = ((NF(2.0) / vegcarbon_dynamics.SLA) + vegcarbon_dynamics.awl) / (C_veg + eps(NF)) # division by zero risk
     return LAI_b
 end
 
@@ -77,10 +79,12 @@ end
 Computes the local litterfall rate `Λ_loc` based on the balanced Leaf Area Index `LAI_b` (assuming evergreen PFTs),
 Eq. 75, PALADYN (Willeit 2016).
 """
-@inline function compute_Λ_loc(vegcarbon_dynamics::PALADYNCarbonDynamics{NF}, LAI_b) where NF
-    Λ_loc = (vegcarbon_dynamics.γL / vegcarbon_dynamics.SLA +
-             vegcarbon_dynamics.γR / vegcarbon_dynamics.SLA + 
-             vegcarbon_dynamics.γS * vegcarbon_dynamics.awl) * LAI_b
+@inline function compute_Λ_loc(vegcarbon_dynamics::PALADYNCarbonDynamics{NF}, LAI_b) where {NF}
+    Λ_loc = (
+        vegcarbon_dynamics.γL / vegcarbon_dynamics.SLA +
+            vegcarbon_dynamics.γR / vegcarbon_dynamics.SLA +
+            vegcarbon_dynamics.γS * vegcarbon_dynamics.awl
+    ) * LAI_b
     return Λ_loc
 end
 
@@ -89,8 +93,8 @@ end
 Computes the `C_veg` tendency based on `NPP` and the balanced Leaf Area Index `LAI_b`,
 Eq. 72, PALADYN (Willeit 2016) 
 """
-@inline function compute_C_veg_tend(vegcarbon_dynamics::PALADYNCarbonDynamics{NF}, LAI_b::NF, NPP::NF) where NF
-    # Compute λ_NPP 
+@inline function compute_C_veg_tend(vegcarbon_dynamics::PALADYNCarbonDynamics{NF}, LAI_b::NF, NPP::NF) where {NF}
+    # Compute λ_NPP
     λ_NPP = compute_λ_NPP(vegcarbon_dynamics, LAI_b)
 
     # Compute local litterfall rate
@@ -102,36 +106,52 @@ Eq. 72, PALADYN (Willeit 2016)
     return C_veg_tendency
 end
 
+# Process methods
 
-function compute_auxiliary!(state, model, vegcarbon_dynamics::PALADYNCarbonDynamics)
-    grid = get_grid(model)
-    launch!(grid, :xy, compute_auxiliary_kernel!, state, vegcarbon_dynamics)
+function compute_auxiliary!(state, grid, vegcarbon_dynamics::PALADYNCarbonDynamics, args...)
+    out = auxiliary_fields(state, vegcarbon_dynamics)
+    fields = get_fields(state, vegcarbon_dynamics; except = out)
+    launch!(grid, XY, compute_auxiliary_kernel!, out, fields, vegcarbon_dynamics)
+    return nothing
 end
 
-@kernel function compute_auxiliary_kernel!(state, vegcarbon_dynamics::PALADYNCarbonDynamics{NF}) where NF
-    i, j = @index(Global, NTuple)
-
-    # Compute balanced Leaf Area Index 
-    # TODO is this ok, or better with get input, compute and store result?
-    state.LAI_b[i, j] = compute_LAI_b(vegcarbon_dynamics, state.C_veg[i, j])
-
+function compute_tendencies!(state, grid, vegcarbon_dynamics::PALADYNCarbonDynamics, args...)
+    out = tendency_fields(state, vegcarbon_dynamics)
+    fields = get_fields(state, vegcarbon_dynamics)
+    launch!(grid, XY, compute_tendencies_kernel!, out, fields, vegcarbon_dynamics)
+    return nothing
 end
 
-function compute_tendencies!(state, model, vegcarbon_dynamics::PALADYNCarbonDynamics)
-    grid = get_grid(model)
-    launch!(grid, :xy, compute_tendencies_kernel!, state, vegcarbon_dynamics)
-end
+# Kernel functions
 
-@kernel function compute_tendencies_kernel!(state, vegcarbon_dynamics::PALADYNCarbonDynamics{NF}) where NF  
-    i, j = @index(Global, NTuple)
-
+@propagate_inbounds function compute_veg_carbon_tendency(i, j, grid, fields, vegcarbon_dynamics::PALADYNCarbonDynamics)
     # Get inputs
-    LAI_b = state.LAI_b[i, j]
-    NPP = state.NPP[i, j]
-    
+    LAI_b = fields.balanced_leaf_area_index[i, j]
+    NPP = fields.net_primary_production[i, j]
+
     # Compute the vegetation carbon pool tendency
     C_veg_tendency = compute_C_veg_tend(vegcarbon_dynamics, LAI_b, NPP)
+    return C_veg_tendency
+end
 
-    # Store result
-    state.tendencies.C_veg[i, j] = C_veg_tendency
+@propagate_inbounds function compute_veg_carbon_auxiliary!(out, i, j, grid, fields, vegcarbon_dynamics::PALADYNCarbonDynamics)
+    # Compute balanced Leaf Area Index
+    return out.balanced_leaf_area_index[i, j, 1] = compute_LAI_b(vegcarbon_dynamics, fields.carbon_vegetation[i, j])
+end
+
+@propagate_inbounds function compute_veg_carbon_tendencies!(tend, i, j, grid, fields, vegcarbon_dynamics::PALADYNCarbonDynamics)
+    # Compute and store C_veg tendency
+    return tend.carbon_vegetation[i, j, 1] = compute_veg_carbon_tendency(i, j, grid, fields, vegcarbon_dynamics)
+end
+
+# Kernels
+
+@kernel inbounds = true function compute_auxiliary_kernel!(out, grid, fields, vegcarbon_dynamics::AbstractVegetationCarbonDynamics, args...)
+    i, j = @index(Global, NTuple)
+    compute_veg_carbon_auxiliary!(out, i, j, grid, fields, vegcarbon_dynamics, args...)
+end
+
+@kernel inbounds = true function compute_tendencies_kernel!(tend, grid, fields, vegcarbon_dynamics::AbstractVegetationCarbonDynamics, args...)
+    i, j = @index(Global, NTuple)
+    compute_veg_carbon_tendencies!(tend, i, j, grid, fields, vegcarbon_dynamics, args...)
 end

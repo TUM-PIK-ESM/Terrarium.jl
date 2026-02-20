@@ -14,7 +14,7 @@ Indicator type for variables that should be assigned a 3D field on their associa
 end
 
 # Dispatch for Oceananigans `location` method
-location(dims::XYZ) = (dims.x, dims.y, dims.z)
+Oceananigans.location(dims::XYZ) = (dims.x, dims.y, dims.z)
 
 """
     XY <: VarDims
@@ -26,7 +26,7 @@ Indicator type for variables that should be assigned a 2D (lateral only) field o
     y::LY = Center()
 end
 
-location(dims::XY) = (dims.x, dims.y, nothing)
+Oceananigans.location(dims::XY) = (dims.x, dims.y, nothing)
 
 # TODO: do we need to support state variables not defined on a grid?
 
@@ -53,16 +53,9 @@ are temperature-enthalpy and saturation-pressure relations.
 abstract type AbstractClosureRelation end
 
 """
-    closurevar(::AbstractClosureRelation)
-
-Return an `AuxiliaryVariable` corresponding to the closure variable defined by the given closure relation.
-"""
-function closurevar end
-
-"""
 Base type for state variable placeholder types.
 """
-abstract type AbstractVariable{name, VD} end
+abstract type AbstractVariable{name, VD, UT} end
 
 """
     $SIGNATURES
@@ -70,22 +63,25 @@ abstract type AbstractVariable{name, VD} end
 Retrieve the name of the given variable or closure. For closure relations, `varname`
 should return the name of the variable returned by the closure relation.
 """
-varname(::AbstractVariable{name}) where {name} = name
-varname(namespace::Pair{Symbol}) = first(namespace)
+@inline varname(::AbstractVariable{name}) where {name} = name
+@inline varname(::Type{<:AbstractVariable{name}}) where {name} = name
+@inline varname(namespace::Pair{Symbol}) = first(namespace)
 
 """
     $SIGNATURES
 
 Retrieve the grid dimensions on which this variable is defined.
 """
-vardims(var::AbstractVariable) = var.dims
+@inline vardims(var::AbstractVariable) = var.dims
+@inline vardims(::Type{<:AbstractVariable{name, VD}}) where {name, VD} = VD
 
 """
     $SIGNATURES
 
 Retrieve the physical units for the given variable.
 """
-varunits(var::AbstractVariable) = var.units
+@inline varunits(var::AbstractVariable) = var.units
+@inline varunits(::Type{<:AbstractVariable{name, VD, UT}}) where {name, VD, UT} = UT
 
 # Test equality between variables by their names, dimensions, and physical units
 Base.:(==)(var1::AbstractVariable, var2::AbstractVariable) =
@@ -93,12 +89,18 @@ Base.:(==)(var1::AbstractVariable, var2::AbstractVariable) =
     vardims(var1) == vardims(var2) &&
     varunits(var1) == varunits(var2)
 
+function Base.summary(var::AbstractVariable)
+    unitstr = varunits(var) == NoUnits ? "-" : varunits(var)
+    text = "Variable $(string(varname(var))) [$(unitstr)] on $(typeof(vardims(var)))"
+    return text
+end
+
 """
     $TYPEDEF
 
-Represents a generic state variable with the given `name` and spatial `dims`.
+Represents metadata for a generic state variable with the given `name` and spatial `dims`.
 """
-struct Variable{name, VD, UT} <: AbstractVariable{name, VD}
+struct Variable{name, VD, UT} <: AbstractVariable{name, VD, UT}
     "Variable dimensions"
     dims::VD
 
@@ -109,16 +111,16 @@ struct Variable{name, VD, UT} <: AbstractVariable{name, VD}
 end
 
 """
-Base type for state variable placeholder types with 
+Baste type for process state variables with specific intents, e.g. `prognostic`, `auxiliary`, or `input`.
 """
-abstract type AbstractProcessVariable{name, VD} <: AbstractVariable{name, VD} end
+abstract type AbstractProcessVariable{name, VD, UT} <: AbstractVariable{name, VD, UT} end
 
-vardims(pv::AbstractProcessVariable) = vardims(pv.var)
-varunits(pv::AbstractProcessVariable) = varunits(pv.var)
+@inline vardims(pv::AbstractProcessVariable) = vardims(pv.var)
+@inline varunits(pv::AbstractProcessVariable) = varunits(pv.var)
 
 function Base.show(io::IO, ::MIME"text/plain", var::AbstractVariable)
     units = varunits(var)
-    if units != NoUnits
+    return if units != NoUnits
         println(io, "$(nameof(typeof(var))) $(varname(var)) with dimensions $(typeof(vardims(var))) and units $(string(varunits(var)))")
     else
         println(io, "$(nameof(typeof(var))) $(varname(var)) with dimensions $(typeof(vardims(var)))")
@@ -133,14 +135,18 @@ and spatial `dims`. Auxiliary variables are those which are diagnosed directly o
 indirectly from the values of one or more prognostic variables.
 """
 struct AuxiliaryVariable{
-    name,
-    VD<:VarDims,
-    UT<:Units,
-    Var<:Variable{name, VD, UT},
-    DT<:AbstractInterval
-} <: AbstractProcessVariable{name, VD}
+        name,
+        VD <: VarDims,
+        UT <: Units,
+        Var <: Variable{name, VD, UT},
+        DT <: AbstractInterval,
+        FC <: Union{Nothing, Function},
+    } <: AbstractProcessVariable{name, VD, UT}
     "State variable"
     var::Var
+
+    "Field constructor"
+    ctor::FC
 
     "Variable domain"
     domain::DT
@@ -155,14 +161,18 @@ end
 Represents an input (e.g. forcing) variable with the given `name` and spatial `dims`.
 """
 struct InputVariable{
-    name,
-    VD<:VarDims,
-    UT<:Units,
-    Var<:Variable{name, VD, UT},
-    DT<:AbstractInterval
-} <: AbstractProcessVariable{name, VD}
+        name,
+        VD <: VarDims,
+        UT <: Units,
+        Var <: Variable{name, VD, UT},
+        DT <: AbstractInterval,
+        Def <: Union{Nothing, Number, Function},
+    } <: AbstractProcessVariable{name, VD, UT}
     "State variable"
     var::Var
+
+    "Default value or function initializer"
+    default::Def
 
     "Variable domain"
     domain::DT
@@ -177,14 +187,14 @@ end
 Represents a prognostic state variable with the given `name` and spatial `dims`.
 """
 struct PrognosticVariable{
-    name,
-    VD<:VarDims,
-    UT<:Units,
-    Var<:Variable{name, VD, UT},
-    CL<:Union{Nothing, AbstractClosureRelation},
-    TV<:Union{Nothing, AuxiliaryVariable},
-    DT<:AbstractInterval
-} <: AbstractProcessVariable{name, VD}
+        name,
+        VD <: VarDims,
+        UT <: Units,
+        Var <: Variable{name, VD, UT},
+        CL <: Union{Nothing, AbstractClosureRelation},
+        TV <: Union{Nothing, AuxiliaryVariable},
+        DT <: AbstractInterval,
+    } <: AbstractProcessVariable{name, VD, UT}
     "State variable"
     var::Var
 
@@ -208,7 +218,7 @@ hasclosure(var::PrognosticVariable) = !isnothing(var.closure)
 """
     $TYPEDEF
 
-Container for abstract state variable definitions. Automatically sorts and merges all variables
+Container for abstract state variable definitions. Automatically collates and merges all variables
 and namespaces passed into the constructor.
 """
 struct Variables{ProgVars, TendVars, AuxVars, InputVars, Namespaces}
@@ -230,22 +240,28 @@ struct Namespace{name, Vars}
     Namespace(name::Symbol, vars::Variables) = new{name, typeof(vars)}(vars)
 end
 
-varname(::Namespace{name}) where {name} = name
+@inline varname(::Namespace{name}) where {name} = name
 
 Variables(obj) = Variables(variables(obj))
 Variables(vars::Union{AbstractProcessVariable, Namespace}...) = Variables(vars)
-function Variables(vars::Tuple{Vararg{Union{AbstractProcessVariable, Namespace}}})
+function Variables(@nospecialize(vars::Tuple{Vararg{Union{AbstractProcessVariable, Namespace}}}))
     # partition variables into prognostic, auxiliary, input, and namespace groups;
     # duplicates within each group are automatically merged
-    prognostic_vars = merge_duplicates(filter(var -> isa(var, PrognosticVariable), vars))
-    auxiliary_vars = merge_duplicates(filter(var -> isa(var, AuxiliaryVariable), vars))
-    input_vars = merge_duplicates(filter(var -> isa(var, InputVariable), vars))
-    namespaces = merge_duplicates(filter(var -> isa(var, Namespace), vars))
+    varinfo(var::AbstractVariable) = (varname(var), vardims(var), varunits(var))
+    varinfo(ns::Namespace) = varname(ns)
+    # Note that we intentionally use `deduplicate` here instead of `deduplicate_vars` to
+    # avoid unnecessary compilation overhead; this is performance non-critical code anyway.
+    prognostic_vars = deduplicate(varinfo, filter(var -> isa(var, PrognosticVariable), vars))
+    auxiliary_vars = deduplicate(varinfo, filter(var -> isa(var, AuxiliaryVariable), vars))
+    input_vars = deduplicate(varinfo, filter(var -> isa(var, InputVariable), vars))
+    namespaces = deduplicate(varinfo, filter(var -> isa(var, Namespace), vars))
     # get tendencies from prognostic variables
     tendency_vars = map(var -> var.tendency, prognostic_vars)
-    # create closure variables and add to auxiliary variables
-    closure_vars = map(var -> closurevar(var.closure), filter(hasclosure, prognostic_vars))
-    auxiliary_vars = merge_duplicates(tuplejoin(auxiliary_vars, closure_vars))
+    # create closure variables and prepend to tuple of auxiliary variables;
+    # note that the order matters here since Field constructors will be called in the order
+    # that they appear in the var tuples.
+    closure_vars = mapreduce(var -> variables(var.closure), tuplejoin, filter(hasclosure, prognostic_vars), init = ())
+    auxiliary_vars = deduplicate(varinfo, tuplejoin(closure_vars, auxiliary_vars))
     # drop inputs with matching prognostic or auxiliary variables
     input_vars = filter(var -> var ∉ prognostic_vars && var ∉ auxiliary_vars, input_vars)
     # check for duplicates
@@ -265,7 +281,22 @@ function Variables(vars::Tuple{Vararg{Union{AbstractProcessVariable, Namespace}}
     )
 end
 
-function check_duplicates(vars...)
+"""
+    deduplicate_vars(vars::Tuple{Vararg{AbstractVariable}})
+
+Type-stable equivalent of [`deduplicate`](@ref) for tuples of `AbstractVariable`s.
+"""
+@generated function deduplicate_vars(vars::Tuple{Vararg{AbstractVariable}})
+    names = map(varname, vars.parameters)
+    unique_idx = unique(i -> names[i], eachindex(vars.parameters))
+    accessors = map(i -> :(vars[$i]), unique_idx)
+    return :(tuple($(accessors...)))
+end
+
+"""
+Check for variables/namespaces with duplicate names and raise an error if duplicates are detected.
+"""
+function check_duplicates(vars::Union{AbstractVariable, Namespace}...)
     names = unique(map(varname, vars))
     groups = Dict(map(n -> n => filter(==(n) ∘ varname, vars), names)...)
     for key in keys(groups)
@@ -273,6 +304,59 @@ function check_duplicates(vars...)
             error("Found conflicting variable/namespace definitions for $key:\n$(join(groups[key], "\n"))")
         end
     end
+    return
+end
+
+"""
+Merges all of the given `Variables` containers into a single container.
+"""
+function Base.merge(varss::Variables...)
+    allvars = map(varss) do vars
+        tuplejoin(
+            values(vars.prognostic),
+            values(vars.auxiliary),
+            values(vars.inputs),
+            values(vars.namespaces)
+        )
+    end
+    return Variables(reduce(tuplejoin, allvars))
+end
+
+function Base.summary(vars::Variables)
+    str = "Variables(prognostic = $(keys(vars.prognostic)), auxiliary = $(keys(vars.auxiliary)), inputs = $(keys(vars.inputs)), namespaces = $(keys(vars.namespaces)))"
+    return str
+end
+
+function Base.show(io::IO, vars::Variables)
+    println(io, "Variables")
+    println(io, "├─ Prognostic: ")
+    for var in vars.prognostic
+        println("├── $(summary(var))")
+    end
+    println(io, "├─ Auxiliary: ")
+    for var in vars.auxiliary
+        println("├── $(summary(var))")
+    end
+    println(io, "├─ Inputs: ")
+    for var in vars.inputs
+        println("├── $(summary(var))")
+    end
+    println(io, "├─ Namespaces:")
+    for ns in vars.namespaces
+        println("├── $(summary(ns))")
+    end
+    return nothing
+end
+
+# Automatically forward dispatches for `show` on tuples of variables to Variables;
+# This is for the convenience of the user such that `variables(model)` pretty prints
+function Base.show(
+        io::IO,
+        vartup::Tuple{Union{AbstractVariable, Namespace}, Vararg{Union{AbstractVariable, Namespace}}}
+    )
+    vars = Variables(vartup)
+    show(io, vars)
+    return nothing
 end
 
 """
@@ -280,31 +364,32 @@ end
 
 Convenience constructor for `Variable`.
 """
-var(name::Symbol, dims::VarDims, units::Units = NoUnits) = Variable(name, dims, units)
+@inline var(name::Symbol, dims::VarDims, units::Units = NoUnits) = Variable(name, dims, units)
 
 """
     $SIGNATURES
 
 Convenience constructors for `PrognosticVariable`.
 """
-prognostic(name::Symbol, dims::VarDims; units=NoUnits, closure=nothing, domain=RealLine(), desc="") = prognostic(var(name, dims, units); closure, domain, desc)
-prognostic(var::Variable; closure=nothing, domain=RealLine(), desc="") = PrognosticVariable(var, closure, tendency(var), domain, desc)
+@inline prognostic(name::Symbol, dims::VarDims; units = NoUnits, closure = nothing, domain = RealLine(), desc = "") = prognostic(var(name, dims, units); closure, domain, desc)
+@inline prognostic(var::Variable; closure = nothing, domain = RealLine(), desc = "") = PrognosticVariable(var, closure, tendency(var), domain, desc)
 
 """
     $SIGNATURES
 
 Convenience constructor method for `AuxiliaryVariable`.
 """
-auxiliary(name::Symbol, dims::VarDims; units=NoUnits, domain=RealLine(), desc="") = auxiliary(var(name, dims, units); domain, desc)
-auxiliary(var::Variable; domain=RealLine(), desc="") = AuxiliaryVariable(var, domain, desc)
+@inline auxiliary(name::Symbol, dims::VarDims, ctor = nothing, params = nothing; units = NoUnits, domain = RealLine(), desc = "") = auxiliary(var(name, dims, units), ctor, params; domain, desc)
+@inline auxiliary(var::Variable, ::Nothing, ::Nothing; domain = RealLine(), desc = "") = AuxiliaryVariable(var, nothing, domain, desc)
+@inline auxiliary(var::Variable, ctor::Function, params; domain = RealLine(), desc = "") = AuxiliaryVariable(var, (args...) -> ctor(params, args...), domain, desc)
 
 """
     $SIGNATURES
 
 Convenience constructor method for `InputVariable`.
 """
-input(name::Symbol, dims::VarDims; units=NoUnits, domain=RealLine(), desc="") = input(var(name, dims, units); domain, desc)
-input(var::Variable; domain=RealLine(), desc="") = InputVariable(var, domain, desc)
+@inline input(name::Symbol, dims::VarDims; default = nothing, units = NoUnits, domain = RealLine(), desc = "") = input(var(name, dims, units); default, domain, desc)
+@inline input(var::Variable; default = nothing, domain = RealLine(), desc = "") = InputVariable(var, default, domain, desc)
 
 """
     $SIGNATURES
@@ -312,17 +397,50 @@ input(var::Variable; domain=RealLine(), desc="") = InputVariable(var, domain, de
 Creates an `AuxiliaryVariable` for the tendency of a prognostic variable with the given name, dimensions, and physical units.
 This constructor is primarily used internally by other constructors and does not usually need to be called by implementations of `variables`.
 """
-tendency(var::Variable) = auxiliary(varname(var), vardims(var), units=upreferred(varunits(var))/u"s")
+@inline tendency(var::Variable) = auxiliary(varname(var), vardims(var), units = upreferred(varunits(var)) / u"s")
 
 """
     $SIGNATURES
 
 Convenience constructor method for variable `Namespace`s.
 """
-namespace(name::Symbol, vars::Variables) = Namespace(name, vars)
-namespace(name::Symbol, vars::Tuple) = Namespace(name, Variables(vars...))
+@inline namespace(name::Symbol, vars::Variables) = Namespace(name, vars)
+@inline namespace(name::Symbol, vars::Tuple) = Namespace(name, Variables(vars...))
 
 """
 Alias for `Variables(vars...)`
 """
-variables(vars::Union{AbstractVariable, Namespace}...) = Variables(vars)
+@inline variables(vars::Union{AbstractVariable, Namespace}...) = Variables(vars)
+
+"""
+Helper method that selects only prognostic variables declared on `obj`.
+"""
+@inline prognostic_variables(obj) = prognostic_variables(variables(obj))
+@inline prognostic_variables(vars::Tuple) = deduplicate_vars(Tuple(filter(var -> isa(var, PrognosticVariable), vars)))
+
+"""
+Helper method that selects only auxiliary variables declared on `obj`.
+"""
+@inline auxiliary_variables(obj) = auxiliary_variables(variables(obj))
+@inline auxiliary_variables(vars::Tuple) = deduplicate_vars(Tuple(filter(var -> isa(var, AuxiliaryVariable), vars)))
+
+"""
+Helper method that selects only input variables declared on `obj`.
+"""
+@inline input_variables(obj) = input_variables(variables(obj))
+@inline input_variables(vars::Tuple) = deduplicate_vars(Tuple(filter(var -> isa(var, InputVariable), vars)))
+
+"""
+Helper method that selects only closure (auxiliary) variables declared on `obj`.
+"""
+@inline closure_variables(obj) = closure_variables(variables(obj))
+@inline function closure_variables(vars::Tuple)
+    progvars = prognostic_variables(vars)
+    all_closure_vars = fastmap(var -> variables(var.closure), progvars)
+    return deduplicate_vars(tuplejoin(all_closure_vars...))
+end
+
+function Base.NamedTuple(vars::Tuple{Vararg{Union{AbstractVariable, Namespace}}})
+    keys = map(varname, vars)
+    return NamedTuple{keys}(vars)
+end

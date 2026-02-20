@@ -1,0 +1,3 @@
+# Examples
+
+In this section you'll find a collection of examples that demonstrate the use of Terrarium.jl. All of these are also available as Pluto notebooks in the `examples/notebooks` directory of the repository. There you'll also find further notebooks that are not included in the documentation, demonstrating e.g. differentiating Terrarium.jl models. Additional example scripts are available in the `examples/scripts` directory.

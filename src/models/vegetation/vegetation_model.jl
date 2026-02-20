@@ -9,97 +9,41 @@ Properties:
 $TYPEDFIELDS
 """
 @kwdef struct VegetationModel{
-    NF,
-    Photosynthesis<:AbstractPhotosynthesis,
-    StomatalConducatance<:AbstractStomatalConductance,
-    AutotrophicRespiration<:AbstractAutotrophicRespiration,
-    CarbonDynamics<:AbstractVegetationCarbonDynamics,
-    VegetationDynamics<:AbstractVegetationDynamics,
-    Phenology<:AbstractPhenology,
-    GridType<:AbstractLandGrid{NF},
-    Constants<:PhysicalConstants{NF},
-    Initializer<:AbstractInitializer,
-} <: AbstractVegetationModel{NF, GridType}
+        NF,
+        Vegetation <: AbstractVegetation{NF},
+        Atmosphere <: AbstractAtmosphere{NF},
+        GridType <: AbstractLandGrid{NF},
+        Constants <: PhysicalConstants{NF},
+        Initializer <: AbstractInitializer,
+    } <: AbstractVegetationModel{NF, GridType}
     "Spatial grid type"
     grid::GridType
 
-    "Photosynthesis scheme"
-    photosynthesis::Photosynthesis = LUEPhotosynthesis() # not prognostic
+    "Atmospheric input configuration"
+    atmosphere::Atmosphere = PrescribedAtmosphere(eltype(grid))
 
-    "Stomatal conducantance scheme"
-    stomatal_conductance::StomatalConducatance = MedlynStomatalConductance() # not prognostic
-
-    "Autotrophic respiration scheme"
-    autotrophic_respiration::AutotrophicRespiration = PALADYNAutotrophicRespiration() # not prognostic
-
-    "Phenology scheme"
-    phenology::Phenology = PALADYNPhenology() # not prognostic
-
-    "Vegetation carbon pool dynamics"
-    carbon_dynamics::CarbonDynamics = PALADYNCarbonDynamics() # prognostic
-
-    "Vegetation population density or coverage fraction dynamics"
-    vegetation_dynamics::VegetationDynamics =  PALADYNVegetationDynamics() # prognostic
+    "Vegetation processes"
+    vegetation::Vegetation = VegetationCarbon(eltype(grid))
 
     "Physical constants"
-    constants::Constants = PhysicalConstants{eltype(grid)}()
+    constants::Constants = PhysicalConstants(eltype(grid))
 
     "State variable initializer"
-    initializer::Initializer = DefaultInitializer()
+    initializer::Initializer = DefaultInitializer(eltype(grid))
 end
 
-# VegetationModel getter methods
-get_photosynthesis(model::VegetationModel) = model.photosynthesis
-
-get_stomatal_conductance(model::VegetationModel) = model.stomatal_conductance
-
-get_autotrophic_respiration(model::VegetationModel) = model.autotrophic_respiration
-
-get_phenology(model::VegetationModel) = model.phenology
-
-get_carbon_dynamics(model::VegetationModel) = model.carbon_dynamics
-
-get_vegetation_dynamics(model::VegetationModel) = model.vegetation_dynamics
-
-get_constants(model::VegetationModel) = model.constants
-
-# Model interface methods
-variables(model::VegetationModel) = (
-    variables(model.photosynthesis)...,
-    variables(model.stomatal_conductance)...,
-    variables(model.autotrophic_respiration)...,
-    variables(model.phenology)...,
-    variables(model.carbon_dynamics)...,
-    variables(model.vegetation_dynamics)...,
-)
-
 function compute_auxiliary!(state, model::VegetationModel)
-    # Compute auxiliary variables for each component
-    # Veg. carbon dynamics: needs C_veg(t-1) and computes LAI_b(t-1)
-    compute_auxiliary!(state, model, model.carbon_dynamics)
-
-    # Phenology: needs LAI_b(t-1) and computes LAI(t-1) and phen(t-1)
-    compute_auxiliary!(state, model, model.phenology)
-
-    # Stomatal conductance: needs atm. inputs(t) and computes λc(t)
-    compute_auxiliary!(state, model, model.stomatal_conductance)
-
-    # Photosynthesis: needs atm. inputs(t), λc(t), LAI(t-1), and computes Rd(t) and GPP(t)
-    compute_auxiliary!(state, model, model.photosynthesis)
-
-    # Autotrophic respiration: needs atm. inputs(t), GPP(t), Rd(t), C_veg(t-1), phen(t-1) and computes Ra(t) and NPP(t)
-    compute_auxiliary!(state, model, model.autotrophic_respiration)
-    
-    # Note: vegetation_dynamics compute_auxiliary! does nothing for now
+    # Unpack vegetation model
+    (; grid, atmosphere, vegetation, constants) = model
+    # Compute auxiliary variables for coupled vegetation processes
+    compute_auxiliary!(state, grid, vegetation, atmosphere, constants)
     return nothing
 end
 
 function compute_tendencies!(state, model::VegetationModel)
-    # Needs NPP(t), C_veg(t-1), LAI_b(t-1) and computes tendency for C_veg
-    compute_tendencies!(state, model, model.carbon_dynamics)
-
-    # Needs NPP(t), C_veg(t-1), LAI_b(t-1), ν(t-1) and computes tendency for ν
-    compute_tendencies!(state, model, model.vegetation_dynamics)
-
+    # Unpack vegetation model
+    (; grid, vegetation, constants) = model
+    # Compute auxiliary variables for coupled vegetation processes
+    compute_tendencies!(state, grid, vegetation, constants)
     return nothing
 end

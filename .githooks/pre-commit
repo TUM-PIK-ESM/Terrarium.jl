@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+
+# Redirect output to stderr.
+exec 1>&2
+
+# Run Runic on added and modified files
+git diff-index -z --name-only --diff-filter=AM master | \
+    grep -z '\.jl$' | \
+    xargs -0 --no-run-if-empty julia --project=@runic --startup-file=no -m Runic --check --diff

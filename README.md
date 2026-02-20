@@ -9,8 +9,11 @@
 <a href="https://eupl.eu/1.2/en">
     <img alt="EUPLv1.2 license" src="https://img.shields.io/badge/License-EUPLv1.2-blue.svg?style=flat-square">
 </a>
+<a href="https://github.com/fredrikekre/Runic.jl">
+    <img alt="code style: runic" src="https://img.shields.io/badge/code_style-%E1%9A%B1%E1%9A%A2%E1%9A%BE%E1%9B%81%E1%9A%B2-black.svg?style=flat-square">
+</a>
 
-[Terrarium.jl](https://tum-pik-esm.github.io/Terrarium.jl/dev) is a new and upcoming land model that aims to support hybrid physics- and data-driven land modeling across multiple spatial and temporal scales. We envision Terrarium to be part of a new generation of Earth system component models that combine modularity, interactivity, GPU-compability and auto-differentiability (AD) for seamless integration of process-based and data-driven model components in both global and regional scale simulations.
+[Terrarium.jl](https://tum-pik-esm.github.io/Terrarium.jl/dev) is a new and upcoming framework for hybrid physics- and data-driven land modeling across spatial and temporal scales. We envision Terrarium to be part of a new generation of Earth system component models that combine modularity, interactivity, GPU-compability and auto-differentiability (AD) for seamless integration of process-based and data-driven model components in both global and regional scale simulations.
 
 Terrarium is being developed alongside [SpeedyWeather.jl](https://github.com/SpeedyWeather/SpeedyWeather.jl) and [Oceananigans.jl](https://github.com/CliMA/Oceananigans.jl) as the land component of a new, user-friendly, and fully GPU/AD-compatible Earth System Model in the Julia programming language.
 
@@ -34,14 +37,6 @@ It is important to emphasize, however, what Terrarium is not:
 - Terrarium is **not “just another model”**. We do not intend for users to simply download our model products and cite our papers. We want users to directly interact with our model, ideally running their own simulations and writing their own code.
 - Terrarium is **not a monolithic model**. Modularity and extensibility are core to our vision. Terrarium provides a library of models, process implementations, and numerical tools which users can use to build their own simulations. We will provide guidance and a set of well-tested and stable model configurations, but we encourage users to experiment and push the limits of what those models can do.
 
-## Why Oceananigans?
-It might initially seem strange that a land model would be built on top of a framework for ocean modeling. There are, however, some key advantages in doing so:
-
-
-1. Firstly, like ocean models, land models are commonly implemented using finite difference and/or finite volume method (FDM/FVM) to approximate spatial gradients in mass and energy conservation laws. Oceananigans provides state-of-the-art tools for FVM simulation in Julia, with a focus on geophysical applications, which aligns well with our goals. Like most land models, Terrarium will initially focus on 1D column modeling; however, using Oceananigans affords us the possibility of very feasibly expanding to 2D and 3D simulations in the future!
-2. Secondly, the numerical operators provided by Oceananigans are built to be both auto-differentiable and GPU-compatible out-of-the-box, which means that Terrarium can inherit these capabilities almost “for free”.
-3. Finally, and perhaps most importantly, we believe in the vision pioneered by the [Climate Modeling Alliance](https://clima.caltech.edu/) and the Oceananigans team for the development of a new generation of Earth System Models that are open, accessible, interactive, and capable of learning from data in ways that go beyond traditional data assimilation.
-
 ## Installation
 
 Terrarium is still in an early prototype stage and is not yet registered as a package in the Julia General registry.
@@ -56,14 +51,58 @@ or clone the repository and start hacking directly!
 
 ## Quick start
 
-Coming soon!
+A natural first step with `Terrarium` is to set up and run your very first `SoilModel`. This represents a standalone model of transient heat, water, and carbon transport over a particular choice of `grid`. We start by chosing a `ColumnGrid` which represents one or more laterally independent vertical columns:
+
+```julia
+using Terrarium
+
+# Set up a SoilModel on a ColumnGrid with 10 vertical soil layers that will run on the CPU with 32-bit precision
+num_columns = 1
+arch = CPU()
+grid = ColumnGrid(arch, Float32, ExponentialSpacing(N=10), num_columns)
+model = SoilModel(grid)
+# Prescribe a constant surface temperature of 1°C
+bcs = PrescribedSurfaceTemperature(:T_ub, 1.0)
+integrator = initialize(model, ForwardEuler(eltype(grid)), boundary_conditions = bcs)
+# Run the simulation forward for 10 model days
+@time run!(integrator, period = Day(10))
+```
+
+That's it! You already succesfully ran a (very simple) simulation with Terrarium!
+
+Note that setting `num_columns = 1` here corresponds to a point simulation for a single vertical column. However, we can easily scale this up by set `num_columns` to any positive integer (up to the memory limit of your system, of course).
+
+We can also easily adapt this code to run a *global* simulation over a suitable spatial grid. For this, we'll need to have [`RingGrids`](https://github.com/SpeedyWeather/RingGrids.jl) installed (or import it directly from Terrarium with `using Terrarium.RingGrids`). Optionally, if a GPU is available and [CUDA.jl](https://github.com/JuliaGPU/CUDA.jl) is installed in the current project or global Julia environment, we can accelerate the global simulation by simply changing `CPU` to `GPU`:
+
+```julia
+using RingGrids: FullGaussianGrid
+using CUDA # needs to be seaprately installed
+
+rings = FullGaussianGrid(8) # Gaussian grid with 16 lattitudinal rings (512 points, ~9.5˚)
+arch = GPU() # run on the GPU!
+grid = ColumnRingGrid(arch, Float32, ExponentialSpacing(N=10), rings)
+model = SoilModel(grid)
+# Prescribe a constant surface temperature of 1°C
+bcs = PrescribedSurfaceTemperature(:T_ub, 1.0)
+integrator = initialize(model, ForwardEuler(eltype(grid)), boundary_conditions = bcs)
+# Run the simulation forward for 10 model days
+@time run!(integrator, period = Day(10))
+```
+and voila! We have just run a GPU-accelerated, global-scale simulation of soil thermal dynamics with minimal additional effort. While more realistic simulations are of course more involved, this simple example demonstrates the core of what we aim to accomplish with Terrarium; a fast, user-friendly, and highly adaptable land model that can easily be configured to run on local, regional, and global scales.
+
+## Why Oceananigans?
+It might initially seem strange that a land model would be built on top of a framework for ocean modeling. There are, however, some key advantages in doing so:
+
+
+1. Firstly, like ocean models, land models are commonly implemented using finite difference and/or finite volume method (FDM/FVM) to approximate spatial gradients in mass and energy conservation laws. Oceananigans provides state-of-the-art tools for FVM simulation in Julia, with a focus on geophysical applications, which aligns well with our goals. Like most land models, Terrarium will initially focus on 1D column modeling; however, using Oceananigans affords us the possibility of very feasibly expanding to 2D and 3D simulations in the future!
+2. Secondly, the numerical operators provided by Oceananigans are built to be both auto-differentiable and GPU-compatible out-of-the-box, which means that Terrarium can inherit these capabilities almost “for free”.
+3. Finally, and perhaps most importantly, we believe in the vision pioneered by the [Climate Modeling Alliance](https://clima.caltech.edu/) and the [NumericalEarth](https://github.com/NumericalEarth/) projects for the development of a new generation of Earth System Models that are open, accessible, interactive, and capable of learning from data in a multitude of ways that go beyond traditional data assimilation.
 
 ## Contributing
 
 An open source project is only as strong as its community of contributors. We're alays happy to accept contributions, no matter how big or small!
 
 Terrarium.jl is in a very early stage of development, so this is a golden opportunity for you to get your ideas in on the ground floor. If you have some ideas or code you would like to contribute, please don't hesitate to create an issue and get involved!
-
 
 ## Copyright and license
 
@@ -77,3 +116,19 @@ What does that mean for you? You are 100% free to
 - Use the software for both commercial and non-commerical purposes
 
 However, if you make changes or modification to the code, excluding those made purely for the purpose of interoperability, **you are required to re-distribute the modified software under the EUPL v1.2 or a compatible license**. This is vital to ensure the long-term survival of the project and to foster an open, supportive, and diverse community.
+
+## Acknowledgements
+
+Terrarium.jl is a community-oriented project lead by the [FutureLab on Artificial Intelligence](https://www.pik-potsdam.de/en/institute/departments/complexity-science/research/artificial-intelligence) at the Potsdam Institute for Climate Impact Research (PIK) and Earth System Modeling group at the Technical University of Munich (TUM). We acknowledge funding support from
+- Horizon Europe grant agreement number 101184070
+- Volkswagen Foundation
+- Munich Data Science Institute (MDSI) at Technical University of Munich (TUM) via the Linde/MDSI Doctoral Fellowship program
+
+<img width="409" height="91" alt="image" src="https://github.com/user-attachments/assets/d75524fc-2cd4-4951-91c6-d13f0b62229f" />
+
+**Disclaimer**:
+*Views and opinions expressed are however those of the author(s)
+only and do not necessarily reflect those of the European Union or
+European Research Executive Agency (REA). Neither the
+European Union nor the granting authority can be held responsible
+for them.*

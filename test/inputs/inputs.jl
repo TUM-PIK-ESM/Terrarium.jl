@@ -16,8 +16,7 @@ using Unitful
     @test field_input.dims == XY()
     @test variables(field_input) == (Terrarium.input(:X1, XY()), Terrarium.input(:X2, XY()))
     ## check state variables are allocated
-    clock = Clock(time=0)
-    state = Terrarium.StateVariables(Variables(field_input), grid, clock)
+    state = initialize(Variables(field_input), grid)
     @test hasproperty(state.inputs, :X1)
     @test hasproperty(state.inputs, :X2)
 
@@ -43,7 +42,7 @@ using Unitful
     S1.data .= randn(size(S1))
     ## check update_inputs!
     fields = (S1 = Field(grid, XY()), S2 = Field(grid, XY()))
-    clock = Clock(time=0)
+    clock = Clock(time = 0)
     update_inputs!(fields, fts_input, clock)
     @test all(fields.S1 .== S1[1])
     @test all(fields.S2 .== S2[1])

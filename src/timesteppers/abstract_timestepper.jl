@@ -57,6 +57,8 @@ can be defined to implement more specialized time-stepping schemes.
 function explicit_step!(state, grid::AbstractLandGrid, timestepper::AbstractTimeStepper, Δt)
     @assert is_initialized(timestepper)
     fastiterate(keys(state.prognostic)) do name
+        # apply flux BCs, if present
+        compute_z_bcs!(state.tendencies[name], state.prognostic[name], grid, state)
         # update prognostic state variable
         explicit_step!(state.prognostic[name], state.tendencies[name], grid, timestepper, Δt)
     end
@@ -71,69 +73,61 @@ Accumulate `tendency*Δt` in the given prognostic `field`. This method can be ov
 timestepping schemes as needed.
 """
 function explicit_step!(
-    field::AbstractField{LX, LY, LZ},
-    tendency::AbstractField{LX, LY, LZ},
-    grid::AbstractLandGrid,
-    timestepper::AbstractTimeStepper,
-    Δt,
-    args...
-) where {LX, LY, LZ}
-    launch!(
-        grid,
-        :xyz,
-        explicit_step_kernel_3D!,
-        field,
-        tendency,
-        timestepper,
+        field::AbstractField{LX, LY, LZ},
+        tendency::AbstractField{LX, LY, LZ},
+        grid::AbstractLandGrid,
+        timestepper::AbstractTimeStepper,
         Δt,
         args...
+    ) where {LX, LY, LZ}
+    launch!(
+        grid, XYZ, explicit_step_xyz_kernel!,
+        field, tendency, timestepper, Δt, args...
     )
+    return nothing
 end
 
 function explicit_step!(
-    field::AbstractField{LX, LY, Nothing},
-    tendency::AbstractField{LX, LY, Nothing},
-    grid::AbstractLandGrid,
-    timestepper::AbstractTimeStepper,
-    Δt,
-    args...
-) where {LX, LY}
-    launch!(
-        grid,
-        :xy,
-        explicit_step_kernel_2D!,
-        field,
-        tendency,
-        timestepper,
+        field::AbstractField{LX, LY, Nothing},
+        tendency::AbstractField{LX, LY, Nothing},
+        grid::AbstractLandGrid,
+        timestepper::AbstractTimeStepper,
         Δt,
         args...
+    ) where {LX, LY}
+    launch!(
+        grid, XY, explicit_step_xy_kernel!,
+        field, tendency, timestepper, Δt, args...
     )
+    return nothing
 end
 
-@kernel function explicit_step_kernel_3D!(
-    field,
-    tendency,
-    ::AbstractTimeStepper,
-    Δt
-)
+@kernel function explicit_step_xyz_kernel!(
+        field,
+        grid,
+        tendency,
+        ::AbstractTimeStepper,
+        Δt
+    )
     i, j, k = @index(Global, NTuple)
     u = field
     ∂u∂t = tendency
-    @inbounds let Δt = convert(eltype(tendency), Δt);
+    @inbounds let Δt = convert(eltype(tendency), Δt)
         u[i, j, k] += ∂u∂t[i, j, k] * Δt
     end
 end
 
-@kernel function explicit_step_kernel_2D!(
-    field,
-    tendency,
-    ::AbstractTimeStepper,
-    Δt
-)
+@kernel function explicit_step_xy_kernel!(
+        field,
+        grid,
+        tendency,
+        ::AbstractTimeStepper,
+        Δt
+    )
     i, j = @index(Global, NTuple)
     u = field
     ∂u∂t = tendency
-    @inbounds let Δt = convert(eltype(tendency), Δt);
+    @inbounds let Δt = convert(eltype(tendency), Δt)
         u[i, j, 1] += ∂u∂t[i, j] * Δt
     end
 end

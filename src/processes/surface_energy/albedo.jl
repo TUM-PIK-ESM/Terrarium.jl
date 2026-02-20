@@ -4,16 +4,14 @@
 Properties:
 $TYPEDFIELDS
 """
-@kwdef struct PrescribedAlbedo <: AbstractAlbedo end
+@kwdef struct PrescribedAlbedo{NF} <: AbstractAlbedo{NF} end
+
+PrescribedAlbedo(::Type{NF}) where {NF} = PrescribedAlbedo{NF}()
 
 variables(::PrescribedAlbedo) = (
-    input(:albedo, XY(), domain=UnitInterval(), desc="Surface albedo, i.e. ratio of outgoing to incoming shortwave radiation [-]"),
-    input(:emissivity, XY(), domain=UnitInterval(), desc="Surface emissivity, i.e. efficiency of longwave emission [-]"),
+    input(:albedo, XY(), domain = UnitInterval(), desc = "Surface albedo, i.e. ratio of outgoing to incoming shortwave radiation [-]"),
+    input(:emissivity, XY(), domain = UnitInterval(), desc = "Surface emissivity, i.e. efficiency of longwave emission [-]"),
 )
-
-@inline albedo(i, j, state, ::PrescribedAlbedo) = @inbounds state.albedo[i, j]
-
-@inline emissivity(i, j, state, ::PrescribedAlbedo) = @inbounds state.emissivity[i, j]
 
 """
     $TYPEDEF
@@ -21,7 +19,7 @@ variables(::PrescribedAlbedo) = (
 Properties:
 $TYPEDFIELDS
 """
-@kwdef struct ConstantAlbedo{NF} <: AbstractAlbedo
+@kwdef struct ConstantAlbedo{NF} <: AbstractAlbedo{NF}
     "Surface albedo, i.e. ratio of outgoing to incoming shortwave radiation [-]"
     albedo::NF = 0.3
 
@@ -31,6 +29,6 @@ end
 
 ConstantAlbedo(::Type{NF}; kwargs...) where {NF} = ConstantAlbedo{NF}(; kwargs...)
 
-@inline albedo(i, j, state, albedo::ConstantAlbedo) = albedo.albedo
+@inline albedo(i, j, grid, fields, albedo::ConstantAlbedo) = albedo.albedo
 
-@inline emissivity(i, j, state, albedo::ConstantAlbedo) = albedo.emissivity
+@inline emissivity(i, j, grid, fields, albedo::ConstantAlbedo) = albedo.emissivity

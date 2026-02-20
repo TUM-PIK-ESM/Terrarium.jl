@@ -5,7 +5,7 @@ using Test
 @testset "λc test" begin
     stomcond = MedlynStomatalConductance()
     # Test vpd near zero (λc should be close to 1)
-    vpd = eps() 
+    vpd = eps()
     λc = compute_λc(stomcond, vpd)
     @test λc ≈ 1.0
 
@@ -15,4 +15,3 @@ using Test
     λc = compute_λc(stomcond, vpd)
     @test 0.0 < λc < 1.0
 end
-   

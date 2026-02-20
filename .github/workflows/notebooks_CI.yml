@@ -1,0 +1,33 @@
+name: Notebooks CI
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+jobs:
+  test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        version:
+          - '1.10' 
+        os:
+          - ubuntu-latest
+        arch:
+          - x64
+    steps:
+      - uses: actions/checkout@v4
+      - uses: julia-actions/setup-julia@v2
+        with:
+          version: ${{ matrix.version }}
+          arch: ${{ matrix.arch }}
+      - uses: julia-actions/cache@v2
+      - name: Install dependencies (notebooks)
+        run: julia --project=examples/notebooks/ -e 'using Pkg; Pkg.develop(PackageSpec(path=pwd())); Pkg.instantiate()'
+      # - name: Run Pluto Notebook Differentiate
+      #   run: |
+      #     cd examples/notebooks/ 
+      #     julia --project=. ./differentiate-notebook.jl
+        

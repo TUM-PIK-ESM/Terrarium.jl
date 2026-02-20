@@ -1,9 +1,19 @@
 """
+Return the number of seconds per day in the given number format.
+"""
+seconds_per_day(::Type{NF}) where {NF} = ustrip(u"s", NF(1)u"d")
+
+"""
+Return the number of seconds per hour in the given number format.
+"""
+seconds_per_hour(::Type{NF}) where {NF} = ustrip(u"s", NF(1)u"hr")
+
+"""
     $SIGNATURES
 
 Compute partial pressure of oxygen from surface pressure in Pa.
 """
-@inline function partial_pressure_O2(pres::NF) where NF
+@inline function partial_pressure_O2(pres::NF) where {NF}
     # TODO Shouldn't this be in physical constants?
     pres_O2 = NF(0.209) * pres
     return pres_O2
@@ -14,36 +24,25 @@ end
 
 Compute partial pressure of CO2 from surface pressure and CO2 concentration in Pa.
 """
-@inline function partial_pressure_CO2(pres::NF, conc_co2::NF) where NF
-    pres_co2 = conc_co2 * NF(1e-6) * pres
+@inline function partial_pressure_CO2(pres::NF, conc_co2::NF) where {NF}
+    pres_co2 = conc_co2 * NF(1.0e-6) * pres
     return pres_co2
 end
 
 """
-    $SIGNATURES
+    vapor_pressure_to_specific_humidity(e, p, ε)
 
-Computes the vapor pressure deficit from air temperature, specific humidity, and surface pressure.
+Convert the vapor pressure `e` to specific humidity at the given pressure `p` based on the
+molecular weight ratio ε.
 """
-@inline function compute_vpd(T_air::NF, q_air::NF, pres::NF) where NF
-    # Compute Saturation vapor pressure over water [Pa]
-    e_sat_w = NF(6.1094e2) * exp(NF(17.625) * T_air / (NF(243.04) + T_air))
-
-    # Convert air specific humidity to vapor pressure [Pa]
-    q_to_e = q_air * pres / (NF(0.622) + NF(0.378) * q_air)
-
-    # Compute vapor pressure deficit [Pa]
-    # TODO is the max operation needed?
-    vpd = max(e_sat_w - q_to_e, NF(0.1))
-
-    return vpd
-end
+@inline vapor_pressure_to_specific_humidity(e, p, ε) = ε * e / p
 
 """
-    relative_to_specific_humidity(r_h, pr, Ts, Tair)
+    relative_to_specific_humidity(r_h, pr, Tair)
 
-Derives specific humidity from measured relative humidity, air pressure, and soil/air temperatures.
+Derives specific humidity from measured relative humidity, air pressure, and air temperature.
 """
-@inline relative_to_specific_humidity(r_h, pr, Ts, Tair) = 0.622 * (r_h / 100) * saturation_vapor_pressure(Tair, Ts) / pr
+@inline relative_to_specific_humidity(r_h, pr, T) = 0.622 * (r_h / 100) * saturation_vapor_pressure(Tair) / pr
 
 # saturation vapor pressure
 """
@@ -57,13 +56,13 @@ coefficients a₁, a₂, and a₃.
 """
     saturation_vapor_pressure(T, Ts=T)
 
-Saturation vapor pressure at the given temperature `T` over a surface at temperature `Ts`,
-accounting for both frozen (`Ts < 0°C`) and unfrozen conditions.
+Saturation vapor pressure at the given temperature `T`, accounting for both frozen (`T < 0°C`)
+and unfrozen conditions.
 
 Coefficients taken from Alduchov and Eskridge (1997).
 """
-@inline function saturation_vapor_pressure(T::NF, Ts::NF=T) where {NF}
-    if Ts <= zero(Ts)
+@inline function saturation_vapor_pressure(T::NF) where {NF}
+    return if T <= zero(T)
         saturation_vapor_pressure(T, NF(611.0), NF(22.46), NF(272.62))
     else
         saturation_vapor_pressure(T, NF(611.0), NF(17.62), NF(243.12))

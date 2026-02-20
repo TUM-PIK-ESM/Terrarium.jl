@@ -19,8 +19,8 @@ Returns the underlying `Oceananigans` grid type for `Field`s defined on the give
 """
 function get_field_grid end
 
-architecture(grid::AbstractLandGrid) = architecture(get_field_grid(grid))
-on_architecture(arch, grid::AbstractLandGrid) = adapt(array_type(arch), grid)
+Architectures.architecture(grid::AbstractLandGrid) = architecture(get_field_grid(grid))
+Architectures.on_architecture(arch, grid::AbstractLandGrid) = adapt(array_type(arch), grid)
 
 include("grid_utils.jl")
 
