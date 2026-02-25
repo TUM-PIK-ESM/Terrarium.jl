@@ -16,7 +16,7 @@ end
 
 function mean_soil_temperature_step!(integrator, timestepper, Δt)
 
-    timestep!(integrator, timestepper, Δt, Δt)
+    timestep!(integrator, timestepper, Δt)
     return mean(interior(integrator.state.temperature))
     # TODO: Figure out why this is segfaulting in Enzyme
     # Answer: Average operator is not type inferrable, see:
