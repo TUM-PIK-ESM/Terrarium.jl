@@ -100,7 +100,7 @@ It might initially seem strange that a land model would be built on top of a fra
 
 ## Contributing
 
-An open source project is only as strong as its community of contributors. We're alays happy to accept contributions, no matter how big or small!
+An open source project is only as strong as its community of contributors. We're always happy to accept contributions, no matter how big or small!
 
 Terrarium.jl is in a very early stage of development, so this is a golden opportunity for you to get your ideas in on the ground floor. If you have some ideas or code you would like to contribute, please don't hesitate to create an issue and get involved!
 
