@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.20.21
+# v0.20.23
 
 using Markdown
 using InteractiveUtils
@@ -70,9 +70,6 @@ Boundary conditions are specified by passing Oceananigans `BoundaryCondition` ty
 For our current example, we are defining a simple linear ODE without any spatial dynamics, so we can get away with just a single column with one vertical layer. We can define it like so:
 """
 
-# ╔═╡ 78f268ef-5385-4c63-bc35-2c973de69da5
-grid = ColumnGrid(CPU(), Float64, UniformSpacing(N = 1))
-
 # ╔═╡ 054a8b11-250f-429f-966f-ca3c9a5dc2ef
 md"""
 ## Defining the model
@@ -120,6 +117,44 @@ Terrarium.variables(::ExpModel) = (
     Terrarium.auxiliary(:c, Terrarium.XY(), desc = "Constant offset for exponential growth"),
     Terrarium.input(:F, Terrarium.XY(), desc = "External forcing"),
 )
+
+# ╔═╡ dfc52b4e-a015-4295-b47f-1dd2b10abeb2
+begin
+	using KernelAbstractions # we need this later for the kernels 
+	
+	@kwdef struct SnowModel{NF, Grid <: Terrarium.AbstractLandGrid{NF}, Pro, Init} <: Terrarium.AbstractModel{NF, Grid}
+	    "Spatial grid on which state variables are discretized"
+	    grid::Grid
+	
+	    "Snow melting process"
+	    snow_melt::Pro = DegreeDaySnow()
+	
+	    "Model initializer"
+	    initializer::Init = DefaultInitializer()
+	end
+	
+	Terrarium.variables(model::SnowModel) = (
+	    Terrarium.variables(model.snow_melt)..., 
+	)
+	
+	@kwdef struct DegreeDaySnow{NF} <: Terrarium.AbstractProcess{NF}
+		"Degree-day factor" 
+	    k::NF = 1
+	
+		"Melting point of snow on the ground"
+		T_melt::NF = 0
+	end
+	
+	Terrarium.variables(model::DegreeDaySnow) = (
+		Terrarium.input(:air_temperature, XY(), default = NF(0), units="°C", desc = "Near-surface air temperature in °C"),
+		Terrarium.input(:snow_fall, XY(), default = NF(0), units="m/s", desc = "snow fall rate in m/s"),
+	    Terrarium.prognostic(:snow_depth, XY(), units="m", desc = "Snow depth in m")
+	)
+	
+end
+
+# ╔═╡ 78f268ef-5385-4c63-bc35-2c973de69da5
+grid = ColumnGrid(CPU(), Float64, UniformSpacing(N = 1))
 
 # ╔═╡ d4d19de7-6f77-4873-9182-9832d1ca4381
 md"""
@@ -236,9 +271,6 @@ md"""
 We can advance our model by one step via the `timestep!` method:
 """
 
-# ╔═╡ 879d86d2-6828-4957-9aac-cd43508cbf1a
-timestep!(integrator)
-
 # ╔═╡ 4676ab3b-4f8f-4f47-9538-5f1e4ef257b1
 integrator.state.u
 
@@ -347,37 +379,6 @@ For our experiment we will use the degree day model with a prescribed surface te
 First, we need to define our model that holds the snow melting process similar to before: 
 """
 
-# ╔═╡ dfc52b4e-a015-4295-b47f-1dd2b10abeb2
-@kwdef struct SnowModel{NF, Grid <: Terrarium.AbstractLandGrid{NF}, Pro, Init} <: Terrarium.AbstractModel{NF, Grid}
-    "Spatial grid on which state variables are discretized"
-    grid::Grid
-
-    "Snow melting process"
-    snow_melt::Pro = DegreeDaySnow()
-
-    "Model initializer"
-    initializer::Init = DefaultInitializer()
-end
-
-Terrarium.variables(model::SnowModel) = (
-    Terrarium.variables(model.snow_melt)...
-)
-
-@kwdef struct DegreeDaySnow{NF} <: Terrarium.AbstractProcess{NF}
-	"Degree-day factor" 
-    k::NF = 
-
-	"Melting point of snow on the ground"
-	T_melt::NF = 0
-end
-
-Terrarium.variables(model::DegreeDaySnow) = (
-	Terrarium.input(:air_temperature, XY(), default = NF(0), units="°C", desc = "Near-surface air temperature in °C"),
-	Terrarium.input(:snow_fall, XY(), default = NF(0), units="m/s", desc = "snow fall rate in m/s"),
-    Terrarium.prognostic(:snow_depth, XY(), units="m", desc = "Snow depth in m")
-)
-
-
 # ╔═╡ 52a2bf95-e258-41ab-922e-f0965d0d0ee2
 md"""
 Then, we need to define the dynamics again. Typically, we launch kernels on the level of `AbstractProcess`es in Terrarium. These processes then might have further parametrizations attached to them that need to be computed. We have a few utilities and conventions for this purpose:
@@ -392,31 +393,6 @@ Let's put all of this in practice now for our example.
 
 First, we need to define the `compute_tendencies!` for our `Model` as before, then we launch the kernel in the `compute_tendencies!` of our `Process`. For this model we don't actually have auxiliary variables, so we don't have to actually define a `compute_auxiliary!` in this case, as we inherit a default `compute_auxiliary!(args...) = nothing`. 
 """
-
-# ╔═╡ ef63d6e4-2317-429e-a117-7fb95990cad4
-
-
-# ╔═╡ 72ec62c7-5066-481d-b9c9-84a4851a1e0c
-begin
-	function Terrarium.compute_tendencies!(state, model::SnowModel)
-	    compute_tendencies!(state, model.grid, model.snow_melt)
-	    return nothing
-	end
-	
-	function Terrarium.compute_tendencies!(
-	        state,
-	        grid,
-	        snow_melt::DegreeDaySnow
-	    )
-		fields = get_fields(state, snow_melt)
-	    launch!(grid, XY, compute_snow_melt!, state.tendencies, grid, fields, snow_melt)
-	end
-	
-	@kernel function compute_snow_melt!(tend, grid, fields, snow_melt)
-		i,j = @index(Global, NTuple)
-		tend[i, j] = compute_snow_melt_tendency(i, j, grid, fields, snow_melt)
-	end 
-end
 
 # ╔═╡ ab4a216f-3962-4a6f-8f92-2e9a08798e7c
 md"""
@@ -442,16 +418,49 @@ function compute_snow_melt_tendency(i, j, grid, fields, snow_melt)
 	end 
 end 
 
+# ╔═╡ 72ec62c7-5066-481d-b9c9-84a4851a1e0c
+begin
+	function Terrarium.compute_tendencies!(state, model::SnowModel)
+	    compute_tendencies!(state, model.grid, model.snow_melt)
+	    return nothing
+	end
+	
+	function Terrarium.compute_tendencies!(
+	        state,
+	        grid,
+	        snow_melt::DegreeDaySnow
+	    )
+		fields = get_fields(state, snow_melt)
+	    launch!(grid, XY, compute_snow_melt!, state.tendencies, grid, fields, snow_melt)
+	end
+	
+	@kernel function compute_snow_melt!(tend, grid, fields, snow_melt)
+		i,j = @index(Global, NTuple)
+		tend[i, j] = compute_snow_melt_tendency(i, j, grid, fields, snow_melt)
+	end 
+end
+
 # ╔═╡ e81f4b38-5789-416e-acee-e02b052cb8f4
 md"""
 For a simple process like this, this is of course quite a lot of overhead, but this structure allows us to also compose very complex land models with ease and efficiency. 
 
-There's one additional thi
-
-But, now we have implemented everything we need for our dynamics and we can finally run the model again. For this we set up our initializers again in a very similar manner as above for the previous example: 
+There's one additional thing we need to take of: the snow depth is strictly non-negative, but a simple model like ours implemented would quickly reach negative values for $S$. While the aforementioned [Kavetski and Kuczera paper](https://agupubs.onlinelibrary.wiley.com/doi/10.1029/2006WR005195) mitigates this issue by smoothing the model equation, we will in this example do the simplest possible strategy: we simply clip non-negative values during the time stepping of our model. To implement such a clipping we have to extend `timestep!(state::StateVaribales, model::ExpModel, timestepper, Δt)`. This method is applied after each explicit step the time stepper takes (but before any closure relations are applied if they exist). Let's implement the clipping: 
 """
 
 # ╔═╡ b723c568-c0e1-4d9a-9a74-237d7cfd1ea9
+function Terrarium.timestep!(state::StateVariables, model::ExpModel, timestepper, Δt)
+	state.snow_depth .= max.(state.snow_depth, 0)
+end 
+
+# ╔═╡ 879d86d2-6828-4957-9aac-cd43508cbf1a
+timestep!(integrator)
+
+# ╔═╡ 841c540f-ed63-4d89-9baf-836ccb3aed0d
+md"""
+But, now we really have implemented everything we need for our dynamics and we can finally run the model again. For this we set up our initializers again in a very similar manner as above for the previous example, just this time with inputs from netCDF files and a global grid: 
+"""
+
+# ╔═╡ a55711ae-919c-46b0-a03e-ac4e105e0c4c
 
 
 # ╔═╡ Cell order:
@@ -496,12 +505,13 @@ But, now we have implemented everything we need for our dynamics and we can fina
 # ╟─0f607788-53e7-4a55-95f0-3690e9867099
 # ╠═dbe8d0fa-893f-4c05-9e46-220ab41636f3
 # ╠═c06502ff-c021-488c-a333-36233091d046
-# ╠═25e22154-946f-4c32-a1fa-73d86e935ff3
+# ╟─25e22154-946f-4c32-a1fa-73d86e935ff3
 # ╠═dfc52b4e-a015-4295-b47f-1dd2b10abeb2
-# ╠═52a2bf95-e258-41ab-922e-f0965d0d0ee2
-# ╠═ef63d6e4-2317-429e-a117-7fb95990cad4
+# ╟─52a2bf95-e258-41ab-922e-f0965d0d0ee2
 # ╠═72ec62c7-5066-481d-b9c9-84a4851a1e0c
 # ╠═ab4a216f-3962-4a6f-8f92-2e9a08798e7c
 # ╠═d8b05ae3-ecba-41de-84c7-45cbf31b735d
-# ╠═e81f4b38-5789-416e-acee-e02b052cb8f4
+# ╟─e81f4b38-5789-416e-acee-e02b052cb8f4
 # ╠═b723c568-c0e1-4d9a-9a74-237d7cfd1ea9
+# ╟─841c540f-ed63-4d89-9baf-836ccb3aed0d
+# ╠═a55711ae-919c-46b0-a03e-ac4e105e0c4c
