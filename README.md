@@ -44,7 +44,7 @@ Terrarium is still in an early prototype stage and is not yet registered as a pa
 However, you can still install the package from the repository via the package manager (type `]` in your REPL):
 
 ```
-pkg> add https://github.com/TUM-PIK-ESM/Terrarium.jl
+pkg> add https://github.com/NumericalEarth/Terrarium.jl
 ```
 
 or clone the repository and start hacking directly!
