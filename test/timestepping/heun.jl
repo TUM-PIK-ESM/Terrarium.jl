@@ -5,7 +5,7 @@ using Test
 
 @kwdef struct ExpModel{NF, Grid <: Terrarium.AbstractLandGrid{NF}, I} <: Terrarium.AbstractModel{NF, Grid}
     grid::Grid
-    initializer::I = DefaultInitializer()
+    initializer::I = DefaultInitializer(eltype(grid))
 end
 
 Terrarium.variables(::ExpModel) = (
@@ -26,11 +26,11 @@ end
 @testset "ExpModel: Heun and Euler time steppers" begin
 
     grid = ColumnGrid(CPU(), Float64, UniformSpacing(N = 1))
-    initializer = FieldInitializers(u = 0.0, v = 0.1)
-    model = ExpModel(grid, initializer)
+    model = ExpModel(grid)
 
-    integrator_heun = initialize(model, Heun())
-    integrator_euler = initialize(model, ForwardEuler())
+    initializers = (u = 0.0, v = 0.1)
+    integrator_heun = initialize(model, Heun(); initializers)
+    integrator_euler = initialize(model, ForwardEuler(); initializers)
 
     # test that Heun estimate is more accurate (larger value than Euler here)
     # test that both are what we expect
@@ -46,4 +46,22 @@ end
     # Heun: expected value: u = (0.1Δt + (0.1 * Δt + 0.1) * Δt) / 2
     dt_heun = default_dt(integrator_heun.timestepper)
     @test integrator_heun.state.u[2] == (0.1 * dt_heun + (0.1 * dt_heun + 0.1) * dt_heun) / 2
+end
+
+# Use timestep!(state, model, timestepper, Δt) to clip negative values in an super simple example sim
+@testset "ExpModel: clip negative values" begin
+    grid = ColumnGrid(CPU(), Float64, UniformSpacing(N = 1))
+    model = ExpModel(grid)
+
+    Terrarium.timestep!(state, model::ExpModel, timestepper::ForwardEuler, Δt) = begin
+        state.u[2] = max(state.u[2], 0.0)
+    end
+
+    initializers = (u = -20, v = -5.0)
+    integrator = initialize(model, ForwardEuler(); initializers)
+
+    # Test that timestep! clips negative values
+    timestep!(integrator)
+
+    @test integrator.state.u[2] >= 0.0
 end

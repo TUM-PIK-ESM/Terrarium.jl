@@ -13,7 +13,7 @@
     <img alt="code style: runic" src="https://img.shields.io/badge/code_style-%E1%9A%B1%E1%9A%A2%E1%9A%BE%E1%9B%81%E1%9A%B2-black.svg?style=flat-square">
 </a>
 
-[Terrarium.jl](https://tum-pik-esm.github.io/Terrarium.jl/dev) is a new and upcoming framework for hybrid physics- and data-driven land modeling across spatial and temporal scales. We envision Terrarium to be part of a new generation of Earth system component models that combine modularity, interactivity, GPU-compability and auto-differentiability (AD) for seamless integration of process-based and data-driven model components in both global and regional scale simulations.
+[Terrarium.jl](https://numericalearth.github.io/Terrarium.jl/dev) is a new and upcoming framework for hybrid physics- and data-driven land modeling across spatial and temporal scales. We envision Terrarium to be part of a new generation of Earth system component models that combine modularity, interactivity, GPU-compability and auto-differentiability (AD) for seamless integration of process-based and data-driven model components in both global and regional scale simulations.
 
 Terrarium is being developed alongside [SpeedyWeather.jl](https://github.com/SpeedyWeather/SpeedyWeather.jl) and [Oceananigans.jl](https://github.com/CliMA/Oceananigans.jl) as the land component of a new, user-friendly, and fully GPU/AD-compatible Earth System Model in the Julia programming language.
 
@@ -44,7 +44,7 @@ Terrarium is still in an early prototype stage and is not yet registered as a pa
 However, you can still install the package from the repository via the package manager (type `]` in your REPL):
 
 ```
-pkg> add https://github.com/TUM-PIK-ESM/Terrarium.jl
+pkg> add https://github.com/NumericalEarth/Terrarium.jl
 ```
 
 or clone the repository and start hacking directly!
@@ -100,7 +100,7 @@ It might initially seem strange that a land model would be built on top of a fra
 
 ## Contributing
 
-An open source project is only as strong as its community of contributors. We're alays happy to accept contributions, no matter how big or small!
+An open source project is only as strong as its community of contributors. We're always happy to accept contributions, no matter how big or small!
 
 Terrarium.jl is in a very early stage of development, so this is a golden opportunity for you to get your ideas in on the ground floor. If you have some ideas or code you would like to contribute, please don't hesitate to create an issue and get involved!
 

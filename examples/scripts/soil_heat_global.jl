@@ -24,12 +24,7 @@ grid = ColumnRingGrid(arch, Float64, ExponentialSpacing(N = 30), land_mask.grid,
 lon, lat = RingGrids.get_londlatds(grid.rings)
 
 # Initial conditions
-initializer = FieldInitializers(
-    # steady-ish state initial condition for soil temperature
-    temperature = (x, z) -> 0.02 * z,
-    # fully saturated soil
-    saturation_water_ice = 1.0,
-)
+initializer = SoilInitializer(eltype(grid))
 model = SoilModel(grid; initializer)
 # Periodic surface temperature with annual cycle
 bc = PrescribedSurfaceTemperature(:T_ub, (x, t) -> 30 * sin(2π * t / (24 * 3600 * 365)))

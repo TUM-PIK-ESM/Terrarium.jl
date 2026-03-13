@@ -24,17 +24,15 @@ function build_model(arch = CPU())
     hydrology = SoilHydrology(eltype(grid), RichardsEq(); hydraulic_properties)
     soil = SoilEnergyWaterCarbon(eltype(grid); hydrology)
     vegetation = VegetationCarbon(eltype(grid))
-    # Variably saturated with water table at roughly 5 m depth
-    initializer = FieldInitializers(
-        saturation_water_ice = (x, z) -> min(1, 0.5 - 0.1 * z)
-    )
     # Construct coupled model
     vegsoil = VegetationSoilModel(grid; soil, vegetation, initializer)
     return vegsoil
 end
 
 vegsoil = build_model()
-tinf = @snoop_inference initialize(vegsoil, ForwardEuler())
+# Variably saturated with water table at roughly 5 m depth
+initializers = (saturation_water_ice = (x, z) -> min(1, 0.5 - 0.1 * z),)
+tinf = @snoop_inference initialize(vegsoil, ForwardEuler(); initializers)
 # print_tree(tinf, maxdepth=100)
 ProfileView.view(flamegraph(tinf))
 Δt = 60.0

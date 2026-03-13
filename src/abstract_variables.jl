@@ -89,6 +89,12 @@ Base.:(==)(var1::AbstractVariable, var2::AbstractVariable) =
     vardims(var1) == vardims(var2) &&
     varunits(var1) == varunits(var2)
 
+function Base.summary(var::AbstractVariable)
+    unitstr = varunits(var) == NoUnits ? "-" : varunits(var)
+    text = "Variable $(string(varname(var))) [$(unitstr)] on $(typeof(vardims(var)))"
+    return text
+end
+
 """
     $TYPEDEF
 
@@ -276,7 +282,7 @@ function Variables(@nospecialize(vars::Tuple{Vararg{Union{AbstractProcessVariabl
 end
 
 """
-    $TYPEDSIGNATURES
+    deduplicate_vars(vars::Tuple{Vararg{AbstractVariable}})
 
 Type-stable equivalent of [`deduplicate`](@ref) for tuples of `AbstractVariable`s.
 """
@@ -314,6 +320,43 @@ function Base.merge(varss::Variables...)
         )
     end
     return Variables(reduce(tuplejoin, allvars))
+end
+
+function Base.summary(vars::Variables)
+    str = "Variables(prognostic = $(keys(vars.prognostic)), auxiliary = $(keys(vars.auxiliary)), inputs = $(keys(vars.inputs)), namespaces = $(keys(vars.namespaces)))"
+    return str
+end
+
+function Base.show(io::IO, vars::Variables)
+    println(io, "Variables")
+    println(io, "├─ Prognostic: ")
+    for var in vars.prognostic
+        println("├── $(summary(var))")
+    end
+    println(io, "├─ Auxiliary: ")
+    for var in vars.auxiliary
+        println("├── $(summary(var))")
+    end
+    println(io, "├─ Inputs: ")
+    for var in vars.inputs
+        println("├── $(summary(var))")
+    end
+    println(io, "├─ Namespaces:")
+    for ns in vars.namespaces
+        println("├── $(summary(ns))")
+    end
+    return nothing
+end
+
+# Automatically forward dispatches for `show` on tuples of variables to Variables;
+# This is for the convenience of the user such that `variables(model)` pretty prints
+function Base.show(
+        io::IO,
+        vartup::Tuple{Union{AbstractVariable, Namespace}, Vararg{Union{AbstractVariable, Namespace}}}
+    )
+    vars = Variables(vartup)
+    show(io, vars)
+    return nothing
 end
 
 """

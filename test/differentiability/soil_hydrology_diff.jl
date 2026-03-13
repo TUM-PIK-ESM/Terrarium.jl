@@ -12,12 +12,7 @@ function build_soil_energy_hydrology_model(
     ) where {NF}
     grid = ColumnGrid(arch, Float64, ExponentialSpacing(N = 10))
     # initial conditions
-    initializer = FieldInitializers(
-        # steady-ish state initial condition for temperature
-        temperature = (x, z) -> 1.0,
-        # saturated soil
-        saturation_water_ice = (x, z) -> min(0.5 - 0.1 * z, 1.0),
-    )
+    initializer = SoilInitializer(eltype(grid))
     hydrology = SoilHydrology(eltype(grid), vertflow; hydrology_kwargs...)
     strat = HomogeneousStratigraphy(eltype(grid); porosity)
     soil = SoilEnergyWaterCarbon(eltype(grid); hydrology, strat)
@@ -141,13 +136,13 @@ end
     hydraulic_properties = ConstantSoilHydraulics(Float64)
     model = build_soil_energy_hydrology_model(CPU(), Float64; hydraulic_properties)
     integrator = initialize(model, ForwardEuler())
-    inputs = integrator.inputs
-    state = integrator.state
-    dstate = make_zero(state)
+    dintegrator = make_zero(integrator)
+    # set a seed for the temperature
+    dintegrator.state.temperature .= 1.0
     stepper = integrator.timestepper
     dstepper = make_zero(stepper)
     Δt = 60.0
-    @time Enzyme.autodiff(set_runtime_activity(Reverse), timestep!, Const, Duplicated(state, dstate), Duplicated(stepper, dstepper), Const(model), Const(inputs), Const(Δt))
-    @test all(isfinite.(dstate.temperature))
-    @test all(isfinite.(dstate.pressure_head))
+    @time Enzyme.autodiff(set_runtime_activity(Reverse), timestep!, Const, Duplicated(integrator, dintegrator), Duplicated(stepper, dstepper), Const(Δt))
+    @test all(isfinite.(dintegrator.state.temperature))
+    @test all(isfinite.(dintegrator.state.pressure_head))
 end

@@ -16,11 +16,16 @@ is_adaptive(euler::ForwardEuler) = false
 
 is_initialized(euler::ForwardEuler) = true
 
-function timestep!(state, timestepper::ForwardEuler, model::AbstractModel, inputs::InputSources, Δt)
+function timestep!(integrator::ModelIntegrator, timestepper::ForwardEuler, Δt)
+    # Compute auxiliaries and tendencies
+    update_state!(integrator, compute_tendencies = true)
     # Euler step
-    explicit_step!(state, get_grid(model), timestepper, Δt)
+    explicit_step!(integrator.state, get_grid(integrator.model), timestepper, Δt)
+    # Call timestep! on model
+    timestep!(integrator.state, integrator.model, timestepper, Δt)
     # Apply closure relations
-    closure!(state, model)
+    closure!(integrator.state, integrator.model)
     # Update clock
-    return tick!(state.clock, Δt)
+    tick!(integrator.state.clock, Δt)
+    return nothing
 end

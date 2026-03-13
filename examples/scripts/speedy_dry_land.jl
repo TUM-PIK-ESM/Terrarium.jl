@@ -73,12 +73,7 @@ Nz = 30
 grid = ColumnRingGrid(CPU(), Float32, ExponentialSpacing(; N = Nz, Δz_min), ring_grid)
 # grid = ColumnGrid(CPU(), Float32, ExponentialSpacing(N=30))
 # Initial conditions
-soil_initializer = FieldInitializers(
-    # steady-ish state initial condition for soil temperature
-    temperature = (x, z) -> 0 - 0.02f0 * z,
-    # fully saturated soil
-    saturation_water_ice = 1.0f0,
-)
+soil_initializer = SoilInitializer(eltype(grid))
 
 # Soil model with prescribed surface temperautre BC
 model = SoilModel(grid, initializer = soil_initializer)

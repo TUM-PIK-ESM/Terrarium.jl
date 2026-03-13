@@ -30,16 +30,16 @@ grid = ColumnRingGrid(arch, ExponentialSpacing(N = Nz), land_mask)
 Tair_forcing = InputSource(grid, rebuild(Tair_raster, name = :Tair))
 Tsurf_0 = Tair_raster[Ti(1)][findall(land_mask)]
 
+model = SoilModel(grid)
+boundary_conditions = PrescribedSurfaceTemperature(:Tair)
 # Initial conditions
-initializer = FieldInitializers(
+initializers = (
     # steady-ish state initial condition for temperature
     temperature = (x, z) -> Tsurf_0[Int(round(x)) + 1] - 0.02 * z,
     # dry soil
     saturation_water_ice = 1.0,
 )
-model = SoilModel(grid; initializer, boundary_conditions)
-boundary_conditions = PrescribedSurfaceTemperature(:Tair)
-integrator = initialize(model, ForwardEuler(), Tair_forcing; boundary_conditions)
+integrator = initialize(model, ForwardEuler(), Tair_forcing; initializers, boundary_conditions)
 @time timestep!(integrator)
 @time run!(integrator, period = Day(10), dt = 120.0)
 

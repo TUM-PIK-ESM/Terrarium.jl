@@ -90,8 +90,9 @@ makedocs(
     pages = [
         "Home" => "index.md",
         "Overview" => [
-            "Mathematical formulation" => "overview/mathematical_formulation.md",
+            "Numerical core" => "overview/numerical_core.md",
             "Software architecture" => "overview/software_architecture.md",
+            "Mathematical formulation" => "overview/mathematical_formulation.md",
         ],
         "Physics" => [
             "Soil physics" => [
@@ -112,7 +113,7 @@ deployconfig = Documenter.auto_detect_deploy_system()
 # rm(joinpath(@__DIR__, "build", ".gitignore"))
 
 deploydocs(
-    repo = "github.com/TUM-PIK-ESM/Terrarium.jl.git",
+    repo = "github.com/NumericalEarth/Terrarium.jl.git",
     push_preview = true,
     versions = ["v0" => "v^", "v#.#", "dev" => "dev"],
     deploy_config = deployconfig,
