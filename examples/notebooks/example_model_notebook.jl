@@ -22,7 +22,13 @@ begin # for reproducability set a random seed
 end
 
 # ╔═╡ eeb283fa-5360-4bab-83cf-dcbc0bee7949
-using CairoMakie
+using CairoMakie, GeoMakie
+
+# ╔═╡ a55711ae-919c-46b0-a03e-ac4e105e0c4c
+begin 
+	using RingGrids, NCDatasets 
+	global_grid = HEALPixGrid(24) # we define the global grid we model on as a HealPIX grid 
+end
 
 # ╔═╡ 5630efd5-2482-463d-913f-9addb120beec
 md"""
@@ -69,6 +75,12 @@ Boundary conditions are specified by passing Oceananigans `BoundaryCondition` ty
 
 For our current example, we are defining a simple linear ODE without any spatial dynamics, so we can get away with just a single column with one vertical layer. We can define it like so:
 """
+
+# ╔═╡ 78f268ef-5385-4c63-bc35-2c973de69da5
+# ╠═╡ disabled = true
+#=╠═╡
+grid = ColumnGrid(CPU(), Float64, UniformSpacing(N = 1))
+  ╠═╡ =#
 
 # ╔═╡ 054a8b11-250f-429f-966f-ca3c9a5dc2ef
 md"""
@@ -153,9 +165,6 @@ begin
 	
 end
 
-# ╔═╡ 78f268ef-5385-4c63-bc35-2c973de69da5
-grid = ColumnGrid(CPU(), Float64, UniformSpacing(N = 1))
-
 # ╔═╡ d4d19de7-6f77-4873-9182-9832d1ca4381
 md"""
 Here, we defined our three variables with their names as a `Symbol` and whether they are 2D variables (`XY`) on the spatial grid or 3D variables (`XYZ`) that also vary along the vertical z-axis. Here we are considering only a simple scalar model so we choose 2D (`XY`), bearing in mind that all points in the X and Y dimensions of `ColumnGrid` are independent of each other.
@@ -237,12 +246,14 @@ Then, we define our forcing. For that, our time-dependent forcing is loaded in f
 """
 
 # ╔═╡ 252af6a1-73c8-4abe-8100-690564641b0d
+#=╠═╡
 begin
     t_F = 0:1:300
     F = FieldTimeSeries(grid, XY(), t_F)
     F.data .= randn(size(F))
     input = InputSource(; F)
 end
+  ╠═╡ =#
 
 # ╔═╡ 452f95e1-3c6b-4e49-935f-1a6f96c96bbb
 md"""
@@ -255,7 +266,9 @@ Then, we construct our model from the chosen `grid` and `initializer`
 """
 
 # ╔═╡ 2a4234c5-f529-4166-94c3-0556565348ea
+#=╠═╡
 model = ExpModel(grid; initializer)
+  ╠═╡ =#
 
 # ╔═╡ 4c36fdc0-5120-46b9-86ca-e875e23a6c1d
 md"""
@@ -264,15 +277,24 @@ to `initialize` along with a suitable timestepper and our input/forcing data, wh
 """
 
 # ╔═╡ 7e38132b-d406-4863-b88f-90efe2a1bfa2
+#=╠═╡
 integrator = initialize(model, Heun(Δt = 1.0), input)
+  ╠═╡ =#
 
 # ╔═╡ ab442662-9975-42e5-b5c7-48687f8cbe12
 md"""
 We can advance our model by one step via the `timestep!` method:
 """
 
+# ╔═╡ 879d86d2-6828-4957-9aac-cd43508cbf1a
+#=╠═╡
+timestep!(integrator)
+  ╠═╡ =#
+
 # ╔═╡ 4676ab3b-4f8f-4f47-9538-5f1e4ef257b1
+#=╠═╡
 integrator.state.u
+  ╠═╡ =#
 
 # ╔═╡ 21e20c28-dfe1-4a0a-992f-c3499fbe4be8
 md"""
@@ -280,10 +302,14 @@ or we can use `run!` for a fixed number of `steps` or over a desired `Dates.Peri
 """
 
 # ╔═╡ de3d4210-c39f-11f0-3d50-3f95a2361e2a
+#=╠═╡
 run!(integrator, period = Hour(1))
+  ╠═╡ =#
 
 # ╔═╡ cce4d4d3-0fa4-4376-bcb6-c52603bc17d6
+#=╠═╡
 integrator.state.u
+  ╠═╡ =#
 
 # ╔═╡ 7fa2dfbf-7077-4162-bcc1-ba2bd12b093c
 md"""
@@ -298,9 +324,17 @@ The `integrator` data structure implements the Oceananigans model interface, so 
 """
 
 # ╔═╡ 95f479e2-2ffa-4e15-8952-421465eab2ee
+#=╠═╡
 sim = Simulation(integrator; stop_time = 300.0, Δt = 1.0)
+  ╠═╡ =#
+
+# ╔═╡ 081d0b29-927c-4a03-a3dd-4dcac043dcc1
+md"""
+We can then add an output writer to the simulation and finally `run!` it!
+"""
 
 # ╔═╡ 26000a4e-77cb-4c04-aeb2-ba5b0e14112a
+#=╠═╡
 begin
     # We need to import some types from Oceananigans here for output handling
     using Oceananigans: TimeInterval, JLD2Writer
@@ -325,11 +359,7 @@ begin
     @assert isfile(output_file) "Output file does not exist!"
     display("Simulaton data saved to $(output_file)")
 end
-
-# ╔═╡ 081d0b29-927c-4a03-a3dd-4dcac043dcc1
-md"""
-We can then add an output writer to the simulation and finally `run!` it!
-"""
+  ╠═╡ =#
 
 # ╔═╡ 0f607788-53e7-4a55-95f0-3690e9867099
 md"""
@@ -337,11 +367,15 @@ Then load the output data and plot the results:
 """
 
 # ╔═╡ dbe8d0fa-893f-4c05-9e46-220ab41636f3
+#=╠═╡
 # Load output into field time series
 fts = FieldTimeSeries(output_file, "u")
+  ╠═╡ =#
 
 # ╔═╡ c06502ff-c021-488c-a333-36233091d046
+#=╠═╡
 plot(1:length(fts), [fts[i][1, 1, 1] for i in 1:length(fts)])
+  ╠═╡ =#
 
 # ╔═╡ 25e22154-946f-4c32-a1fa-73d86e935ff3
 md"""
@@ -452,22 +486,48 @@ function Terrarium.timestep!(state::StateVariables, model::ExpModel, timestepper
 	state.snow_depth .= max.(state.snow_depth, 0)
 end 
 
-# ╔═╡ 879d86d2-6828-4957-9aac-cd43508cbf1a
-timestep!(integrator)
-
 # ╔═╡ 841c540f-ed63-4d89-9baf-836ccb3aed0d
 md"""
 But, now we really have implemented everything we need for our dynamics and we can finally run the model again. For this we set up our initializers again in a very similar manner as above for the previous example, just this time with inputs from netCDF files and a global grid: 
 """
 
-# ╔═╡ a55711ae-919c-46b0-a03e-ac4e105e0c4c
+# ╔═╡ 3ef9f3c7-16a2-416f-981a-64427d89b033
+md"""
+Now, we get all the input data. We can use the input data provided by `RingGrids` / `SpeedyWeather` in this case: 
+"""
 
+# ╔═╡ 86f4103b-ddaf-4f89-93cf-1290c623274e
+begin 	
+	snow_climatology = get_asset("data/boundary_conditions/snow.nc", from_assets=true, name="snow", ArrayType=FullGaussianField, FileFormat=NCDataset, output_grid=global_grid)
+	lst_climatology = get_asset("data/boundary_conditions/land_surface_temperature.nc", from_assets=true, name="lst", ArrayType=FullGaussianField, FileFormat=NCDataset, output_grid=global_grid)
+
+	# the land sea mask is saved in UInt number format, we need a seperate interpolate here for now
+	land_sea_mask_hires = get_asset("data/boundary_conditions/land-sea_mask.nc", from_assets=true, name="lsm", ArrayType=FullClenshawField, FileFormat=NCDataset)
+	land_sea_mask = zeros(Float32, global_grid)
+	RingGrids.grid_cell_average!(land_sea_mask, land_sea_mask_hires)
+	land_sea_mask = land_sea_mask .> 0.9 # we need a binary mask for Terrarium
+
+end 
+
+# ╔═╡ 6ba13cea-da1c-457e-ada0-8987a0667b24
+md"""
+The snow and land surface temperatures are monthly climatologies. For this simple example, we'll just pick the January value. Let's quickly look at our input data. 
+"""
+
+# ╔═╡ fc8562fd-0213-48be-870f-ab9b06c54543
+heatmap(land_sea_mask)
+
+# ╔═╡ 051d99da-a7b8-4cd8-be7c-3f7f615345d3
+heatmap(lst_climatology[:,1], title="Land Surface Temperature")
+
+# ╔═╡ 9982a3fd-c2ef-4bba-917e-211912fdce84
+heatmap(snow_climatology[:,1], title="Snow")
 
 # ╔═╡ Cell order:
 # ╟─5630efd5-2482-463d-913f-9addb120beec
-# ╟─808d5d89-c1d2-4f6a-bd55-4b3a8444c90f
+# ╠═808d5d89-c1d2-4f6a-bd55-4b3a8444c90f
 # ╠═94d82d31-42ec-41de-91e9-b5585b3a72d4
-# ╟─07c8a3a4-21aa-4213-a876-eadc8754d4a0
+# ╠═07c8a3a4-21aa-4213-a876-eadc8754d4a0
 # ╟─4922e264-c80d-4a5b-8891-a7c8a3fdbfe7
 # ╠═78f268ef-5385-4c63-bc35-2c973de69da5
 # ╟─054a8b11-250f-429f-966f-ca3c9a5dc2ef
@@ -475,7 +535,7 @@ But, now we really have implemented everything we need for our dynamics and we c
 # ╠═ecd92bff-a116-493d-9ce0-a2eb7d161dc6
 # ╟─575d920c-b12e-493f-95a7-5c962c3591fd
 # ╠═82e45724-ba16-4806-9470-5cb4c43ea734
-# ╠═d4d19de7-6f77-4873-9182-9832d1ca4381
+# ╟─d4d19de7-6f77-4873-9182-9832d1ca4381
 # ╠═5ea313fc-3fbb-4092-a2cc-e0cd1f2fe641
 # ╠═3815424f-6210-470d-aef1-99c60c71072f
 # ╟─32373599-768f-4809-acdd-4704acc3f30b
@@ -515,3 +575,9 @@ But, now we really have implemented everything we need for our dynamics and we c
 # ╠═b723c568-c0e1-4d9a-9a74-237d7cfd1ea9
 # ╟─841c540f-ed63-4d89-9baf-836ccb3aed0d
 # ╠═a55711ae-919c-46b0-a03e-ac4e105e0c4c
+# ╠═3ef9f3c7-16a2-416f-981a-64427d89b033
+# ╠═86f4103b-ddaf-4f89-93cf-1290c623274e
+# ╠═6ba13cea-da1c-457e-ada0-8987a0667b24
+# ╠═fc8562fd-0213-48be-870f-ab9b06c54543
+# ╠═051d99da-a7b8-4cd8-be7c-3f7f615345d3
+# ╠═9982a3fd-c2ef-4bba-917e-211912fdce84
