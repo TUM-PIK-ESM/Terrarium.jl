@@ -100,7 +100,7 @@ end
 The inverse quadratic (or "quadratic parallel") bulk thermal conductivity formula (Cosenza et al. 2003):
 
 ```math
-k = [\\sum_{i=1}^N θᵢ\\sqrt{kᵢ}]^2
+k = \\left[\\sum_{i=1}^N θᵢ\\sqrt{kᵢ}\\right]^2
 ```
 
 Cosenza, P., Guérin, R., and Tabbagh, A.: Relationship between thermal

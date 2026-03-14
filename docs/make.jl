@@ -5,6 +5,8 @@ using PlutoStaticHTML
 
 using Terrarium
 
+BUILD_DOCS_NOTEBOOKS = false
+
 const NOTEBOOK_DIR = joinpath(dirname(@__DIR__), "examples", "notebooks")
 const EXAMPLE_DIR = joinpath(@__DIR__, "src", "notebooks")
 const EXAMPLE_DIR_RELATIVE = joinpath("notebooks")
@@ -30,7 +32,7 @@ end
 # lookup table for all Pluto notebooks to be included
 notebook_lookup = if BUILD_DOCS_NOTEBOOKS
     Dict(
-        "Model Interface" => "example_model_notebook.md",
+        # "Model Interface" => "example_model_notebook.md",
         #    "Differentiating Terrarium" => "differentiate-notebook.md",
     )
 else

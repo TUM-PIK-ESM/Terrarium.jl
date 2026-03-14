@@ -6,7 +6,7 @@ based on the scheme proposed by Zeng (2001). The PDF of the root distribution
 is modeled as
 
 ```math
-\\frac{\\partial R}{\\partial z} = \\frac{1}{2} \\left( a \\exp(a z) + b \\exp(b z) \\right)
+\\frac{\\partial R}{\\partial z} = \\frac{1}{2} \\left[ a \\exp(a z) + b \\exp(b z) \\right]
 ```
 which is then integrated over the soil column and normalized to sum to unity. Note that
 this is effectively the average of two exponential distributions with rates `a` and `b`, both
