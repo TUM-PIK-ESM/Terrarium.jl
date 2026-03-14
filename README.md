@@ -2,7 +2,7 @@
 <strong> 🌲🌡💧 Fast, differentiable, and GPU-aware land modeling across scales with [Oceananigans.jl](https://github.com/CliMA/Oceananigans.jl). </strong>
 ---
 
-<a href="https://tum-pik-esm.github.io/Terrarium.jl/dev">
+<a href="https://numericalearth.github.io/Terrarium.jl/dev">
 <img alt="Development documentation" src="https://img.shields.io/badge/documentation-in%20development-orange?style=flat-square">
 </a>
 <a href="https://www.repostatus.org/#wip"><img src="https://www.repostatus.org/badges/latest/wip.svg" alt="Project Status: WIP – Initial development is in progress, but there has not yet been a stable, usable release suitable for the public." /></a>
