@@ -24,7 +24,7 @@ where $\mathbf{j}_\text{h}$ (W/m²) is the diffusive heat flux vector and $\math
 Since ground materials are often porous, i.e., there exists void space between the solid particles, it is necessary to consider the potential presence of water and/or ice in this void space, which is hereafter referred to as pore space, or simply, soil pores. The thermal effects of water and ice can be accounted for by considering not only the temperature of the material but rather the total internal energy of the elementary volume. Combining the diffusive flux with a potential advective heat flux $j_z^{\text{w}}$ due to water flow yields the energy conservation law,
 ```math
 \begin{equation}
-\frac{\partial U(T,\theta)}{\partial t} - \nabla \cdot \left(\mathbf{j}_\text{h} + \mathbf{j}_h^{\text{w}}\right) - F_h(z,t) = 0\,,
+\frac{\partial U(T,\theta)}{\partial t} - \boldsymbol{\nabla} \cdot \left(\mathbf{j}_\text{h} + \mathbf{j}_h^{\text{w}}\right) - F_h(z,t) = 0\,,
 \end{equation}
 ```
 where $U(T,\theta)$ (J/m³) is the volumetric internal energy as a function of temperature and total water/ice content $\theta$ (m³/m³), and $F_h(z,t)$ is an inhomogeneous heat source/sink (forcing) term.
@@ -42,7 +42,7 @@ where $L_{\text{sl}}$ and $c_{\text{w}}$ (J/kg) represent the specific latent he
 The constitutive relationship between energy and temperature plays a key role in characterizing the subsurface energy balance. This relation can be defined in integral form as
 ```math
 \begin{equation}
-    U(T,\theta) = \int_{T_{\text{ref}}}^T \tilde{C}(x,\theta) \, dx\,,
+    U(T,\theta) = \int_{T_{\text{ref}}}^T \tilde{C}(x,\theta) \, \mathrm{d}x\,,
     %= \overbrace{\HC(\thetaw,\thetai)\left[T-T_{\text{ref}}\right]}^{\text{Sensible}} + \overbrace{\densityw \LHF\thetaw(T,\thetawi)}^{\text{Latent}},
 \end{equation}
 ```
@@ -84,7 +84,7 @@ where $C = C(\theta_{\text{w}},\theta)$ is the volumetric heat capacity (J/K/m³
 
 The vertical flow of water in porous media, such as soils, can be formulated as following the conservation law
 ```math
-    \phi\frac{\partial\vartheta(\psi)}{\partial t} - \nabla \cdot \textbf{j}_{\text{w}} - F_{\text{w}}(z,t) = 0,
+    \phi\frac{\partial\vartheta(\psi)}{\partial t} - \boldsymbol{\nabla} \cdot \textbf{j}_{\text{w}} - F_{\text{w}}(z,t) = 0,
 ```
 where $\phi$ is the natural porosity (or saturated water content) of the soil volume and $F_{\text{w}}(z,t)$ (m/s) is an inhomogeneous source/sink (forcing) term.
 
