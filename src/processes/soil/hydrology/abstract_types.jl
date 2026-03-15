@@ -9,14 +9,6 @@ any other implementation-specific state variables.
 abstract type AbstractSoilHydrology{NF} <: AbstractProcess{NF} end
 
 """
-    get_swrc(hydrology::AbstractSoilHydrology)
-
-Return the soil water retention curve from the `hydraulic_properties` associated with
-the given soil hydrology configuration.
-"""
-function get_swrc end
-
-"""
     get_hydraulic_properties(hydrology::AbstractSoilHydrology)
 
 Return the soil hydraulic properties defined by the given soil `hydrology` configuration.
@@ -29,14 +21,6 @@ function get_hydraulic_properties end
 Compute or retrieve the current saturation level of water + ice in the pore space.
 """
 function saturation_water_ice end
-
-"""
-    hydraulic_conductivity(i, j, k, grid, fields, ::AbstractSoilHydrology)
-
-Compute or retrieve the current hydraulic conductivity at grid cell `i, j` and vertical
-layer **face** `k`.
-"""
-function hydraulic_conductivity end
 
 """
     liquid_water_fraction(i, j, k, grid, fields, ::AbstractSoilHydrology)
@@ -58,6 +42,48 @@ function water_table end
 Retrieve the current saturation level of water + ice in the pore space.
 """
 function surface_excess_water end
+
+"""
+    get_swrc(hydrology::AbstractSoilHydrology)
+
+Return the soil water retention curve from the `hydraulic_properties` associated with
+the given soil hydrology configuration.
+"""
+get_swrc(hydrology::AbstractSoilHydrology) = get_swrc(get_hydraulic_properties(hydrology))
+
+## Process interfaces
+
+"""
+    initialize!(
+        state, grid,
+        hydrology::AbstractSoilHydrology,
+        soil::AbstractSoil,
+        constants::PhysicalConstants
+    )
+"""
+initialize!(state, grid, hydrology::AbstractSoilHydrology, soil::AbstractSoil, constants::PhysicalConstants) = nothing
+
+"""
+    compute_auxiliary!(
+        state, grid,
+        hydrology::AbstractSoilHydrology,
+        soil::AbstractSoil,
+        constants::PhysicalConstants
+    )
+"""
+compute_auxiliary!(state, grid, hydrology::AbstractSoilHydrology, soil::AbstractSoil, constants::PhysicalConstants) = nothing
+
+"""
+    compute_tendencies!(
+        state, grid,
+        hydrology::SoilHydrology{NF, RichardsEq},
+        soil::AbstractSoil,
+        constants::PhysicalConstants
+    )
+"""
+compute_tendencies!(state, grid, hydrology::AbstractSoilHydrology, soil::AbstractSoil, constants::PhysicalConstants) = nothing
+
+# Closures
 
 """
     $TYPEDEF

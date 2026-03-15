@@ -63,7 +63,7 @@ get_closure(energy::SoilEnergyBalance) = energy.closure
 function initialize!(
         state, grid,
         energy::SoilEnergyBalance,
-        ground::AbstractGround,
+        ground::AbstractSoil,
         constants::PhysicalConstants,
         args...
     )
@@ -80,7 +80,7 @@ compute_auxiliary!(state, grid, energy::SoilEnergyBalance, args...) = nothing
 function compute_tendencies!(
         state, grid,
         energy::SoilEnergyBalance,
-        ground::AbstractGround,
+        ground::AbstractSoil,
         args...
     )
     # Get dependencies
