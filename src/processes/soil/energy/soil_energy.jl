@@ -56,6 +56,8 @@ function ground_temperature(energy::SoilEnergyBalance, grid, clock, fields)
     return @view fields.temperature[:, :, fgrid.Nz]
 end
 
+get_thermal_properties(energy::SoilEnergyBalance) = energy.thermal_properties
+
 get_closure(energy::SoilEnergyBalance) = energy.closure
 
 function initialize!(
@@ -98,7 +100,8 @@ end
         energy::SoilEnergyBalance,
         args...
     )
-    return tendencies.internal_energy[i, j, k] += compute_energy_tendency(i, j, k, grid, fields, energy, args...)
+    tendencies.internal_energy[i, j, k] += compute_energy_tendency(i, j, k, grid, fields, energy, args...)
+    return nothing
 end
 
 @propagate_inbounds function compute_energy_tendency(
