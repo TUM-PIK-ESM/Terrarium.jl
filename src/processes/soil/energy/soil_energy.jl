@@ -60,10 +60,11 @@ get_thermal_properties(energy::SoilEnergyBalance) = energy.thermal_properties
 
 get_closure(energy::SoilEnergyBalance) = energy.closure
 
+""" $TYPEDSIGNATURES """
 function initialize!(
         state, grid,
         energy::SoilEnergyBalance,
-        ground::AbstractSoil,
+        soil::AbstractSoil,
         constants::PhysicalConstants,
         args...
     )
@@ -71,20 +72,22 @@ function initialize!(
     # Note that this assumes the temperature state to have already been initialized!
     # TODO: We may need to generalize this for rare cases where energy is specified as
     # the initial condition.
-    invclosure!(state, grid, energy.closure, energy, ground, constants)
+    invclosure!(state, grid, energy.closure, energy, soil, constants)
     return nothing
 end
 
-compute_auxiliary!(state, grid, energy::SoilEnergyBalance, args...) = nothing
+""" $TYPEDSIGNATURES """
+compute_auxiliary!(state, grid, energy::SoilEnergyBalance, soil::AbstractSoil, args...) = nothing
 
+""" $TYPEDSIGNATURES """
 function compute_tendencies!(
         state, grid,
         energy::SoilEnergyBalance,
-        ground::AbstractSoil,
+        soil::AbstractSoil,
         args...
     )
     # Get dependencies
-    procs = (get_hydrology(ground), get_stratigraphy(ground), get_biogeochemistry(ground))
+    procs = (get_hydrology(soil), get_stratigraphy(soil), get_biogeochemistry(soil))
     # Get output (tendency) fields
     tendencies = tendency_fields(state, energy)
     # Get other fields (does not include tendencies)

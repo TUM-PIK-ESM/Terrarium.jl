@@ -77,16 +77,6 @@ variables(hydrology::SoilHydrology{NF}) where {NF} = (
     input(:liquid_water_fraction, XYZ(), default = 1, domain = UnitInterval(), desc = "Fraction of unfrozen water in the pore space"),
 )
 
-@propagate_inbounds saturation_water_ice(i, j, k, grid, fields, ::SoilHydrology) = fields.saturation_water_ice[i, j, k]
-
-@propagate_inbounds hydraulic_conductivity(i, j, k, grid, fields, ::SoilHydrology) = fields.hydraulic_conductivity[i, j, k]
-
-@propagate_inbounds liquid_water_fraction(i, j, k, grid, fields, ::SoilHydrology) = fields.liquid_water_fraction[i, j, k]
-
-@propagate_inbounds water_table(i, j, grid, fields, ::SoilHydrology) = fields.water_table[i, j]
-
-@propagate_inbounds surface_excess_water(i, j, grid, fields, ::SoilHydrology{NF}) where {NF} = zero(NF)
-
 function compute_water_table!(state, grid, hydrology::SoilHydrology)
     launch!(
         grid, XY, compute_water_table_kernel!,
@@ -114,17 +104,30 @@ end
 
 # Immobile soil water (NoFlow)
 
+""" $TYPEDSIGNATURES """
 function initialize!(state, grid, hydrology::SoilHydrology, soil::AbstractSoil, args...)
     compute_hydraulics!(state, grid, hydrology, soil)
     compute_water_table!(state, grid, hydrology)
     return nothing
 end
 
-@inline compute_auxiliary!(state, grid, hydrology::SoilHydrology, args...) = nothing
+""" $TYPEDSIGNATURES """
+@inline compute_auxiliary!(state, grid, hydrology::SoilHydrology, soil::AbstractSoil, args...) = nothing
 
-@inline compute_tendencies!(state, grid, hydrology::SoilHydrology, args...) = nothing
+""" $TYPEDSIGNATURES """
+@inline compute_tendencies!(state, grid, hydrology::SoilHydrology, soil::AbstractSoil, args...) = nothing
 
 # Kernel functions
+
+@propagate_inbounds saturation_water_ice(i, j, k, grid, fields, ::SoilHydrology) = fields.saturation_water_ice[i, j, k]
+
+@propagate_inbounds hydraulic_conductivity(i, j, k, grid, fields, ::SoilHydrology) = fields.hydraulic_conductivity[i, j, k]
+
+@propagate_inbounds liquid_water_fraction(i, j, k, grid, fields, ::SoilHydrology) = fields.liquid_water_fraction[i, j, k]
+
+@propagate_inbounds water_table(i, j, grid, fields, ::SoilHydrology) = fields.water_table[i, j]
+
+@propagate_inbounds surface_excess_water(i, j, grid, fields, ::SoilHydrology{NF}) where {NF} = zero(NF)
 
 """
     $TYPEDSIGNATURES

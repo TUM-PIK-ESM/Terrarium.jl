@@ -30,30 +30,6 @@ Compute the thermal conductivity at index `i, j, k`.
 """
 function compute_thermal_conductivity end
 
-# Process methods
-
-"""
-    initialize!(state, grid, energy::AbstractSoilEnergyBalance, soil::AbstractSoil, constants::PhysicalConstants)
-
-Initialize energy state from the current `state` on `grid` for the given `soil` configuration. Unless otherwise stated,
-it should generally be assumed that the `temperature` is already initialized prior to this method being called.
-"""
-initialize!(state, grid, energy::AbstractSoilEnergyBalance, soil::AbstractSoil, constants::PhysicalConstants) = nothing
-
-"""
-    compute_auxiliary!(state, grid, energy::AbstractSoilEnergyBalance, soil::AbstractSoil, constants::PhysicalConstants)
-
-Compute energy auxiliaries from the current `state` on `grid` for the given `soil` configuration.
-"""
-compute_auxiliary!(state, grid, energy::AbstractSoilEnergyBalance, soil::AbstractSoil, constants::PhysicalConstants) = nothing
-
-"""
-    compute_tendencies!(state, grid, energy::AbstractSoilEnergyBalance, soil::AbstractSoil, constants::PhysicalConstants)
-
-Compute energy tendencies from the current `state` on `grid` for the given `soil` configuration.
-"""
-compute_tendencies!(state, grid, energy::AbstractSoilEnergyBalance, soil::AbstractSoil, constants::PhysicalConstants) = nothing
-
 """
     $TYPEDEF
 

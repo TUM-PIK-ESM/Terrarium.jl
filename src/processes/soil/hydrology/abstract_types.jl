@@ -51,38 +51,6 @@ the given soil hydrology configuration.
 """
 get_swrc(hydrology::AbstractSoilHydrology) = get_swrc(get_hydraulic_properties(hydrology))
 
-## Process interfaces
-
-"""
-    initialize!(
-        state, grid,
-        hydrology::AbstractSoilHydrology,
-        soil::AbstractSoil,
-        constants::PhysicalConstants
-    )
-"""
-initialize!(state, grid, hydrology::AbstractSoilHydrology, soil::AbstractSoil, constants::PhysicalConstants) = nothing
-
-"""
-    compute_auxiliary!(
-        state, grid,
-        hydrology::AbstractSoilHydrology,
-        soil::AbstractSoil,
-        constants::PhysicalConstants
-    )
-"""
-compute_auxiliary!(state, grid, hydrology::AbstractSoilHydrology, soil::AbstractSoil, constants::PhysicalConstants) = nothing
-
-"""
-    compute_tendencies!(
-        state, grid,
-        hydrology::SoilHydrology{NF, RichardsEq},
-        soil::AbstractSoil,
-        constants::PhysicalConstants
-    )
-"""
-compute_tendencies!(state, grid, hydrology::AbstractSoilHydrology, soil::AbstractSoil, constants::PhysicalConstants) = nothing
-
 # Closures
 
 """
