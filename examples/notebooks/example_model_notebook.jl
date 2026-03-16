@@ -26,8 +26,8 @@ using CairoMakie, GeoMakie
 
 # ╔═╡ a55711ae-919c-46b0-a03e-ac4e105e0c4c
 begin 
-	using RingGrids, NCDatasets 
-	global_grid = HEALPixGrid(24) # we define the global grid we model on as a HealPIX grid 
+	using RingGrids, NCDatasets
+	global_grid = FullGaussianGrid(22) # we define the global grid we model on as a HealPIX grid 
 end
 
 # ╔═╡ 5630efd5-2482-463d-913f-9addb120beec
@@ -266,7 +266,9 @@ Then, we construct our model from the chosen `grid`
 """
 
 # ╔═╡ 2a4234c5-f529-4166-94c3-0556565348ea
+#=╠═╡
 model = ExpModel(grid)
+  ╠═╡ =#
 
 # ╔═╡ 4c36fdc0-5120-46b9-86ca-e875e23a6c1d
 md"""
@@ -275,7 +277,9 @@ to `initialize` along with a suitable timestepper and our input/forcing data, wh
 """
 
 # ╔═╡ 7e38132b-d406-4863-b88f-90efe2a1bfa2
+#=╠═╡
 integrator = initialize(model, Heun(Δt = 1.0), input; initializers)
+  ╠═╡ =#
 
 # ╔═╡ ab442662-9975-42e5-b5c7-48687f8cbe12
 md"""
@@ -497,11 +501,9 @@ begin
 	snow_climatology = get_asset("data/boundary_conditions/snow.nc", from_assets=true, name="snow", ArrayType=FullGaussianField, FileFormat=NCDataset, output_grid=global_grid)
 	lst_climatology = get_asset("data/boundary_conditions/land_surface_temperature.nc", from_assets=true, name="lst", ArrayType=FullGaussianField, FileFormat=NCDataset, output_grid=global_grid)
 
-	# the land sea mask is saved in UInt number format, we need a seperate interpolate here for now
-	land_sea_mask_hires = get_asset("data/boundary_conditions/land-sea_mask.nc", from_assets=true, name="lsm", ArrayType=FullClenshawField, FileFormat=NCDataset)
-	land_sea_mask = zeros(Float32, global_grid)
-	RingGrids.grid_cell_average!(land_sea_mask, land_sea_mask_hires)
-	land_sea_mask = land_sea_mask .> 0.9 # we need a binary mask for Terrarium
+	# the land sea mask we infer from the non-NaN points in the climatology files
+	land_sea_mask = isfinite.(snow_climatology[:,1])
+	@assert all(land_sea_mask .== isfinite.(lst_climatology[:,1])) # make sure it's the same for both
 
 end 
 
@@ -518,6 +520,22 @@ heatmap(lst_climatology[:,1], title="Land Surface Temperature")
 
 # ╔═╡ 9982a3fd-c2ef-4bba-917e-211912fdce84
 heatmap(snow_climatology[:,1], title="Snow")
+
+# ╔═╡ 49364e74-1272-4d65-892c-5b08d0e49a54
+md"""
+Ok, so now let's put everything together! 
+
+* We defined our model `SnowModel` and dynamics `DegreeDaySnow`
+* We loaded climatological input data and a land sea mask for our grid 
+
+Now, we just need to define initialize everything correctly. As we are working with globally gridded data, we will define `ColumnRingGrid` based on the `global_grid` we already initialized.  
+"""
+
+# ╔═╡ e80009fb-cf05-4360-9f7e-c355d059ff5c
+begin 
+	grid = ColumnRingGrid(UniformSpacing(N=1), global_grid, land_sea_mask)
+	Tair = InputSource(grid, lst_climatology)
+end 
 
 # ╔═╡ Cell order:
 # ╟─5630efd5-2482-463d-913f-9addb120beec
@@ -571,9 +589,11 @@ heatmap(snow_climatology[:,1], title="Snow")
 # ╠═b723c568-c0e1-4d9a-9a74-237d7cfd1ea9
 # ╟─841c540f-ed63-4d89-9baf-836ccb3aed0d
 # ╠═a55711ae-919c-46b0-a03e-ac4e105e0c4c
-# ╠═3ef9f3c7-16a2-416f-981a-64427d89b033
+# ╟─3ef9f3c7-16a2-416f-981a-64427d89b033
 # ╠═86f4103b-ddaf-4f89-93cf-1290c623274e
-# ╠═6ba13cea-da1c-457e-ada0-8987a0667b24
+# ╟─6ba13cea-da1c-457e-ada0-8987a0667b24
 # ╠═fc8562fd-0213-48be-870f-ab9b06c54543
 # ╠═051d99da-a7b8-4cd8-be7c-3f7f615345d3
 # ╠═9982a3fd-c2ef-4bba-917e-211912fdce84
+# ╠═49364e74-1272-4d65-892c-5b08d0e49a54
+# ╠═e80009fb-cf05-4360-9f7e-c355d059ff5c
