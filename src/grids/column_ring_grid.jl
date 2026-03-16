@@ -122,7 +122,7 @@ Converts a `RingGrids.Field` to an Oceananigans `Field`
 using the given `ColumnRingGrid`. Only masked grid points are copied to the Oceananigans field.
 For 2D RingGrids fields, returns a 2D Oceananigans field. For 3D fields, returns a 3D field.
 """
-function Field(ring_field::RingGrids.AbstractField, grid::ColumnRingGrid, loc = (Center, Center); default_value = zero(eltype(ring_field)))
+function Field(ring_field::RingGrids.AbstractField, grid::ColumnRingGrid; default_value = zero(eltype(ring_field)))
     # Ensure we're on the same architecture
     arch = architecture(grid)
     ring_field_data = on_architecture(arch, ring_field.data)
