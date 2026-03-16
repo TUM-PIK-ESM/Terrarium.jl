@@ -115,6 +115,38 @@ function RingGrids.Field(arch::AbstractArchitecture, field::AbstractVecOrMat, gr
     return ring_field
 end
 
+"""
+    $SIGNATURES
+
+Converts a `RingGrids.Field` to an Oceananigans `Field` 
+using the given `ColumnRingGrid`. Only masked grid points are copied to the Oceananigans field.
+For 2D RingGrids fields, returns a 2D Oceananigans field. For 3D fields, returns a 3D field.
+"""
+function Field(ring_field::RingGrids.AbstractField, grid::ColumnRingGrid, loc = (Center, Center); default_value = zero(eltype(ring_field)))
+    # Ensure we're on the same architecture
+    arch = architecture(grid)
+    ring_field_data = on_architecture(arch, ring_field.data)
+
+    # Create Oceananigans field with appropriate dimensions
+    ndims_extra = ndims(ring_field) - 1  # Extra dimensions beyond the horizontal grid
+    if ndims_extra == 0
+        # 2D field (horizontal only)
+        oceananigans_field = Field{Center, Center, Nothing}(grid.grid)
+        fill!(oceananigans_field, default_value)
+        oceananigans_data = interior(oceananigans_field)
+        oceananigans_data[:, 1, 1] .= ring_field_data[grid.mask.data]
+    else
+        # 3D field (horizontal + vertical or other dimensions)
+        oceananigans_field = Field{Center, Center, Center}(grid.grid)
+        fill!(oceananigans_field, default_value)
+        oceananigans_data = interior(oceananigans_field)
+        colons = ntuple(_ -> Colon(), ndims_extra)
+        oceananigans_data[:, 1, colons...] .= ring_field_data[grid.mask.data, colons...]
+    end
+
+    return oceananigans_field
+end
+
 function Architectures.on_architecture(arch::AbstractArchitecture, grid::ColumnRingGrid)
     return ColumnRingGrid(
         on_architecture(arch, grid.rings),

@@ -2,6 +2,7 @@ using Terrarium
 using Test
 
 import Oceananigans.Grids: RectilinearGrid, z_domain
+import Terrarium.RingGrids
 import Terrarium.RingGrids: FullHEALPixGrid, get_npoints
 
 @testset "Vertical discretizations" begin
@@ -39,4 +40,35 @@ end
     @test field_grid.Ny == 1
     @test field_grid.Nz == 10
     @test z_domain(field_grid) == (-5.0, 0.0)
+
+    # Test RingGrids.Field to Oceananigans.Field conversion
+    @testset "RingGrids to Oceananigans Field conversion" begin
+        # Create a 2D RingGrids field with test data
+        ring_grid = FullHEALPixGrid(8)
+        grid = ColumnRingGrid(UniformSpacing(Δz = 0.5, N = 10), ring_grid)
+
+        ring_field_2d = rand(ring_grid)
+
+        # Convert to Oceananigans field
+        oceananigans_field_2d = Terrarium.Field(ring_field_2d, grid)
+        @test isa(oceananigans_field_2d, Terrarium.Field)
+        @test size(oceananigans_field_2d) == (get_npoints(ring_grid), 1, 1)
+
+        # Check that values were copied correctly
+        ocean_data = Terrarium.interior(oceananigans_field_2d)
+        @test all(ocean_data[:, 1, 1] .== ring_field_2d.data[grid.mask.data])
+
+        # Test with 3D field (horizontal + vertical)
+        ring_field_3d = rand(ring_grid, 10)
+
+        ocean_field_3d = Terrarium.Field(ring_field_3d, grid)
+        @test isa(ocean_field_3d, Terrarium.Field)
+        @test size(ocean_field_3d) == (get_npoints(ring_grid), 1, 10)
+
+        # Check that values were copied correctly for each vertical level
+        ocean_data_3d = Terrarium.interior(ocean_field_3d)
+        for k in 1:10
+            @test all(ocean_data_3d[:, 1, k] .== ring_field_3d.data[grid.mask.data, k])
+        end
+    end
 end
