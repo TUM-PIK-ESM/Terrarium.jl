@@ -71,13 +71,11 @@ end
 # for static rasters initialize once and then don't update anymore
 function initialize_from_raster!(field, raster, idxmap, timedim::Nothing, current_time)
     field .= view(raster, idxmap)
-    return
+    return nothing
 end
 
 # for time-varying rasters this just updates once at the start time
-function initialize_from_raster!(field, raster, idxmap, timedim, current_time)
-    return update_from_raster!(field, raster, idxmap, timedim, current_time)
-end
+initialize_from_raster!(field, raster, idxmap, timedim, current_time) = update_from_raster!(field, raster, idxmap, timedim, current_time)
 
 function Terrarium.update_inputs!(fields, source::RasterInputSource, clock::Clock)
     for name in keys(source.rasters)

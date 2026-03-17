@@ -145,7 +145,7 @@ function initialize!(state::StateVariables, sources::InputSources)
     for ns in state.namespaces
         initialize!(ns, sources)
     end
-    return
+    return nothing
 end
 
 """

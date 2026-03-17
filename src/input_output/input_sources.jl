@@ -87,7 +87,7 @@ function initialize!(fields, source::FieldInputSource, clock = nothing)
             set!(field, source_field)
         end
     end
-    return
+    return nothing
 end
 
 """
