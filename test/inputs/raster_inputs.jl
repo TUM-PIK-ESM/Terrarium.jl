@@ -1,5 +1,3 @@
-module RasterInputTest
-
 using Terrarium
 using Terrarium: Clock, Variables, InputSource, initialize!, update_inputs!, variables, interior
 using Test
@@ -191,6 +189,4 @@ const RasterInputSource = TerrariumRastersExt.RasterInputSource
 
     # Clean up
     rm(testdir; recursive = true)
-end
-
 end
