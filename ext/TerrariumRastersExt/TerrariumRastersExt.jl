@@ -52,27 +52,29 @@ function Terrarium.InputSource(grid::ColumnRingGrid{NF}, rasters::AbstractRaster
     return RasterInputSource(vardims, idxmap, reftime, (; named_rasters...))
 end
 
+Terrarium.variables(source::RasterInputSource{NF, VD, TT, IM, RS, names}) where {NF, VD, TT, IM, RS, names} =
+    map(name -> Terrarium.input(name, source.dims), names)
+
 function Terrarium.initialize!(fields, source::RasterInputSource)
     for name in keys(source.rasters)
         if hasproperty(fields, name)
             field = getproperty(fields, name)
             raster = source.rasters[name]
             timedim = dims(raster, Ti)
-            current_time = timestamp(source.reftime, clock.time)
-            initialize_from_raster!(field, raster, source.idxmap, timedim, current_time)
+            Terrarium.initialize_from_raster!(field, raster, source.idxmap, timedim)
         end
     end
     return
 end
 
 # for static rasters initialize once and then don't update anymore
-function Terrarium.initialize_from_raster!(field, raster, idxmap, timedim::Nothing, current_time)
+function Terrarium.initialize_from_raster!(field, raster, idxmap, timedim::Nothing)
     field .= view(raster, idxmap)
     return
 end
 
 # for time-varying rasters this is a no-op (we update them in update_inputs!)
-function Terrarium.initialize_from_raster!(field, raster, idxmap, timedim, current_time)
+function Terrarium.initialize_from_raster!(field, raster, idxmap, timedim)
     return nothing
 end
 
