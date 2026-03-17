@@ -55,27 +55,28 @@ end
 Terrarium.variables(source::RasterInputSource{NF, VD, TT, IM, RS, names}) where {NF, VD, TT, IM, RS, names} =
     map(name -> Terrarium.input(name, source.dims), names)
 
-function Terrarium.initialize!(fields, source::RasterInputSource)
+function Terrarium.initialize!(fields, source::RasterInputSource, clock::Clock)
     for name in keys(source.rasters)
         if hasproperty(fields, name)
             field = getproperty(fields, name)
             raster = source.rasters[name]
             timedim = dims(raster, Ti)
-            initialize_from_raster!(field, raster, source.idxmap, timedim)
+            current_time = timestamp(source.reftime, clock.time)
+            initialize_from_raster!(field, raster, source.idxmap, timedim, current_time)
         end
     end
     return
 end
 
 # for static rasters initialize once and then don't update anymore
-function initialize_from_raster!(field, raster, idxmap, timedim::Nothing)
+function initialize_from_raster!(field, raster, idxmap, timedim::Nothing, current_time)
     field .= view(raster, idxmap)
     return
 end
 
-# for time-varying rasters this is a no-op (we update them in update_inputs!)
-function initialize_from_raster!(field, raster, idxmap, timedim)
-    return nothing
+# for time-varying rasters this just updates once at the start time
+function initialize_from_raster!(field, raster, idxmap, timedim, current_time)
+    return update_from_raster!(field, raster, idxmap, timedim, current_time)
 end
 
 function Terrarium.update_inputs!(fields, source::RasterInputSource, clock::Clock)

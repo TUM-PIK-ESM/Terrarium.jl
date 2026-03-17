@@ -98,9 +98,7 @@ function initialize!(integrator::ModelIntegrator)
     reset!(integrator.state)
     reset!(integrator.clock)
     # set inputs based on updated clock/state
-    # first initialize them, then set them to the current time
     initialize!(integrator.state, integrator.inputs)
-    update_inputs!(integrator.state, integrator.inputs)
     # fill halo regions
     fill_halo_regions!(integrator.state)
     # evaluate user-specified field initializers

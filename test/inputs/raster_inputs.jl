@@ -57,7 +57,8 @@ const RasterInputSource = TerrariumRastersExt.RasterInputSource
         @test hasproperty(state.inputs, :temperature)
 
         # Test that initialize! copies data correctly
-        initialize!(state.inputs, source)
+        clock = Clock(time = 0.0)
+        initialize!(state.inputs, source, clock)
 
         # Verify data was copied (only masked points)
         # The idxmap maps from grid mask to flattened raster indices
@@ -66,7 +67,6 @@ const RasterInputSource = TerrariumRastersExt.RasterInputSource
         @test all(interior(state.inputs.temperature)[:, 1, 1] .≈ expected)
 
         # Test that update_inputs! does nothing for static rasters
-        clock = Clock(time = 0.0)
         original_data = copy(interior(state.inputs.temperature))
         update_inputs!(state.inputs, source, clock)
         @test all(interior(state.inputs.temperature) .== original_data)
@@ -112,7 +112,7 @@ const RasterInputSource = TerrariumRastersExt.RasterInputSource
 
         # Initialize (should be no-op for time-varying)
         clock = Clock(time = 0.0)
-        initialize!(state.inputs, source)
+        initialize!(state.inputs, source, clock)
 
         # Update at t=0 (should get first timestep)
         update_inputs!(state.inputs, source, clock)
@@ -180,7 +180,7 @@ const RasterInputSource = TerrariumRastersExt.RasterInputSource
         @test hasproperty(state.inputs, :var2)
 
         # Initialize and verify both fields
-        initialize!(state.inputs, source)
+        initialize!(state.inputs, source, Clock(time = 0.0))
         expected1 = vec(data1)[source.idxmap]
         expected2 = vec(data2)[source.idxmap]
         @test all(interior(state.inputs.var1)[:, 1, 1] .≈ expected1)

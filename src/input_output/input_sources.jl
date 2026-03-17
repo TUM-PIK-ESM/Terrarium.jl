@@ -25,7 +25,7 @@ variables(::InputSource) = ()
 
 Initializes the input source. Default implementation does nothing.
 """
-initialize!(fields, ::InputSource) = nothing
+initialize!(fields, ::InputSource, clock) = nothing
 
 """
     $SIGNATURES
@@ -51,9 +51,9 @@ InputSources(sources::InputSource...) = InputSources(Tuple(sources))
 
 variables(sources::InputSources) = tuplejoin(map(variables, sources.sources)...)
 
-function initialize!(fields, sources::InputSources)
+function initialize!(fields, sources::InputSources, clock::Clock)
     for source in sources.sources
-        initialize!(fields, source)
+        initialize!(fields, source, clock)
     end
     return
 end
@@ -79,7 +79,7 @@ struct FieldInputSource{NF, VD <: VarDims, FS <: Tuple{Vararg{AnyField{NF}}}, na
     fields::NamedTuple{names, FS}
 end
 
-function initialize!(fields, source::FieldInputSource)
+function initialize!(fields, source::FieldInputSource, clock = nothing)
     for name in keys(source.fields)
         if hasproperty(fields, name)
             field = getproperty(fields, name)
@@ -153,6 +153,11 @@ function InputSource(named_fts::Pair{Symbol, <:FieldTimeSeries}...)
 end
 
 variables(source::FieldTimeSeriesInputSource{NF, VD, names}) where {NF, VD, names} = map(name -> input(name, source.dims), names)
+
+# to initialize just update the state once at the start time
+function initialize!(fields, source::FieldTimeSeriesInputSource, clock::Clock)
+    return update_inputs!(fields, source, clock)
+end
 
 function update_inputs!(fields, source::FieldTimeSeriesInputSource, clock::Clock)
     for name in keys(source.fts)
