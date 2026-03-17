@@ -118,6 +118,22 @@ function InputSource(grid::AbstractLandGrid{NF}, fields::NamedTuple{names, FS}) 
     return FieldInputSource{NF, typeof(dims), typeof(values(fields)), names}(dims, fields)
 end
 
+"""
+    $SIGNATURES
+
+Convenience function to create a `FieldInputSource` from `RingGrids.Field` objects.
+Converts the RingGrids fields to Oceananigans fields and then creates the input source.
+"""
+function InputSource(grid::ColumnRingGrid{NF}, ring_fields::NamedTuple{names, RF}) where {NF, names, RF <: Tuple{Vararg{RingGrids.AbstractField}}}
+    # Convert RingGrids fields to Oceananigans fields
+    oceananigans_fields = map(ring_fields) do ring_field
+        Field(ring_field, grid)
+    end
+    # Infer dimensions from converted fields
+    dims = Terrarium.vardims(first(values(oceananigans_fields)))
+    return FieldInputSource{NF, typeof(dims), typeof(values(oceananigans_fields)), names}(dims, oceananigans_fields)
+end
+
 variables(source::FieldInputSource{NF, VD, FS, names}) where {NF, VD, FS, names} = map(name -> input(name, source.dims), names)
 
 """
