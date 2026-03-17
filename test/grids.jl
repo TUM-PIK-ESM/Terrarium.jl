@@ -70,5 +70,29 @@ end
         for k in 1:10
             @test all(ocean_data_3d[:, 1, k] .== ring_field_3d.data[grid.mask.data, k])
         end
+
+        # Test with masked grid (some points inactive)
+
+        # Create a new ring grid for this test
+        mask = rand(Bool, ring_grid)
+        # Create a masked ColumnRingGrid using the correct constructor
+        masked_grid = ColumnRingGrid(UniformSpacing(Δz = 0.5, N = 10), mask)
+
+        ring_field = rand(ring_grid)
+
+        # Convert to Oceananigans field
+        ocean_field_masked = Terrarium.Field(ring_field, masked_grid)
+        @test isa(ocean_field_masked, Terrarium.Field)
+        @test size(ocean_field_masked) == (sum(mask), 1, 1)
+
+        # Verify only masked (active) points were copied
+        ocean_data_masked = Terrarium.interior(ocean_field_masked)
+
+        expected_values = ring_field.data[mask]
+        @test all(ocean_data_masked[:, 1, 1] .== expected_values)
+
+        # Test that conversion throws error for RingGrids fields with ndims >= 3
+        ring_field_3d_plus = rand(ring_grid, 10, 5)  # horizontal × vertical × extra dimension
+        @test_throws ErrorException Terrarium.Field(ring_field_3d_plus, grid)
     end
 end
