@@ -30,13 +30,6 @@ initialize!(fields, ::InputSource) = nothing
 """
     $SIGNATURES
 
-Initialize a field from a raster. This is extended by TerrariumRastersExt.
-"""
-function initialize_from_raster! end
-
-"""
-    $SIGNATURES
-
 Updates the values of input variables stored in `fields` from the given input `source`.
 Default implementation simply returns `nothing`.
 """
