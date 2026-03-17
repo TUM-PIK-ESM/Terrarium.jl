@@ -136,6 +136,19 @@ function reset_tendencies!(state::StateVariables)
 end
 
 """
+Initialize input variables from the given input `sources`.
+"""
+function initialize!(state::StateVariables, sources::InputSources)
+    # initialize inputs in current namespace
+    initialize!(state.inputs, sources, state.clock)
+    # recursively initialize namespaces
+    for ns in state.namespaces
+        initialize!(ns, sources)
+    end
+    return nothing
+end
+
+"""
 Update input variables from the given input `sources`.
 """
 function update_inputs!(state::StateVariables, sources::InputSources)
