@@ -60,15 +60,11 @@ end
 
     # Create a ColumnRingGrid
     ring_grid = RingGrids.FullHEALPixGrid(8)
-    npoints = RingGrids.get_npoints(ring_grid)
     grid = ColumnRingGrid(UniformSpacing(Δz = 0.5, N = 5), ring_grid)
 
-    # Create RingGrids fields with known data
-    ring_field1 = RingGrids.Field(ring_grid)
-    ring_field1.data .= collect(1.0:Float32(npoints))
-
-    ring_field2 = RingGrids.Field(ring_grid)
-    ring_field2.data .= collect(Float32(npoints):-1.0:1.0)
+    # Create RingGrids fields
+    ring_field1 = rand(ring_grid)
+    ring_field2 = rand(ring_grid)
 
     # Test single field
     source = InputSource(grid, (; temperature = ring_field1))
