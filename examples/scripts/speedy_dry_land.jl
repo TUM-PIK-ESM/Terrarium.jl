@@ -77,7 +77,8 @@ soil_initializer = SoilInitializer(eltype(grid))
 
 # Soil model with prescribed surface temperautre BC
 model = SoilModel(grid, initializer = soil_initializer)
-Tair_input = InputSource(eltype(grid), :air_temperature)
+air_temperature = Field(grid, XY())
+Tair_input = InputSource(grid, (; air_temperature))
 bcs = PrescribedSurfaceTemperature(:air_temperature)
 integrator = initialize(model, ForwardEuler(eltype(grid)), Tair_input, boundary_conditions = bcs)
 

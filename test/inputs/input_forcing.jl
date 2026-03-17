@@ -26,7 +26,8 @@ end
 @testset "Forcing input" begin
     grid = ColumnGrid(CPU(), DEFAULT_NF, ExponentialSpacing())
     model = TestModel(grid)
-    F_in = InputSource(eltype(grid), :F)
+    F = Field(grid, XY())
+    F_in = InputSource(grid, (; F))
     @test isa(F_in, FieldInputSource)
     integrator = initialize(model, ForwardEuler(eltype(grid)), F_in)
     # check that state variable is defined

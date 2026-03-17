@@ -6,12 +6,14 @@ using Unitful
 @testset "Input sources" begin
     # Field input source
     grid = ColumnGrid(ExponentialSpacing())
-    field_input = InputSource(eltype(grid), :X1)
+    X1 = Field(grid, XY())
+    field_input = InputSource(grid, (; X1))
     @test isa(field_input, FieldInputSource)
     ## check that dimensions were inferred correctly
     @test field_input.dims == XY()
     @test variables(field_input) == (Terrarium.input(:X1, XY()),)
-    field_input = InputSource(eltype(grid), :X1, :X2)
+    X2 = Field(grid, XY())
+    field_input = InputSource(grid, (; X1, X2))
     @test isa(field_input, FieldInputSource)
     @test field_input.dims == XY()
     @test variables(field_input) == (Terrarium.input(:X1, XY()), Terrarium.input(:X2, XY()))
