@@ -138,12 +138,12 @@ end
 """
 Initialize input variables from the given input `sources`.
 """
-function initialize_inputs!(state::StateVariables, sources::InputSources)
+function initialize!(state::StateVariables, sources::InputSources)
     # initialize inputs in current namespace
     initialize!(state.inputs, sources)
     # recursively initialize namespaces
     for ns in state.namespaces
-        initialize_inputs!(ns, sources)
+        initialize!(ns, sources)
     end
     return
 end
