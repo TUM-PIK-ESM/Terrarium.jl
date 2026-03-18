@@ -142,7 +142,7 @@ begin
 	    snow_melt::Pro = DegreeDaySnow()
 	
 	    "Model initializer"
-	    initializer::Init = DefaultInitializer()
+	    initializer::Init = DefaultInitializer(eltype(grid))
 	end
 	
 	Terrarium.variables(model::SnowModel) = (
@@ -157,10 +157,10 @@ begin
 		T_melt::NF = 0
 	end
 	
-	Terrarium.variables(model::DegreeDaySnow) = (
-		Terrarium.input(:air_temperature, XY(), default = NF(0), units="°C", desc = "Near-surface air temperature in °C"),
-		Terrarium.input(:snow_fall, XY(), default = NF(0), units="m/s", desc = "snow fall rate in m/s"),
-	    Terrarium.prognostic(:snow_depth, XY(), units="m", desc = "Snow depth in m")
+	Terrarium.variables(model::DegreeDaySnow{NF}) where {NF} = (
+		Terrarium.input(:air_temperature, XY(), default = NF(0), units=u"°C", desc = "Near-surface air temperature in °C"),
+		Terrarium.input(:snow_fall, XY(), default = NF(0), units=u"m/s", desc = "snow fall rate in m/s"),
+	    Terrarium.prognostic(:snow_depth, XY(), units=u"m", desc = "Snow depth in m")
 	)
 	
 end
@@ -266,6 +266,7 @@ Then, we construct our model from the chosen `grid`
 """
 
 # ╔═╡ 2a4234c5-f529-4166-94c3-0556565348ea
+# ╠═╡ disabled = true
 #=╠═╡
 model = ExpModel(grid)
   ╠═╡ =#
@@ -277,6 +278,7 @@ to `initialize` along with a suitable timestepper and our input/forcing data, wh
 """
 
 # ╔═╡ 7e38132b-d406-4863-b88f-90efe2a1bfa2
+# ╠═╡ disabled = true
 #=╠═╡
 integrator = initialize(model, Heun(Δt = 1.0), input; initializers)
   ╠═╡ =#
@@ -498,8 +500,8 @@ Now, we get all the input data. We can use the input data provided by `RingGrids
 
 # ╔═╡ 86f4103b-ddaf-4f89-93cf-1290c623274e
 begin 	
-	snow_climatology = get_asset("data/boundary_conditions/snow.nc", from_assets=true, name="snow", ArrayType=FullGaussianField, FileFormat=NCDataset, output_grid=global_grid)
-	lst_climatology = get_asset("data/boundary_conditions/land_surface_temperature.nc", from_assets=true, name="lst", ArrayType=FullGaussianField, FileFormat=NCDataset, output_grid=global_grid)
+	snow_climatology = RingGrids.get_asset("data/boundary_conditions/snow.nc", from_assets=true, name="snow", ArrayType=FullGaussianField, FileFormat=NCDataset, output_grid=global_grid)
+	lst_climatology = RingGrids.get_asset("data/boundary_conditions/land_surface_temperature.nc", from_assets=true, name="lst", ArrayType=FullGaussianField, FileFormat=NCDataset, output_grid=global_grid)
 
 	# the land sea mask we infer from the non-NaN points in the climatology files
 	land_sea_mask = isfinite.(snow_climatology[:,1])
@@ -528,14 +530,33 @@ Ok, so now let's put everything together!
 * We defined our model `SnowModel` and dynamics `DegreeDaySnow`
 * We loaded climatological input data and a land sea mask for our grid 
 
-Now, we just need to define initialize everything correctly. As we are working with globally gridded data, we will define `ColumnRingGrid` based on the `global_grid` we already initialized.  
+Now, we just need to define initialize everything correctly. As we are working with globally gridded data, we will define `ColumnRingGrid` based on the `global_grid` we already initialized. Then, we will load our inputs. For this, we will choose the January (so the first element) of our climatology files. When using them in `InputSource` be sure to choose the same name as used in the definitions of the dynamics before.  
 """
 
 # ╔═╡ e80009fb-cf05-4360-9f7e-c355d059ff5c
 begin 
-	grid = ColumnRingGrid(UniformSpacing(N=1), global_grid, land_sea_mask)
-	Tair = InputSource(grid, lst_climatology)
+	snow_grid = ColumnRingGrid(UniformSpacing(N=1), global_grid, land_sea_mask)
+	inputs = InputSource(snow_grid, (;air_temperature = lst_climatology[:,1], snow_fall = snow_climatology[:,1]))
 end 
+
+# ╔═╡ 7f310793-f4af-4013-b02f-8273107246e7
+md"""
+As an initial condition, we just cover the whole Earth in deep snow (everywhere the same)!
+"""
+
+# ╔═╡ b12f3815-89d3-4c1d-9224-6bde2d1f939e
+snow_initializers = (snow_depth = 5.0,) 
+
+# ╔═╡ 01e757f2-55ec-494f-8286-29e5e5fe0a2e
+md"""
+Now, we initialize our model and the integrator.
+"""
+
+# ╔═╡ a29583b9-62be-42ef-adf0-867a734a03d7
+snow_model = SnowModel(snow_grid)
+
+# ╔═╡ 018375eb-fd00-48b6-9b9d-dc42ba2d5c2d
+snow_integrator = initialize(snow_model, Heun(Δt = 1.0), inputs; initializers=snow_initializers)
 
 # ╔═╡ Cell order:
 # ╟─5630efd5-2482-463d-913f-9addb120beec
@@ -583,7 +604,7 @@ end
 # ╠═dfc52b4e-a015-4295-b47f-1dd2b10abeb2
 # ╟─52a2bf95-e258-41ab-922e-f0965d0d0ee2
 # ╠═72ec62c7-5066-481d-b9c9-84a4851a1e0c
-# ╠═ab4a216f-3962-4a6f-8f92-2e9a08798e7c
+# ╟─ab4a216f-3962-4a6f-8f92-2e9a08798e7c
 # ╠═d8b05ae3-ecba-41de-84c7-45cbf31b735d
 # ╟─e81f4b38-5789-416e-acee-e02b052cb8f4
 # ╠═b723c568-c0e1-4d9a-9a74-237d7cfd1ea9
@@ -595,5 +616,10 @@ end
 # ╠═fc8562fd-0213-48be-870f-ab9b06c54543
 # ╠═051d99da-a7b8-4cd8-be7c-3f7f615345d3
 # ╠═9982a3fd-c2ef-4bba-917e-211912fdce84
-# ╠═49364e74-1272-4d65-892c-5b08d0e49a54
+# ╟─49364e74-1272-4d65-892c-5b08d0e49a54
 # ╠═e80009fb-cf05-4360-9f7e-c355d059ff5c
+# ╟─7f310793-f4af-4013-b02f-8273107246e7
+# ╠═b12f3815-89d3-4c1d-9224-6bde2d1f939e
+# ╟─01e757f2-55ec-494f-8286-29e5e5fe0a2e
+# ╠═a29583b9-62be-42ef-adf0-867a734a03d7
+# ╠═018375eb-fd00-48b6-9b9d-dc42ba2d5c2d
