@@ -5,7 +5,7 @@
 of the Richardson-Richards equation:
 
 ```math
-\\phi(z) \\frac{\\partial s_{\\mathrm{wi}}(\\Psi(z,t))}{\\partial t} = \\n+\\nabla \\cdot \\bigl(K(s_{\\mathrm{wi}}, T) \\; \\n+\\nabla (\\psi_m + 1)\\bigr)
+\\phi(z) \\frac{\\partial s_{\\mathrm{wi}}(\\Psi(z,t))}{\\partial t} = \\boldsymbol{\\nabla} \\cdot \\left[ K(s_{\\mathrm{wi}}, T) + \\boldsymbol{\\nabla} (\\psi_m + 1)\\right]
 ```
 which describes the vertical movement of water according to gravity-driven
 percolation and capillary-driven diffusion.

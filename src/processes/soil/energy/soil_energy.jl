@@ -4,7 +4,7 @@
 Represents an explicit formulation of the two-phase heat conduction operator in 1D:
 
 ```math
-\\frac{\\partial U(T,\\phi)}{\\partial t} = \\nabla \\cdot \\kappa(T)\\nabla_x T(x,t)
+\\frac{\\partial U(T,\\phi)}{\\partial t} = \\boldsymbol{\\nabla} \\cdot \\left[ \\kappa(T) \\boldsymbol{\\nabla}_x T(x,t) \\right]
 ```
 where \$T\$ is temperature [K], \$U\$ is internal energy [J m⁻³], and \$\\kappa\$ is the thermal conductivity [W m K⁻¹].
 """

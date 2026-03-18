@@ -76,11 +76,10 @@ ConstantEvaporationResistanceFactor(::Type{NF}; kwargs...) where {NF} = Constant
 Implements the soil moisture limiting resistance factor of Lee and Pielke (1992),
 
 ```math
-\\beta = \\begin{cases}
-\\frac{1}{4} \\left(1 - \\cos\\left(π \\frac{\\theta_1}{\\theta_{\\text{fc}}} \\right)\\right) & \\theta_1 < \\theta_{\\text{fc}} \\
-1 & \\text{otherwise}
-\\end{cases}
+\\beta =
+\\frac{1}{4} \\left[1 - \\cos\\left(π \\theta_1/\\theta_{\\text{fc}} \\right)\\right] \\quad \\text{for } \\theta_1 < \\theta_{\\text{fc}}
 ```
+otherwise ``\\beta=1``.
 """
 struct SoilMoistureResistanceFactor{NF} <: AbstractGroundEvaporationResistanceFactor end
 

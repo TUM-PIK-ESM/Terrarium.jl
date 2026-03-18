@@ -5,10 +5,11 @@ Implementation of vegetation water availability (a.k.a "plant available water")
 that computes the wilting fraction
 
 ```math
-W_i = \\min(\\frac{\\theta_{\\text{w},i} - \\theta_{\\text{wp},i}}{\\theta_{\\text{fc},i} - \\theta_{\\text{wp},i}}}, 1)
+W_i = \\min\\left(\\frac{\\theta_{\\text{w},i} - \\theta_{\\text{wp},i}}{\\theta_{\\text{fc},i} - \\theta_{\\text{wp},i}}
+, 1\\right)
 ```
 
-where ``\\theta_{\\text{w},i}`` is the volumetric water content of the i'th soil layer, ``\\theta_{\\text{fc},i}``
+where ``\\theta_{\\text{w},i}`` is the volumetric water content of the ``i``'th soil layer, ``\\theta_{\\text{fc},i}``
 is the "field capacity", and ``\\theta_{\\text{wp},i}`` is the "wilting point". The water availability
 
 Properties:

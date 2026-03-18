@@ -52,6 +52,31 @@ function Terrarium.InputSource(grid::ColumnRingGrid{NF}, rasters::AbstractRaster
     return RasterInputSource(vardims, idxmap, reftime, (; named_rasters...))
 end
 
+Terrarium.variables(source::RasterInputSource{NF, VD, TT, IM, RS, names}) where {NF, VD, TT, IM, RS, names} =
+    map(name -> Terrarium.input(name, source.dims), names)
+
+function Terrarium.initialize!(fields, source::RasterInputSource, clock::Clock)
+    for name in keys(source.rasters)
+        if hasproperty(fields, name)
+            field = getproperty(fields, name)
+            raster = source.rasters[name]
+            timedim = dims(raster, Ti)
+            current_time = timestamp(source.reftime, clock.time)
+            initialize_from_raster!(field, raster, source.idxmap, timedim, current_time)
+        end
+    end
+    return
+end
+
+# for static rasters initialize once and then don't update anymore
+function initialize_from_raster!(field, raster, idxmap, timedim::Nothing, current_time)
+    field .= view(raster, idxmap)
+    return nothing
+end
+
+# for time-varying rasters this just updates once at the start time
+initialize_from_raster!(field, raster, idxmap, timedim, current_time) = update_from_raster!(field, raster, idxmap, timedim, current_time)
+
 function Terrarium.update_inputs!(fields, source::RasterInputSource, clock::Clock)
     for name in keys(source.rasters)
         if hasproperty(fields, name)
@@ -65,7 +90,7 @@ function Terrarium.update_inputs!(fields, source::RasterInputSource, clock::Cloc
     return
 end
 
-# Update rule for static raster inputs
+# For static raster we don't need to update
 function update_from_raster!(
         field::Field,
         raster::AbstractRaster,
@@ -73,9 +98,6 @@ function update_from_raster!(
         ::Nothing,
         t
     )
-    # TODO: Might need to check the performance of this? It's also a bit wasteful to copy on each timestep
-    # if the underlying raster data doesn't change...
-    field .= view(raster, idxmap)
     return nothing
 end
 

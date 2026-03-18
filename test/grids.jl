@@ -2,6 +2,7 @@ using Terrarium
 using Test
 
 import Oceananigans.Grids: RectilinearGrid, z_domain
+import Terrarium.RingGrids
 import Terrarium.RingGrids: FullHEALPixGrid, get_npoints
 
 @testset "Vertical discretizations" begin
@@ -39,4 +40,59 @@ end
     @test field_grid.Ny == 1
     @test field_grid.Nz == 10
     @test z_domain(field_grid) == (-5.0, 0.0)
+
+    # Test RingGrids.Field to Oceananigans.Field conversion
+    @testset "RingGrids to Oceananigans Field conversion" begin
+        # Create a 2D RingGrids field with test data
+        ring_grid = FullHEALPixGrid(8)
+        grid = ColumnRingGrid(UniformSpacing(Δz = 0.5, N = 10), ring_grid)
+
+        ring_field_2d = rand(ring_grid)
+
+        # Convert to Oceananigans field
+        oceananigans_field_2d = Terrarium.Field(ring_field_2d, grid)
+        @test isa(oceananigans_field_2d, Terrarium.Field)
+        @test size(oceananigans_field_2d) == (get_npoints(ring_grid), 1, 1)
+
+        # Check that values were copied correctly
+        ocean_data = Terrarium.interior(oceananigans_field_2d)
+        @test all(ocean_data[:, 1, 1] .== ring_field_2d.data[grid.mask.data])
+
+        # Test with 3D field (horizontal + vertical)
+        ring_field_3d = rand(ring_grid, 10)
+
+        ocean_field_3d = Terrarium.Field(ring_field_3d, grid)
+        @test isa(ocean_field_3d, Terrarium.Field)
+        @test size(ocean_field_3d) == (get_npoints(ring_grid), 1, 10)
+
+        # Check that values were copied correctly for each vertical level
+        ocean_data_3d = Terrarium.interior(ocean_field_3d)
+        for k in 1:10
+            @test all(ocean_data_3d[:, 1, k] .== ring_field_3d.data[grid.mask.data, k])
+        end
+
+        # Test with masked grid (some points inactive)
+
+        # Create a new ring grid for this test
+        mask = rand(Bool, ring_grid)
+        # Create a masked ColumnRingGrid using the correct constructor
+        masked_grid = ColumnRingGrid(UniformSpacing(Δz = 0.5, N = 10), mask)
+
+        ring_field = rand(ring_grid)
+
+        # Convert to Oceananigans field
+        ocean_field_masked = Terrarium.Field(ring_field, masked_grid)
+        @test isa(ocean_field_masked, Terrarium.Field)
+        @test size(ocean_field_masked) == (sum(mask), 1, 1)
+
+        # Verify only masked (active) points were copied
+        ocean_data_masked = Terrarium.interior(ocean_field_masked)
+
+        expected_values = ring_field.data[mask]
+        @test all(ocean_data_masked[:, 1, 1] .== expected_values)
+
+        # Test that conversion throws error for RingGrids fields with ndims >= 3
+        ring_field_3d_plus = rand(ring_grid, 10, 5)  # horizontal × vertical × extra dimension
+        @test_throws ErrorException Terrarium.Field(ring_field_3d_plus, grid)
+    end
 end
