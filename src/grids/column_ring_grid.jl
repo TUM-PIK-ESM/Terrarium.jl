@@ -42,7 +42,7 @@ struct ColumnRingGrid{
             mask::RingGrids.AbstractField{Bool} = convert.(Bool, ones(rings))
         ) where {NF <: AbstractFloat}
         assert_field_matches_grid(mask, rings)
-        # get number of horizontal grid poitns by summing over mask
+        # get number of horizontal grid points by summing over mask
         Nh = sum(mask)
         # get number of vertical grid points
         Nz = num_layers(vert)
@@ -136,6 +136,8 @@ function Oceananigans.Field(ring_field::RingGrids.AbstractField, grid::ColumnRin
         oceananigans_data[:, 1, 1] .= ring_field_data[grid.mask.data]
     elseif ndims(ring_field) == 2
         # 3D field (horizontal + vertical or other dimensions)
+        @assert size(grid.grid, 3) == size(ring_field, 2) "Vertical dimension mismatch: grid has $(size(grid.grid, 3)) layers, but field has $(size(ring_field, 2)) layers"
+
         oceananigans_field = Field{Center, Center, Center}(grid.grid)
         fill!(oceananigans_field, default_value)
         oceananigans_data = interior(oceananigans_field)
