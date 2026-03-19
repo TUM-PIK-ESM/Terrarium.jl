@@ -103,7 +103,7 @@ function InputSource(grid::AbstractLandGrid{NF}, field::FS; name, units = NoUnit
     field = on_architecture(architecture(grid), field)
 
     # Check that fields match grid
-    @assert grid == field.grid "Field must have the same grid as the input grid"
+    @assert field.grid == get_field_grid(grid) "Field must have the same grid as the input grid"
 
     # infer the VarDims and subsequently the Field location from the data dimensions
     dims = Terrarium.vardims(field)
