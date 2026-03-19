@@ -112,7 +112,10 @@ function initialize!(state, grid, hydrology::SoilHydrology, soil::AbstractSoil, 
 end
 
 """ $TYPEDSIGNATURES """
-@inline compute_auxiliary!(state, grid, hydrology::SoilHydrology, soil::AbstractSoil, args...) = nothing
+@inline function compute_auxiliary!(state, grid, hydrology::SoilHydrology, soil::AbstractSoil, args...)
+    compute_hydraulics!(state, grid, hydrology, soil, args...)
+    return nothing
+end
 
 """ $TYPEDSIGNATURES """
 @inline compute_tendencies!(state, grid, hydrology::SoilHydrology, soil::AbstractSoil, args...) = nothing
@@ -143,7 +146,7 @@ Kernel function that computes soil hydraulics and unsaturated hydraulic conducti
     # Get underlying grid
     fgrid = get_field_grid(grid)
     # compute hydraulic conductivity
-    return @inbounds if k <= 1
+    @inbounds if k <= 1
         out.hydraulic_conductivity[i, j, k] = hydraulic_conductivity(i, j, 1, fgrid, fields, hydrology, strat, bgc)
     elseif k >= fgrid.Nz
         out.hydraulic_conductivity[i, j, k] = hydraulic_conductivity(i, j, fgrid.Nz, fgrid, fields, hydrology, strat, bgc)
@@ -151,6 +154,7 @@ Kernel function that computes soil hydraulics and unsaturated hydraulic conducti
     else
         out.hydraulic_conductivity[i, j, k] = min_zᵃᵃᶠ(i, j, k, fgrid, hydraulic_conductivity, fields, hydrology, strat, bgc)
     end
+    return nothing
 end
 
 """
@@ -161,7 +165,8 @@ Kernel function that diagnoses the water table at grid cell `i, j` given the cur
 @propagate_inbounds function compute_water_table!(water_table, i, j, grid, sat, ::SoilHydrology{NF}) where {NF}
     zs = znodes(get_field_grid(grid), Center(), Center(), Face())
     # scan z axis starting from the bottom (index 1) to find first non-saturated grid cell
-    return water_table[i, j, 1] = findfirst_z(i, j, <(one(NF)), zs, sat)
+    water_table[i, j, 1] = findfirst_z(i, j, <(one(NF)), zs, sat)
+    return nothing
 end
 
 """
@@ -204,7 +209,8 @@ any remaining excess water is added to the `surface_excess_water` pool.
 
     # If the lowermost (bottom) layer has a deficit, just set to zero.
     # This constitutes a mass balance violation but should not happen under realistic conditions.
-    return sat[i, j, 1] = max(sat[i, j, 1], zero(NF))
+    sat[i, j, 1] = max(sat[i, j, 1], zero(NF))
+    return nothing
 end
 
 """ $TYPEDSIGNATURES """
@@ -221,7 +227,8 @@ end
     # Get porosity
     por = porosity(i, j, k, grid, fields, strat, bgc)
     # Rescale by porosity to get saturation tendency
-    return saturation_water_ice_tendency[i, j, k] += ∂θ∂t / por
+    saturation_water_ice_tendency[i, j, k] += ∂θ∂t / por
+    return nothing
 end
 
 """
