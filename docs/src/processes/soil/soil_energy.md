@@ -106,12 +106,12 @@ AbstractSoilEnergyClosure
 SoilEnergyBalance
 ```
 
-### Default state variables
+### [State variables](@id soilenergy.vars)
 ```@example
 variables(SoilEnergyBalance())
 ```
 
-### Process method dispatches
+### [Process method dispatches](@id soilenergy.dispatches)
 
 ```@docs; canonical = false
 initialize!(state, grid, energy::SoilEnergyBalance, soil::AbstractSoil, constants::PhysicalConstants, args...)
@@ -141,6 +141,10 @@ get_thermal_properties
 
 ```@docs; canonical = false
 compute_energy_tendency
+```
+
+```@docs; canonical = false
+compute_energy_tendencies!
 ```
 
 ```@docs; canonical = false

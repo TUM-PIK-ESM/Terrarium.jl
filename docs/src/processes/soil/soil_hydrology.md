@@ -41,13 +41,13 @@ AbstractSoilWaterClosure
 SoilHydrology
 ```
 
-#### [State variables](@id soilhydrology.vars)
+### [State variables](@id soilhydrology.vars)
 
 ```@example
 variables(SoilHydrology())
 ```
 
-#### [Process method dispatches](@id soilhydrology.dispatches)
+### [Process method dispatches](@id soilhydrology.dispatches)
 
 ```@docs; canonical = false
 initialize!(state, grid, hydrology::SoilHydrology, soil::AbstractSoil, args...)
