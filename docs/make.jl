@@ -99,6 +99,7 @@ makedocs(
         ],
         "Processes" => [
             "Soil" => [
+                "Soil stratigraphy" => "processes/soil/soil_stratigraphy.md",
                 "Soil hydrology" => "processes/soil/soil_hydrology.md",
                 "Soil energy" => "processes/soil/soil_energy.md",
             ],
