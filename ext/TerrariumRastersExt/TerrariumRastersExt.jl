@@ -2,6 +2,7 @@ module TerrariumRastersExt
 
 using Terrarium
 using Terrarium: XY, XYZ # variable dims
+using Unitful: NoUnits
 
 using Dates
 using DocStringExtensions
@@ -17,18 +18,24 @@ import Oceananigans.Architectures: on_architecture
 Input source that reads data from one or mroe (possibly time-varying) `Raster`. This type should generally not be
 constructed directly but rather via the `InputSource` constructor interface.
 """
-struct RasterInputSource{NF, VD, TT, IM <: AbstractVector{Int}, RS <: Tuple{Vararg{AbstractRaster{NF}}}, names} <: InputSource{NF}
+struct RasterInputSource{NF, VD, TT, IM <: AbstractVector{Int}, RS <: AbstractRaster{NF}, UT} <: InputSource{NF}
     "Variable dimensions"
     dims::VD
+
+    "Variable name"
+    name::Symbol
+
+    "Physical units"
+    units::UT
 
     "Index map for the grid mask"
     idxmap::IM
 
-    "Reference time for "
+    "Reference time"
     reftime::TT
 
-    "Named tuple of data rasters"
-    rasters::NamedTuple{names, RS}
+    "Data raster"
+    raster::RS
 end
 
 """
@@ -36,34 +43,24 @@ end
 
 Creates a new `RasterInputSource` from the given `Raster` data and `grid`.
 """
-function Terrarium.InputSource(grid::ColumnRingGrid{NF}, rasters::AbstractRaster{NF}...; reftime = nothing) where {NF}
-    # Check that rasters match grid
-    # @assert unique(map(data -> data.name, rasters)) == length(rasters) "All data rasters must have unique names"
+function Terrarium.InputSource(grid::ColumnRingGrid{NF}, raster::AbstractRaster{NF}; name = raster.name, units = NoUnits, reftime = nothing) where {NF}
     # get indices from grid mask
     idxmap = on_architecture(architecture(grid), findall(Array(grid.mask)))
     # infer the VarDims and subsequently the Field location from the data dimensions
-    vardims = Terrarium.vardims(first(rasters))
-    named_rasters = map(data -> data.name => data, rasters)
-    # infer reference times
-    reftimes = filter(!isnothing, map(data -> default_reftime(data, reftime), rasters))
-    reftime = isempty(reftimes) ? nothing : first(reftimes)
-    # check for inconsistent ref times
-    @assert isempty(reftimes) || foldl(==, reftimes, init = reftime)
-    return RasterInputSource(vardims, idxmap, reftime, (; named_rasters...))
+    vd = Terrarium.vardims(raster)
+    # infer reference time
+    reftime = default_reftime(raster, reftime)
+    return RasterInputSource(vd, name, units, idxmap, reftime, raster)
 end
 
-Terrarium.variables(source::RasterInputSource{NF, VD, TT, IM, RS, names}) where {NF, VD, TT, IM, RS, names} =
-    map(name -> Terrarium.input(name, source.dims), names)
+Terrarium.variables(source::RasterInputSource) = (Terrarium.input(source.name, source.dims; units = source.units),)
 
 function Terrarium.initialize!(fields, source::RasterInputSource, clock::Clock)
-    for name in keys(source.rasters)
-        if hasproperty(fields, name)
-            field = getproperty(fields, name)
-            raster = source.rasters[name]
-            timedim = dims(raster, Ti)
-            current_time = timestamp(source.reftime, clock.time)
-            initialize_from_raster!(field, raster, source.idxmap, timedim, current_time)
-        end
+    if hasproperty(fields, source.name)
+        field = getproperty(fields, source.name)
+        timedim = dims(source.raster, Ti)
+        current_time = timestamp(source.reftime, clock.time)
+        initialize_from_raster!(field, source.raster, source.idxmap, timedim, current_time)
     end
     return
 end
@@ -78,14 +75,11 @@ end
 initialize_from_raster!(field, raster, idxmap, timedim, current_time) = update_from_raster!(field, raster, idxmap, timedim, current_time)
 
 function Terrarium.update_inputs!(fields, source::RasterInputSource, clock::Clock)
-    for name in keys(source.rasters)
-        if hasproperty(fields, name)
-            field = getproperty(fields, name)
-            raster = source.rasters[name]
-            timedim = dims(raster, Ti)
-            current_time = timestamp(source.reftime, clock.time)
-            update_from_raster!(field, raster, source.idxmap, timedim, current_time)
-        end
+    if hasproperty(fields, source.name)
+        field = getproperty(fields, source.name)
+        timedim = dims(source.raster, Ti)
+        current_time = timestamp(source.reftime, clock.time)
+        update_from_raster!(field, source.raster, source.idxmap, timedim, current_time)
     end
     return
 end
