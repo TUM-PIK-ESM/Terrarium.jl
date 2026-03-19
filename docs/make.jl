@@ -56,7 +56,7 @@ function build_notebook_doc_pages()
     # move to docs/src/notebooks because for some reason that's needed
     mkpath(DOCS_EXAMPLE_DIR)
     for (_, file_name) in notebook_lookup
-        mv(joinpath(EXAMPLE_NOTEBOOK_DIR, file_name), joinpath(DOCS_EXAMPLE_DIR, file_name))
+        mv(joinpath(EXAMPLE_NOTEBOOK_DIR, file_name), joinpath(DOCS_EXAMPLE_DIR, file_name), force = true)
     end
 
     return nothing
