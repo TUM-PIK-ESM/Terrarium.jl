@@ -1,9 +1,13 @@
 """
     $TYPEDEF
 
-Base type for mineral soil texture parameterizations.
+Base type for representing the solid material composition of the soil.
 """
-abstract type AbstractSoilTexture{NF} end
+abstract type AbstractSoilMatrix{NF} end
+
+function organic_fraction end
+
+function mineral_texture end
 
 """
     $TYPEDEF
@@ -34,6 +38,8 @@ function organic_porosity end
 Base type for soil stratigraphy parameterizations.
 """
 abstract type AbstractStratigraphy{NF} end
+
+# Kernel functions
 
 """
     soil_texture(i, j, k, grid, fields, ::AbstractStratigraphy, args...)

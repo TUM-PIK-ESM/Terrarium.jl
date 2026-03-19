@@ -16,7 +16,7 @@ end
 
 function HomogeneousStratigraphy(
         ::Type{NF};
-        texture::AbstractSoilTexture{NF} = SoilTexture(NF),
+        texture::SoilTexture{NF} = SoilTexture(NF),
         porosity::AbstractSoilPorosity{NF} = ConstantSoilPorosity(NF)
     ) where {NF}
     return HomogeneousStratigraphy(texture, porosity)
