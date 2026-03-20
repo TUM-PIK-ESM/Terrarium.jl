@@ -206,7 +206,7 @@ begin
     t_F = 0:1:300
     F = FieldTimeSeries(grid, XY(), t_F)
     F.data .= randn(size(F))
-    input = InputSource(; F, name = :F)
+    input = InputSource(F, name = :F)
 end
 
 # ╔═╡ 452f95e1-3c6b-4e49-935f-1a6f96c96bbb
