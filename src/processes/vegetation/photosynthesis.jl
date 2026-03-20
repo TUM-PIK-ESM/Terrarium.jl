@@ -1,8 +1,8 @@
-# Note: this implementaion assumes a daily timestep but this should be changed later to allow for a more flexible timestep
 """
     $TYPEDEF
-Photosynthesis implementation from PALADYN (Willeit 2016) for C3 PFTs following the general light
-use efficiency model described in Haxeltine and Prentice 1996.
+Photosynthesis implementation from PALADYN (Willeit 2016) for C3 PFTs following the mechanistic
+approach of Haxeltine and Prentice (1996). Computes instantaneous photosynthetic rates as differential
+equations that are integrated over arbitrary timesteps by the timestepper.
 
 Authors: Maha Badri and Matteo Willeit
 
@@ -76,9 +76,9 @@ end
 LUEPhotosynthesis(::Type{NF}; kwargs...) where {NF} = LUEPhotosynthesis{NF}(; kwargs...)
 
 variables(::LUEPhotosynthesis{NF}) where {NF} = (
-    auxiliary(:net_assimilation, XY(), units = u"g/m^2/d"), # Daily net assimilation (photosynthesis) [gC/m²/day]
-    auxiliary(:daily_leaf_respiration, XY(), units = u"g/m^2/d"), # Daily leaf respiration [gC/m²/day]
-    auxiliary(:gross_primary_production, XY(), units = u"kg/m^2/d"), # Gross Primary Production [kgC/m²/day]
+    auxiliary(:net_assimilation, XY(), units = u"g/m^2/s"), # Net photosynthesis rate [gC/m²/s]
+    auxiliary(:leaf_respiration, XY(), units = u"g/m^2/s"), # Leaf respiration rate [gC/m²/s]
+    auxiliary(:gross_primary_production, XY(), units = u"kg/m^2/s"), # Gross primary production rate [kgC/m²/s]
     input(:soil_moisture_limiting_factor, XY(), default = NF(1)), # soil moisture limiting factor with default value of 1
     input(:leaf_area_index, XY()), # Leaf Area Index [m²/m²]
 )
@@ -226,7 +226,7 @@ end
 """
     $SIGNATURES
 
-Computes Gross Primary Production `GPP`in [kgC/m²/day] and leaf respiration `Rd` in [gC/m²/day]
+Computes Gross Primary Production [kgC/m²/s] and leaf respiration [gC/m²/s] at instantaneous rates.
 """
 function compute_photosynthesis(
         photo::LUEPhotosynthesis{NF},
@@ -290,14 +290,10 @@ end
 """
     $SIGNATURES
 
-Compute the Gross Primary Production [kgC/m²/s].
+Compute the Gross Primary Production rate [kgC/m²/s].
 """
-function compute_GPP(::LUEPhotosynthesis{NF}, An::NF) where {NF}
-    # Compute And, the total daytime net photosynthesis `And` [gC/m²/day],
-    # Eq 19, Haxeltine & Prentice 1996 + Eq. 65, PALADYN (Willeit 2016).
-    # And = (An + (NF(1.0) - day_length / NF(24.0)) * Rd) * seconds_per_day(NF)
-
-    # Compute GPP [kgC/m²/s]
+@inline function compute_GPP(::LUEPhotosynthesis{NF}, An::NF) where {NF}
+    # Convert from gC/m²/s to kgC/m²/s
     GPP = An * NF(1.0e-3)
     return GPP
 end
@@ -330,7 +326,7 @@ end
     λc = fields.leaf_to_air_co2_ratio[i, j]
 
     # Compute Rd, leaf respiration rate in [gC/m²/s],
-    # An, daily net photosynthesis [gC/m²/s]
+    # An, net photosynthesis rate in [gC/m²/s]
     Rd, An = compute_photosynthesis(photo, T_air, swdown, pres, co2, LAI, λc, β)
 
     # Compute GPP, Gross Primary Production in [kgC/m²/s]
@@ -341,7 +337,7 @@ end
 
 @propagate_inbounds function compute_photosynthesis!(out, i, j, grid, fields, photo::LUEPhotosynthesis, atmos::AbstractAtmosphere)
     Rd, An, GPP = compute_photosynthesis(i, j, grid, fields, photo, atmos)
-    out.daily_leaf_respiration[i, j, 1] = Rd
+    out.leaf_respiration[i, j, 1] = Rd
     out.net_assimilation[i, j, 1] = An
     out.gross_primary_production[i, j, 1] = GPP
     return out
