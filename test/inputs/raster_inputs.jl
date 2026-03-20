@@ -1,5 +1,5 @@
 using Terrarium
-using Terrarium: Clock, Variables, InputSource, initialize!, update_inputs!, variables, interior, InputSources
+using Terrarium: Clock, Variables, InputSource, initialize!, update_inputs!, variables, interior, InputSources, inputname
 using Test
 using Dates
 using NCDatasets
@@ -45,7 +45,7 @@ const RasterInputSource = TerrariumRastersExt.RasterInputSource
         source = InputSource(grid, raster)
         @test isa(source, RasterInputSource)
         @test source.dims == XY()
-        @test source.name == :temperature
+        @test inputname(source) == :temperature
 
         # Check variables are correctly inferred
         vars = variables(source)
@@ -99,7 +99,7 @@ const RasterInputSource = TerrariumRastersExt.RasterInputSource
         reftime = DateTime(2020, 1, 1)
         source = InputSource(grid, raster; reftime)
         @test isa(source, RasterInputSource)
-        @test source.name == :forcing
+        @test inputname(source) == :forcing
         @test source.reftime == reftime
 
         # Check variables

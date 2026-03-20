@@ -1,5 +1,5 @@
 using Terrarium
-using Terrarium: FieldInputSource, FieldTimeSeriesInputSource, Variables, initialize!, interior, InputSources
+using Terrarium: FieldInputSource, FieldTimeSeriesInputSource, Variables, initialize!, interior, InputSources, inputname
 using Test
 using Unitful
 
@@ -11,7 +11,7 @@ using Unitful
     @test isa(field_input, FieldInputSource)
     ## check that dimensions and name were inferred correctly
     @test field_input.dims == XY()
-    @test field_input.name == :X1
+    @test inputname(field_input) == :X1
     @test variables(field_input) == (Terrarium.input(:X1, XY()),)
     ## check state variable is allocated and initialize! copies data
     X1 .= 1.0f0
@@ -36,7 +36,7 @@ using Unitful
     @test isa(fts_input, FieldTimeSeriesInputSource)
     ## check that dimensions and name were inferred correctly
     @test fts_input.dims == XY()
-    @test fts_input.name == :S1
+    @test inputname(fts_input) == :S1
     @test fts_input.fts === S1
     # populate S1 with random data and check update_inputs!
     S1.data .= randn(size(S1))
@@ -75,7 +75,7 @@ end
     source = InputSource(grid, ring_field1; name = :temperature)
     @test isa(source, FieldInputSource)
     @test source.dims == XY()
-    @test source.name == :temperature
+    @test inputname(source) == :temperature
     @test variables(source) == (Terrarium.input(:temperature, XY()),)
 
     # Test multiple fields via InputSources

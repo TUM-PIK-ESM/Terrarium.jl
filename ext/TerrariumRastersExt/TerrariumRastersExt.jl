@@ -18,12 +18,9 @@ import Oceananigans.Architectures: on_architecture
 Input source that reads data from one or mroe (possibly time-varying) `Raster`. This type should generally not be
 constructed directly but rather via the `InputSource` constructor interface.
 """
-struct RasterInputSource{NF, VD, TT, IM <: AbstractVector{Int}, RS <: AbstractRaster{NF}, UT} <: InputSource{NF}
+struct RasterInputSource{NF, name, VD, TT, IM <: AbstractVector{Int}, RS <: AbstractRaster{NF}, UT} <: InputSource{NF, name}
     "Variable dimensions"
     dims::VD
-
-    "Variable name"
-    name::Symbol
 
     "Physical units"
     units::UT
@@ -50,14 +47,14 @@ function Terrarium.InputSource(grid::ColumnRingGrid{NF}, raster::AbstractRaster{
     vd = Terrarium.vardims(raster)
     # infer reference time
     reftime = default_reftime(raster, reftime)
-    return RasterInputSource(vd, name, units, idxmap, reftime, raster)
+    return RasterInputSource{NF, name, typeof(vd), typeof(reftime), typeof(idxmap), typeof(raster), typeof(units)}(vd, units, idxmap, reftime, raster)
 end
 
-Terrarium.variables(source::RasterInputSource) = (Terrarium.input(source.name, source.dims; units = source.units),)
+Terrarium.variables(source::RasterInputSource{NF, name}) where {NF, name} = (Terrarium.input(name, source.dims; units = source.units),)
 
-function Terrarium.initialize!(fields, source::RasterInputSource, clock::Clock)
-    if hasproperty(fields, source.name)
-        field = getproperty(fields, source.name)
+function Terrarium.initialize!(fields, source::RasterInputSource{NF, name}, clock::Clock) where {NF, name}
+    if hasproperty(fields, name)
+        field = getproperty(fields, name)
         timedim = dims(source.raster, Ti)
         current_time = timestamp(source.reftime, clock.time)
         initialize_from_raster!(field, source.raster, source.idxmap, timedim, current_time)
@@ -74,9 +71,9 @@ end
 # for time-varying rasters this just updates once at the start time
 initialize_from_raster!(field, raster, idxmap, timedim, current_time) = update_from_raster!(field, raster, idxmap, timedim, current_time)
 
-function Terrarium.update_inputs!(fields, source::RasterInputSource, clock::Clock)
-    if hasproperty(fields, source.name)
-        field = getproperty(fields, source.name)
+function Terrarium.update_inputs!(fields, source::RasterInputSource{NF, name}, clock::Clock) where {NF, name}
+    if hasproperty(fields, name)
+        field = getproperty(fields, name)
         timedim = dims(source.raster, Ti)
         current_time = timestamp(source.reftime, clock.time)
         update_from_raster!(field, source.raster, source.idxmap, timedim, current_time)

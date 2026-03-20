@@ -8,7 +8,7 @@ additionally provide a constructor as a dispatch of `InputSource`.
 
 The type argument `NF` corresponds to the numeric type of the input data.
 """
-abstract type InputSource{NF} end
+abstract type InputSource{NF, name} end
 
 # Default kwarg constructor for convenience
 InputSource(; kwargs...) = InputSource(kwargs...)
@@ -19,6 +19,13 @@ InputSource(; kwargs...) = InputSource(kwargs...)
 Returns a tuple of `Symbol`s corresponding to variable names supported by this `InputSource`.
 """
 variables(::InputSource) = ()
+
+"""
+    $SIGNATURES
+
+Returns the name of the input source.
+"""
+inputname(::InputSource{NF, name}) where {NF, name} = name
 
 """
     $SIGNATURES
@@ -71,12 +78,9 @@ end
 Input source that defines `input` state variables with the given names which
 can then be directly modified by the user.
 """
-struct FieldInputSource{NF, VD <: VarDims, FS <: AnyField{NF}, UT} <: InputSource{NF}
+struct FieldInputSource{NF, name, VD <: VarDims, FS <: AnyField{NF}, UT} <: InputSource{NF, name}
     "Variable dimensions"
     dims::VD
-
-    "Variable name"
-    name::Symbol
 
     "Physical units"
     units::UT
@@ -85,9 +89,9 @@ struct FieldInputSource{NF, VD <: VarDims, FS <: AnyField{NF}, UT} <: InputSourc
     field::FS
 end
 
-function initialize!(fields, source::FieldInputSource, clock = nothing)
-    if hasproperty(fields, source.name)
-        field = getproperty(fields, source.name)
+function initialize!(fields, source::FieldInputSource{NF, name}, clock = nothing) where {NF, name}
+    if hasproperty(fields, name)
+        field = getproperty(fields, name)
         set!(field, source.field)
     end
     return nothing
@@ -108,7 +112,7 @@ function InputSource(grid::AbstractLandGrid{NF}, field::FS; name, units = NoUnit
     # infer the VarDims and subsequently the Field location from the data dimensions
     dims = Terrarium.vardims(field)
 
-    return FieldInputSource{NF, typeof(dims), typeof(field), typeof(units)}(dims, name, units, field)
+    return FieldInputSource{NF, name, typeof(dims), typeof(field), typeof(units)}(dims, units, field)
 end
 
 """
@@ -120,10 +124,10 @@ Converts the RingGrids field to an Oceananigans field and then creates the input
 function InputSource(grid::ColumnRingGrid{NF}, ring_field::RingGrids.AbstractField; name, units = NoUnits) where {NF}
     oceananigans_field = Field(ring_field, grid)
     dims = Terrarium.vardims(oceananigans_field)
-    return FieldInputSource{NF, typeof(dims), typeof(oceananigans_field), typeof(units)}(dims, name, units, oceananigans_field)
+    return FieldInputSource{NF, name, typeof(dims), typeof(oceananigans_field), typeof(units)}(dims, units, oceananigans_field)
 end
 
-variables(source::FieldInputSource) = (input(source.name, source.dims; units = source.units),)
+variables(source::FieldInputSource{NF, name}) where {NF, name} = (input(name, source.dims; units = source.units),)
 
 """
 Type alias for a `FieldTimeSeries` with any X, Y, Z location or grid.
@@ -135,12 +139,9 @@ const AnyFieldTimeSeries{NF} = FieldTimeSeries{LX, LY, LZ, TI, K, I, D, G, NF} w
 
 Input source that reads input fields from pre-specified Oceananigans `FieldTimeSeries`.
 """
-struct FieldTimeSeriesInputSource{NF, VD <: VarDims, FTS <: AnyFieldTimeSeries{NF}, UT} <: InputSource{NF}
+struct FieldTimeSeriesInputSource{NF, name, VD <: VarDims, FTS <: AnyFieldTimeSeries{NF}, UT} <: InputSource{NF, name}
     "Variable dimensions"
     dims::VD
-
-    "Variable name"
-    name::Symbol
 
     "Physical units"
     units::UT
@@ -151,19 +152,19 @@ end
 
 function InputSource(fts::AnyFieldTimeSeries{NF}; name, units = NoUnits) where {NF}
     dims = vardims(fts)
-    return FieldTimeSeriesInputSource{NF, typeof(dims), typeof(fts), typeof(units)}(dims, name, units, fts)
+    return FieldTimeSeriesInputSource{NF, name, typeof(dims), typeof(fts), typeof(units)}(dims, units, fts)
 end
 
-variables(source::FieldTimeSeriesInputSource) = (input(source.name, source.dims; units = source.units),)
+variables(source::FieldTimeSeriesInputSource{NF, name}) where {NF, name} = (input(name, source.dims; units = source.units),)
 
 # to initialize just update the state once at the start time
 function initialize!(fields, source::FieldTimeSeriesInputSource, clock::Clock)
     return update_inputs!(fields, source, clock)
 end
 
-function update_inputs!(fields, source::FieldTimeSeriesInputSource, clock::Clock)
-    if hasproperty(fields, source.name)
-        field_t = getproperty(fields, source.name)
+function update_inputs!(fields, source::FieldTimeSeriesInputSource{NF, name}, clock::Clock) where {NF, name}
+    if hasproperty(fields, name)
+        field_t = getproperty(fields, name)
         set!(field_t, source.fts[Time(clock.time)])
     end
     return
