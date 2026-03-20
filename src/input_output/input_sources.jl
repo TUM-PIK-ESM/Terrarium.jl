@@ -6,7 +6,7 @@ from any arbitrary backend. They expect an `initialize!(fields, ::InputSource)` 
 `update_inputs!(fields, ::InputSource, ::Clock)` method that is called at every time step. Both default to doing nothing. Implementations should
 additionally provide a constructor as a dispatch of `InputSource`.
 
-The type argument `NF` corresponds to the numeric type of the input data.
+The type argument `NF` corresponds to the numeric type of the input data, `name` to its name that's also used in its `variables` definition. 
 """
 abstract type InputSource{NF, name} end
 
