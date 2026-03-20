@@ -1,5 +1,5 @@
 using Terrarium
-using Terrarium: Clock, Variables, InputSource, initialize!, update_inputs!, variables, interior
+using Terrarium: Clock, Variables, InputSource, initialize!, update_inputs!, variables, interior, InputSources, inputname
 using Test
 using Dates
 using NCDatasets
@@ -41,11 +41,11 @@ const RasterInputSource = TerrariumRastersExt.RasterInputSource
         # Load with Rasters
         raster = Raster(static_file; name = :temperature)
 
-        # Create RasterInputSource
+        # Create RasterInputSource (name defaults to raster.name)
         source = InputSource(grid, raster)
         @test isa(source, RasterInputSource)
         @test source.dims == XY()
-        @test haskey(source.rasters, :temperature)
+        @test inputname(source) == :temperature
 
         # Check variables are correctly inferred
         vars = variables(source)
@@ -99,6 +99,7 @@ const RasterInputSource = TerrariumRastersExt.RasterInputSource
         reftime = DateTime(2020, 1, 1)
         source = InputSource(grid, raster; reftime)
         @test isa(source, RasterInputSource)
+        @test inputname(source) == :forcing
         @test source.reftime == reftime
 
         # Check variables
@@ -164,25 +165,25 @@ const RasterInputSource = TerrariumRastersExt.RasterInputSource
         raster1 = Raster(file1; name = :var1)
         raster2 = Raster(file2; name = :var2)
 
-        # Create RasterInputSource with multiple rasters
-        source = InputSource(grid, raster1, raster2)
-        @test isa(source, RasterInputSource)
-        @test haskey(source.rasters, :var1)
-        @test haskey(source.rasters, :var2)
-
-        # Check variables
-        vars = variables(source)
-        @test length(vars) == 2
+        # Create InputSources with two separate RasterInputSources
+        sources = InputSources(
+            InputSource(grid, raster1),
+            InputSource(grid, raster2)
+        )
+        @test variables(sources) == (Terrarium.input(:var1, XY()), Terrarium.input(:var2, XY()))
 
         # Test initialization
-        state = initialize(Variables(source), grid)
+        state = initialize(Variables(sources), grid)
         @test hasproperty(state.inputs, :var1)
         @test hasproperty(state.inputs, :var2)
 
         # Initialize and verify both fields
-        initialize!(state.inputs, source, Clock(time = 0.0))
-        expected1 = vec(data1)[source.idxmap]
-        expected2 = vec(data2)[source.idxmap]
+        clock = Clock(time = 0.0)
+        initialize!(state.inputs, sources, clock)
+        source1 = sources.sources[1]
+        source2 = sources.sources[2]
+        expected1 = vec(data1)[source1.idxmap]
+        expected2 = vec(data2)[source2.idxmap]
         @test all(interior(state.inputs.var1)[:, 1, 1] .≈ expected1)
         @test all(interior(state.inputs.var2)[:, 1, 1] .≈ expected2)
     end
