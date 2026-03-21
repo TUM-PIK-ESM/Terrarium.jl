@@ -536,7 +536,7 @@ Now, we just need to define initialize everything correctly. As we are working w
 # ╔═╡ e80009fb-cf05-4360-9f7e-c355d059ff5c
 begin 
 	snow_grid = ColumnRingGrid(UniformSpacing(N=1), global_grid, land_sea_mask)
-	snow_input = InputSource(snow_grid, snow_climatology[:,1], name=:snow_fall, units=u"m/s"))
+	snow_input = InputSource(snow_grid, snow_climatology[:,1], name=:snow_fall, units=u"m/s")
 	lst_input = InputSource(snow_grid,  lst_climatology[:,1], name=:air_temperature, units=u"°C")
 end 
 
