@@ -251,7 +251,7 @@ begin
     t_F = 0:1:300
     F = FieldTimeSeries(grid, XY(), t_F)
     F.data .= randn(size(F))
-    input = InputSource(F, name = :F)
+    input = InputSource(; F)
 end
   ╠═╡ =#
 
@@ -530,13 +530,14 @@ Ok, so now let's put everything together!
 * We defined our model `SnowModel` and dynamics `DegreeDaySnow`
 * We loaded climatological input data and a land sea mask for our grid 
 
-Now, we just need to define initialize everything correctly. As we are working with globally gridded data, we will define `ColumnRingGrid` based on the `global_grid` we already initialized. Then, we will load our inputs. For this, we will choose the January (so the first element) of our climatology files. When using them in `InputSource` be sure to choose the same name as used in the definitions of the dynamics before.  
+Now, we just need to define initialize everything correctly. As we are working with globally gridded data, we will define `ColumnRingGrid` based on the `global_grid` we already initialized. Then, we will load our inputs. For this, we will choose the January (so the first element) of our climatology files. When using them in `InputSource` be sure to choose the same name and units as used in the definitions of the dynamics before.
 """
 
 # ╔═╡ e80009fb-cf05-4360-9f7e-c355d059ff5c
 begin 
 	snow_grid = ColumnRingGrid(UniformSpacing(N=1), global_grid, land_sea_mask)
-	inputs = InputSource(snow_grid, (;air_temperature = lst_climatology[:,1], snow_fall = snow_climatology[:,1]))
+	snow_input = InputSource(snow_grid, snow_climatology[:,1], name=:snow_fall, units=u"m/s"))
+	lst_input = InputSource(snow_grid,  lst_climatology[:,1], name=:air_temperature, units=u"°C")
 end 
 
 # ╔═╡ 7f310793-f4af-4013-b02f-8273107246e7
@@ -556,7 +557,7 @@ Now, we initialize our model and the integrator.
 snow_model = SnowModel(snow_grid)
 
 # ╔═╡ 018375eb-fd00-48b6-9b9d-dc42ba2d5c2d
-snow_integrator = initialize(snow_model, Heun(Δt = 1.0), inputs; initializers=snow_initializers)
+snow_integrator = initialize(snow_model, Heun(Δt = 1.0), snow_input, lst_input; initializers=snow_initializers)
 
 # ╔═╡ Cell order:
 # ╟─5630efd5-2482-463d-913f-9addb120beec
