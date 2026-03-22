@@ -69,7 +69,6 @@ end
 
 # Dict for makedocs for notebooks to be included
 notebook_docpages = Pair{String, String}[]
-push!(notebook_docpages, "Overview" => "notebooks/examples_overview.md")
 for (title, name) in notebook_lookup
     push!(notebook_docpages, title => joinpath(EXAMPLE_DIR_RELATIVE, name))
 end
@@ -113,6 +112,12 @@ makedocs(
                 "Vegetation phenology" => "processes/vegetation/vegetation_phenology.md",
                 "Root distribution" => "processes/vegetation/root_distribution.md",
             ],
+            "Surface hydrology" => [
+                "Surface hydrology" => "processes/surface_hydrology/surface_hydrology.md",
+                "Canopy interception" => "processes/surface_hydrology/canopy_interception.md",
+                "Evapotranspiration" => "processes/surface_hydrology/evapotranspiration.md",
+                "Surface runoff" => "processes/surface_hydrology/surface_runoff.md",
+            ],
             "Surface energy balance" => [
                 "Surface energy balance" => "processes/surface_energy/surface_energy_balance.md",
                 "Radiative fluxes" => "processes/surface_energy/radiative_fluxes.md",
@@ -124,7 +129,10 @@ makedocs(
         "Models" => [
 
         ],
-        "Examples" => notebook_docpages,
+        "Examples" => [
+            "Overview" => "examples_overview.md",
+            notebook_docpages...,
+        ],
         "Contributing" => "contributing.md",
         "API Reference" => "api_reference.md",
     ],
