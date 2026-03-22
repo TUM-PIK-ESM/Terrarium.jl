@@ -114,7 +114,7 @@ As an example, let's consider the construction and initalization of a [`SoilMode
 arch = CPU()
 grid = ColumnGrid(arch, Float32, ExponentialSpacing(N=10))
 model = SoilModel(grid)
-integrator = initialize(model, ForwardEuler())
+integrator = initialize(model, ForwardEuler(Float32))
 ```
 
 Here `integrator` corresponds to a `ModelIntegrator` configured for a [`ForwardEuler`](@ref) time stepping scheme. `ModelIntegrator` defines dispatches for [`timestep!`](@ref) and [`run!`](@ref) that allow for open-ended simulations starting from the initialized state. We can use [`timestep!`](@ref) to take a single time step,
