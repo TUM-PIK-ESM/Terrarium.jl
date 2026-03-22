@@ -125,6 +125,7 @@ end
 
 @testset "Assimilation factors c1 and c2" begin
     photo = LUEPhotosynthesis()
+    constants = PhysicalConstants()
     T_air = 20.0 # °C
     Γ_star = 3.0 # Value for T_air = 20.0 °C and pres_O2 = 20.9e3 Pa
     Kc = 20.0 # Value for T_air = 20.0 °C
@@ -133,20 +134,21 @@ end
 
     # Test pi = Γ_star (c1 and c2 should be 0)
     pres_i = Γ_star
-    c_1, c_2 = compute_assimilation_factors(photo, T_air, Γ_star, Kc, Ko, pres_i, pres_O2)
+    T_stress = compute_temperature_stress(photo, T_air)
+    c_1, c_2 = compute_assimilation_factors(photo, Γ_star, T_stress, Kc, Ko, pres_i, pres_O2)
     @test c_1 == 0
     @test c_2 == 0
 
     # Test pi < Γ_star (c1 and c2 should be negative, c1 can be 0 if T_stress=0)
     # TODO can this happen?
     pres_i = Γ_star / 2.0
-    c_1, c_2 = compute_assimilation_factors(photo, T_air, Γ_star, Kc, Ko, pres_i, pres_O2)
+    c_1, c_2 = compute_assimilation_factors(photo, Γ_star, T_stress, Kc, Ko, pres_i, pres_O2)
     @test isfinite(c_1) && c_1 <= 0
     @test isfinite(c_2) && c_2 < 0
 
     # Test pi > Γ_star (c1 and c2 should be positive, c1 can be 0 if T_stress=0)
     pres_i = Γ_star * 2.0
-    c_1, c_2 = compute_assimilation_factors(photo, T_air, Γ_star, Kc, Ko, pres_i, pres_O2)
+    c_1, c_2 = compute_assimilation_factors(photo, Γ_star, T_stress, Kc, Ko, pres_i, pres_O2)
     @test isfinite(c_1) && c_1 >= 0
     @test isfinite(c_2) && c_2 > 0
 end

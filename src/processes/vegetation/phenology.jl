@@ -57,7 +57,7 @@ Computes `LAI`, based on the balanced Leaf Area Index `LAI_b`:
     f_deciduous = compute_f_deciduous(phenol)
 
     # Compute phen
-    phen = compute_phen(phenol)
+    phen = compute_phenology_factor(phenol)
 
     # Compute LAI
     LAI = (f_deciduous * phen + (NF(1.0) - f_deciduous)) * LAI_b
