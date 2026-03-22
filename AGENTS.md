@@ -21,13 +21,17 @@ dynamics are allowed except in very special cases where they must be clearly doc
 
 ## Critical Rules
 
-### Kernel Functions (GPU compatibility)
+### Kernels (GPU compatibility)
 
-- Use `@kernel` / `@index` (KernelAbstractions.jl)
-- Kernels must be **type-stable** and **allocation-free**
+- Use `@kernel` / `@index` (KernelAbstractions.jl) to define device-agnostic kernels
+- Functions marked with `@kernel` are called **kernels** which then invoke **kernel functions** with call pattern `compute_something(i, j, k, grid, fields, process::ProcessType, args...)` or `compute_something!(out, i, j, k, grid, fields, proces::ProcessType)`
+    - Kernel functions defined for 2D kernels instead have `i, j` instead of `i, j, k`
+- Kernels and their subsequent call graph must be fully **type-stable** and **allocation-free**
 - Use `ifelse` — never short-circuiting `if`/`else` in kernels
-- No error messages, no Models or `state` inside kernels
-- Mark functions called inside kernels with `@inline`
+- No error messages, no `AbstractModel`s, and no `state` inside kernels
+- Always extract relevant input/output `Field`s with `get_fields` and related methods
+- Favor explicit enumeration of process types when invoking kernels rather than passing `AbstractCoupledProcesses` types
+- Mark functions called inside kernels with `@inline` or `@propagate_inbounds` when including indices
 - **Never loop over grid points outside kernels** — use `launch!`
 
 ### Differentiability & Enzyme.jl
@@ -63,10 +67,23 @@ is a top priority and must be continuously tested.
 
 ### Docstrings
 
-- Use DocStringExtensions.jl with `$(SIGNATURES)`
+- Use DocStringExtensions.jl with `$TYPEDSIGNATURES`
 - **ALWAYS `jldoctest` blocks, NEVER plain `julia` blocks** — doctests are tested; plain blocks rot
 - Include `# output` with verifiable output; prefer `show` methods over boolean comparisons
 - Use unicode for math (`Δt`, `η`, `ρ`), not LaTeX — LaTeX doesn't render in the REPL
+
+### Documentation pages
+
+- Doc pages for processes and models should always consist of the following sections:
+    - **Theory**: General overview of of the physical process, what the main inputs and output variables typically are, and general equations relevant for understanding the implementations.
+    - **Abstract types**: Enumeration of all abstract types relevant for the process, both subtypes of `AbstractProcess` and parameterization types.
+    - **Concrete types**: Enumeration of all concrete implementations of the aforementioned abstract types. For implementations `AbstractProcess`es, this should also include an enumeration of signatures for `compute_auxiliary!` and `compute_tendencies!` for each type.
+    - **Methods**: Enumeration of process-specific methods.
+    - **Kernel functions**: Enumeration of **kernel functions**; do NOT include **kernels** (i.e. functions annoated with `@kernel`)
+- All functions referenced in doc pages should be marked with `canonical = false` since the canonical versions of the docstrings are defined in a separate `@autodocs` block in the index
+- All types and functions referenced in the doc pages must have docstrings otherwise the doc build will fail. Ensure docstrings are defined and add them if they are missing.
+- Doc pages should always be prefaced with appropriate `@meta` and `@setup` blocks
+- If a model or process is not fully implemented, an appropriate warning should be displayed on the doc page
 
 ### Model Constructors
 
@@ -78,7 +95,8 @@ is a top priority and must be continuously tested.
 - **Files**: snake_case matching the type they define — `soil_hydrology.jl`
 - **Types/Constructors**: PascalCase **only for true constructors** — `SoilHydrology`
 - **Functions**: snake_case — `compute_tendencies!` unless commonly combined in English, e.g. `timestep!`. This is not a hard rule, exceptions are permitted.
-- **Kernels**: should always be suffixed with `_kernel!` — `compute_tendency_kernel!`
+- **Kernels**: should always be suffixed with `_kernel!` — `compute_tendencies_kernel!`
+- **Kernel functions**: should always be prefixed with `compute_`; mutating variants should use the standard bang `!` convention.
 - **Variables**: Prefer English long name or readable unicode math notation — do not use abbreviations that may introduce ambiguity, e.g. `cond` could be either "condition" or "conductivity"; be as specific as possible.
 
 ## Physics & Process Equations
@@ -155,7 +173,7 @@ update tests and docs with code changes, check CI before merging.
 - Reference physics equations in comments when implementing dynamics
 - Do not make unsolicited changes; focus on specific tasks
 - When extending Enzyme.jl compatibility, verify adjoints with `Enzyme.autodiff`
-- Ensure type annotations are restrictive enough to guide dispatch and prevent misuse
+- Ensure type annotations are restrictive enough to guide dispatch and minimize misuse
 
 ## Further Reading
 
