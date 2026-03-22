@@ -113,6 +113,13 @@ makedocs(
                 "Vegetation phenology" => "processes/vegetation/vegetation_phenology.md",
                 "Root distribution" => "processes/vegetation/root_distribution.md",
             ],
+            "Surface energy balance" => [
+                "Surface energy balance" => "processes/surface_energy/surface_energy_balance.md",
+                "Radiative fluxes" => "processes/surface_energy/radiative_fluxes.md",
+                "Turbulent fluxes" => "processes/surface_energy/turbulent_fluxes.md",
+                "Skin temperature and ground heat" => "processes/surface_energy/skin_temperature.md",
+                "Albedo and emissivity" => "processes/surface_energy/albedo.md",
+            ],
         ],
         "Models" => [
 
