@@ -71,20 +71,10 @@ ImplicitSkinTemperature
 
 ## Methods
 
-### Skin temperature schemes
-
 ```@docs; canonical = false
 compute_skin_temperature
 ```
 
-### Ground heat flux
-
 ```@docs; canonical = false
 compute_ground_heat_flux
-```
-
-## Kernel functions
-
-```@docs; canonical = false
-compute_skin_temperature_kernel!
 ```

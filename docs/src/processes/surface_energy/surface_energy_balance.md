@@ -20,10 +20,10 @@ R_{\text{net}} = H_s + H_l + G
 ```
 
 where all fluxes are **positive upward** (away from surface, toward atmosphere):
-- $R_{\text{net}}$ is the net radiation [W/m²] (positive upward)
-- $H_s$ is the sensible heat flux [W/m²] (positive upward)
-- $H_l$ is the latent heat flux [W/m²] (positive upward)
-- $G$ is the ground heat flux [W/m²] (positive downward into soil, negative in upward-positive convention)
+- $R_{\text{net}}$ is the net radiation (W/m², positive upward)
+- $H_s$ is the sensible heat flux (W/m², positive upward)
+- $H_l$ is the latent heat flux (W/m², positive upward)
+- $G$ is the ground heat flux (W/m², positive downward into soil, negative in upward-positive convention)
 
 The surface energy balance couples radiative processes (shortwave and longwave), atmospheric turbulence (aerodynamic exchange), and surface properties (albedo, emissivity, thermal conductivity).
 
@@ -39,9 +39,9 @@ R_{\text{net}} = S_{\uparrow} - S_{\downarrow} + L_{\uparrow} - L_{\downarrow}
 
 where:
 - $S_{\uparrow} = \alpha S_{\downarrow}$ is reflected (upwelling) shortwave radiation
-- $S_{\downarrow}$ is incident (downwelling) shortwave radiation [W/m²]
+- $S_{\downarrow}$ is incident (downwelling) shortwave radiation (W/m²)
 - $L_{\uparrow} = \epsilon \sigma T_0^4 + (1-\epsilon) L_{\downarrow}$ is total upwelling longwave radiation
-- $L_{\downarrow}$ is incident (downwelling) longwave radiation [W/m²]
+- $L_{\downarrow}$ is incident (downwelling) longwave radiation (W/m²)
 - $\alpha$ is surface albedo (fraction of shortwave radiation reflected)
 - $\epsilon$ is surface emissivity (fraction of thermal radiation emitted)
 - $\sigma$ is the Stefan-Boltzmann constant

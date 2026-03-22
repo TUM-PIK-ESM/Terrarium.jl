@@ -4,7 +4,7 @@
 CurrentModule = Terrarium
 ```
 
-```@setup
+```@setup default
 using Terrarium
 ```
 
@@ -47,7 +47,7 @@ SoilHydrology
 
 ### [State variables](@id soilhydrology.vars)
 
-```@example
+```@example default
 variables(SoilHydrology())
 ```
 

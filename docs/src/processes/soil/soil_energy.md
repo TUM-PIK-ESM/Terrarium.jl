@@ -4,7 +4,7 @@
 CurrentModule = Terrarium
 ```
 
-```@setup
+```@setup default
 using Terrarium
 ```
 
@@ -111,7 +111,7 @@ SoilEnergyBalance
 ```
 
 ### [State variables](@id soilenergy.vars)
-```@example
+```@example default
 variables(SoilEnergyBalance())
 ```
 

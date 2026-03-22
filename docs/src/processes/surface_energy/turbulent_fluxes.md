@@ -48,9 +48,9 @@ H_l = L \rho_a \frac{\Delta q}{r_a}
 where:
 - $L$ is the latent heat of vaporization or sublimation [J/kg]
 - $\rho_a$ is the air density [kg/m³]
-- $\Delta q = q_s - q_a$ is the specific humidity difference (positive if surface more humid than air) [kg/kg]
+- $\Delta q = q_{\text{sat}}(T_s) - q_a$ is the specific humidity gradient [kg/kg] derived from the vapor pressure deficit which is always ≥ 0 by definition
 - $r_a$ is the aerodynamic resistance [s/m]
-- $H_l$ is **positive during evaporation/transpiration** (water leaves surface, heat flows upward), and **negative during condensation** (rare at land surface)
+- $H_l$ is **always non-negative** (≥ 0) and represents energy lost due to evaporation, transpiration, or sublimation. Currently condensation (dew formation) is neglected so negative latent heat fluxes cannot occur.
 
 ### Coupling to vegetation and soil
 

@@ -84,6 +84,7 @@ is a top priority and must be continuously tested.
 - All types and functions referenced in the doc pages must have docstrings otherwise the doc build will fail. Ensure docstrings are defined and add them if they are missing.
 - Doc pages should always be prefaced with appropriate `@meta` and `@setup` blocks
 - If a model or process is not fully implemented, an appropriate warning should be displayed on the doc page
+- Do not use brackets for expressing units as this conflicts with Markdown link syntax; use parentheses instead
 
 ### Model Constructors
 
