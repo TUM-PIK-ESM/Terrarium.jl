@@ -104,7 +104,14 @@ makedocs(
                 "Soil energy" => "processes/soil/soil_energy.md",
             ],
             "Vegetation" => [
-                "Photosynthesis" => "processes/vegetation/photosynthesis.md",
+                "Photosynthesis and gas exchange" => "processes/vegetation/photosynthesis.md",
+                "Stomatal conductance" => "processes/vegetation/stomatal_conductance.md",
+                "Plant available water" => "processes/vegetation/plant_available_water.md",
+                "Autotrophic respiration" => "processes/vegetation/autotrophic_respiration.md",
+                "Carbon dynamics" => "processes/vegetation/carbon_dynamics.md",
+                "Vegetation dynamics" => "processes/vegetation/vegetation_dynamics.md",
+                "Vegetation phenology" => "processes/vegetation/vegetation_phenology.md",
+                "Root distribution" => "processes/vegetation/vegetation_root_distribution.md",
             ],
         ],
         "Models" => [

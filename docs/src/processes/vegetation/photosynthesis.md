@@ -9,15 +9,13 @@ CurrentModule = Terrarium
 
 ## Theory
 
-### Photosynthesis fundamentals
-
 Photosynthesis is the process by which plants convert solar radiation into chemical energy (sugars). The rate of photosynthesis depends on photosynthetically active radiation (PAR), ambient CO₂ concentration, leaf temperature, and leaf water status. Terrarium currently implements the mechanistic approach of Haxeltine and Prentice (1996) adapted from PALADYN (Willeit 2016), which explicitly represents two limitations to photosynthesis: light availability and enzyme (RuBisCO) activity.
 
-Unlike in PALADYN, however, all photosynthetic rates are computed as **instantaneous rates** (mol/m²/s or gC/m²/s). This ensures the model behaves correctly with subdaily, daily, or longer integration intervals.
+Unlike in PALADYN, however, all photosynthetic rates are computed as **instantaneous rates** (e.g. mol/m²/s or gC/m²/s) to ensure compatibility with generic timestepping schemes.
 
 ### Light and RuBisCO-limited photosynthesis (two-leaf model)
 
-The Haxeltine and Prentice (1996) approach computes photosynthesis by considering two potentially limiting processes and smoothly blending between them. 
+The Haxeltine and Prentice (1996) approach computes photosynthesis by considering two potentially limiting processes and smoothly interpolating between them.
 
 First, absorbed photosynthetically active radiation (APAR) is computed accounting for canopy light extinction:
 ```math
@@ -42,7 +40,8 @@ c_1 = \alpha_{C3} \cdot f_{\text{temp}} \cdot C_{\text{mass}} \cdot \frac{p_i - 
 \end{equation}
 ```
 
-Here $p_i$ is intercellular CO₂ partial pressure, $\Gamma^*$ is the CO₂ compensation point, and $f_{\text{temp}}$ is the temperature stress factor.
+where $p_i$ is intercellular CO₂ partial pressure and $f_{\text{temp}}$ is the temperature stress factor. $\Gamma^*$ is the CO₂ compensation point which represents the intercellular CO₂ concentration
+at which no CO₂ uptake occurs in the absence of mitochondrial respiration.
 
 The RuBisCO-limited (enzyme-limited) photosynthesis rate is:
 ```math
@@ -97,7 +96,7 @@ where $\sigma_{\text{low}}$ and $\sigma_{\text{high}}$ are sigmoid-shaped functi
 
 ### Stomatal conductance coupling
 
-Stomatal conductance (gas exchange) is computed separately from photosynthesis using the Medlyn et al. (2011) optimal stomatal control theory (see [Stomatal Conductance Methods](@ref) and [MedlynStomatalConductance](@ref)). This gives the internal leaf CO₂ concentration ratio $\lambda_c$ that drives the intercellular CO₂ pressure: $p_i = \lambda_c \cdot p_a$, which is used in the photosynthesis calculation above.
+Stomatal conductance (gas exchange) is computed separately from photosynthesis using the Medlyn et al. (2011) optimal stomatal control theory (see [Stomatal Conductance](@ref)). This gives the internal leaf CO₂ concentration ratio $\lambda_c$ that drives the intercellular CO₂ pressure: $p_i = \lambda_c \cdot p_a$, which is used in the photosynthesis calculation above.
 
 The stomatal conductance model captures the empirical observation that stomata open more when CO₂ uptake is high and close when air is dry (high VPD), creating a tight coupling between photosynthesis, transpiration, and atmospheric water demand.
 
@@ -107,22 +106,10 @@ The stomatal conductance model captures the empirical observation that stomata o
 AbstractPhotosynthesis
 ```
 
-```@docs; canonical = false
-AbstractStomatalConductance
-```
-
 ## Concrete types
-
-### Photosynthesis
 
 ```@docs; canonical = false
 LUEPhotosynthesis
-```
-
-### Stomatal Conductance
-
-```@docs; canonical = false
-MedlynStomatalConductance
 ```
 
 ## Methods
@@ -183,34 +170,12 @@ compute_photosynthesis
 compute_GPP
 ```
 
-### Stomatal Conductance
-
-```@docs; canonical = false
-compute_gw_can
-```
-
-```@docs; canonical = false
-compute_λc
-```
-
 ## Kernel functions
-
-### Photosynthesis
 
 ```@docs; canonical = false
 compute_photosynthesis
 ```
 
 ```@docs; canonical = false
-compute_photosynthesis_kernel!
-```
-
-### Stomatal Conductance
-
-```@docs; canonical = false
-compute_stomatal_conductance
-```
-
-```@docs; canonical = false
-compute_stomatal_conductance_kernel!
+compute_photosynthesis!
 ```
