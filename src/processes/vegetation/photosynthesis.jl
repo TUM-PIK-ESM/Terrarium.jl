@@ -31,14 +31,17 @@ $TYPEDFIELDS
     "Leaf albedo in PAR range [-]"
     α_leaf::NF = 0.17
 
+    "Fraction of PAR assimilated at ecosystem level, relative to leaf level [-]"
+    α_a::NF = 0.5
+
+    "Intrinsic quantum efficiency of CO2 uptake in C3 plants [mol/mol]"
+    α_C3::NF = 0.08
+
     "Conversion factor for solar radiation at 550 nm from J/m² to mol/m² [mol/J]"
     cq::NF = 4.6e-6
 
     "Extinction coefficient for radiation through vegetation [-]"
     k_ext::NF = 0.5
-
-    "Fraction of PAR assimilated at ecosystem level, relative to leaf level [-]"
-    α_a::NF = 0.5
 
     "Upper temperature threshold for CO₂/O₂ specificity factor [°C]. Above this, photosynthesis rapidly declines. PFT-specific, needleleaf tree value."
     T_CO2_high::NF = 42.0
@@ -51,9 +54,6 @@ $TYPEDFIELDS
 
     "Lower temperature threshold for light-limited photosynthesis rate [°C]. Minimum for photosynthesis. PFT-specific, needleleaf tree value."
     T_photos_low::NF = 15.0
-
-    "Intrinsic quantum efficiency of CO2 uptake in C3 plants [mol/mol]"
-    α_C3::NF = 0.08
 
     "Root of quadratic mean shape parameter [-]. Controls smoothness of interpolation between light and RuBisCO limitations (0.7 for smooth, 0.5 for arithmetic mean)."
     θ_r::NF = 0.7

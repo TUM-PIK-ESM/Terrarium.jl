@@ -37,9 +37,9 @@ end
 """
     $SIGNATURES
 
-Computes `phen`, the phenology factor [-].
+Computes the phenology factor `ϕ` [-].
 """
-@inline function compute_phen(phenol::PALADYNPhenology{NF}) where {NF}
+@inline function compute_phenology_factor(phenol::PALADYNPhenology{NF}) where {NF}
     # TODO add phenology implementation from PALADYN
     # For now, set phen to 1.0 (full leaf-out, evergreen PFT)
     phen = NF(1.0)
@@ -81,7 +81,7 @@ end
     LAI_b = fields.balanced_leaf_area_index[i, j]
 
     # Compute phen
-    phen = compute_phen(phenol)
+    phen = compute_phenology_factor(phenol)
 
     # Compute LAI
     LAI = compute_LAI(phenol, LAI_b)
