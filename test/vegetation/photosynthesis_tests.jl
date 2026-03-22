@@ -1,9 +1,8 @@
 using Terrarium
 using Terrarium: compute_kinetic_parameters, compute_Γ_star, compute_PAR, compute_APAR, compute_pres_i
 using Terrarium: compute_temperature_stress, compute_assimilation_factors, compute_Vc_max, compute_JE_JC
-using Terrarium: compute_Rd, compute_Ag, compute_photosynthesis
+using Terrarium: compute_Rd, compute_Ag, compute_respiration_assimilation, compute_photosynthesis
 using Test
-
 
 @testset "Kinetic parameters" begin
     photo = LUEPhotosynthesis()
@@ -135,20 +134,20 @@ end
     # Test pi = Γ_star (c1 and c2 should be 0)
     pres_i = Γ_star
     T_stress = compute_temperature_stress(photo, T_air)
-    c_1, c_2 = compute_assimilation_factors(photo, Γ_star, T_stress, Kc, Ko, pres_i, pres_O2)
+    c_1, c_2 = compute_assimilation_factors(photo, constants, Γ_star, T_stress, Kc, Ko, pres_i, pres_O2)
     @test c_1 == 0
     @test c_2 == 0
 
     # Test pi < Γ_star (c1 and c2 should be negative, c1 can be 0 if T_stress=0)
     # TODO can this happen?
     pres_i = Γ_star / 2.0
-    c_1, c_2 = compute_assimilation_factors(photo, Γ_star, T_stress, Kc, Ko, pres_i, pres_O2)
+    c_1, c_2 = compute_assimilation_factors(photo, constants, Γ_star, T_stress, Kc, Ko, pres_i, pres_O2)
     @test isfinite(c_1) && c_1 <= 0
     @test isfinite(c_2) && c_2 < 0
 
     # Test pi > Γ_star (c1 and c2 should be positive, c1 can be 0 if T_stress=0)
     pres_i = Γ_star * 2.0
-    c_1, c_2 = compute_assimilation_factors(photo, Γ_star, T_stress, Kc, Ko, pres_i, pres_O2)
+    c_1, c_2 = compute_assimilation_factors(photo, constants, Γ_star, T_stress, Kc, Ko, pres_i, pres_O2)
     @test isfinite(c_1) && c_1 >= 0
     @test isfinite(c_2) && c_2 > 0
 end
@@ -278,21 +277,21 @@ end
     # Test T_air < -3 (GPP and Rd should be 0)
     T_air = -5.0 # °C
     LAI = 5.0 # Mock value
-    GPP, Rd = compute_photosynthesis(photo, constants, T_air, swdown, pres, co2, LAI, λc, β)
+    GPP, Rd = compute_respiration_assimilation(photo, constants, T_air, swdown, pres, co2, LAI, λc, β)
     @test GPP == 0.0
     @test Rd == 0.0
 
     # Test T_air > -3 and LAI=0 (GPP and Rd should be 0)
     T_air = 20.0 # °C
     LAI = 0.0
-    GPP, Rd = compute_photosynthesis(photo, constants, T_air, swdown, pres, co2, LAI, λc, β)
+    GPP, Rd = compute_respiration_assimilation(photo, constants, T_air, swdown, pres, co2, LAI, λc, β)
     @test GPP == 0.0
     @test Rd == 0.0
 
     # Test T_air > -3 and LAI > 0 (GPP and Rd should be finite)
     T_air = 20.0 # °C
     LAI = 5.0 # Mock value
-    GPP, Rd = compute_photosynthesis(photo, constants, T_air, swdown, pres, co2, LAI, λc, β)
+    GPP, Rd = compute_respiration_assimilation(photo, constants, T_air, swdown, pres, co2, LAI, λc, β)
     @test isfinite(GPP)
     @test isfinite(Rd)
 
