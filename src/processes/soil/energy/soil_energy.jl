@@ -98,6 +98,7 @@ end
 
 # Kernel functions
 
+""" $TYPEDSIGNATURES """
 @propagate_inbounds function compute_energy_tendencies!(
         tendencies, i, j, k, grid, fields,
         energy::SoilEnergyBalance,
@@ -107,6 +108,7 @@ end
     return nothing
 end
 
+""" $TYPEDSIGNATURES """
 @propagate_inbounds function compute_energy_tendency(
         i, j, k, grid, fields,
         energy::SoilEnergyBalance{NF, <:ExplicitTwoPhaseHeatConduction},
@@ -122,6 +124,7 @@ end
     return ∂U∂t
 end
 
+""" $TYPEDSIGNATURES """
 @propagate_inbounds function compute_thermal_conductivity(
         i, j, k, grid, fields,
         energy::SoilEnergyBalance,
@@ -134,6 +137,7 @@ end
 end
 
 # Diffusive heat flux term passed to ∂z operator
+""" $TYPEDSIGNATURES """
 @propagate_inbounds function diffusive_heat_flux(i, j, k, grid, fields, args...)
     # Get temperature field
     T = fields.temperature

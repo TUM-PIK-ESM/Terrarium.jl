@@ -76,6 +76,11 @@ end
 
 # Kernel functions
 
+"""
+    $TYPEDSIGNATURES
+
+Compute the phenology factor and instantaneous leaf area index (LAI).
+"""
 @propagate_inbounds function compute_phenology(i, j, grid, fields, phenol::PALADYNPhenology)
     # Get input
     LAI_b = fields.balanced_leaf_area_index[i, j]
@@ -89,6 +94,11 @@ end
     return phen, LAI
 end
 
+"""
+    $TYPEDSIGNATURES
+
+Mutating wrapper for [`compute_phenology`](@ref) that stores the result in `out`.
+"""
 @propagate_inbounds function compute_phenology!(out, i, j, grid, fields, phenol::PALADYNPhenology)
     phen, LAI = compute_phenology(i, j, grid, fields, phenol)
     out.phenology_factor[i, j, 1] = phen

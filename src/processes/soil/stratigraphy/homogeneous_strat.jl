@@ -26,6 +26,11 @@ end
 
 soil_texture(i, j, k, grid, fields, strat::HomogeneousStratigraphy) = strat.texture
 
+"""
+    $TYPEDSIGNATURES
+
+Compute the organic fraction of solid material in the soil volume at index `i, j, k`.
+"""
 @inline function organic_fraction(
         i, j, k, grid, fields,
         strat::HomogeneousStratigraphy,

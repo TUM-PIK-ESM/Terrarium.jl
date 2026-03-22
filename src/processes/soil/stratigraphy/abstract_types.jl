@@ -5,8 +5,18 @@ Base type for representing the solid material composition of the soil.
 """
 abstract type AbstractSoilMatrix{NF} end
 
+"""
+    organic_fraction(::AbstractSoilMatrix)
+
+Return the fraction of the soil matrix that is organic material.
+"""
 function organic_fraction end
 
+"""
+    organic_fraction(::AbstractSoilMatrix)
+
+Return the `SoilTexture` describing the mineral component of the soil matrix.
+"""
 function mineral_texture end
 
 """

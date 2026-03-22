@@ -193,6 +193,11 @@ Compute autotrophic respiration following the scheme of PALADYN (Willeit 2016).
     return Ra, NPP
 end
 
+"""
+    $TYPEDSIGNATURES
+
+Mutating wrapper for [`compute_autotrophic_respiration`](@ref) that stores the results in `out`.
+"""
 @propagate_inbounds function compute_autotrophic_respiration!(out, i, j, grid, fields, autoresp::AbstractAutotrophicRespiration, args...)
     # Compute and store results
     Ra, NPP = compute_autotrophic_respiration(i, j, grid, fields, autoresp, args...)

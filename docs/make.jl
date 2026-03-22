@@ -111,7 +111,7 @@ makedocs(
                 "Carbon dynamics" => "processes/vegetation/carbon_dynamics.md",
                 "Vegetation dynamics" => "processes/vegetation/vegetation_dynamics.md",
                 "Vegetation phenology" => "processes/vegetation/vegetation_phenology.md",
-                "Root distribution" => "processes/vegetation/vegetation_root_distribution.md",
+                "Root distribution" => "processes/vegetation/root_distribution.md",
             ],
         ],
         "Models" => [

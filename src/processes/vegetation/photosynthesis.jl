@@ -325,6 +325,12 @@ end
 
 # Kernel functions
 
+"""
+    $TYPEDSIGNATURES
+
+Compute photosynthesis, leaf respiration, and gross primary production at a single grid point.
+Returns instantaneous rates in [gC/m²/s] and [kgC/m²/s] for integration by the timestepper.
+"""
 @propagate_inbounds function compute_photosynthesis(
         i, j, grid, fields,
         photo::LUEPhotosynthesis,
@@ -350,6 +356,11 @@ end
     return Rd, An, GPP
 end
 
+"""
+    $TYPEDSIGNATURES
+
+Calls [`compute_photosynthesis`](@ref) and stores the results in `out`.
+"""
 @propagate_inbounds function compute_photosynthesis!(
         out, i, j, grid, fields,
         photo::LUEPhotosynthesis,

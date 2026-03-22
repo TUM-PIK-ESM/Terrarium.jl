@@ -1,4 +1,4 @@
-# Stomatal conductance and leaf gas exchange
+# Stomatal conductance
 
 ```@meta
 CurrentModule = Terrarium

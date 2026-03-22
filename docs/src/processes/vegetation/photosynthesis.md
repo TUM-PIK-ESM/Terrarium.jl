@@ -96,7 +96,7 @@ where $\sigma_{\text{low}}$ and $\sigma_{\text{high}}$ are sigmoid-shaped functi
 
 ### Stomatal conductance coupling
 
-Stomatal conductance (gas exchange) is computed separately from photosynthesis using the Medlyn et al. (2011) optimal stomatal control theory (see [Stomatal Conductance](@ref)). This gives the internal leaf CO₂ concentration ratio $\lambda_c$ that drives the intercellular CO₂ pressure: $p_i = \lambda_c \cdot p_a$, which is used in the photosynthesis calculation above.
+Stomatal conductance (gas exchange) is computed separately from photosynthesis using the Medlyn et al. (2011) optimal stomatal control theory (see [Stomatal conductance](@ref)). This gives the internal leaf CO₂ concentration ratio $\lambda_c$ that drives the intercellular CO₂ pressure: $p_i = \lambda_c \cdot p_a$, which is used in the photosynthesis calculation above.
 
 The stomatal conductance model captures the empirical observation that stomata open more when CO₂ uptake is high and close when air is dry (high VPD), creating a tight coupling between photosynthesis, transpiration, and atmospheric water demand.
 
@@ -139,11 +139,11 @@ compute_pres_i
 ```
 
 ```@docs; canonical = false
-compute_t_stress
+compute_temperature_stress
 ```
 
 ```@docs; canonical = false
-compute_c1_c2
+compute_assimilation_factors
 ```
 
 ```@docs; canonical = false

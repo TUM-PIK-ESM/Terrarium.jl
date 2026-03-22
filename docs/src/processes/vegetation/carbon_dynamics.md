@@ -48,18 +48,15 @@ Net primary production (NPP) is partitioned between two pathways: increasing veg
 \end{equation}
 ```
 
-This ensures that when vegetation is below its minimum viable LAI, all NPP goes to increasing carbon rather than spreading.
+This ensures that when vegetation is below its minimum viable LAI, all NPP goes to increasing carbon rather than being available for spreading new vegetation. The vegetation carbon tendency is then:
 
-### Vegetation area fraction dynamics
-
-The area fraction $\nu$ of a given plant functional type (PFT) evolves according to a logistic-growth style equation:
 ```math
 \begin{equation}
-\frac{\partial \nu}{\partial t} = \lambda_{\text{NPP}} \frac{C_{\text{veg}}}{\nu^*} (1 - \nu) - \gamma_v \nu^*
+\frac{dC_{\text{veg}}}{dt} = (1 - \lambda_{\text{NPP}}) \text{NPP} - \Lambda_{\text{loc}}
 \end{equation}
 ```
 
-where $\nu^* = \max(\nu, \nu_{\text{seed}})$ ensures that a minimum seed fraction is maintained, and $\gamma_v$ (year$^{-1}$) is the background disturbance/mortality rate that limits maximum vegetation coverage. The first term represents expansion driven by carbon accumulation, while the second represents loss from disturbance.
+The first term represents NPP allocated to carbon accumulation on already-vegetated land, while the second term represents carbon losses through litterfall and turnover of all pools.
 
 ## Abstract types
 
@@ -67,22 +64,10 @@ where $\nu^* = \max(\nu, \nu_{\text{seed}})$ ensures that a minimum seed fractio
 AbstractVegetationCarbonDynamics
 ```
 
-```@docs; canonical = false
-AbstractVegetationDynamics
-```
-
 ## Concrete types
-
-### Carbon Dynamics
 
 ```@docs; canonical = false
 PALADYNCarbonDynamics
-```
-
-### Vegetation Dynamics
-
-```@docs; canonical = false
-PALADYNVegetationDynamics
 ```
 
 ## Methods
@@ -96,27 +81,23 @@ compute_λ_NPP
 ```
 
 ```@docs; canonical = false
-compute_litterfall_rate
+compute_Λ_loc
 ```
 
 ```@docs; canonical = false
-compute_γv
-```
-
-```@docs; canonical = false
-compute_ν_star
-```
-
-```@docs; canonical = false
-compute_ν_tendency
+compute_C_veg_tend
 ```
 
 ## Kernel functions
 
 ```@docs; canonical = false
-compute_carbon_tendency
+compute_veg_carbon_tendency
 ```
 
 ```@docs; canonical = false
-compute_carbon_tendencies!
+compute_veg_carbon_auxiliary!
+```
+
+```@docs; canonical = false
+compute_veg_carbon_tendencies!
 ```

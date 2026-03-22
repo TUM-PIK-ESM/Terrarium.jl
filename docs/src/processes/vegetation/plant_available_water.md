@@ -24,7 +24,7 @@ where $\theta_w$ is the current volumetric water content, $\theta_{wp}$ is the w
 
 ### Soil moisture limitation of photosynthesis
 
-The impact of soil water availability on photosynthesis is aggregated across the rooting depth using the [root distribution](@ref Root distribution):
+The impact of soil water availability on photosynthesis is aggregated across the rooting depth using the [root distribution](@ref "Root distribution"):
 ```math
 \begin{equation}
 \beta = \int_0^{z_{\text{max}}} W(z) \cdot r(z) \, dz
