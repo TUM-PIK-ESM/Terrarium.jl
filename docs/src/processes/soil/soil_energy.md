@@ -112,7 +112,7 @@ SoilEnergyBalance
 
 ### [State variables](@id soilenergy.vars)
 ```@example default
-variables(SoilEnergyBalance())
+variables(SoilEnergyBalance(Float32))
 ```
 
 ### [Process method dispatches](@id soilenergy.dispatches)

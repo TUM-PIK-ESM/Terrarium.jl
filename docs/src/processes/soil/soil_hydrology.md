@@ -48,7 +48,7 @@ SoilHydrology
 ### [State variables](@id soilhydrology.vars)
 
 ```@example default
-variables(SoilHydrology())
+variables(SoilHydrology(Float32))
 ```
 
 ### [Process method dispatches](@id soilhydrology.dispatches)
