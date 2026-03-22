@@ -268,6 +268,7 @@ end
 
 @testset "Photosynthesis (GPP and Rd)" begin
     photo = LUEPhotosynthesis()
+    constants = PhysicalConstants()
     swdown = 50.0 # W/m²
     pres = 1.0e5 # Pa
     co2 = 400.0 # ppm
@@ -277,21 +278,21 @@ end
     # Test T_air < -3 (GPP and Rd should be 0)
     T_air = -5.0 # °C
     LAI = 5.0 # Mock value
-    GPP, Rd = compute_photosynthesis(photo, T_air, swdown, pres, co2, LAI, λc, β)
+    GPP, Rd = compute_photosynthesis(photo, constants, T_air, swdown, pres, co2, LAI, λc, β)
     @test GPP == 0.0
     @test Rd == 0.0
 
     # Test T_air > -3 and LAI=0 (GPP and Rd should be 0)
     T_air = 20.0 # °C
     LAI = 0.0
-    GPP, Rd = compute_photosynthesis(photo, T_air, swdown, pres, co2, LAI, λc, β)
+    GPP, Rd = compute_photosynthesis(photo, constants, T_air, swdown, pres, co2, LAI, λc, β)
     @test GPP == 0.0
     @test Rd == 0.0
 
     # Test T_air > -3 and LAI > 0 (GPP and Rd should be finite)
     T_air = 20.0 # °C
     LAI = 5.0 # Mock value
-    GPP, Rd = compute_photosynthesis(photo, T_air, swdown, pres, co2, LAI, λc, β)
+    GPP, Rd = compute_photosynthesis(photo, constants, T_air, swdown, pres, co2, LAI, λc, β)
     @test isfinite(GPP)
     @test isfinite(Rd)
 
