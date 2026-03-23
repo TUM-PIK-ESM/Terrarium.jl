@@ -127,7 +127,7 @@ makedocs(
             ],
         ],
         "Models" => [
-
+            "Soil model" => "models/soil_model.md",
         ],
         "Examples" => [
             "Overview" => "examples_overview.md",
