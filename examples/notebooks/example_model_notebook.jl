@@ -595,20 +595,23 @@ fts = FieldTimeSeries(output_file, "u")
 # ╔═╡ c06502ff-c021-488c-a333-36233091d046
 plot(1:length(fts), [fts[i][1, 1, 1] for i in 1:length(fts)])
 
-# ╔═╡ bc5c7603-314a-411e-8097-a6344f7bf52a
-begin
-    using JLD2
-
-    output_file_name = joinpath(output_dir, "ddsnow-simulation.jld2")
-    fts_result = FieldTimeSeries(output_file, "snow_depth")
-end
-
 # ╔═╡ c8a89e9e-d24a-415c-9a5b-5089053f6384
 begin
     # Run the simulation
     run!(snow_sim)
     @assert isfile(output_file) "Output file does not exist!"
     display("Simulaton data saved to $(output_file)")
+	simulation_ran = true 
+end
+
+# ╔═╡ bc5c7603-314a-411e-8097-a6344f7bf52a
+begin
+    using JLD2
+	   
+	@assert isfile(output_file) "Output file does not exist!"
+	if simulation_ran
+    	fts_result = FieldTimeSeries(output_file, "snow_depth")
+	end
 end
 
 # ╔═╡ b7c37a45-b00f-4d27-bcf5-f42ac610566e
