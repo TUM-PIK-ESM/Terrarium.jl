@@ -9,7 +9,7 @@ CurrentModule = Terrarium
 
 ## Modularity through multiple dispatch
 
-Terrarium relies heavily on a core feature of Julia: *multiple dispatch*. Multiple dispatch is a programming pattern where methods (functions with a paritcular set of argument types) are dynamically invoked based on the (runtime) types of all their arguments. This can be constrasted to most object-oriented languages (e.g. Java, C/C++/C#, Python, etc.) where dispatch occurs based on only a single (implicit) argument, typically the type of the "object" (or `struct`) with which the method is associated.
+Terrarium relies heavily on a core feature of Julia: *multiple dispatch*. Multiple dispatch is a programming pattern where methods (functions with a particular set of argument types) are dynamically invoked based on the (runtime) types of all their arguments. This can be contrasted to most object-oriented languages (e.g. Java, C/C++/C#, Python, etc.) where dispatch occurs based on only a single (implicit) argument, typically the type of the "object" (or `struct`) with which the method is associated.
 
 Multiple dispatch allows us to implement model components based on specific combinations of types. As a concrete example, consider the following method signature from Terrarium's surface hydrology module that computes the aerodynamic resistance beneath the canopy:
 ```julia
