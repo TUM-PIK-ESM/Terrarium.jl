@@ -1,7 +1,7 @@
 # Core interfaces
 
 !!! warning "🚧🚧 Under construction 🚧🚧"
-    The software architecture of Terrarium.jl is still in an early prototype stage and is the subject of ongoing discussion. This page is a non-exhaustive summary of the current working concept and will be updated accordingly if and when the architecture changes.
+    The software architecture of Terrarium.jl is still in a prototype stage and is the subject of ongoing discussion. This page is a non-exhaustive summary of the current working concept and will be updated accordingly if and when the architecture changes.
 
 ```@meta
 CurrentModule = Terrarium

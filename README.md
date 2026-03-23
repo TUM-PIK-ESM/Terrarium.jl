@@ -39,7 +39,7 @@ It is important to emphasize, however, what Terrarium is not:
 
 ## Installation
 
-Terrarium is still in an early prototype stage and is not yet registered as a package in the Julia General registry.
+Terrarium is still in a prototype stage and is not yet registered as a package in the Julia General registry.
 
 However, you can still install the package from the repository via the package manager (type `]` in your REPL):
 
