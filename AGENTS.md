@@ -120,7 +120,7 @@ src/
 ├── input_output/                   # Types and functions for managing inputs and outputs
 ├── models/                         # Model implementations
 ├── processes/                      # Process implementations
-├── timesteppers/                   # Time stepping schemes, integrators, and integration with Oceanangians `AbstractModel`
+├── timesteppers/                   # Time stepping schemes, integrators, and integration with Oceananigans `AbstractModel`
 ├── utils/                          # Miscellaneous utilities
 ```
 

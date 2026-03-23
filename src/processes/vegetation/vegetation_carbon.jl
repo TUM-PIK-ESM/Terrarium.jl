@@ -6,7 +6,7 @@ Represents a generic coupling of vegetation carbon processes.
 @kwdef struct VegetationCarbon{
         NF,
         Photosynthesis <: AbstractPhotosynthesis{NF},
-        StomatalConducatance <: AbstractStomatalConductance{NF},
+        StomatalConductance <: AbstractStomatalConductance{NF},
         AutotrophicRespiration <: AbstractAutotrophicRespiration{NF},
         Phenology <: AbstractPhenology{NF},
         CarbonDynamics <: AbstractVegetationCarbonDynamics{NF},
@@ -16,8 +16,8 @@ Represents a generic coupling of vegetation carbon processes.
     "Photosynthesis scheme"
     photosynthesis::Photosynthesis # not prognostic
 
-    "Stomatal conducantance scheme"
-    stomatal_conductance::StomatalConducatance # not prognostic
+    "Stomatal conductance scheme"
+    stomatal_conductance::StomatalConductance # not prognostic
 
     "Autotrophic respiration scheme"
     autotrophic_respiration::AutotrophicRespiration # not prognostic

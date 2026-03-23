@@ -15,7 +15,7 @@ Terrarium should not be thought of as a single model but rather a *framework* or
 A “model” in Terrarium represents a collection of components that fully characterize the dynamics of a land simulation. All models must be defined as `struct`s that subtype [`AbstractModel`](@ref) and typically consist of the following components:
 - A `grid` that defines both a vertical and lateral discretization of the spatial domain,
 - One or more [Processes](@ref) that define the state variables, parameters, and dynamics of the model,
-- An `initializer` that defines a sequence of initialization routines (as well as any assocaited parameters) for the state variables declared by all of its components.
+- An `initializer` that defines a sequence of initialization routines (as well as any associated parameters) for the state variables declared by all of its components.
 
 To see this in action, let's look again at a simple example of setting up a soil model for a single vertical column:
 
@@ -82,10 +82,10 @@ Calling `initialize` on a model or process type returns a [`StateVariables`](@re
 Of course, very few models can do anything useful or interesting starting from (literally) zero. Terrarium provides three complementary mechanisms through which initialization routines for model/process state variables can be defined:
 
 - Direct initialization via the `initializers` keyword argument of [`initialize`](@ref). The keyword argument must be a `NamedTuple` where the keys correspond to the name of the state variable and the values are either scalars, arrays matching the size of the model `grid`, or functions of the form `f(coords...)` where `coords` are the non-`Flat` dimensions of `grid`. For column-based grids, this is generally `f(x,z)` with `x` corresponding to a column index.
-- [`AbstractInitializer`](@ref) types encapsulate a sequence of initialization routines. These `Initializer` types can be supplied to subtypes of `AbstractModel` during construction. Models can/should typically define corresponding `AbstractInitializer` types that represent common initilization strategies appropriate for the processes included in that model; e.g. the `SoilModel` defines [`SoilInitializer`](@ref) with process-specific initialization types like [`QuasiThermalSteadyState`](@ref) and [`SaturationWaterTable`](@ref).
-- Model/process speciic dispatches of [`initialize!`](@ref) can be defined for process initialization logic that should be run regardless of the choice of prognostic state variable initialization.
+- [`AbstractInitializer`](@ref) types encapsulate a sequence of initialization routines. These `Initializer` types can be supplied to subtypes of `AbstractModel` during construction. Models can/should typically define corresponding `AbstractInitializer` types that represent common initialization strategies appropriate for the processes included in that model; e.g. the `SoilModel` defines [`SoilInitializer`](@ref) with process-specific initialization types like [`QuasiThermalSteadyState`](@ref) and [`SaturationWaterTable`](@ref).
+- Model/process specific dispatches of [`initialize!`](@ref) can be defined for process initialization logic that should be run regardless of the choice of prognostic state variable initialization.
 
-As a general rule, these initializers are invoked in the order that they are listed above. Implementations of `initilaize!` should generally assume that the prognostic state has already been initilaized by corresponding `Field` or model initializers.
+As a general rule, these initializers are invoked in the order that they are listed above. Implementations of `initialize!` should generally assume that the prognostic state has already been initialized by corresponding `Field` or model initializers.
 
 ## Timestepping
 
@@ -108,7 +108,7 @@ A single time step of the `ModelIntegrator` roughly involves four steps:
 3. Invoke [`compute_tendencies!`](@ref) on all model components to calculate tendencies for all prognostic variables,
 4. Apply the tendencies computed in step (3) to update the prognostic state based on the selected timestepping scheme. Higher order explicit or implicit timesteppers may repeat steps 1-3 multiple times within a single time step.
 
-As an example, let's consider the construction and initalization of a [`SoilModel`](@ref):
+As an example, let's consider the construction and initialization of a [`SoilModel`](@ref):
 
 ```@example basics
 arch = CPU()
