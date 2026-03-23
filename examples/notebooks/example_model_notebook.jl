@@ -25,9 +25,15 @@ end
 using CairoMakie, GeoMakie
 
 # ╔═╡ a55711ae-919c-46b0-a03e-ac4e105e0c4c
-begin 
-	using RingGrids, NCDatasets
-	global_grid = FullGaussianGrid(22) # we define the global grid we model on as a HealPIX grid 
+begin
+    using RingGrids, NCDatasets
+    global_grid = FullGaussianGrid(22) # we define the global grid we model on as a HealPIX grid
+end
+
+# ╔═╡ d77c8a4b-b53c-4906-a841-8ec37287ae9d
+begin
+    using PlutoUI
+    PlutoUI.LocalResource("snow_depth.mp4")
 end
 
 # ╔═╡ 5630efd5-2482-463d-913f-9addb120beec
@@ -132,37 +138,37 @@ Terrarium.variables(::ExpModel) = (
 
 # ╔═╡ dfc52b4e-a015-4295-b47f-1dd2b10abeb2
 begin
-	using KernelAbstractions # we need this later for the kernels 
-	
-	@kwdef struct SnowModel{NF, Grid <: Terrarium.AbstractLandGrid{NF}, Pro, Init} <: Terrarium.AbstractModel{NF, Grid}
-	    "Spatial grid on which state variables are discretized"
-	    grid::Grid
-	
-	    "Snow melting process"
-	    snow_melt::Pro = DegreeDaySnow()
-	
-	    "Model initializer"
-	    initializer::Init = DefaultInitializer(eltype(grid))
-	end
-	
-	Terrarium.variables(model::SnowModel) = (
-	    Terrarium.variables(model.snow_melt)..., 
-	)
-	
-	@kwdef struct DegreeDaySnow{NF} <: Terrarium.AbstractProcess{NF}
-		"Degree-day factor" 
-	    k::NF = 1
-	
-		"Melting point of snow on the ground"
-		T_melt::NF = 0
-	end
-	
-	Terrarium.variables(model::DegreeDaySnow{NF}) where {NF} = (
-		Terrarium.input(:air_temperature, XY(), default = NF(0), units=u"°C", desc = "Near-surface air temperature in °C"),
-		Terrarium.input(:snow_fall, XY(), default = NF(0), units=u"m/s", desc = "snow fall rate in m/s"),
-	    Terrarium.prognostic(:snow_depth, XY(), units=u"m", desc = "Snow depth in m")
-	)
-	
+    using KernelAbstractions # we need this later for the kernels
+
+    @kwdef struct SnowModel{NF, Grid <: Terrarium.AbstractLandGrid{NF}, Pro, Init} <: Terrarium.AbstractModel{NF, Grid}
+        "Spatial grid on which state variables are discretized"
+        grid::Grid
+
+        "Snow melting process"
+        snow_melt::Pro = DegreeDaySnow()
+
+        "Model initializer"
+        initializer::Init = DefaultInitializer(eltype(grid))
+    end
+
+    Terrarium.variables(model::SnowModel) = (
+        Terrarium.variables(model.snow_melt)...,
+    )
+
+    @kwdef struct DegreeDaySnow{NF} <: Terrarium.AbstractProcess{NF}
+        "Degree-day factor [m/(Ks)]"
+        k::NF = 0.005f0 / (24 * 60 * 60)
+
+        "Melting point of snow on the ground [°C]"
+        T_melt::NF = 0.0f0
+    end
+
+    Terrarium.variables(model::DegreeDaySnow{NF}) where {NF} = (
+        Terrarium.input(:air_temperature, XY(), default = NF(0), units = u"°C", desc = "Near-surface air temperature in °C"),
+        Terrarium.input(:snow_fall, XY(), default = NF(0), units = u"m/s", desc = "snow fall rate in m/s"),
+        Terrarium.prognostic(:snow_depth, XY(), units = u"m", desc = "Snow depth in m"),
+    )
+
 end
 
 # ╔═╡ d4d19de7-6f77-4873-9182-9832d1ca4381
@@ -251,7 +257,7 @@ begin
     t_F = 0:1:300
     F = FieldTimeSeries(grid, XY(), t_F)
     F.data .= randn(size(F))
-    input = InputSource(; F)
+    input = InputSource(grid, F, name=:F)
 end
   ╠═╡ =#
 
@@ -368,17 +374,6 @@ md"""
 Then load the output data and plot the results:
 """
 
-# ╔═╡ dbe8d0fa-893f-4c05-9e46-220ab41636f3
-#=╠═╡
-# Load output into field time series
-fts = FieldTimeSeries(output_file, "u")
-  ╠═╡ =#
-
-# ╔═╡ c06502ff-c021-488c-a333-36233091d046
-#=╠═╡
-plot(1:length(fts), [fts[i][1, 1, 1] for i in 1:length(fts)])
-  ╠═╡ =#
-
 # ╔═╡ 25e22154-946f-4c32-a1fa-73d86e935ff3
 md"""
 Well, this was a simple way to define and run a simple exponential model with external forcing following the Terrarium `AbstractModel` interface. 
@@ -387,7 +382,7 @@ But typically, our computations will be a bit more complicated than that and we 
 
 ## Writing kernelized-code for Terrarium 
 
-Terrarium is a device-agnostic model that runs across different architectures like x86 CPUs, ARM CPUs, but also GPUs. To achieve this wide compability, we rely on KernelAbstractions to write our compute code in kernels. But don't panic! We provide a lot of utilities and functions that help you with that and ensure that our models are fast and efficient as well. In simple terms, kernels can be thought of as the inner body of a for-loop. The kernel function implements one iteration of that loop, in Terrarium the kernel function implements the computation for a single column / grid point. To execute the computation the kernel is 'launched' on the device we set up when constructing the model (per default your CPU). In this launch we also set the range this kernel should iterate over (usually all columns of the grid), and hand over all arguments the kernel function needs. 
+Terrarium.jl is a device-agnostic modelling framework that runs across different architectures like x86 CPUs, ARM CPUs, but also GPUs. To achieve this wide compability, we rely on KernelAbstractions to write our compute code in kernels. But don't panic! We provide a lot of utilities and functions that help you with that and ensure that our models are fast and efficient as well. In simple terms, kernels can be thought of as the inner body of a for-loop. The kernel function implements one iteration of that loop, in Terrarium the kernel function implements the computation for a single column / grid point. To execute the computation the kernel is 'launched' on the device we set up when constructing the model (per default your CPU). In this launch we also set the range this kernel should iterate over (usually all columns of the grid), and hand over all arguments the kernel function needs. 
 
 To demonstrate this process and all tools we have availble to help you with that, we will implement a degree day snow model. 
 
@@ -439,41 +434,45 @@ With that, we can also define our `compute_foo_tendency` function that does the 
 
 # ╔═╡ d8b05ae3-ecba-41de-84c7-45cbf31b735d
 function compute_snow_melt_tendency(i, j, grid, fields, snow_melt)
-	# get the variables we need 
-	P = fields.snow_fall[i,j] 
-	T = fields.air_temperature[i,j]
+    # get the variables we need
+    P = fields.snow_fall[i, j]
+    T = fields.air_temperature[i, j]
 
-	# get the parameters 
-	T_melt = snow_melt.T_melt 
-	k = snow_melt.k 
+    # get the parameters
+    T_melt = snow_melt.T_melt
+    k = snow_melt.k
 
-	if T > T_melt 
-		return P - k * (T - T_melt)
-	else 
-		return P
-	end 
-end 
+    if T > T_melt
+        return P - k * (T - T_melt)
+    else
+        return P
+    end
+end
 
 # ╔═╡ 72ec62c7-5066-481d-b9c9-84a4851a1e0c
 begin
-	function Terrarium.compute_tendencies!(state, model::SnowModel)
-	    compute_tendencies!(state, model.grid, model.snow_melt)
-	    return nothing
-	end
-	
-	function Terrarium.compute_tendencies!(
-	        state,
-	        grid,
-	        snow_melt::DegreeDaySnow
-	    )
-		fields = get_fields(state, snow_melt)
-	    launch!(grid, XY, compute_snow_melt!, state.tendencies, grid, fields, snow_melt)
-	end
-	
-	@kernel function compute_snow_melt!(tend, grid, fields, snow_melt)
-		i,j = @index(Global, NTuple)
-		tend[i, j] = compute_snow_melt_tendency(i, j, grid, fields, snow_melt)
-	end 
+    function Terrarium.compute_tendencies!(state, model::SnowModel)
+        compute_tendencies!(state, model.grid, model.snow_melt)
+        return nothing
+    end
+
+    function Terrarium.compute_tendencies!(
+            state,
+            grid,
+            snow_melt::DegreeDaySnow
+        )
+        fields = get_fields(state, snow_melt)
+        return Terrarium.launch!(grid, XY, compute_snow_melt!, state.tendencies, fields, snow_melt)
+    end
+
+    @kernel function compute_snow_melt!(tend, grid, fields, snow_melt)
+        i, j = @index(Global, NTuple)
+        tend.snow_depth[i, j] = compute_snow_melt_tendency(i, j, grid, fields, snow_melt)
+    end
+
+    # no auxiliary variables
+    Terrarium.compute_auxiliary!(state, model::SnowModel) = nothing
+    Terrarium.compute_auxiliary!(state, grid, model::DegreeDaySnow) = nothing
 end
 
 # ╔═╡ e81f4b38-5789-416e-acee-e02b052cb8f4
@@ -485,8 +484,8 @@ There's one additional thing we need to take of: the snow depth is strictly non-
 
 # ╔═╡ b723c568-c0e1-4d9a-9a74-237d7cfd1ea9
 function Terrarium.timestep!(state::StateVariables, model::ExpModel, timestepper, Δt)
-	state.snow_depth .= max.(state.snow_depth, 0)
-end 
+    return state.snow_depth .= max.(state.snow_depth, 0)
+end
 
 # ╔═╡ 841c540f-ed63-4d89-9baf-836ccb3aed0d
 md"""
@@ -499,15 +498,16 @@ Now, we get all the input data. We can use the input data provided by `RingGrids
 """
 
 # ╔═╡ 86f4103b-ddaf-4f89-93cf-1290c623274e
-begin 	
-	snow_climatology = RingGrids.get_asset("data/boundary_conditions/snow.nc", from_assets=true, name="snow", ArrayType=FullGaussianField, FileFormat=NCDataset, output_grid=global_grid)
-	lst_climatology = RingGrids.get_asset("data/boundary_conditions/land_surface_temperature.nc", from_assets=true, name="lst", ArrayType=FullGaussianField, FileFormat=NCDataset, output_grid=global_grid)
+begin
+    snow_climatology = RingGrids.get_asset("data/boundary_conditions/snow.nc", from_assets = true, name = "snow", ArrayType = FullGaussianField, FileFormat = NCDataset, output_grid = global_grid) ./ 3.8e10 # ~ conversion from kg/(month * m^2) to m/(s * m^2)
 
-	# the land sea mask we infer from the non-NaN points in the climatology files
-	land_sea_mask = isfinite.(snow_climatology[:,1])
-	@assert all(land_sea_mask .== isfinite.(lst_climatology[:,1])) # make sure it's the same for both
+    lst_climatology = RingGrids.get_asset("data/boundary_conditions/land_surface_temperature.nc", from_assets = true, name = "lst", ArrayType = FullGaussianField, FileFormat = NCDataset, output_grid = global_grid) .- 273.15 # data is in K, we want C
 
-end 
+    # the land sea mask we infer from the non-NaN points in the climatology files
+    land_sea_mask = isfinite.(snow_climatology[:, 1])
+    @assert all(land_sea_mask .== isfinite.(lst_climatology[:, 1])) # make sure it's the same for both
+
+end
 
 # ╔═╡ 6ba13cea-da1c-457e-ada0-8987a0667b24
 md"""
@@ -518,10 +518,10 @@ The snow and land surface temperatures are monthly climatologies. For this simpl
 heatmap(land_sea_mask)
 
 # ╔═╡ 051d99da-a7b8-4cd8-be7c-3f7f615345d3
-heatmap(lst_climatology[:,1], title="Land Surface Temperature")
+heatmap(lst_climatology[:, 1], title = "Land Surface Temperature")
 
 # ╔═╡ 9982a3fd-c2ef-4bba-917e-211912fdce84
-heatmap(snow_climatology[:,1], title="Snow")
+heatmap(snow_climatology[:, 1], title = "Snow")
 
 # ╔═╡ 49364e74-1272-4d65-892c-5b08d0e49a54
 md"""
@@ -534,11 +534,11 @@ Now, we just need to define initialize everything correctly. As we are working w
 """
 
 # ╔═╡ e80009fb-cf05-4360-9f7e-c355d059ff5c
-begin 
-	snow_grid = ColumnRingGrid(UniformSpacing(N=1), global_grid, land_sea_mask)
-	snow_input = InputSource(snow_grid, snow_climatology[:,1], name=:snow_fall, units=u"m/s")
-	lst_input = InputSource(snow_grid,  lst_climatology[:,1], name=:air_temperature, units=u"°C")
-end 
+begin
+    snow_grid = ColumnRingGrid(UniformSpacing(N = 1), global_grid, land_sea_mask)
+    snow_input = InputSource(snow_grid, snow_climatology[:, 1], name = :snow_fall, units = u"m/s")
+    lst_input = InputSource(snow_grid, lst_climatology[:, 1], name = :air_temperature, units = u"°C")
+end
 
 # ╔═╡ 7f310793-f4af-4013-b02f-8273107246e7
 md"""
@@ -546,18 +546,123 @@ As an initial condition, we just cover the whole Earth in deep snow (everywhere 
 """
 
 # ╔═╡ b12f3815-89d3-4c1d-9224-6bde2d1f939e
-snow_initializers = (snow_depth = 5.0,) 
+snow_initializers = (snow_depth = 0.5,)
 
 # ╔═╡ 01e757f2-55ec-494f-8286-29e5e5fe0a2e
 md"""
-Now, we initialize our model and the integrator.
+Now, we initialize our model and the integrator. As in the first example, we use a `Heun` time stepper
 """
 
 # ╔═╡ a29583b9-62be-42ef-adf0-867a734a03d7
 snow_model = SnowModel(snow_grid)
 
 # ╔═╡ 018375eb-fd00-48b6-9b9d-dc42ba2d5c2d
-snow_integrator = initialize(snow_model, Heun(Δt = 1.0), snow_input, lst_input; initializers=snow_initializers)
+snow_integrator = initialize(snow_model, Heun(Δt = Float32(1.0)), snow_input, lst_input; initializers = snow_initializers)
+
+# ╔═╡ 5f9a57c7-9094-418f-ae62-11cce5cad690
+md"""
+... and we can finally run the model. As before, by wrapping it in an `Oceananigans.Simulation` to output our results 
+"""
+
+# ╔═╡ 4288f181-fb84-4ce1-b13b-674a5a8de132
+snow_sim = Simulation(snow_integrator; stop_time = 7.0e6, Δt = 3600.0)
+
+# ╔═╡ 7094e65a-fbd5-4bc1-9734-54c77fbeb757
+begin
+    # We need to import some types from Oceananigans here for output handling
+    using Oceananigans: TimeInterval, JLD2Writer
+    using Oceananigans.Units: seconds
+
+    # Reset the integrator to its initial state
+    Terrarium.initialize!(snow_integrator)
+
+    output_dir = mkpath(tempname())
+    output_file = joinpath(output_dir, "ddsnow-simulation.jld2")
+    snow_sim.output_writers[:snapshots] = JLD2Writer(
+        snow_integrator,
+        (snow_depth = snow_integrator.state.snow_depth,);
+        filename = output_file,
+        overwrite_existing = true,
+        including = [:grid],
+        schedule = TimeInterval(3600) # output every hour
+    )
+end
+
+# ╔═╡ dbe8d0fa-893f-4c05-9e46-220ab41636f3
+# Load output into field time series
+fts = FieldTimeSeries(output_file, "u")
+
+# ╔═╡ c06502ff-c021-488c-a333-36233091d046
+plot(1:length(fts), [fts[i][1, 1, 1] for i in 1:length(fts)])
+
+# ╔═╡ bc5c7603-314a-411e-8097-a6344f7bf52a
+begin
+    using JLD2
+
+    output_file_name = joinpath(output_dir, "ddsnow-simulation.jld2")
+    fts_result = FieldTimeSeries(output_file, "snow_depth")
+end
+
+# ╔═╡ c8a89e9e-d24a-415c-9a5b-5089053f6384
+begin
+    # Run the simulation
+    run!(snow_sim)
+    @assert isfile(output_file) "Output file does not exist!"
+    display("Simulaton data saved to $(output_file)")
+end
+
+# ╔═╡ b7c37a45-b00f-4d27-bcf5-f42ac610566e
+md"""
+And now, we plot that data. First we load the JLD2 file. 
+"""
+
+# ╔═╡ 78b731fd-6106-4a43-a6f5-264f5fbc271d
+md""" 
+Then, we plot it using `CairoMakie`. For this purpose we first convert to a `RingGrids.Field` and then plot it via `heatmap`
+"""
+
+# ╔═╡ 0872d1a8-f170-46ee-a99e-fe1c6f533ace
+begin
+    tsteps = 1
+
+    ring_field = RingGrids.Field(fts_result[tsteps], snow_grid)[:, 1]
+    heatmap(ring_field)
+
+    fig = Figure(size = (1200, 660))
+
+    ax = Axis(
+        fig[1, 1],
+        aspect = 2,             # 0-360˚E -90-90˚N maps have an aspect of 2:1
+        title = "Snow Depth",
+        titlesize = 10,
+        xticks = 0:60:360,      # label 0˚E, 60˚E, 120˚E, ...
+        yticks = -60:30:60,     # label -60˚N, -30˚N, 0˚N, ...
+        xticklabelsize = 10,
+        yticklabelsize = 10,
+        xtickformat = values -> ["$(round(Int, value))˚E" for value in values],
+        ytickformat = values -> ["$(round(Int, value))˚N" for value in values],
+    )
+
+    lond = RingGrids.get_lond(ring_field)    # get lon, lat axes in degrees
+    latd = RingGrids.get_latd(ring_field)
+
+    n_t = Observable(1)
+
+    data = @lift Matrix(RingGrids.Field(fts_result[$n_t], snow_grid)[:, 1])
+    hm = heatmap!(ax, lond, latd, data, colorrange = (0, 1))
+    Colorbar(fig[:, end + 1], hm)
+
+    frames = 1:length(fts_result)
+
+    record(fig, "snow_depth.mp4", frames, framerate = 12) do i # core animation loop
+        n_t[] = i
+    end
+end
+
+# ╔═╡ bfb60a6c-df9c-4d45-88f0-a01f572fe8b2
+md"""
+And just like that we have implemented our snow simulation. In this version the forcing / input is completly static, so we converge to a static point that corresponds to the January climatology. That's why still see a faily big snow cover in the northern hemisphere. An obvious next step for this model would be now to actually use the full seasonal climatology.
+"""
 
 # ╔═╡ Cell order:
 # ╟─5630efd5-2482-463d-913f-9addb120beec
@@ -621,6 +726,16 @@ snow_integrator = initialize(snow_model, Heun(Δt = 1.0), snow_input, lst_input;
 # ╠═e80009fb-cf05-4360-9f7e-c355d059ff5c
 # ╟─7f310793-f4af-4013-b02f-8273107246e7
 # ╠═b12f3815-89d3-4c1d-9224-6bde2d1f939e
-# ╟─01e757f2-55ec-494f-8286-29e5e5fe0a2e
+# ╠═01e757f2-55ec-494f-8286-29e5e5fe0a2e
 # ╠═a29583b9-62be-42ef-adf0-867a734a03d7
 # ╠═018375eb-fd00-48b6-9b9d-dc42ba2d5c2d
+# ╟─5f9a57c7-9094-418f-ae62-11cce5cad690
+# ╠═4288f181-fb84-4ce1-b13b-674a5a8de132
+# ╠═7094e65a-fbd5-4bc1-9734-54c77fbeb757
+# ╠═c8a89e9e-d24a-415c-9a5b-5089053f6384
+# ╟─b7c37a45-b00f-4d27-bcf5-f42ac610566e
+# ╠═bc5c7603-314a-411e-8097-a6344f7bf52a
+# ╟─78b731fd-6106-4a43-a6f5-264f5fbc271d
+# ╠═0872d1a8-f170-46ee-a99e-fe1c6f533ace
+# ╠═d77c8a4b-b53c-4906-a841-8ec37287ae9d
+# ╟─bfb60a6c-df9c-4d45-88f0-a01f572fe8b2

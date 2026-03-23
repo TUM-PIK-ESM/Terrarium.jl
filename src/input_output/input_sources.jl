@@ -25,7 +25,7 @@ variables(::InputSource) = ()
 
 Returns the name of the input source.
 """
-inputname(::InputSource{NF, name}) where {NF, name} = name
+varname(::InputSource{NF, name}) where {NF, name} = name
 
 """
     $SIGNATURES
