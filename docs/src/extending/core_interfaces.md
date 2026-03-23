@@ -21,7 +21,7 @@ In order to maximize code reuse and ease coupling of different components, Terra
 ```julia
 air_temperature(i, j, grid, fields, atmos::AbstractAtmosphere) = fields.air_temperature[i, j]
 ```
-which defaults to assuming that a 2D input `Field` (see [Fields](@ref)) named `air_temperature` has been defined and is available as a property of `fields`. However, alternative implementations could derive this air temperature from other state variables or via some other function, without requiring any changes to the calling code. This kind of interface-based coupling is core to the software design of Terrarium.
+which defaults to assuming that a 2D input `Field` (see [Fields](@ref)) named `air_temperature` has been defined and is available as a property of `fields`. However, alternative implementations could derive this air temperature from other state variables or via some other function, without requiring any changes to the calling code. This kind of interface-based coupling is core to the software design of Terrarium. Method interfaces for individual process and parameterization types are summarized on their respective doc pages. Documentation and method dispatches can also be dynamically queried from the Julia REPL via the help function `?air_temperature` or with `methods(air_temperature)` and `methodswith`.
 
 ## Core interfaces
 
@@ -35,7 +35,7 @@ compute_tendencies!
 
 ### The `AbstractProcess` interface
 
-In the example above, both `AbstractAtmosphere` and `PALADYNCanopyEvapotranspiration` are examples of "processes* that subtype the `AbstractProcess` type.
+In the example above, both `AbstractAtmosphere` and `PALADYNCanopyEvapotranspiration` are examples of *processes* that subtype the `AbstractProcess` type.
 
 Implementations of `AbstractProcess` represent physical processes characterized by:
 - Zero or more state `variable`s that vary spatially across any given `grid`,
