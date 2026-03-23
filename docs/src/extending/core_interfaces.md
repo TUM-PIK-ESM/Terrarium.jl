@@ -15,7 +15,7 @@ Multiple dispatch allows us to implement model components based on specific comb
 ```julia
 aerodynamic_resistance(i, j, grid, fields, atmos::AbstractAtmosphere, evtr::PALADYNCanopyEvapotranspiration)
 ```
-This method will be executed when the function `aerodynamic_resistance` is called with any implementation (subtype) of `AbstractAtmosphere` and the `PALADYNCanopyEvapotranspiration` evapotranpsiration scheme. We could define further dispatches that have different implementations for specific subtypes of `AbstractAtmosphere` or alternative canopy evapotranspiration schemes which would then be invoked when the user configures a model with that chocie of components.
+This method will be executed when the function `aerodynamic_resistance` is called with any implementation (subtype) of `AbstractAtmosphere` and the `PALADYNCanopyEvapotranspiration` evapotranspiration scheme. We could define further dispatches that have different implementations for specific subtypes of `AbstractAtmosphere` or alternative canopy evapotranspiration schemes which would then be invoked when the user configures a model with that choice of components.
 
 In order to maximize code reuse and ease coupling of different components, Terrarium also defines *interfaces* for each model component (such as `AbstractAtmosphere`). These interfaces usually consist of a standard set of methods and behaviors that each component is expected to implement. As an example, `AbstractAtmosphere` defines a method of the form,
 ```julia
