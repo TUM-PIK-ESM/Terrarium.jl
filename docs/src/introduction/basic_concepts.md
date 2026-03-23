@@ -1,4 +1,4 @@
-# Baisc concepts
+# Basic concepts
 
 ```@meta
 CurrentModule = Terrarium
