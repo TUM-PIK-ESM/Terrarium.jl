@@ -46,7 +46,7 @@ Concrete implementations of `AbstractProcess` are `struct` types that typically 
 
 Default (no-op) implementations of [`variables`](@ref) and [`initialize!`](@ref) are provided for convenience. However, to avoid ambiguity, `compute_auxiliary!` and `compute_tendencies!` **must be defined by each process** even if they are not needed.
 
-The required additional `args` are may vary for each type of `AbstractProcess`; typically they consist of either other `AbstractProcess`es on which the process depends or universal parameter types like [`PhysicalConstants`](@ref). These argument types must be clearly documented and standardized for each abstract subtype of `AbstractProcess`. Changes to these interfaces, e.g. the addition of alternative call patterns with different `args`, should be made with great care and only when absolutely necessary. It is recommended for implementations to always include trailing `args...` to ensure forward compatibility.
+The required additional `args` may vary for each type of `AbstractProcess`; typically they consist of either `AbstractProcess`es on which the process depends or universal parameter types like [`PhysicalConstants`](@ref). These argument types must be clearly documented and standardized for each abstract subtype of `AbstractProcess`. Changes to these interfaces, e.g. the addition of alternative call patterns with different `args`, should be made with great care and only when absolutely necessary. It is recommended for implementations to always include trailing `args...` to ensure forward compatibility.
 
 For more details on the `state` structure and definition of `variables`, see the section on [State variables](@ref) below.
 
