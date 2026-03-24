@@ -386,7 +386,7 @@ Terrarium.jl is a device-agnostic modelling framework that runs across different
 
 In simple terms, kernels can be thought of as the inner body of a for-loop. The kernel function implements one iteration of that loop; in Terrarium, the kernel function implements the computation for a single column / grid point. To execute the computation the kernel is "launched" on the device we set up when constructing the model (per default your CPU). When configuring the kernel launch, we also set the range this kernel should iterate over (usually all points on the grid), and hand over all arguments required by the kernel function. 
 
-To demonstrate this process and all tools we have availble to help you with that, we will implement a degree day snow model. 
+To demonstrate this process, and all tools we have available to facilitate it, we will implement a simplified degree day snow model. 
 
 ### Degree Day Model 
 
