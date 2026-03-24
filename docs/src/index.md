@@ -33,6 +33,7 @@ julia --project=. -e "import Pkg; Pkg.instantiate()"
 To run the examples, make sure to set the project directory to the appropriate directory, e.g:
 
 ```
+julia --project=examples/scripts -e "import Pkg; Pkg.instantiate()"
 julia --project=examples/scripts examples/scripts/soil_heat_global.jl
 ```
 
