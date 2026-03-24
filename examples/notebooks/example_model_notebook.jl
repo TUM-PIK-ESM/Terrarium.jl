@@ -378,7 +378,7 @@ Then load the output data and plot the results:
 md"""
 We have seen a simple example of how to define and run an exponential growth model with external forcing following the Terrarium `AbstractModel` interface. 
 
-But typically, our computations will be a bit more complicated than that and we can't easily assign them with a broadcastable operation like with done here in `compute_tendencies!`. So what do we have to do in these cases? 
+But typically, our computations will be a bit more complicated than that, and we can't just rely on simple broadcasting operations like what we did in `compute_tendencies!` above. The reason for this is simply efficiency: it is (usually) more efficient to bundle together many scalar operations into operations that can be massively parallelized. But how do we actually achieve this?
 
 ## Writing kernelized-code for Terrarium 
 
