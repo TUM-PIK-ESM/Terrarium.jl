@@ -435,7 +435,7 @@ With that, we can also define our `compute_foo_tendency` function that does the 
 """
 
 # ╔═╡ d8b05ae3-ecba-41de-84c7-45cbf31b735d
-function compute_snow_melt_tendency(i, j, grid, fields, snow_melt)
+function compute_snow_flux_tendency(i, j, grid, fields, snow_melt)
     # get the variables we need
     P = fields.snow_fall[i, j]
     T = fields.air_temperature[i, j]
@@ -460,12 +460,12 @@ begin
             snow_melt::DegreeDaySnow
         )
         fields = get_fields(state, snow_melt)
-        return Terrarium.launch!(grid, XY, compute_snow_melt!, state.tendencies, fields, snow_melt)
+        return Terrarium.launch!(grid, XY, compute_snow_flux!, state.tendencies, fields, snow_melt)
     end
 
-    @kernel function compute_snow_melt!(tend, grid, fields, snow_melt)
+    @kernel function compute_snow_flux!(tend, grid, fields, snow_melt)
         i, j = @index(Global, NTuple)
-        tend.snow_depth[i, j] = compute_snow_melt_tendency(i, j, grid, fields, snow_melt)
+        tend.snow_depth[i, j] = compute_snow_flux_tendency(i, j, grid, fields, snow_melt)
     end
 
     # no auxiliary variables
