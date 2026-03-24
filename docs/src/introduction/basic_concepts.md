@@ -30,7 +30,7 @@ model = SoilModel(grid)
 
 Here we first specify the `grid` which defines the spatial discretization (a single rectangular `column`), device architecture, and number format (`Float32`) to be used by all model components. The spacing of the $N = 10$ vertical layers is set to be exponentially increasing from a minimum thickness of 10 cm at the surface; note that alternative options for the vertical discretization include [`UniformSpacing`](@ref) and [`PrescribedSpacing`](@ref).
 
-The `SoilModel` is then constructed directly from this `grid`. If the 
+The `SoilModel` is then constructed directly from this `grid`. 
 
 ## Processes
 
