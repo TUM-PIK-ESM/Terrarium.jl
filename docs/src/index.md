@@ -14,6 +14,9 @@ However, you can still install the package from the repository via the package m
 pkg> add https://github.com/TUM-PIK-ESM/Terrarium.jl
 ```
 
+!!! compat "Julia 1.10 or 1.11 is required"
+    Currently, Terrarium.jl is only tested on Julia 1.10 (LTS) and 1.11.
+
 If you would like to start hacking on the code directly, we recommend first cloning the repository:
 
 ```
