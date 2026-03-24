@@ -376,7 +376,7 @@ Then load the output data and plot the results:
 
 # ╔═╡ 25e22154-946f-4c32-a1fa-73d86e935ff3
 md"""
-Well, this was a simple way to define and run a simple exponential model with external forcing following the Terrarium `AbstractModel` interface. 
+We have seen a simple example of how to define and run an exponential growth model with external forcing following the Terrarium `AbstractModel` interface. 
 
 But typically, our computations will be a bit more complicated than that and we can't easily assign them with a broadcastable operation like with done here in `compute_tendencies!`. So what do we have to do in these cases? 
 
