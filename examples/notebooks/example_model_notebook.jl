@@ -414,7 +414,7 @@ First, we need to define our model that holds the snow melting process similar t
 
 # ╔═╡ 52a2bf95-e258-41ab-922e-f0965d0d0ee2
 md"""
-Then, we need to define the dynamics again. Typically, we launch kernels on the level of `AbstractProcess`es in Terrarium. These processes then might have further parametrizations attached to them that need to be computed. We have a few utilities and conventions for this purpose:
+Then, we need to define the dynamics. Typically, we launch kernels on the level of `AbstractProcess`es in Terrarium. These processes then might have further parameterizations attached to them that need to be computed. We have a few utilities and conventions for this purpose:
 
 * Kernels are typically named `compute_*_kernel!`, and follow a signature `compute_*_kernel!(output_fields, grid, fields, processes..., args...)`.
 * In this function call we don't hand over the full `StateVariables` anymore as this would come with a large computational overhead on GPUs. Instead we only hand over those fields that the process actually needs. You can either assemble these fields manually, or use the convenience function `get_fields(state, processes...)` that returns all the fields that are defined in the `variables` of the respective processes or the model.
