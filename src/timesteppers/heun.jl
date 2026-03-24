@@ -17,7 +17,8 @@ is_adaptive(heun::Heun) = false
 
 is_initialized(heun::Heun) = !isnothing(heun.stage)
 
-function initialize(timestepper::Heun, ::AbstractModel, state)
+function initialize(timestepper::Heun{NF}, ::AbstractModel{NF2}, state) where {NF, NF2}
+    @assert NF == NF2 "Time stepper was initialized with eltype(Δt)=$(NF) but model has eltype=$(NF2)"
     return setproperties(timestepper, stage = deepcopy(state))
 end
 
