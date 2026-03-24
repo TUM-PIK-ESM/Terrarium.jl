@@ -30,7 +30,7 @@ end
 # lookup table for all Pluto notebooks to be included
 notebook_lookup = if BUILD_DOCS_NOTEBOOKS
     Dict(
-        "Model Interface" => "example_model_notebook.md",
+        #"Model Interface" => "example_model_notebook.md",
         #    "Differentiating Terrarium" => "differentiate-notebook.md",
     )
 else
