@@ -34,4 +34,8 @@ jobs:
 #       run: julia --project=examples/ examples/soil_heat_global_era5.jl
       - name: Run Vegetation-Soil Column
         run: julia --project=examples/scripts/ examples/scripts/vegetation_soil_column.jl
+      - name: Run Model Interface Example
+        run: julia --project=examples/scripts/ examples/scripts/model_interface.jl
+      - name: Run Differentiating Terrarium Example
+        run: julia --project=examples/scripts/ examples/scripts/differentiating_terrarium.jl
         
