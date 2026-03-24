@@ -78,7 +78,7 @@ makedocs(
         prettyurls = get(ENV, "CI", nothing) == "true",
         ansicolor = true,
         collapselevel = 1,
-        canonical = "https://tum-pik-esm.github.io/Terrarium.jl/stable/",
+        canonical = "https://numericalearth.github.io/Terrarium.jl/stable/",
         size_threshold = 600_000,
         # Using MathJax3 since Pluto uses that engine too.
         mathengine = Documenter.MathJax3(),
