@@ -33,7 +33,7 @@ end
 # ╔═╡ d77c8a4b-b53c-4906-a841-8ec37287ae9d
 begin
     using PlutoUI
-    PlutoUI.LocalResource("snow_depth.mp4")
+    PlutoUI.LocalResource("snow_storage.mp4")
 end
 
 # ╔═╡ 5630efd5-2482-463d-913f-9addb120beec
@@ -166,7 +166,7 @@ begin
     Terrarium.variables(model::DegreeDaySnow{NF}) where {NF} = (
         Terrarium.input(:air_temperature, XY(), default = NF(0), units = u"°C", desc = "Near-surface air temperature in °C"),
         Terrarium.input(:snow_fall, XY(), default = NF(0), units = u"m/s", desc = "snow fall rate in m/s"),
-        Terrarium.prognostic(:snow_depth, XY(), units = u"m", desc = "Snow depth in m"),
+        Terrarium.prognostic(:snow_storage, XY(), units = u"m", desc = "Snow water equivalent in m"),
     )
 
 end
@@ -390,7 +390,7 @@ To demonstrate this process, and all tools we have available to facilitate it, w
 
 ### Degree Day Model 
 
-A degree day model models snow melt by assuming that snow depth decreases linearly  over time with the temperature when it is above its melting point. Following [Kavetski and Kuczera's formulation](https://agupubs.onlinelibrary.wiley.com/doi/10.1029/2006WR005195) we denote the snow mass balance as 
+A degree day model models snow melt by assuming that snow storage or snow water equivalent decreases linearly  over time with the temperature when it is above its melting point. Following [Kavetski and Kuczera's formulation](https://agupubs.onlinelibrary.wiley.com/doi/10.1029/2006WR005195) we denote the snow mass balance as 
 
 ```math 
 \frac{dS}{dt} = P - M
@@ -465,7 +465,7 @@ begin
 
     @kernel function compute_snow_flux!(tend, grid, fields, snow_melt)
         i, j = @index(Global, NTuple)
-        tend.snow_depth[i, j] = compute_snow_flux_tendency(i, j, grid, fields, snow_melt)
+        tend.snow_storage[i, j] = compute_snow_flux_tendency(i, j, grid, fields, snow_melt)
     end
 
     # no auxiliary variables
@@ -477,12 +477,12 @@ end
 md"""
 For a simple process like this, this is of course quite a lot of overhead, but this structure allows us to very efficiently build up complex land models from relatively simple components. 
 
-There's one additional thing we need to take care of: the snow depth is strictly non-negative, but our model as currently implemented would quickly reach negative values for $S$. While the aforementioned [Kavetski and Kuczera paper](https://agupubs.onlinelibrary.wiley.com/doi/10.1029/2006WR005195) mitigates this issue by smoothing the model equation, we will in this example do the simplest possible strategy: we simply clip non-negative values during the time stepping of our model. To implement such a clipping we have to extend `timestep!(state::StateVaribales, model::ExpModel, timestepper, Δt)`. This method is applied after each explicit step the time stepper takes (but before any closure relations are applied if they exist). Let's implement the clipping: 
+There's one additional thing we need to take care of: the snow storage is strictly non-negative, but our model as currently implemented would quickly reach negative values for $S$. While the aforementioned [Kavetski and Kuczera paper](https://agupubs.onlinelibrary.wiley.com/doi/10.1029/2006WR005195) mitigates this issue by smoothing the model equation, we will in this example do the simplest possible strategy: we simply clip non-negative values during the time stepping of our model. To implement such a clipping we have to extend `timestep!(state::StateVaribales, model::ExpModel, timestepper, Δt)`. This method is applied after each explicit step the time stepper takes (but before any closure relations are applied if they exist). Let's implement the clipping: 
 """
 
 # ╔═╡ b723c568-c0e1-4d9a-9a74-237d7cfd1ea9
 function Terrarium.timestep!(state::StateVariables, model::ExpModel, timestepper, Δt)
-    return state.snow_depth .= max.(state.snow_depth, 0)
+    return state.snow_storage .= max.(state.snow_storage, 0)
 end
 
 # ╔═╡ 841c540f-ed63-4d89-9baf-836ccb3aed0d
@@ -544,7 +544,7 @@ As an initial condition, we just cover the whole Earth in deep snow (everywhere 
 """
 
 # ╔═╡ b12f3815-89d3-4c1d-9224-6bde2d1f939e
-snow_initializers = (snow_depth = 0.5,)
+snow_initializers = (snow_storage = 0.5,)
 
 # ╔═╡ 01e757f2-55ec-494f-8286-29e5e5fe0a2e
 md"""
@@ -578,7 +578,7 @@ begin
     output_file = joinpath(output_dir, "ddsnow-simulation.jld2")
     snow_sim.output_writers[:snapshots] = JLD2Writer(
         snow_integrator,
-        (snow_depth = snow_integrator.state.snow_depth,);
+        (snow_storage = snow_integrator.state.snow_storage,);
         filename = output_file,
         overwrite_existing = true,
         including = [:grid],
@@ -608,7 +608,7 @@ begin
 
     @assert isfile(output_file) "Output file does not exist!"
     if simulation_ran
-        fts_result = FieldTimeSeries(output_file, "snow_depth")
+        fts_result = FieldTimeSeries(output_file, "snow_storage")
     end
 end
 
@@ -634,8 +634,8 @@ begin
     ax = Axis(
         fig[1, 1],
         aspect = 2,             # 0-360˚E -90-90˚N maps have an aspect of 2:1
-        title = "Snow Depth",
-        titlesize = 10,
+        title = "Snow water equivalent [m]",
+        titlesize = 20,
         xticks = 0:60:360,      # label 0˚E, 60˚E, 120˚E, ...
         yticks = -60:30:60,     # label -60˚N, -30˚N, 0˚N, ...
         xticklabelsize = 10,
@@ -655,7 +655,7 @@ begin
 
     frames = 1:length(fts_result)
 
-    record(fig, "snow_depth.mp4", frames, framerate = 12) do i # core animation loop
+    record(fig, "snow_storage.mp4", frames, framerate = 12) do i # core animation loop
         n_t[] = i
     end
 end
