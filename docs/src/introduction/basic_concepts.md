@@ -53,7 +53,7 @@ InputVariable
 which can also be instantiated using one of the convenience methods [`prognostic`](@ref), [`auxiliary`](@ref), or [`input`](@ref).
 
 !!! info Variables vs. `Field`s
-    Within the context of defining and handling model/process state, Terrarium distinguishes between *variables* and *Fields*. Variables are symbolic objects subtyping [`AbstractVariable`](@ref) that contain metadata about the state variable defined by the process or model type. These variables are realized as [`Fields`](@ref) defined over the model grid.
+    Within the context of defining and handling model/process state, Terrarium distinguishes between *variables* and *Fields*. Variables are symbolic objects subtyping [`AbstractVariable`](@ref) that contain metadata about the state variable defined by the process or model type. These variables are realized as [`Fields`](@ref) defined over the model grid that contain the actual numerical data of the corresponding variable. 
 
 As a simple example, suppose we are implementing a new process `MyProcess` and we want to define the necessary state variables. We do this by defining a new dispatch of the `variables` method:
 ```julia
