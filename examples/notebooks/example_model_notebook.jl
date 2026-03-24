@@ -409,7 +409,7 @@ For our experiment we will use the degree day model with a prescribed surface te
 
 ### Your first kernel model 
 
-First, we need to define our model that holds the snow melting process similar to before: 
+First, we need to define our model that holds the snow melting process similar to how we constructed the `ExpModel`: 
 """
 
 # ╔═╡ 52a2bf95-e258-41ab-922e-f0965d0d0ee2
