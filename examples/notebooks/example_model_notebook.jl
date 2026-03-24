@@ -442,11 +442,7 @@ function compute_snow_melt_tendency(i, j, grid, fields, snow_melt)
     T_melt = snow_melt.T_melt
     k = snow_melt.k
 
-    if T > T_melt
-        return P - k * (T - T_melt)
-    else
-        return P
-    end
+    return ifelse(T > T_melt, P - k * (T - T_melt), P)
 end
 
 # ╔═╡ 72ec62c7-5066-481d-b9c9-84a4851a1e0c
@@ -601,17 +597,17 @@ begin
     run!(snow_sim)
     @assert isfile(output_file) "Output file does not exist!"
     display("Simulaton data saved to $(output_file)")
-	simulation_ran = true 
+    simulation_ran = true
 end
 
 # ╔═╡ bc5c7603-314a-411e-8097-a6344f7bf52a
 begin
     using JLD2
-	   
-	@assert isfile(output_file) "Output file does not exist!"
-	if simulation_ran
-    	fts_result = FieldTimeSeries(output_file, "snow_depth")
-	end
+
+    @assert isfile(output_file) "Output file does not exist!"
+    if simulation_ran
+        fts_result = FieldTimeSeries(output_file, "snow_depth")
+    end
 end
 
 # ╔═╡ b7c37a45-b00f-4d27-bcf5-f42ac610566e
