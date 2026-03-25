@@ -98,9 +98,9 @@ makedocs(
         ],
         "Processes" => [
             "Soil" => [
-                "Soil stratigraphy" => "processes/soil/soil_stratigraphy.md",
                 "Soil hydrology" => "processes/soil/soil_hydrology.md",
                 "Soil energy" => "processes/soil/soil_energy.md",
+                "Soil stratigraphy" => "processes/soil/soil_stratigraphy.md",
             ],
             "Vegetation" => [
                 "Photosynthesis and gas exchange" => "processes/vegetation/photosynthesis.md",
@@ -118,7 +118,7 @@ makedocs(
                 "Evapotranspiration" => "processes/surface_hydrology/evapotranspiration.md",
                 "Surface runoff" => "processes/surface_hydrology/surface_runoff.md",
             ],
-            "Surface energy balance" => [
+            "Surface energy fluxes" => [
                 "Surface energy balance" => "processes/surface_energy/surface_energy_balance.md",
                 "Radiative fluxes" => "processes/surface_energy/radiative_fluxes.md",
                 "Turbulent fluxes" => "processes/surface_energy/turbulent_fluxes.md",

@@ -24,7 +24,7 @@ struct SoilHydrology{
     "Soil water vertical flow operator"
     vertflow::VerticalFlow
 
-    "Closure relation for mapping between saturation water potential (hydraulic head)"
+    "Closure relation for the soil hydrology state"
     closure::SaturationClosure
 
     "Soil hydraulic properties parameterization"
