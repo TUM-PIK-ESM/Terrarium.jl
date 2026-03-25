@@ -30,7 +30,7 @@ end
 # Each entry is (page_title, script_filename)
 script_list = [
     "Model Interface" => "model_interface.jl",
-    "Differentiating Terrarium" => "differentiating_terrarium.jl",
+    #"Differentiating Terrarium" => "differentiating_terrarium.jl",  # dont include enzyme example for now while it's bugged
 ]
 
 """
