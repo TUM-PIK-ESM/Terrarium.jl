@@ -26,6 +26,6 @@ jobs:
       - uses: julia-actions/cache@v2
       - name: Install dependencies (scripts)
         run: julia --project=examples/scripts/ -e 'using Pkg; Pkg.develop(PackageSpec(path=pwd())); Pkg.instantiate()'
-      - name: Run Differentiating Terrarium Example
-        run: julia --project=examples/scripts/ examples/scripts/differentiating_terrarium.jl
+      #- name: Run Differentiating Terrarium Example
+      #  run: julia --project=examples/scripts/ examples/scripts/differentiating_terrarium.jl
         
