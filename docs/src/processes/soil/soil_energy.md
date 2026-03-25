@@ -15,7 +15,7 @@ using Terrarium
 
 ### Heat conduction
 
-Heat transport along the vertical axis perpendicular to the land surface can be represented according to the heat equation, with the upper boundary set to surface temperature and the lower boundary set to a constant positive heat flux representing heat produced by the inner earth (Lachenbruch 1986, Jaeger 1965). If both the upper and lower boundaries are assumed to be constant over time, the steady-state temperature profile takes the form of a continuous piecewise linear function increasing over depth with the slope determined by the thermal properties of the ground material. The instantaneous temperature field can then be generally represented as
+Heat transfer along the vertical axis perpendicular to the land surface can be represented according to the heat equation, with the upper boundary set to surface temperature and the lower boundary set to a constant positive heat flux representing heat produced by the inner earth (Lachenbruch 1986, Jaeger 1965). If both the upper and lower boundaries are assumed to be constant over time, the steady-state temperature profile takes the form of a continuous piecewise linear function increasing over depth with the slope determined by the thermal properties of the ground material. The instantaneous temperature field can then be generally represented as
 ```math
 \begin{equation}
 T(z,t) = T_0 + \frac{Q_{\text{geo}}}{\kappa_{\text{h}}(z)}z + \Delta T(z,t)
@@ -49,14 +49,14 @@ where $L_{\text{sl}}$ and $c_{\text{w}}$ (J/kg) represent the specific latent he
 
 ### Energy-temperature closure
 
-The constitutive relationship between energy and temperature plays a crticial role in characterizing the subsurface energy balance. This relation can be defined in integral form as
+The constitutive relationship between energy and temperature plays a critical role in characterizing the subsurface energy balance. This relation can be defined in integral form as
 ```math
 \begin{equation}
     U(T,\theta) = \int_{T_{\text{ref}}}^T \tilde{C}(x,\theta) \, \mathrm{d}x\,,
     %= \overbrace{\HC(\thetaw,\thetai)\left[T-T_{\text{ref}}\right]}^{\text{Sensible}} + \overbrace{\densityw \LHF\thetaw(T,\thetawi)}^{\text{Latent}},
 \end{equation}
 ```
-where $\tilde{C}$ is referred to as the *effective* or *apparent* heat capacity and $T_{\text{ref}}$ is a reference temperature. The apparent heat capacity is then defined as the derivative of the energ-temperature relation,
+where $\tilde{C}$ is referred to as the *effective* or *apparent* heat capacity and $T_{\text{ref}}$ is a reference temperature. The apparent heat capacity is then defined as the derivative of the energy-temperature relation,
 ```math
 \begin{equation}
 \tilde{C}(T,\theta) := \frac{\partial U}{\partial T} =

@@ -89,7 +89,7 @@ makedocs(
     pages = [
         "Home" => "index.md",
         "Overview" => [
-            "Baisc concepts" => "introduction/basic_concepts.md",
+            "Basic concepts" => "introduction/basic_concepts.md",
             "Numerical core" => "introduction/numerical_core.md",
             "Mathematical formulation" => "introduction/mathematical_formulation.md",
         ],
