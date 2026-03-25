@@ -324,13 +324,17 @@ lst_climatology = RingGrids.get_asset("data/boundary_conditions/land_surface_tem
 land_sea_mask = isfinite.(snow_climatology[:, 1])
 @assert all(land_sea_mask .== isfinite.(lst_climatology[:, 1]))
 
-# The snow and land surface temperatures are monthly climatologies. For this simple example, we'll just pick the January value. Let's quickly look at our input data.
+# The snow and land surface temperatures are monthly climatologies. For this simple example, we'll just pick the January value. Let's quickly look at our input data. First the land sea mask:
 
-heatmap(land_sea_mask)
+heatmap(land_sea_mask, title = "Land Sea Mask")
+
+# Then, the land surface temperature:
 
 heatmap(lst_climatology[:, 1], title = "Land Surface Temperature")
 
-heatmap(snow_climatology[:, 1], title = "Snow")
+# And finally, the snowfall:
+
+heatmap(snow_climatology[:, 1], title = "Snowfall")
 
 # Ok, so now let's put everything together!
 #
