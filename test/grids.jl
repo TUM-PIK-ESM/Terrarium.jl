@@ -95,4 +95,45 @@ end
         ring_field_3d_plus = rand(ring_grid, 10, 5)  # horizontal × vertical × extra dimension
         @test_throws ErrorException Terrarium.Field(ring_field_3d_plus, grid)
     end
+
+    @testset "Oceananigans Field to RingGrids Field" begin
+        ring_grid = FullHEALPixGrid(8)
+        npoints = get_npoints(ring_grid)
+        nz = 10
+
+        full_grid = ColumnRingGrid(UniformSpacing(Δz = 0.5, N = nz), ring_grid)
+        fgrid = get_field_grid(full_grid)
+        ncols = fgrid.Nx  # == npoints (no mask)
+
+        # 2D Oceananigans field (Field{Center,Center,Nothing}) → RingGrids.Field
+        field_2d = Terrarium.Field{Center, Center, Nothing}(fgrid)
+        Terrarium.interior(field_2d)[:, 1, 1] .= Float32.(1:ncols)
+
+        ring_2d = RingGrids.Field(field_2d, full_grid)
+        @test ring_2d.data[full_grid.mask.data, 1] ≈ Float32.(1:ncols)
+
+        # 3D Oceananigans field (Field{Center,Center,Center}) → RingGrids.Field
+        field_3d = Terrarium.Field{Center, Center, Center}(fgrid)
+        for k in 1:nz
+            Terrarium.interior(field_3d)[:, 1, k] .= Float32(k)
+        end
+
+        ring_3d = RingGrids.Field(field_3d, full_grid)
+        @test size(ring_3d, 2) == nz
+        for k in 1:nz
+            @test all(ring_3d.data[full_grid.mask.data, k] .≈ Float32(k))
+        end
+
+        # fill_value is set for non-masked (inactive) points
+        mask = rand(Bool, ring_grid)
+        masked_grid = ColumnRingGrid(UniformSpacing(Δz = 0.5, N = nz), mask)
+        masked_fgrid = get_field_grid(masked_grid)
+
+        field_masked = Terrarium.Field{Center, Center, Nothing}(masked_fgrid)
+        fill!(field_masked, 1.0f0)
+
+        ring_fill = RingGrids.Field(field_masked, masked_grid; fill_value = -1.0)
+        @test all(ring_fill.data[masked_grid.mask.data, 1] .≈ 1.0f0)
+        @test all(ring_fill.data[.!masked_grid.mask.data, 1] .== -1.0)
+    end
 end

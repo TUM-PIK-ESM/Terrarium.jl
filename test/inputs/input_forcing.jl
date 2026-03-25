@@ -27,7 +27,7 @@ end
     grid = ColumnGrid(CPU(), DEFAULT_NF, ExponentialSpacing())
     model = TestModel(grid)
     F = Field(grid, XY())
-    F_in = InputSource(grid, (; F))
+    F_in = InputSource(grid, F; name = :F)
     @test isa(F_in, FieldInputSource)
     integrator = initialize(model, ForwardEuler(eltype(grid)), F_in)
     # check that state variable is defined
@@ -40,7 +40,7 @@ end
     t_F = 0:0.1:1
     F = FieldTimeSeries(grid, XY(), t_F)
     F.data .= ones(size(F))
-    F_in = InputSource(; F)
+    F_in = InputSource(F; name = :F)
     @test isa(F_in, FieldTimeSeriesInputSource)
     integrator = initialize(model, ForwardEuler(eltype(grid)), F_in)
     # check initial values
