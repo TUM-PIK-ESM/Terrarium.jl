@@ -18,9 +18,9 @@ Random.seed!(1234)
 #
 # In this example we will set up an embarrassingly simple example to demonstrate Terrarium's model interface. Our model will have 1-dimensional exponential dynamics with a constant offset
 #
-#```math
-#\frac{du}{dt} = \alpha u + c + F(t)
-#```
+# ```math
+# \frac{du}{dt} = \alpha u + c + F(t)
+# ```
 #
 # for an arbitrary prognostic variable ``u``. For the sake of this demonstration we will treat the offset ``c`` as an auxiliary/diagnostic variable even though it is constant in time. ``F(t)`` is an external forcing that we apply.
 #
@@ -376,11 +376,12 @@ println("Simulation data saved to $(output_file_snow)")
 # And now, we plot that data. First we load the JLD2 file.
 fts_result = FieldTimeSeries(output_file_snow, "snow_storage")
 
-# Then, we plot it using `CairoMakie`. For this purpose we first convert to a `RingGrids.Field` and then plot it via `heatmap`
+# Then, we plot it using `CairoMakie`. For this purpose we first convert to a `RingGrids.Field` and then plot it via `heatmap` like so
 tsteps = 1
 ring_field = RingGrids.Field(fts_result[tsteps], snow_grid)[:, 1]
 heatmap(ring_field)
-#
+
+# Now we just wrap that into a Makie animation in the following to create a movie of our results
 fig = Figure(size = (1200, 660))
 ax = Axis(
     fig[1, 1],
