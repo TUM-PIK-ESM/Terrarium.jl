@@ -1,4 +1,4 @@
-name: Examples CI
+name: Enzyme Examples CI
 on:
   pull_request:
     branches:
