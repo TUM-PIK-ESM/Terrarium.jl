@@ -115,7 +115,7 @@ current_time(integrator::ModelIntegrator) = integrator.clock.time
 get_fields(integrator::ModelIntegrator, queries...) = get_fields(integrator.state, queries...)
 
 """
-    $SIGNATURES
+    $TYPEDSIGNATURES
 
 Advance the model forward by one timestep with optional timestep size `Δt`. If `finalize = true`,
 `compute_auxiliary!` is called after the time step in order to update the values of auxiliary/diagnostic
@@ -131,7 +131,7 @@ function timestep!(integrator::ModelIntegrator, Δt; finalize = true)
 end
 
 """
-    $TYPEDEF
+    $TYPEDSIGNATURES
 
 Creates and initializes a `ModelIntegrator` for the given `model` with the given `clock` state.
 This method allocates all necessary `Field`s for the state variables and calls `initialize!(::ModelIntegrator)`.

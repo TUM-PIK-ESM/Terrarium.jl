@@ -41,8 +41,6 @@ Implementations of `AbstractProcess` represent physical processes characterized 
 
 Concrete implementations of `AbstractProcess` are `struct` types that typically consist of zero or more parameters or parameter `struct`s (also sometimes referred to as *parameterizations*).
 
-### Parameterizations
-
 ## State variables
 State variables are symbolically defined for each process in their respective implementations of the `variables` method by returning instances of [`AbstractVariable`](@ref) which define (at minimum) its name, dimensionality, and physical units. State variables may be one of three types:
 ```@docs; canonical = false
@@ -70,14 +68,20 @@ Currently, Terrarium only supports a single 3D grid representing variables defin
 
 ## Initialization
 
-A key abstraction in Terrarium is the [`initialize`](@ref) method:
+Model and process types in Terrarium are *stateless* and *immutable*; i.e. they only specify parameters and model configuration. To allocate state variables for a model or process, we need to use the [`initialize`](@ref) method:
 
-```docs; canonical = false
-initialize(model::AbstractModel)
-initialize(process::AbstractProcess, grid::AbstractGrid)
+```@docs; canonical = false
+initialize(model::AbstractModel{NF, Grid}) where {NF, Grid}
+initialize(process::AbstractProcess{NF}, grid::AbstractLandGrid{NF}) where {NF}
 ```
 
-Calling `initialize` on a model or process type returns a [`StateVariables`](@ref) structure containing all of the initialized [`Field`](@ref)s corresponding to state variables defined by the model/process. By default, `Field`s will be initialized with zeros. Some state variable types, such as `input` variables, allow for the specification of alternative default values.
+which will create and return a [`StateVariables`](@ref) structure containing all of the initialized [`Field`](@ref)s corresponding to state variables defined by the model/process.
+
+```@docs; canonical = false
+StateVariables
+```
+
+By default, `Field`s will be initialized with zeros. Some state variable types, such as `input` variables, allow for the specification of alternative default values.
 
 Of course, very few models can do anything useful or interesting starting from (literally) zero. Terrarium provides three complementary mechanisms through which initialization routines for model/process state variables can be defined:
 
@@ -91,13 +95,13 @@ As a general rule, these initializers are invoked in the order that they are lis
 
 Terrarium explicitly separates process computations in `compute_auxiliary!` and `compute_tendencies!` from the choice of time stepping scheme. As a general rule, only models can be configured for timestepping. A model can be initialized for timestepping via
 
-```@doc; canonical = false
+```@docs; canonical = false
 initialize(model::AbstractModel, timestepper::AbstractTimeStepper, inputs::InputSource...)
 ```
 
 This will return a [`ModelIntegrator`](@ref):
 
-```@doc; canonical = false
+```@docs; canonical = false
 ModelIntegrator
 ```
 
