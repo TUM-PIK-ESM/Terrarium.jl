@@ -21,7 +21,7 @@ parsed_args = parse_args(ARGS, s)
 
 IS_LOCAL = parsed_args["local"] || parse(Bool, get(ENV, "LOCALDOCS", "false"))
 IS_DRAFT = parsed_args["draft"] || parse(Bool, get(ENV, "DRAFTDOCS", "false"))
-BUILD_DOCS_NOTEBOOKS = !IS_DRAFT && parse(Bool, get(ENV, "BUILD_DOCS_NOTEBOOKS", "true"))
+BUILD_EXAMPLE_DOCS = !IS_DRAFT && parse(Bool, get(ENV, "BUILD_EXAMPLE_DOCS", "true"))
 if haskey(ENV, "GITHUB_ACTIONS")
     ENV["JULIA_DEBUG"] = "Documenter"
 end
@@ -42,8 +42,7 @@ function build_literate_pages()
     mkpath(EXAMPLES_OUTDIR)
     for (_, filename) in script_list
         ## the differentiation notebook is never auto-executed (Enzyme compile time)
-        should_execute = !IS_DRAFT && BUILD_DOCS_NOTEBOOKS &&
-            filename != "differentiating_terrarium.jl"
+        should_execute = BUILD_EXAMPLE_DOCS && filename != "differentiating_terrarium.jl"
         kwargs = Dict{Symbol, Any}(
             :execute => should_execute,
             :documenter => true,
@@ -66,9 +65,7 @@ end
 build_literate_pages()
 
 # Pages vector for makedocs
-example_docpages = Pair{String, String}[
-    "Overview" => "notebooks/examples_overview.md",
-]
+example_docpages = Pair{String, String}[]
 for (title, filename) in script_list
     mdfile = replace(filename, ".jl" => ".md")
     push!(example_docpages, title => joinpath(EXAMPLES_OUTDIR_RELATIVE, mdfile))
