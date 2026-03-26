@@ -43,7 +43,7 @@ function build_literate_pages()
     for (_, filename) in script_list
         ## the differentiation notebook is never auto-executed (Enzyme compile time)
         should_execute = BUILD_EXAMPLE_DOCS && filename != "differentiating_terrarium.jl"
-        kwargs = Dict{Symbol, Any}(
+        kwargs = Dict{Symbol,Any}(
             :execute => should_execute,
             :documenter => true,
             :flavor => Literate.DocumenterFlavor(),
@@ -63,7 +63,7 @@ function build_literate_pages()
 end
 
 # Pages vector for makedocs
-example_docpages = Pair{String, String}[]
+example_docpages = Pair{String,String}[]
 
 if BUILD_EXAMPLE_DOCS
     # Build example pages with Literate.jl
@@ -76,18 +76,18 @@ if BUILD_EXAMPLE_DOCS
 end
 
 makedocs(
-    format = Documenter.HTML(
-        prettyurls = get(ENV, "CI", nothing) == "true",
-        ansicolor = true,
-        collapselevel = 1,
-        canonical = "https://tum-pik-esm.github.io/Terrarium.jl/stable/",
-        size_threshold = 600_000,
-        mathengine = Documenter.MathJax3(),
+    format=Documenter.HTML(
+        prettyurls=get(ENV, "CI", nothing) == "true",
+        ansicolor=true,
+        collapselevel=1,
+        canonical="https://tum-pik-esm.github.io/Terrarium.jl/stable/",
+        size_threshold=600_000,
+        mathengine=Documenter.MathJax3(),
     ),
-    sitename = "Terrarium.jl",
-    authors = "Brian Groenke, Maximillian Galbrecht, Maha Badri, and Contributors",
-    modules = [Terrarium],
-    pages = [
+    sitename="Terrarium.jl",
+    authors="Brian Groenke, Maximillian Galbrecht, Maha Badri, and Contributors",
+    modules=[Terrarium],
+    pages=[
         "Home" => "index.md",
         "Overview" => [
             "Basic concepts" => "introduction/basic_concepts.md",
@@ -104,7 +104,7 @@ makedocs(
                 "Soil stratigraphy" => "processes/soil/soil_stratigraphy.md",
             ],
             "Vegetation" => [
-                "Photosynthesis and gas exchange" => "processes/vegetation/photosynthesis.md",
+                "Photosynthesis" => "processes/vegetation/photosynthesis.md",
                 "Stomatal conductance" => "processes/vegetation/stomatal_conductance.md",
                 "Plant available water" => "processes/vegetation/plant_available_water.md",
                 "Autotrophic respiration" => "processes/vegetation/autotrophic_respiration.md",
@@ -134,7 +134,7 @@ makedocs(
         "Contributing" => "contributing.md",
         "API Reference" => "api_reference.md",
     ],
-    draft = IS_DRAFT,
+    draft=IS_DRAFT,
 )
 
 deployconfig = Documenter.auto_detect_deploy_system()
@@ -143,8 +143,8 @@ deployconfig = Documenter.auto_detect_deploy_system()
 # rm(joinpath(@__DIR__, "build", ".gitignore"))
 
 deploydocs(
-    repo = "github.com/NumericalEarth/Terrarium.jl.git",
-    push_preview = true,
-    versions = ["v0" => "v^", "v#.#", "dev" => "dev"],
-    deploy_config = deployconfig,
+    repo="github.com/NumericalEarth/Terrarium.jl.git",
+    push_preview=true,
+    versions=["v0" => "v^", "v#.#", "dev" => "dev"],
+    deploy_config=deployconfig,
 )
