@@ -62,13 +62,17 @@ function build_literate_pages()
     return nothing
 end
 
-build_literate_pages()
-
 # Pages vector for makedocs
 example_docpages = Pair{String, String}[]
-for (title, filename) in script_list
-    mdfile = replace(filename, ".jl" => ".md")
-    push!(example_docpages, title => joinpath(EXAMPLES_OUTDIR_RELATIVE, mdfile))
+
+if BUILD_EXAMPLE_DOCS
+    # Build example pages with Literate.jl
+    build_literate_pages()
+    # Add example pages to list
+    for (title, filename) in script_list
+        mdfile = replace(filename, ".jl" => ".md")
+        push!(example_docpages, title => joinpath(EXAMPLES_OUTDIR_RELATIVE, mdfile))
+    end
 end
 
 makedocs(
