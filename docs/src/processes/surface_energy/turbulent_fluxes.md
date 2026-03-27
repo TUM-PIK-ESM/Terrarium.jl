@@ -7,15 +7,25 @@ CurrentModule = Terrarium
 !!! warning
     This page is a work in progress. If you have any questions or notice any errors, please [raise an issue](https://github.com/NumericalEarth/Terrarium.jl/issues).
 
-## Theory
+## Overview
 
-### Turbulent heat transport fundamentals
-
-Turbulent motion in the atmosphere transports heat away from the surface. Two primary mechanisms are involved: the **sensible heat flux** due to the temperature gradient between the atmosphere and land surface, and the **latent heat flux** (from evaporation, transpiration, and sublimation). All turbulent fluxes are **positive upward** (away from the surface, toward the atmosphere).
+Turbulent motion in the atmosphere transports heat away from the surface. Two primary mechanisms are involved: the **sensible heat flux** due to the temperature gradient between the atmosphere and land surface, and the **latent heat flux** (from evaporation, transpiration, and sublimation).
 
 The surface energy budget partitioning strongly depends on the strength of these fluxes:
-- Strong winds and atmospheric instability → large turbulent fluxes, cooler surface
-- Calm conditions and stable layers → weak turbulent fluxes, warmer surface
+- Strong winds and atmospheric instability → large turbulent fluxes
+- Calm conditions and stable boundary layer → weak turbulent fluxes
+
+The coupling between the turbulent fluxes and atmospheric conditions are primarily captured through aerodynamic resistance (or equivalently conductance) terms that approximate the instantaneous resistance of the land surface to energy losses due to turbulent effects.
+
+## Implementations
+
+```@docs; canonical = false
+PrescribedTurbulentFluxes
+```
+
+```@docs; canonical = false
+DiagnosedTurbulentFluxes
+```
 
 ### Sensible heat flux
 
@@ -52,42 +62,29 @@ where:
 - $r_a$ is the aerodynamic resistance [s/m]
 - $H_l$ is **always non-negative** (≥ 0) and represents energy lost due to evaporation, transpiration, or sublimation. Currently condensation (dew formation) is neglected so negative latent heat fluxes cannot occur.
 
-### Coupling to vegetation and soil
-
-Latent heat flux is directly tied to:
-- **Vegetation**: Transpiration through stomata (see [Photosynthesis and Gas Exchange](../vegetation/photosynthesis.md))
-- **Soil moisture**: Availability of water for evaporation
+The latent heat flux is directly tied to:
+- **Vegetation**: Transpiration through stomata (see [Photosynthesis](@ref))
+- **Soil moisture**: Availability of water for evaporation (see [Soil hydrology](@ref))
 - **Surface roughness**: Vegetation height affects aerodynamic properties
 
-## Abstract types
-
-```@docs; canonical = false
-AbstractTurbulentFluxes
-```
-
-## Concrete types
-
-```@docs; canonical = false
-PrescribedTurbulentFluxes
-```
+## Diagnosed turbulent fluxes
 
 ```@docs; canonical = false
 DiagnosedTurbulentFluxes
 ```
 
-## Methods
+## Prescribed turbulent fluxes
 
-### Sensible heat flux
+```@docs; canonical = false
+PrescribedTurbulentFluxes
+```
+
+## Methods
 
 ```@docs; canonical = false
 compute_sensible_heat_flux
 ```
 
-### Latent heat flux
-
 ```@docs; canonical = false
 compute_latent_heat_flux
 ```
-
-## Kernel functions
-

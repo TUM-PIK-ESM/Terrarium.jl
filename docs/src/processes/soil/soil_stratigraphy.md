@@ -80,7 +80,7 @@ SoilVolume
 MineralOrganic
 ```
 
-## Methods
+## Kernel functions
 
 ```@docs; canonical = false
 soil_texture
@@ -105,8 +105,6 @@ organic_porosity
 ```@docs; canonical = false
 volumetric_fractions
 ```
-
-## Kernel functions
 
 ```@docs; canonical = false
 organic_fraction

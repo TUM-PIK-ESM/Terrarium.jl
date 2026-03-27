@@ -35,12 +35,12 @@ variables(::PrescribedSkinTemperature) = (
 """
     $TYPEDEF
 
-Scheme for an implicit skin temperature ``T_0`` satisfying:
+Scheme for an implicit skin temperature ``T_s`` satisfying:
 ```math
-R_{\\text{net}}(T_0) = H_s(T_0) + H_l(T_0) + G(T_0, T_1)
+R_{\\text{net}}(T_s) = H_s(T_s) + H_l(T_s) + G(T_s, T_g)
 ```
 where ``R_{\\text{net}}`` is the net radiation budget, ``H_s`` is the sensible heat flux, ``H_l`` is the latent
-heat flux from sublimation and evapotranspiration, ``G`` is the ground heat flux, and ``T_1`` is the ground
+heat flux from sublimation and evapotranspiration, ``G`` is the ground heat flux, and ``T_g`` is the ground
 temperature, or temperature of the uppermost subsurface (soil or snow) layer.
 
 Properties:
