@@ -7,11 +7,15 @@ CurrentModule = Terrarium
 !!! warning
     This page is a work in progress. If you have any questions or notice any errors, please [raise an issue](https://github.com/NumericalEarth/Terrarium.jl/issues).
 
-## Theory
+## Overview
 
-### Canopy water storage and interception
+When precipitation falls on vegetated ground, some fraction is intercepted and stored as liquid water on leaves and stems. This intercepted water either evaporates directly back to the atmosphere or drips to the ground. The amount intercepted directly depends on vegetation density and structural properties (leaf area index and stem area index).
 
-When precipitation falls on a forested canopy, a fraction is intercepted and stored as liquid water on leaves and stems. This intercepted water either evaporates directly back to the atmosphere or drips to the ground. The amount intercepted depends on vegetation density and structural properties (leaf area index and stem area index).
+## Canopy interception scheme from PALADYN
+
+```@docs; canonical = false
+PALADYNCanopyInterception
+```
 
 ### Interception fraction
 
@@ -93,18 +97,6 @@ P_{\text{ground}} = P - I_{\text{can}} + R_{\text{can}} - E_{\text{can}}
 ```
 
 This represents the water available for soil infiltration and surface runoff.
-
-## Abstract types
-
-```@docs; canonical = false
-AbstractCanopyInterception
-```
-
-## Concrete types
-
-```@docs; canonical = false
-PALADYNCanopyInterception
-```
 
 ## Methods
 

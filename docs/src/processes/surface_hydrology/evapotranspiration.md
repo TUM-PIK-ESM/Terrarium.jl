@@ -7,17 +7,27 @@ CurrentModule = Terrarium
 !!! warning
     This page is a work in progress. If you have any questions or notice any errors, please [raise an issue](https://github.com/NumericalEarth/Terrarium.jl/issues).
 
-## Theory
-
-### Evapotranspiration fundamentals
+## Overview
 
 Evapotranspiration (ET) is the combined process of water evaporation from soil and open water surfaces, evaporation of intercepted water from vegetation, and transpiration through plant stomata. These processes remove water from the surface, driving latent heat flux and competing with sensible heat and ground heat fluxes in the surface energy balance.
 
-All evapotranspiration pathways are driven by the **vapor pressure deficit** or **specific humidity deficit** $\Delta q = q_{\text{sat}}(T_s) - q_a$, where:
+All evapotranspiration pathways are primarily driven by the **vapor pressure deficit** or **specific humidity deficit** $\Delta q = q_{\text{sat}}(T_s) - q_a$, where:
 - $q_{\text{sat}}(T_s)$ is the saturation specific humidity at surface temperature $T_s$ [kg/kg]
 - $q_a$ is the atmospheric specific humidity at reference height [kg/kg]
 
 Each pathway is also modulated by **aerodynamic resistance** $r_a$ (between surface and atmosphere) and/or **stomatal resistance** $r_s$ (in transpiration).
+
+## Bare ground evaporation
+
+```@docs; canonical = false
+GroundEvaporation
+```
+
+## Coupled canopy evapotranspiration
+
+```@docs; canonical = false
+PALADYNCanopyEvapotranspiration
+```
 
 ### Canopy evaporation
 
@@ -90,29 +100,7 @@ H_l = L \rho_a \text{ET}
 
 where $L$ is the latent heat of vaporization and $\rho_a$ is air density.
 
-## Abstract types
-
-```@docs; canonical = false
-AbstractEvapotranspiration
-```
-
-```@docs; canonical = false
-AbstractGroundEvaporationResistanceFactor
-```
-
-## Concrete types
-
-### Evapotranspiration schemes
-
-```@docs; canonical = false
-PALADYNCanopyEvapotranspiration
-```
-
-```@docs; canonical = false
-GroundEvaporation
-```
-
-### Ground resistance parameterizations
+## Ground resistance parameterizations
 
 ```@docs; canonical = false
 ConstantEvaporationResistanceFactor
@@ -122,13 +110,23 @@ ConstantEvaporationResistanceFactor
 SoilMoistureResistanceFactor
 ```
 
-## Methods
+## Coupling to soil hydrology
+
+Subtypes of `AbstractEvapotranpsiration` automatically inherit an implementation of the [`forcing`](@ref) interface for [`SoilHydrology`](@ref),
+which computes the contribution of ET to the soil moisture tendency in each soil layer. The default implementation draws the rescaled surface humidity
+flux only from the uppermost soil layer.
+
+```@docs; canonical = false
+forcing(i, j, k, grid, clock, fields, evtr::AbstractEvapotranspiration, ::AbstractSoilHydrology)
+```
+
+## Kernel functions
+
+### Humidity flux
 
 ```@docs; canonical = false
 surface_humidity_flux
 ```
-
-## Kernel functions
 
 ### Canopy evapotranspiration
 

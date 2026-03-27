@@ -7,9 +7,7 @@ CurrentModule = Terrarium
 !!! warning
     This page is a work in progress. If you have any questions or notice any errors, please [raise an issue](https://github.com/NumericalEarth/Terrarium.jl/issues).
 
-## Theory
-
-### Surface water balance
+## Overview
 
 At the land surface, precipitation (after canopy interception) must partition into infiltration into the soil or runoff toward streams and rivers. The surface water balance determines this critical partitioning:
 
@@ -27,9 +25,15 @@ where:
 
 Negative runoff (which would represent condensation) cannot occur, so $Q = \max(0, P_{\text{ground}} + D - I)$.
 
-### Surface water reservoir
+## Direct runoff
 
-Precipitation and infiltration create a surface water reservoir at the soil surface. Water in excess of instantaneous infiltration capacity accumulates as surface water and slowly drains back into the soil:
+The simplest runoff scheme in Terrarium is [`DirectSurfaceRunoff`](@ref) which first routes all rainwater into the ground as infiltration and then allocates the remaining water flux as runoff.
+
+```@docs; canonical = false
+DirectSurfaceRunoff
+```
+
+Water in excess of instantaneous infiltration capacity accumulates as surface water and slowly drains back into the soil:
 
 ```math
 \begin{equation}
@@ -71,22 +75,6 @@ This simplified surface runoff scheme does not explicitly model subsurface drain
 - Hortonian overland flow (infiltration excess) dominates
 
 In riparian areas or regions with high water tables, more sophisticated approaches (e.g., variable source areas) would be necessary to capture saturation-excess runoff.
-
-## Abstract types
-
-```@docs; canonical = false
-AbstractSurfaceRunoff
-```
-
-## Concrete types
-
-```@docs; canonical = false
-DirectSurfaceRunoff
-```
-
-## Methods
-
-There are no high-level user-facing methods for surface runoff; runoff is computed internally as part of the surface hydrology auxiliary computation.
 
 ## Kernel functions
 
