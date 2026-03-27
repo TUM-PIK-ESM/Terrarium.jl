@@ -2,6 +2,9 @@
     $TYPEDEF
 
 A collection of general physical constants that do not (usually) need to be varied in parameter calibration.
+
+Properties:
+$FIELDS
 """
 @kwdef struct PhysicalConstants{NF}
     "Density of water in kg/m^3"
