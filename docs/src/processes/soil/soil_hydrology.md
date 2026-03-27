@@ -13,7 +13,7 @@ using Terrarium
 
 ## Overview
 
-Soil hydrology processes characterize the dynamics of pore water in the saturated and unsaturated zones of the soil. It defines parameters and methods needed to compute water fluxes between grid cells within the soil domain. Implementations should extend [`AbstractSoilHydrology`](@ref) and should generally consist of at least four components:
+Soil hydrology processes characterize the dynamics of ground water in both saturated and unsaturated soil. It defines parameters and methods needed to compute water fluxes between layers and grid cells within the soil domain. Implementations should extend [`AbstractSoilHydrology`](@ref) and should generally consist of at least four components:
 - A scheme for computing vertical water fluxes between soil layers
 - A closure parameterization linking soil saturation and pressure head
 - A parameterization for [`soil hydraulic properties`](@ref "Hydraulic properties")
@@ -53,8 +53,8 @@ compute_tendencies!(
     hydrology::SoilHydrology{NF, RichardsEq},
     soil::AbstractSoil,
     constants::PhysicalConstants,
-    evtr::Optional{AbstractEvapotranspiration} = nothing,
-    runoff::Optional{AbstractSurfaceRunoff} = nothing,
+    evtr::Optional{AbstractEvapotranspiration},
+    runoff::Optional{AbstractSurfaceRunoff},
     args...
 ) where {NF}
 ```
@@ -62,6 +62,8 @@ compute_tendencies!(
 ## Vertical flow
 
 ### Static soil hydrology ("No Flow")
+
+The simplest possible soil hydrology scheme is one in which the soil saturation state remains constant over time. This can be appropriate for simulations in regions where the soil is normally waterlogged or where changes in the hydrological state can be otherwise assumed to play a negligible role. 
 
 ```@docs; canonical = false
 NoFlow

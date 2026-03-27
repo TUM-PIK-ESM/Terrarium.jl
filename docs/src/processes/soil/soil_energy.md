@@ -11,7 +11,7 @@ using Terrarium
 !!! warning
     This page is a work in progress. If you have any questions or notice any errors, please [raise an issue](https://github.com/NumericalEarth/Terrarium.jl/issues).
 
-## Theory
+## Overview
 
 ### Heat conduction
 
@@ -31,6 +31,9 @@ Diffusive heat flow in a solid medium is governed by Fourier's law,
 ```
 where $\mathbf{j}_\text{h}$ (W/m²) is the diffusive heat flux vector and $\mathbf{n}_z$ is the upward facing normal vector along the vertical $z$ axis.
 
+
+### Phase change of pore water/ice
+
 Since ground materials are often porous, i.e., there exists void space between the solid particles, it is necessary to consider the potential presence of water and/or ice in this void space, which is hereafter referred to as pore space, or simply, soil pores. The thermal effects of water and ice can be accounted for by considering not only the temperature of the material but rather the total internal energy of the elementary volume. Combining the diffusive flux with a potential advective heat flux $j_z^{\text{w}}$ due to water flow yields the energy conservation law,
 ```math
 \begin{equation}
@@ -47,9 +50,31 @@ The advective heat flux $j_{\text{h}}^{\text{w}}$ can be represented as,
 ```
 where $L_{\text{sl}}$ and $c_{\text{w}}$ (J/kg) represent the specific latent heat of fusion and heat capacity of liquid water respectively. This flux term accounts for the energy transferred by the movement of water within the soil matrix. In model configurations that neglect subsurface water flow, this flux term is implicitly assumed to be zero.
 
-### Energy-temperature closure
+```@docs; canonical = false
+SoilEnergyBalance
+```
 
-The constitutive relationship between energy and temperature plays a critical role in characterizing the subsurface energy balance. This relation can be defined in integral form as
+```@example default
+variables(SoilEnergyBalance(Float32))
+```
+
+### [Process interface](@id soilenergy.dispatches)
+
+```@docs; canonical = false
+initialize!(state, grid, energy::SoilEnergyBalance, soil::AbstractSoil, constants::PhysicalConstants, args...)
+```
+
+```@docs; canonical = false
+compute_auxiliary!(state, grid, energy::SoilEnergyBalance, soil::AbstractSoil, args...)
+```
+
+```@docs; canonical = false
+compute_tendencies!(state, grid, energy::SoilEnergyBalance, soil::AbstractSoil, args...)
+```
+
+## Closures
+
+The constitutive relationship between energy and temperature plays a critical role in simulating the thermal state of porous media. This relation can be defined in integral form as
 ```math
 \begin{equation}
     U(T,\theta) = \int_{T_{\text{ref}}}^T \tilde{C}(x,\theta) \, \mathrm{d}x\,,
@@ -89,47 +114,6 @@ with temperature then determined by
 \end{equation}
 ```
 where $C = C(\theta_{\text{w}},\theta)$ is the volumetric heat capacity (J/K/m³) as a function of the unfrozen and total water content.
-
-## Abstract types
-
-```@docs; canonical = false
-AbstractSoilEnergyBalance
-```
-
-```@docs; canonical = false
-AbstractHeatOperator
-```
-
-```@docs; canonical = false
-AbstractSoilEnergyClosure
-```
-
-## Concrete types
-
-```@docs; canonical = false
-SoilEnergyBalance
-```
-
-### [State variables](@id soilenergy.vars)
-```@example default
-variables(SoilEnergyBalance(Float32))
-```
-
-### [Process method dispatches](@id soilenergy.dispatches)
-
-```@docs; canonical = false
-initialize!(state, grid, energy::SoilEnergyBalance, soil::AbstractSoil, constants::PhysicalConstants, args...)
-```
-
-```@docs; canonical = false
-compute_auxiliary!(state, grid, energy::SoilEnergyBalance, soil::AbstractSoil, args...)
-```
-
-```@docs; canonical = false
-compute_tendencies!(state, grid, energy::SoilEnergyBalance, soil::AbstractSoil, args...)
-```
-
-## Closures
 
 ```@docs; canonical = false
 SoilEnergyTemperatureClosure
