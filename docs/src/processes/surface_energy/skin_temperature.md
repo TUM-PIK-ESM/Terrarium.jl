@@ -38,10 +38,6 @@ PrescribedSkinTemperature
 ## Methods
 
 ```@docs; canonical = false
-compute_skin_temperature!
-```
-
-```@docs; canonical = false
 compute_skin_temperature
 ```
 

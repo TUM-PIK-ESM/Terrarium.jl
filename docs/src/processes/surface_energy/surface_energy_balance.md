@@ -19,23 +19,10 @@ R_{\text{net}} = H_s + H_l + G\,.
 Following the standard convention of Terrarium and Oceananigans, all surface energy fluxes are defined **positive upward** (away from surface).
 
 The [`SurfaceEnergyBalance`](@ref) process is responsible for computing all of the above flux terms and thus closing the energy balance between the atmosphere and land surface. Implementations of [`AbstractSurfaceEnergyBalance`](@ref) should generally include, at minimum, representations of each of the four SEB components:
-- An implementation of [`AbstractSkinTemperature`](@ref) that defines and updates both the skin temperature $T_s$ and the ground heat flux $G$,
-- An implementation of [`AbstractRadiativeFluxes`](@ref) that compute the partitioning of the radiation budget,
-- An implementation of [`AbstractTurbulentFluxes`](@ref) that compute the turbulent (sensible and latent) heat fluxes,
-- A scheme for representing the [albedo](@ref "Albedo") in the [Radiative energy budget](@ref).
-
-
-### Radiative energy budget
-
-The radiative energy budge $R_{\text{net}}$ is the sum of all incoming and outgoing radiative fluxes at the interface between the atmosphere and the land surface. This typically consists of both  *shortwave* and *longwave* radiation bands. See [`Radiative fluxes`](@ref) and [`Albedo`](@ref) for further details.
-
-### Turbulent fluxes
-
-Sensible and latent heat fluxes are driven by temperature and humidity gradients between the surface and atmosphere, quantified through bulk aerodynamic approaches. These fluxes depend on wind speed, atmospheric stability, surface roughness, and the availability of soil moisture. See [`Turbulent fluxes`](@ref) for further details.
-
-### Skin temperature determination
-
-The skin temperature $T_0$ is the effective radiative temperature of the land surface. For an implicit approach, $T_0$ self-consistently satisfies the energy balance at each time step. For a prescribed approach, $T_0$ is given as input. The ground heat flux at the surface is derived either directly or as a residual from the energy balance. See [`Skin temperature`](@ref) for further details.
+- An implementation of [`AbstractSkinTemperature`](@ref) that defines and updates both the skin temperature $T_s$ and the ground heat flux $G$. The skin temperature $T_0$ is the effective radiative temperature of the land surface. For an implicit approach, $T_0$ self-consistently satisfies the energy balance at each time step. For a prescribed approach, $T_0$ is given as input. The ground heat flux at the surface is derived either directly or as a residual from the energy balance. See [Skin temperature and ground heat flux](@ref) for further details.
+- An implementation of [`AbstractRadiativeFluxes`](@ref) that compute the partitioning of the radiation budget. The radiative energy budge $R_{\text{net}}$ is the sum of all incoming and outgoing radiative fluxes at the interface between the atmosphere and the land surface. This typically consists of both  *shortwave* and *longwave* radiation bands. See [Radiative fluxes](@ref) for further details.
+- An implementation of [`AbstractTurbulentFluxes`](@ref) that compute the turbulent (sensible and latent) heat fluxes. Sensible and latent heat fluxes are driven by temperature and humidity gradients between the surface and atmosphere, quantified through bulk aerodynamic approaches. These fluxes depend on wind speed, atmospheric stability, surface roughness, and the availability of soil moisture. See [Turbulent fluxes](@ref) for further details.
+- A scheme for representing the [albedo](@ref "Albedo and emissivity") in the [Radiative energy budget](@ref "Radiative fluxes").
 
 ## Implementations
 
