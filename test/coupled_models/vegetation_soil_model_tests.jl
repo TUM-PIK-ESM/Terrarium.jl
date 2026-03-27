@@ -3,21 +3,21 @@ using Test
 
 using Oceananigans.BoundaryConditions: BoundaryCondition, Flux
 
-@testset "VegetationSoilModel" begin
+@testset "LandModel" begin
     grid = ColumnGrid(CPU(), ExponentialSpacing(Δz_max = 1.0, N = 50))
     swrc = VanGenuchten(α = 2.0, n = 2.0)
     hydraulic_properties = ConstantSoilHydraulics(eltype(grid); swrc, unsat_hydraulic_cond = UnsatKVanGenuchten(eltype(grid)))
     hydrology = SoilHydrology(eltype(grid), RichardsEq(); hydraulic_properties)
     soil = SoilEnergyWaterCarbon(eltype(grid); hydrology)
     vegetation = VegetationCarbon(eltype(grid))
-    vegsoil = VegetationSoilModel(grid; soil, vegetation)
+    land = LandModel(grid; soil, vegetation)
     # Variably saturated with water table
     initializers = (
         temperature = (x, z) -> 1.0 - 0.02 * z,
         saturation_water_ice = (x, z) -> min(1, 0.8 - 0.05 * z),
         carbon_vegetation = 0.1,
     )
-    integrator = initialize(vegsoil, ForwardEuler(); initializers)
+    integrator = initialize(land, ForwardEuler(); initializers)
     # Check that infiltration is correctly coupled to soil hydrology
     set!(integrator.state.infiltration, 1.0e-8)
     sat_top_bc = integrator.state.saturation_water_ice.boundary_conditions.top

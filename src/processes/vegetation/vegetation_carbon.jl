@@ -12,6 +12,7 @@ Represents a generic coupling of vegetation carbon processes.
         CarbonDynamics <: AbstractVegetationCarbonDynamics{NF},
         VegetationDynamics <: Optional{AbstractVegetationDynamics},
         RootDistribution <: Optional{AbstractRootDistribution},
+        PAW <: Optional{AbstractPlantAvailableWater},
     } <: AbstractVegetation{NF}
     "Photosynthesis scheme"
     photosynthesis::Photosynthesis # not prognostic
@@ -33,6 +34,9 @@ Represents a generic coupling of vegetation carbon processes.
 
     "Vegetation root distribution"
     root_distribution::RootDistribution
+
+    "Plant available water"
+    plant_available_water::PAW
 end
 
 function VegetationCarbon(
@@ -43,7 +47,8 @@ function VegetationCarbon(
         phenology = PALADYNPhenology(NF),
         carbon_dynamics = PALADYNCarbonDynamics(NF),
         vegetation_dynamics = PALADYNVegetationDynamics(NF),
-        root_distribution = StaticExponentialRootDistribution(NF)
+        root_distribution = StaticExponentialRootDistribution(NF),
+        plant_available_water = FieldCapacityLimitedPAW(NF)
     ) where {NF}
     return VegetationCarbon(;
         photosynthesis,
@@ -52,7 +57,8 @@ function VegetationCarbon(
         phenology,
         carbon_dynamics,
         vegetation_dynamics,
-        root_distribution
+        root_distribution,
+        plant_available_water
     )
 end
 
@@ -61,9 +67,13 @@ function compute_auxiliary!(
         veg::VegetationCarbon,
         atmos::AbstractAtmosphere,
         constants::PhysicalConstants,
+        soil::Optional{AbstractSoil} = nothing,
         args...
     )
     # Compute auxiliary variables for each component
+    # PAW: needs soil saturation profile and computes soil_moisture_limiting_factor
+    compute_auxiliary!(state, grid, veg.plant_available_water, soil)
+
     # Veg. carbon dynamics: needs C_veg(t-1) and computes LAI_b(t-1)
     compute_auxiliary!(state, grid, veg.carbon_dynamics)
 
