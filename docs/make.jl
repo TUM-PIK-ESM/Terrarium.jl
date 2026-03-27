@@ -4,7 +4,7 @@ using Literate
 
 using Terrarium
 
-const SCRIPTS_DIR = joinpath(dirname(@__DIR__), "examples", "scripts")
+const SCRIPTS_DIR = joinpath(dirname(@__DIR__), "examples")
 const EXAMPLES_OUTDIR = joinpath(@__DIR__, "src", "examples")
 const EXAMPLES_OUTDIR_RELATIVE = "examples"
 
@@ -138,7 +138,10 @@ makedocs(
                 "Physics" => "processes/utils/physics_utils.md",
             ],
         ],
-        "Examples" => example_docpages,
+        "Examples" => [
+            "Overview" => "examples_overview.md",
+            example_docpages...,
+        ],
         "Contributing" => "contributing.md",
         "API Reference" => "api_reference.md",
     ],

@@ -27,14 +27,6 @@ cd Terrarium.jl/
 julia --project=. -e "import Pkg; Pkg.instantiate()"
 ```
 
-To run the examples, make sure to set the project directory to the appropriate directory, e.g:
-
-```
-julia --project=examples/scripts examples/scripts/soil_heat_global.jl
-```
-
-You can also directly `activate` the example project environment from your REPL by first entering the package manager with `]` and then running the command `activate examples/scripts` followed by `instantiate`.
-
 ## Quick start
 
 A natural first step with `Terrarium` is to set up and run your very first `SoilModel`. This represents a standalone model of transient heat, water, and carbon transport over a particular choice of `grid`. We start by chosing a `ColumnGrid` which represents one or more laterally independent vertical columns:
@@ -81,9 +73,38 @@ and voila! We have just run a GPU-accelerated, global-scale simulation of soil t
 
 ```@contents
 Pages = [
+    "introduction/basic_concepts.md",
     "introduction/numerical_core.md",
     "introduction/mathematical_formulation.md",
+    "extending/core_interfaces.md",
+    "models/soil_model.md",
+    "processes/soil/soil_hydrology.md",
+    "processes/soil/soil_energy.md",
+    "processes/soil/soil_stratigraphy.md",
+    "processes/vegetation/photosynthesis.md",
+    "processes/vegetation/stomatal_conductance.md",
+    "processes/vegetation/plant_available_water.md",
+    "processes/vegetation/autotrophic_respiration.md",
+    "processes/vegetation/carbon_dynamics.md",
+    "processes/vegetation/vegetation_dynamics.md",
+    "processes/vegetation/vegetation_phenology.md",
+    "processes/vegetation/root_distribution.md",
+    "processes/surface_hydrology/surface_hydrology.md",
+    "processes/surface_hydrology/canopy_interception.md",
+    "processes/surface_hydrology/evapotranspiration.md",
+    "processes/surface_hydrology/surface_runoff.md",
+    "processes/surface_energy/surface_energy_balance.md",
+    "processes/surface_energy/radiative_fluxes.md",
+    "processes/surface_energy/turbulent_fluxes.md",
+    "processes/surface_energy/skin_temperature.md",
+    "processes/surface_energy/albedo.md",
+    "processes/atmosphere/prescribed_atmosphere.md",
+    "processes/atmosphere/aerodynamics.md",
+    "processes/utils/physical_constants.md",
+    "processes/utils/physics_utils.md",
+    "examples_overview.md",
+    "contributing.md",
     "api_reference.md",
 ]
-Depth = 3
+Depth = 2
 ```
