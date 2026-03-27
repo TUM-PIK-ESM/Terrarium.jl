@@ -97,6 +97,9 @@ makedocs(
         "Extending Terrarium" => [
             "Core interfaces" => "extending/core_interfaces.md",
         ],
+        "Models" => [
+            "Soil model" => "models/soil_model.md",
+        ],
         "Processes" => [
             "Soil" => [
                 "Soil hydrology" => "processes/soil/soil_hydrology.md",
@@ -126,9 +129,6 @@ makedocs(
                 "Skin temperature and ground heat" => "processes/surface_energy/skin_temperature.md",
                 "Albedo and emissivity" => "processes/surface_energy/albedo.md",
             ],
-        ],
-        "Models" => [
-            "Soil model" => "models/soil_model.md",
         ],
         "Examples" => example_docpages,
         "Contributing" => "contributing.md",
