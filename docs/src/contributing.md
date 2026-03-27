@@ -40,3 +40,21 @@ We use [Runic.jl](https://github.com/fredrikekre/Runic.jl) for automatted code f
 cp .githooks/pre-commit .git/hooks/pre-commit
 chmod +x .git/hooks/pre-commit
 ```
+
+## Documentation
+
+All pull requests that implement new features or modify existing functionality must have associated documentation. At bare minimum, this should consist of docstrings on all of the relevant functions and types. However, in many cases, it can be helpful to add a documentation page or example script that showcases the feature(s) and helps the user understand holistically how it fits into the Terrarium framework.
+
+The docs can be built locally by running
+
+```
+julia --project=docs docs/make.jl --local
+```
+
+To skip running doctests and example scripts, you can also add `--draft` or `-d` for short.
+
+Preview builds of the documentation associated with pull requests can be reviewed at
+
+https://numericalearth.github.io/Terrarium.jl/previews/PR##
+
+replacing `##` with the pull request ID number.
