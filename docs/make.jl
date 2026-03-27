@@ -129,6 +129,14 @@ makedocs(
                 "Skin temperature and ground heat" => "processes/surface_energy/skin_temperature.md",
                 "Albedo and emissivity" => "processes/surface_energy/albedo.md",
             ],
+            "Atmosphere" => [
+                "Prescribed atmosphere" => "processes/atmosphere/prescribed_atmosphere.md",
+                "Aerodynamics" => "processes/atmosphere/aerodynamics.md",
+            ],
+            "Utilities" => [
+                "Constants" => "processes/utils/physical_constants.md",
+                "Physics" => "processes/utils/physics_utils.md",
+            ],
         ],
         "Examples" => example_docpages,
         "Contributing" => "contributing.md",

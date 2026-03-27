@@ -58,9 +58,9 @@ H_l = L \rho_a \frac{\Delta q}{r_a}
 where:
 - $L$ is the latent heat of vaporization or sublimation [J/kg]
 - $\rho_a$ is the air density [kg/m³]
-- $\Delta q = q_{\text{sat}}(T_s) - q_a$ is the specific humidity gradient [kg/kg] derived from the vapor pressure deficit which is always ≥ 0 by definition
+- $\Delta q = q_{\text{sat}}(T_s) - q_a$ is the specific humidity gradient [kg/kg] derived from the vapor pressure deficit
 - $r_a$ is the aerodynamic resistance [s/m]
-- $H_l$ is **always non-negative** (≥ 0) and represents energy lost due to evaporation, transpiration, or sublimation. Currently condensation (dew formation) is neglected so negative latent heat fluxes cannot occur.
+- $H_l$ is **always non-negative** (≥ 0) and represents energy lost due to evaporation, transpiration, or sublimation. Currently, condensation (dew formation) is neglected so $\Delta q \geq 0$ and negative latent heat fluxes cannot occur
 
 The latent heat flux is directly tied to:
 - **Vegetation**: Transpiration through stomata (see [Photosynthesis](@ref))
