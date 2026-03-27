@@ -13,11 +13,11 @@ Albedo is the fraction of incident shortwave radiation reflected back to space:
 
 ```math
 \begin{equation}
-\alpha = \frac{\text{SW}_{\uparrow}}{S_{\downarrow}}
+\alpha = \frac{\text{SW}_{\uparrow}}{\text{SW}_{\downarrow}}
 \end{equation}
 ```
 
-where $S_{\uparrow}$ is the reflected (upwelling) shortwave and $S_{\downarrow}$ is the incident (downwelling) shortwave. Albedo ranges from 0 (perfectly absorbing) to 1 (perfectly reflecting).
+where $S_{\uparrow}$ is the reflected (upwelling) shortwave and $\text{SW}_{\downarrow}$ is the incident (downwelling) shortwave. Albedo ranges from 0 (perfectly absorbing) to 1 (perfectly reflecting).
 
 ### Variability of albedo and emissivity
 

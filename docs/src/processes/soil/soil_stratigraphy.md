@@ -40,7 +40,7 @@ The total volumetric fractions of each component can then be trivially derived f
 \theta_{\text{air}} &= (1 - \xi) \phi\,,\\
 \theta_{\text{org}} &= \omega (1 - \phi) \,,\\
 \theta_{\text{min}} &= (1 - \omega) (1 - \phi)\,,\\
-1 = \theta_{\text{liq}} + \theta_{\text{ice}} + \theta_{\text{air}} + \theta_{\text{org}} + \theta_{\text{min}}
+1 &= \theta_{\text{liq}} + \theta_{\text{ice}} + \theta_{\text{air}} + \theta_{\text{org}} + \theta_{\text{min}}
 \end{align*}
 ```
 

@@ -13,10 +13,9 @@ using Terrarium
 
 ## Overview
 
-[`SoilModel`](@ref) is a general 1D column model that couples soil energy, water, and carbon
-dynamics. It is the primary model type for simulating heat conduction, freeze-thaw processes,
-and variably saturated water flow in the subsurface. All prognostic state variables are
-discretized in space and time via user-specified `grid` and time stepper.
+[`SoilModel`](@ref) is a model of soil physics that couples the relevant processes governing
+energy, water, and carbon in natural soils. It is the primary model type for simulating heat conduction,
+freeze-thaw processes (e.g. permafrost), and variably saturated water flow in the subsurface.
 
 ```@example default
 arch = CPU()
@@ -25,26 +24,14 @@ model = SoilModel(grid)
 integrator = initialize(model, ForwardEuler(eltype(grid)))
 ```
 
-## Abstract types
-
-```@docs; canonical = false
-AbstractSoilModel
-```
-
-```@docs; canonical = false
-AbstractSoil
-```
-
-## Concrete types
-
 ```@docs; canonical = false
 SoilModel
 ```
 
 ### Components
 
-The default soil process bundle is [`SoilEnergyWaterCarbon`](@ref), which couples four
-sub-processes. All four can be replaced independently when constructing a `SoilModel`; see
+The default representation of coupled soil physics is [`SoilEnergyWaterCarbon`](@ref), which
+consists of four sub-components: All four can be replaced independently when constructing a `SoilModel`; see
 each linked process page for available implementations and parameterizations.
 
 ```@docs; canonical = false
@@ -63,7 +50,7 @@ theoretical background, available concrete types, state variables, and method si
 
 #### Stratigraphy
 
-The `strat` field parameterizes the vertical distribution of soil material properties (texture,
+The `strat` component parameterizes the vertical distribution of soil material properties (texture,
 porosity, organic content). It provides kernel functions used by the energy and hydrology
 sub-processes to look up spatially varying material properties at each grid cell. By default
 [`HomogeneousStratigraphy`](@ref) is used, which assumes a single uniform material throughout
@@ -71,7 +58,7 @@ the profile. See [Soil stratigraphy](@ref) for details.
 
 #### Energy balance
 
-The `energy` field represents heat conduction in the soil column, including the latent heat of
+The `energy` component represents heat conduction in the soil column, including the latent heat of
 freeze-thaw phase change. The default implementation is [`SoilEnergyBalance`](@ref), which
 evolves the volumetric internal energy $U$ (J m⁻³) as the prognostic variable and derives
 temperature via the [`SoilEnergyTemperatureClosure`](@ref). See [Soil energy balance](@ref) for
@@ -79,7 +66,7 @@ details.
 
 #### Hydrology
 
-The `hydrology` field governs the vertical movement of water in the soil column. The default
+The `hydrology` component governs the vertical movement of water in the soil column. The default
 implementation is [`SoilHydrology`](@ref), which evolves total saturation (liquid + ice) as
 the prognostic variable. Vertical flow is disabled by default ([`NoFlow`](@ref)); enabling
 the Richards equation requires selecting [`RichardsEq`](@ref) as the `vertflow` operator. See
@@ -87,9 +74,9 @@ the Richards equation requires selecting [`RichardsEq`](@ref) as the `vertflow` 
 
 #### Biogeochemistry
 
-The `biogeochem` field provides the spatial distribution of soil organic carbon and associated
-biogeochemical fluxes. The default implementation [`ConstantSoilCarbonDensity`](@ref) prescribes
-a spatially homogeneous organic carbon density and does not evolve any prognostic variables.
+The `biogeochem` component simulates the spatial distribution of soil organic carbon and associated
+biogeochemical fluxes. The default implementation [`ConstantSoilCarbonDensity`](@ref) which prescribes
+a spatially homogeneous organic carbon density and does not define any prognostic variables.
 
 ## Initialization
 
