@@ -91,7 +91,7 @@ Base.:(==)(var1::AbstractVariable, var2::AbstractVariable) =
 
 function Base.summary(var::AbstractVariable)
     unitstr = varunits(var) == NoUnits ? "-" : varunits(var)
-    text = "Variable $(string(varname(var))) [$(unitstr)] on $(typeof(vardims(var)))"
+    text = "$(string(varname(var))) [$(unitstr)] on $(typeof(vardims(var)))"
     return text
 end
 

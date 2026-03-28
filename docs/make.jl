@@ -4,7 +4,7 @@ using Literate
 
 using Terrarium
 
-const SCRIPTS_DIR = joinpath(dirname(@__DIR__), "examples", "scripts")
+const SCRIPTS_DIR = joinpath(dirname(@__DIR__), "examples")
 const EXAMPLES_OUTDIR = joinpath(@__DIR__, "src", "examples")
 const EXAMPLES_OUTDIR_RELATIVE = "examples"
 
@@ -21,7 +21,7 @@ parsed_args = parse_args(ARGS, s)
 
 IS_LOCAL = parsed_args["local"] || parse(Bool, get(ENV, "LOCALDOCS", "false"))
 IS_DRAFT = parsed_args["draft"] || parse(Bool, get(ENV, "DRAFTDOCS", "false"))
-BUILD_DOCS_NOTEBOOKS = !IS_DRAFT && parse(Bool, get(ENV, "BUILD_DOCS_NOTEBOOKS", "true"))
+BUILD_EXAMPLE_DOCS = !IS_DRAFT && parse(Bool, get(ENV, "BUILD_EXAMPLE_DOCS", "true"))
 if haskey(ENV, "GITHUB_ACTIONS")
     ENV["JULIA_DEBUG"] = "Documenter"
 end
@@ -42,8 +42,7 @@ function build_literate_pages()
     mkpath(EXAMPLES_OUTDIR)
     for (_, filename) in script_list
         ## the differentiation notebook is never auto-executed (Enzyme compile time)
-        should_execute = !IS_DRAFT && BUILD_DOCS_NOTEBOOKS &&
-            filename != "differentiating_terrarium.jl"
+        should_execute = BUILD_EXAMPLE_DOCS && filename != "differentiating_terrarium.jl"
         kwargs = Dict{Symbol, Any}(
             :execute => should_execute,
             :documenter => true,
@@ -63,15 +62,17 @@ function build_literate_pages()
     return nothing
 end
 
-build_literate_pages()
-
 # Pages vector for makedocs
-example_docpages = Pair{String, String}[
-    "Overview" => "notebooks/examples_overview.md",
-]
-for (title, filename) in script_list
-    mdfile = replace(filename, ".jl" => ".md")
-    push!(example_docpages, title => joinpath(EXAMPLES_OUTDIR_RELATIVE, mdfile))
+example_docpages = Pair{String, String}[]
+
+if BUILD_EXAMPLE_DOCS
+    # Build example pages with Literate.jl
+    build_literate_pages()
+    # Add example pages to list
+    for (title, filename) in script_list
+        mdfile = replace(filename, ".jl" => ".md")
+        push!(example_docpages, title => joinpath(EXAMPLES_OUTDIR_RELATIVE, mdfile))
+    end
 end
 
 makedocs(
@@ -89,17 +90,58 @@ makedocs(
     pages = [
         "Home" => "index.md",
         "Overview" => [
-            "Numerical core" => "overview/numerical_core.md",
-            "Software architecture" => "overview/software_architecture.md",
-            "Mathematical formulation" => "overview/mathematical_formulation.md",
+            "Basic concepts" => "introduction/basic_concepts.md",
+            "Numerical core" => "introduction/numerical_core.md",
+            "Mathematical formulation" => "introduction/mathematical_formulation.md",
         ],
-        "Physics" => [
-            "Soil physics" => [
-                "Energy and water balance" => "physics/soil_energy_water.md",
+        "Extending Terrarium" => [
+            "Core interfaces" => "extending/core_interfaces.md",
+        ],
+        "Models" => [
+            "Soil model" => "models/soil_model.md",
+        ],
+        "Processes" => [
+            "Soil" => [
+                "Soil hydrology" => "processes/soil/soil_hydrology.md",
+                "Soil energy" => "processes/soil/soil_energy.md",
+                "Soil stratigraphy" => "processes/soil/soil_stratigraphy.md",
             ],
-            "Vegetation" => "physics/vegetation.md",
+            "Vegetation" => [
+                "Photosynthesis" => "processes/vegetation/photosynthesis.md",
+                "Stomatal conductance" => "processes/vegetation/stomatal_conductance.md",
+                "Plant available water" => "processes/vegetation/plant_available_water.md",
+                "Autotrophic respiration" => "processes/vegetation/autotrophic_respiration.md",
+                "Carbon dynamics" => "processes/vegetation/carbon_dynamics.md",
+                "Vegetation dynamics" => "processes/vegetation/vegetation_dynamics.md",
+                "Vegetation phenology" => "processes/vegetation/vegetation_phenology.md",
+                "Root distribution" => "processes/vegetation/root_distribution.md",
+            ],
+            "Surface hydrology" => [
+                "Surface hydrology" => "processes/surface_hydrology/surface_hydrology.md",
+                "Canopy interception" => "processes/surface_hydrology/canopy_interception.md",
+                "Evapotranspiration" => "processes/surface_hydrology/evapotranspiration.md",
+                "Surface runoff" => "processes/surface_hydrology/surface_runoff.md",
+            ],
+            "Surface energy fluxes" => [
+                "Surface energy balance" => "processes/surface_energy/surface_energy_balance.md",
+                "Radiative fluxes" => "processes/surface_energy/radiative_fluxes.md",
+                "Turbulent fluxes" => "processes/surface_energy/turbulent_fluxes.md",
+                "Skin temperature and ground heat" => "processes/surface_energy/skin_temperature.md",
+                "Albedo and emissivity" => "processes/surface_energy/albedo.md",
+            ],
+            "Atmosphere" => [
+                "Prescribed atmosphere" => "processes/atmosphere/prescribed_atmosphere.md",
+                "Aerodynamics" => "processes/atmosphere/aerodynamics.md",
+            ],
+            "Utilities" => [
+                "Constants" => "processes/utils/physical_constants.md",
+                "Physics" => "processes/utils/physics_utils.md",
+            ],
         ],
-        "Examples" => example_docpages,
+        "Examples" => [
+            "Overview" => "examples_overview.md",
+            example_docpages...,
+        ],
         "Contributing" => "contributing.md",
         "API Reference" => "api_reference.md",
     ],

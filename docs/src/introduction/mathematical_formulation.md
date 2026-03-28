@@ -4,7 +4,7 @@ Unlike many other land models, Terrarium.jl strictly follows a philosophy of dyn
 ```math
 \frac{\partial u(x,t)}{\partial t} = G(u(x,t)) + F(x,t)
 ```
-where $u(x,t)$ is a field describing the prognostic state of the system, $t$ is time, $F$ is a focing term, and $G$ is a (differentiable) function which computes the tendencies, i.e. the change in the prognostic state at the current time, $t$.
+where $u(x,t)$ is a field describing the prognostic state of the system, $t$ is time, $F$ is a forcing term, and $G$ is a (differentiable) function which computes the tendencies, i.e. the change in the prognostic state at the current time, $t$.
 
 In many areas of science and engineering, this approach to modeling is fairly standard. It can be contrasted, however, with discrete-time dynamical modeling where state changes are computed according to a series of discrete update rules, $\mathbf{D}$, with some fixed time resolution,
 ```math
@@ -25,7 +25,7 @@ Note that one common problem in continuous-time dynamical modeling is the repres
 
 While the above modeling philosophy has many advantages, it also places some practical restrictions on how we code the model physics. The most important constraints are:
 - Prognostic (i.e. time-integrated) state variables must be clearly and coherently distinguished from all other auxiliary variables derived from the prognostic state.
-- Prognostic variables of the system should only be updated by a timestepper, callback, or closure opreation, and should not be otherwise modified by the physical processes within a timestep. Note that this precludes the implementation of some traditional land model process formulations, such as the so-called “bucket schemes” for soil hydrology which rely on non-physical, instantaneous routing of water between soil layers.
+- Prognostic variables of the system should only be updated by a timestepper, callback, or closure operation, and should not be otherwise modified by the physical processes within a timestep. Note that this precludes the implementation of some traditional land model process formulations, such as the so-called “bucket schemes” for soil hydrology which rely on non-physical, instantaneous routing of water between soil layers.
 - For physical coherence, tendencies must be computed only based on the current state of the system. Similarly, all non-prognostic (auxiliary) variables should be derived only from the prognostic state and/or forcings within each timestep and are not allowed to depend on non-prognostic values from previous timesteps, except in special cases where previous values are used only for computational efficiency (e.g. iterative solvers).
 
 These restrictions can potentially be relaxed in some cases through the use of callbacks and/or nested time-stepping schemes, but the goal should always be to adhere to them as much as possible to maximize efficiency and minimize potential sources of error.

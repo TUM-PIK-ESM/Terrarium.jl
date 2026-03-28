@@ -6,7 +6,7 @@ Represents a generic coupling of vegetation carbon processes.
 @kwdef struct VegetationCarbon{
         NF,
         Photosynthesis <: AbstractPhotosynthesis{NF},
-        StomatalConducatance <: AbstractStomatalConductance{NF},
+        StomatalConductance <: AbstractStomatalConductance{NF},
         AutotrophicRespiration <: AbstractAutotrophicRespiration{NF},
         Phenology <: AbstractPhenology{NF},
         CarbonDynamics <: AbstractVegetationCarbonDynamics{NF},
@@ -16,8 +16,8 @@ Represents a generic coupling of vegetation carbon processes.
     "Photosynthesis scheme"
     photosynthesis::Photosynthesis # not prognostic
 
-    "Stomatal conducantance scheme"
-    stomatal_conductance::StomatalConducatance # not prognostic
+    "Stomatal conductance scheme"
+    stomatal_conductance::StomatalConductance # not prognostic
 
     "Autotrophic respiration scheme"
     autotrophic_respiration::AutotrophicRespiration # not prognostic
@@ -76,7 +76,7 @@ function compute_auxiliary!(
     compute_auxiliary!(state, grid, veg.stomatal_conductance, veg.photosynthesis, atmos, constants)
 
     # Photosynthesis: needs atm. inputs(t), λc(t), LAI(t-1), and computes Rd(t) and GPP(t)
-    compute_auxiliary!(state, grid, veg.photosynthesis, veg.stomatal_conductance, atmos)
+    compute_auxiliary!(state, grid, veg.photosynthesis, veg.stomatal_conductance, atmos, constants)
 
     # Autotrophic respiration: needs atm. inputs(t), GPP(t), Rd(t), C_veg(t-1), phen(t-1) and computes Ra(t) and NPP(t)
     compute_auxiliary!(state, grid, veg.autotrophic_respiration, veg.carbon_dynamics, atmos)
