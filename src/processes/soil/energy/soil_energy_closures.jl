@@ -28,7 +28,7 @@ function closure!(
         state, grid,
         closure::SoilEnergyTemperatureClosure,
         energy::SoilEnergyBalance,
-        ground::AbstractGround,
+        ground::AbstractSoil,
         constants::PhysicalConstants,
         args...
     )
@@ -47,7 +47,7 @@ function invclosure!(
         state, grid,
         closure::SoilEnergyTemperatureClosure,
         energy::SoilEnergyBalance,
-        ground::AbstractGround,
+        ground::AbstractSoil,
         constants::PhysicalConstants,
         args...
     )
