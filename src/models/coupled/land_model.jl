@@ -1,54 +1,108 @@
-# Initial concept of what a semi-complete land model might look like.
-struct LandModel{
+"""
+    $TYPEDEF
+
+Fully-coupled land model integrating atmosphere, surface energy balance, surface hydrology,
+vegetation, and soil processes.
+
+Properties:
+$(TYPEDFIELDS)
+"""
+@kwdef struct LandModel{
         NF,
-        GridType <: AbstractLandGrid,
+        GridType <: AbstractLandGrid{NF},
         Atmosphere <: AbstractAtmosphere,
         SEB <: AbstractSurfaceEnergyBalance,
-        GroundModel <: AbstractGroundModel,
-        SnowModel <: AbstractSnowModel,
-        VegetationModel <: AbstractVegetationModel,
-        HydrologyModel <: AbstractHydrologyModel,
+        Hydrology <: AbstractSurfaceHydrology,
+        Soil <: AbstractSoil{NF},
+        Vegetation <: AbstractVegetation{NF},
+        Constants <: PhysicalConstants{NF},
         Initializer <: AbstractInitializer,
     } <: AbstractLandModel{NF, GridType}
-    "Spatial grid"
+    "Spatial discretization"
     grid::GridType
 
-    "Atmospheric inputs"
-    atmosphere::Atmosphere
+    "Near-surface atmospheric conditions"
+    atmosphere::Atmosphere = PrescribedAtmosphere(eltype(grid))
 
     "Surface energy balance"
-    suface_energy_balance::SurfaceEnergyBalance
+    surface_energy_balance::SEB = SurfaceEnergyBalance(eltype(grid))
 
-    "Ground model"
-    ground::GroundModel
+    "Surface hydrology scheme"
+    surface_hydrology::Hydrology = SurfaceHydrology(eltype(grid))
 
-    "Snow scheme"
-    snow::SnowModel
+    "Soil processes"
+    soil::Soil = SoilEnergyWaterCarbon(eltype(grid))
 
-    "Vegetation dynamics"
-    vegetation::VegetationModel
+    "Vegetation processes"
+    vegetation::Vegetation = VegetationCarbon(eltype(grid))
 
-    "Surface hydrology model"
-    hydrology::HydrologyModel
+    "Physical constants"
+    constants::Constants = PhysicalConstants(eltype(grid))
 
     "State variable initializer"
-    initializer::Initializer
+    initializer::Initializer = DefaultInitializer(eltype(grid))
 end
 
-variables(::LandModel) = ()
-
-processes(model::LandModel) = (
-    model.atmosphere,
-    model.surface_energy_balance,
-    processes(model.ground)...,
-    processes(model.snow)...,
-    processes(model.hydrology)...,
-)
-
-function compute_auxiliary!(state, ::LandModel)
-    # TODO
+function initialize(
+        model::LandModel{NF};
+        clock = Clock(time = zero(NF)),
+        boundary_conditions = (;),
+        fields = (;),
+        input_variables = ()
+    ) where {NF}
+    grid = get_grid(model)
+    vars = Variables(variables(model)..., input_variables...)
+    # Initialize BC fields for coupling
+    ground_heat_flux = initialize(vars.auxiliary.ground_heat_flux, grid, clock, boundary_conditions, fields)
+    infiltration = initialize(vars.auxiliary.infiltration, grid, clock, boundary_conditions, fields)
+    ground_heat_flux_bc = GroundHeatFlux(ground_heat_flux)
+    # Note that the hydrology module computes infiltration as positive so we need to negate it here
+    # since fluxes are by convention positive upwards
+    infiltration_bc = InfiltrationFlux(-infiltration)
+    bcs = merge_boundary_conditions(boundary_conditions, ground_heat_flux_bc, infiltration_bc)
+    # Merge user-defined fields with BC fields
+    fields = merge((; ground_heat_flux, infiltration), fields)
+    return initialize(vars, grid; clock, boundary_conditions = bcs, fields)
 end
 
-function compute_tendencies!(state, ::LandModel)
-    # TODO
+function initialize!(state, model::LandModel)
+    initialize!(state, model, model.initializer)
+    grid = get_grid(model)
+    initialize!(state, grid, model.surface_energy_balance)
+    initialize!(state, grid, model.surface_hydrology)
+    # TODO: change when refactoring model/process types
+    initialize!(state, grid, model.vegetation, model.atmosphere, model.constants)
+    initialize!(state, grid, model.soil, model.constants)
+    return nothing
+end
+
+function compute_auxiliary!(state, model::LandModel)
+    grid = get_grid(model)
+    compute_auxiliary!(state, grid, model.atmosphere)
+    compute_auxiliary!(state, grid, model.soil, model.constants)
+    compute_auxiliary!(state, grid, model.surface_hydrology, model.atmosphere, model.constants, model.soil)
+    compute_auxiliary!(state, grid, model.surface_energy_balance, model.atmosphere, model.constants, model.surface_hydrology)
+    compute_auxiliary!(state, grid, model.vegetation, model.atmosphere, model.constants, model.soil)
+    compute_surface_energy_fluxes!(state, grid, model.surface_energy_balance, model.atmosphere, model.constants, model.surface_hydrology)
+    return nothing
+end
+
+function compute_tendencies!(state, model::LandModel)
+    grid = get_grid(model)
+    compute_tendencies!(state, grid, model.surface_hydrology)
+    compute_tendencies!(state, grid, model.soil, model.constants)
+    compute_tendencies!(state, grid, model.vegetation)
+    return nothing
+end
+
+function closure!(state, model::LandModel)
+    grid = get_grid(model)
+    closure!(state, grid, model.soil, model.constants)
+    return nothing
+end
+
+function invclosure!(state, model::LandModel)
+    grid = get_grid(model)
+    invclosure!(state, grid, model.soil, model.constants)
+    return nothing
 end

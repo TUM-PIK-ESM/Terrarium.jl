@@ -39,6 +39,9 @@ end
 
 # Process methods
 
+# No-op when no soil is available; soil_moisture_limiting_factor defaults to 1
+compute_auxiliary!(state, grid, ::AbstractPlantAvailableWater, ::Nothing, args...) = nothing
+
 function compute_auxiliary!(
         state, grid,
         paw::FieldCapacityLimitedPAW,

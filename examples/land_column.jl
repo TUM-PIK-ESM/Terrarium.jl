@@ -11,12 +11,12 @@ hydrology = SoilHydrology(eltype(grid), RichardsEq(); hydraulic_properties)
 soil = SoilEnergyWaterCarbon(eltype(grid); hydrology)
 vegetation = VegetationCarbon(eltype(grid))
 # Construct coupled model
-vegsoil = VegetationSoilModel(grid; soil, vegetation)
+land = LandModel(grid; soil, vegetation)
 # Variably saturated with water table at roughly 5 m depth
 initializers = (
     saturation_water_ice = (x, z) -> min(1, 0.5 - 0.1 * z),
     carbon_vegetation = 0.1,
 )
-integrator = @time initialize(vegsoil, ForwardEuler(); initializers);
+integrator = @time initialize(land, ForwardEuler(); initializers);
 Δt = 60.0
 @time timestep!(integrator, Δt)

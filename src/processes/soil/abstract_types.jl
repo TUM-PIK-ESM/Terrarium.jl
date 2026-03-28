@@ -3,37 +3,30 @@
 """
     $TYPEDEF
 
-Base type for coupled ground processes.
-"""
-abstract type AbstractGround{NF} <: AbstractCoupledProcesses{NF} end
-
-"""
-    get_stratigraphy(ground)
-
-Return the ground stratigraphy parameterization associated with `ground`.
-"""
-@inline get_stratigraphy(ground::AbstractGround) = ground.strat
-
-"""
-    get_energy(ground)
-
-Return the energy balance scheme associated with `ground`.
-"""
-@inline get_energy(ground::AbstractGround) = ground.energy
-
-"""
-    get_hydrology(ground)
-
-Return the hydrology scheme associated with `ground`.
-"""
-@inline get_hydrology(ground::AbstractGround) = ground.hydrology
-
-"""
-    $TYPEDEF
-
 Base type for coupled soil processes.
 """
-abstract type AbstractSoil{NF} <: AbstractGround{NF} end
+abstract type AbstractSoil{NF} <: AbstractCoupledProcesses{NF} end
+
+"""
+    get_stratigraphy(soil)
+
+Return the stratigraphy parameterization associated with `soil`.
+"""
+@inline get_stratigraphy(soil::AbstractSoil) = soil.strat
+
+"""
+    get_energy(soil)
+
+Return the energy balance scheme associated with `soil`.
+"""
+@inline get_energy(soil::AbstractSoil) = soil.energy
+
+"""
+    get_hydrology(soil)
+
+Return the hydrology scheme associated with `soil`.
+"""
+@inline get_hydrology(soil::AbstractSoil) = soil.hydrology
 
 """
     get_biogeochemistry(soil)
