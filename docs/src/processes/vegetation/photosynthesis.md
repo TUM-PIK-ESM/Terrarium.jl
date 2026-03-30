@@ -77,7 +77,7 @@ c_1 = \alpha_{C3} \cdot f_{\text{temp}} \cdot C_{\text{mass}} \cdot \frac{p_i - 
 
 where $\alpha_{C3}$ is the intrinsic quantum efficiency of CO2 uptake in C3 plants, $C_{mass}$ is the carbon atomic mass, $p_i$ is intercellular CO₂ partial pressure and $\Gamma^*$ is the CO2 compensation point. 
 
-The temperature stess factor $f_{\text{temp}}$ is defined as
+The temperature stress factor $f_{\text{temp}}$ is defined as
 
 ```math
 \begin{equation}
@@ -89,15 +89,25 @@ f_{\text{temp}}(T) =
 \end{equation}
 ```
 
-Absorbed photosynthetically active radiation (APAR) is computed from PAR which is assumed to be half of the downwelling shortwave radiation 
+Assuming that half of the downwelling shortwave radiation is in the photosynthetically active wavelength range, photosynthetically active radiation (PAR) can be computed as
 
 ```math
 \begin{equation}
-\text{APAR} = \alpha_a \cdot 0.5 \text{SW} \cdot (1 - e^{-k_{\text{ext}} \cdot \text{LAI}} \cdot (1-\alpha_{leaf}))
+\text{PAR} = 0.5 \cdot \text{SW} \cdot (1 - \alpha_\text{leaf}) \cdot c_q
 \end{equation}
 ```
 
-where $\alpha_a$ accounts for reductions in PAR utilization in natural ecosystems, $k_{\text{ext}}$ is the light extinction coefficient, LAI is leaf area index, and $\alpha_{leaf}$ is the leaf albedo in the PAR range.
+where $\alpha_\text{leaf}$ is the leaf albedo in the PAR range and $c_q$ is the conversion factor from W/m² to mol/m²/s. 
+
+Absorbed PAR (APAR) can then be computed as follows
+
+```math
+\begin{equation}
+\text{APAR} = \alpha_a \cdot \text{PAR} \cdot (1 - e^{-k_{\text{ext}} \cdot \text{LAI}})
+\end{equation}
+```
+
+where $\alpha_a$ accounts for reductions in PAR utilization in natural ecosystems, $k_{\text{ext}}$ is the light extinction coefficient, and LAI is the leaf area index.
 
 
 
@@ -121,7 +131,7 @@ where $K_c$ and $K_o$ are the Michaelis-Menten constants for CO₂ and O2, respe
 
 ### Stomatal conductance coupling
 
-The exchange of carbon during photosynthesis is regulated by stomata, which open and close to control gas exchanges between the leaf and the atmosphere. This creates a tight coupling between photosynthesis and transpiration through stomatal conductance. Stomata balance the need for carbon uptake during photosynthesis against water loss through transpiration. Stomatal conductance is computed separately from photosynthesis(see [Stomatal conductance](@ref)). 
+The exchange of carbon during photosynthesis is regulated by stomata, which open and close to control gas exchanges between the leaf and the atmosphere. This creates a tight coupling between photosynthesis and transpiration through stomatal conductance. Stomata balance the need for carbon uptake during photosynthesis against water loss through transpiration. Stomatal conductance is computed separately from photosynthesis (see [Stomatal conductance](@ref)). 
 
 The stomatal conductance process provides the internal leaf CO₂ concentration ratio $\lambda_c$ which determines the intercellular CO₂ partial pressure via
 
@@ -182,7 +192,7 @@ compute_Ag
 ```
 
 ```@docs; canonical = false
-compute_photosynthesis
+compute_respiration_assimilation
 ```
 
 ```@docs; canonical = false
