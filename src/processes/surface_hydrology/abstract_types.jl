@@ -27,11 +27,11 @@ Compute or retrieve the current canopy water saturation fraction [-].
 function saturation_canopy_water end
 
 """
-    ground_precipitation(i, j, grid, fields, ::AbstractCanopyInterception)
+    rainfall_ground(i, j, grid, fields, ::AbstractCanopyInterception)
 
 Compute or retrieve the current rate of precipitation reaching the ground [m/s].
 """
-function ground_precipitation end
+function rainfall_ground end
 
 """
 Base type for evapotranspiration processes.

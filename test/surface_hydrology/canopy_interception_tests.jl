@@ -71,12 +71,12 @@ end
 
 @testset "compute_precip_ground" begin
     canopy_interception = PALADYNCanopyInterception(Float64)
-    precip_ground = compute_precip_ground(canopy_interception, 0, 0, 0)
-    @test iszero(precip_ground)
-    # Test calculation of precip_ground
+    rainfall_ground = compute_precip_ground(canopy_interception, 0, 0, 0)
+    @test iszero(rainfall_ground)
+    # Test calculation of rainfall_ground
     P = 1.0e-8
     I_can = P / 2
     R_can = 1.0e-6
-    precip_ground = compute_precip_ground(canopy_interception, P, I_can, R_can)
-    @test precip_ground == P - I_can + R_can
+    rainfall_ground = compute_precip_ground(canopy_interception, P, I_can, R_can)
+    @test rainfall_ground == P - I_can + R_can
 end

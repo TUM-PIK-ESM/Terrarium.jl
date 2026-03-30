@@ -103,11 +103,8 @@ include("surface_energy/surface_energy_balance.jl")
 
 # Suface Hydrology
 
-export GroundEvaporation
-include("surface_hydrology/ground_evaporation.jl")
-
 export PALADYNCanopyEvapotranspiration
-include("surface_hydrology/canopy_evapotranpsiration.jl")
+include("surface_hydrology/evapotranpsiration.jl")
 
 export PALADYNCanopyInterception
 include("surface_hydrology/canopy_interception.jl")
