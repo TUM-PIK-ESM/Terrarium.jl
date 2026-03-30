@@ -4,14 +4,22 @@
 CurrentModule = Terrarium
 ```
 
+```@setup default
+using Terrarium
+```
+
 !!! warning
     This page is a work in progress. If you have any questions or notice any errors, please [raise an issue](https://github.com/NumericalEarth/Terrarium.jl/issues).
 
-## Theory
-
-### Soil water availability for plants
+## Overview
 
 The plant available water (PAW) represents the fraction of soil water that is available for uptake by plant roots. This is often assumed to be the fraction of water between the wilting point (where plants can no longer extract water) and field capacity (approximately optimal water availability). This quantity is critical for constraining photosynthesis and transpiration.
+
+```@docs; canonical = false
+AbstractPlantAvailableWater
+```
+
+### Soil water availability for plants
 
 The water availability coefficient for a given soil layer is defined as:
 ```math
@@ -37,16 +45,14 @@ where $r(z)$ is the normalized root fraction at depth $z$, and $z_{\text{max}}$ 
 
 The relationship between soil matric potential and water content depends on soil texture through the water retention curve (SWRC). Coarse soils (sandy) drain more readily than fine-textured soils (clay), affecting the range of plant-available water. Field capacity is typically defined as the water content at -33 kPa matric potential, while the wilting point corresponds to -1500 kPa.
 
-## Abstract types
-
-```@docs; canonical = false
-AbstractPlantAvailableWater
-```
-
-## Concrete types
+### Field capacity limited PAW
 
 ```@docs; canonical = false
 FieldCapacityLimitedPAW
+```
+
+```@example default
+variables(FieldCapacityLimitedPAW(Float32))
 ```
 
 ## Methods
