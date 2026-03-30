@@ -113,7 +113,7 @@ makedocs(
                 "Autotrophic respiration" => "processes/vegetation/autotrophic_respiration.md",
                 "Carbon dynamics" => "processes/vegetation/carbon_dynamics.md",
                 "Vegetation dynamics" => "processes/vegetation/vegetation_dynamics.md",
-                "Vegetation phenology" => "processes/vegetation/vegetation_phenology.md",
+                "Phenology" => "processes/vegetation/phenology.md",
                 "Root distribution" => "processes/vegetation/root_distribution.md",
             ],
             "Surface hydrology" => [
