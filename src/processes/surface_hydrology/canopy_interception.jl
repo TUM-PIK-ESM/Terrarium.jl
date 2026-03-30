@@ -6,7 +6,7 @@ consume `rainfall_ground` rather than the rainfall directly; this no-op implemen
 """
 struct NoCanopyInterception{NF} <: AbstractCanopyInterception{NF} end
 
-NoCanopyInterception(::Type{NF}) = NoCanopyInterception{NF}()
+NoCanopyInterception(::Type{NF}) where {NF} = NoCanopyInterception{NF}()
 
 variables(noop::NoCanopyInterception) = (
     auxiliary(:rainfall_ground, XY(), passthrough_rainfall, noop; desc = "Rainfall rate reaching the ground", units = u"m/s"),
