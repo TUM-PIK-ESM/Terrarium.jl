@@ -1,4 +1,4 @@
-# Plant respiration
+# Autotrophic respiration
 
 ```@meta
 CurrentModule = Terrarium
@@ -7,58 +7,66 @@ CurrentModule = Terrarium
 !!! warning
     This page is a work in progress. If you have any questions or notice any errors, please [raise an issue](https://github.com/NumericalEarth/Terrarium.jl/issues).
 
-## Theory
+## Overview
 
-Autotrophic respiration is the metabolic cost of maintaining and growing plant tissues. It consists of maintenance respiration (the energy cost of tissue upkeep) and growth respiration (the carbon cost of synthesizing new biomass from photosynthates). Maintenance respiration is temperature-dependent and occurs in all living plant tissues.
+Gross primary production
+(GPP) provides the carbon input to the system. A fraction of this carbon is released back to the atmosphere through autotrophic
+respiration $R_a$, which is represented as the sum of two terms: maintenance respiration $R_m$ (the carbon cost of
+maintaining existing plant tissues) and growth respiration $R_g$ (the carbon cost of producing new plant tissues).
 
-### Autotrophic respiration
 
-The total autotrophic respiration can be approximated as a fraction of gross primary production (GPP):
 ```math
 \begin{equation}
-R_a = R_{\text{leaf}} + R_{\text{maint}} + R_{\text{growth}}
+R_a = R_m + R_g
 \end{equation}
 ```
 
-where $R_{\text{leaf}}$ is leaf respiration at the leaf level, $R_{\text{maint}}$ is maintenance respiration across all tissues, and $R_{\text{growth}}$ is the cost of growth. The net primary production (NPP) is then:
+The remaining
+carbon is the net primary production (NPP), which is then allocated to the different plant components.
+
 ```math
 \begin{equation}
 \text{NPP} = \text{GPP} - R_a
 \end{equation}
 ```
 
-### Temperature dependence
-
-Respiration rates follow an exponential temperature dependence:
-```math
-\begin{equation}
-f_{\text{temp}}(T) = \exp\left( 308.56 \left( \frac{1}{56.02} - \frac{1}{46.02 + T} \right) \right)
-\end{equation}
-```
-
-where $T$ is temperature in degrees Celsius. This exponential form captures the enzyme kinetics underlying respiration across a physiologically relevant temperature range.
-
-### Maintenance respiration
-
-Maintenance respiration varies across plant tissues according to their tissue-specific respiration rates and carbon content. For stem respiration, the respiring biomass is estimated from total stem carbon using an allometric factor:
-```math
-\begin{equation}
-R_{\text{maint}} = R_{10} \cdot f_{\text{temp}}(T) \cdot C_{\text{resp}} 
-\end{equation}
-```
-
-where $R_{10}$ is the respiration rate at 10°C, and $C_{\text{resp}}$ is the respiring biomass derived from plant structural and sapwood carbon pools.
-
-## Abstract types
-
 ```@docs; canonical = false
 AbstractAutotrophicRespiration
 ```
 
-## Concrete types
+## PALADYN autotrophic respiration model
 
 ```@docs; canonical = false
 PALADYNAutotrophicRespiration
+```
+
+```@example default
+using Terrarium
+variables(PALADYNAutotrophicRespiration(Float32))
+```
+
+This implementation follows the autotrophic respiration scheme of PALADYN (Willeit, 2016).
+
+### Maintenance respiration
+
+Maintenance respiration is computed as the sum of leaf, stem, and root respiration
+
+```math
+\begin{equation}
+R_m = R_{\text{leaf}} + R_{\text{stem}} + R_{\text{root}}
+\end{equation}
+```
+
+where $R_{\text{leaf}}$ is the dark respiration computed by the photosynthesis scheme, and $R_{\text{stem}}$ and $R_{\text{root}}$ are each computed from the corresponding tissue carbon pool and their assigned C:N ratios.
+
+### Growth respiration
+
+Growth respiration is taken as a fixed fraction of the carbon available after maintenance respiration
+
+```math
+\begin{equation}
+R_g = 0.25 \cdot (\text{GPP} - R_m)
+\end{equation}
 ```
 
 ## Methods
@@ -73,6 +81,18 @@ compute_resp10
 
 ```@docs; canonical = false
 compute_Rm
+```
+
+```@docs; canonical = false
+compute_Rg
+```
+
+```@docs; canonical = false
+compute_Ra
+```
+
+```@docs; canonical = false
+compute_NPP
 ```
 
 ## Kernel functions
