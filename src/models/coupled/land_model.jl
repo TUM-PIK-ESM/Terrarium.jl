@@ -10,31 +10,31 @@ $(TYPEDFIELDS)
 @kwdef struct LandModel{
         NF,
         GridType <: AbstractLandGrid{NF},
-        Atmosphere <: AbstractAtmosphere,
+        Vegetation <: Optional{AbstractVegetation{NF}},
+        Soil <: AbstractSoil{NF},
         SEB <: AbstractSurfaceEnergyBalance,
         Hydrology <: AbstractSurfaceHydrology,
-        Soil <: AbstractSoil{NF},
-        Vegetation <: AbstractVegetation{NF},
+        Atmosphere <: AbstractAtmosphere,
         Constants <: PhysicalConstants{NF},
         Initializer <: AbstractInitializer,
     } <: AbstractLandModel{NF, GridType}
     "Spatial discretization"
     grid::GridType
 
-    "Near-surface atmospheric conditions"
-    atmosphere::Atmosphere = PrescribedAtmosphere(eltype(grid))
-
-    "Surface energy balance"
-    surface_energy_balance::SEB = SurfaceEnergyBalance(eltype(grid))
-
-    "Surface hydrology scheme"
-    surface_hydrology::Hydrology = SurfaceHydrology(eltype(grid))
-
-    "Soil processes"
-    soil::Soil = SoilEnergyWaterCarbon(eltype(grid))
-
     "Vegetation processes"
     vegetation::Vegetation = VegetationCarbon(eltype(grid))
+
+    "Soil processes"
+    soil::Soil = default_soil(grid, vegetation)
+
+    "Surface energy balance"
+    surface_energy_balance::SEB = default_surface_energy_balance(grid, vegetation, soil)
+
+    "Surface hydrology scheme"
+    surface_hydrology::Hydrology = default_surface_hydrology(grid, vegetation, soil)
+
+    "Near-surface atmospheric conditions"
+    atmosphere::Atmosphere = PrescribedAtmosphere(eltype(grid))
 
     "Physical constants"
     constants::Constants = PhysicalConstants(eltype(grid))
@@ -106,3 +106,14 @@ function invclosure!(state, model::LandModel)
     invclosure!(state, grid, model.soil, model.constants)
     return nothing
 end
+
+# Default soil types
+default_soil(grid::AbstractLandGrid, ::Nothing) = SoilEnergyWaterCarbon(eltype(grid))
+default_soil(grid::AbstractLandGrid, ::AbstractVegetation) = SoilEnergyWaterCarbon(eltype(grid), hydrology = SoilHydrology(eltype(grid), RichardsEq()))
+
+# Default SEB
+default_surface_energy_balance(grid::AbstractLandGrid, vegetation, soil) = SurfaceEnergyBalance(eltype(grid))
+
+# Default surface hydrology
+default_surface_hydrology(grid::AbstractLandGrid, ::AbstractVegetation, soil) = SurfaceHydrology(eltype(grid))
+default_surface_hydrology(grid::AbstractLandGrid, ::Nothing, soil) = SurfaceHydrology(eltype(grid), canopy_interception = NoCanopyInterception(eltype(grid)))
