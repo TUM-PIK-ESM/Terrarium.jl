@@ -31,7 +31,7 @@ A_g = \min(J_C, J_E)
 \end{equation}
 ```
 
-This formulation produces an abrupt transition between the two limiting factors. Under some conditions, however, photosynthesis can be co-limited by both light availability and RuBisCO activity. This co-limitation can be represented by taking the smaller root of the following quadratic equation:
+While $A_g$ remains continuous, this formulation produces an abrupt transition between the two limiting factors. Under some conditions, however, photosynthesis can be co-limited by both light availability and RuBisCO activity. This co-limitation allows for a smoother transition and can be represented by taking the smaller root of the following quadratic equation:
 
 
 ```math
@@ -126,14 +126,15 @@ c_2 = \frac{p_i - \Gamma^*}{p_i + K_c(1 + p_o/K_o)}
 \end{equation}
 ```
 
-where $K_c$ and $K_o$ are the Michaelis-Menten constants for CO₂ and O2, respectively and $p_O$ is the O₂ partial pressure.
+where $K_c$ and $K_o$ are the temperature-dependent Michaelis-Menten constants for CO₂ and O₂, respectively, and $p_O$ is the O₂ partial pressure.
 
 
 ### Stomatal conductance coupling
 
-The exchange of carbon during photosynthesis is regulated by stomata, which open and close to control gas exchanges between the leaf and the atmosphere. This creates a tight coupling between photosynthesis and transpiration through stomatal conductance. Stomata balance the need for carbon uptake during photosynthesis against water loss through transpiration. Stomatal conductance is computed separately from photosynthesis (see [Stomatal conductance](@ref)). 
+Both light-limited and RuBisCO-limited photosynthesis rates $J_E$ and $J_C$ depend on the intercellular CO₂ partial pressure $p_i$.
+The exchange of carbon during photosynthesis is regulated by stomata, which open and close to control gas exchanges between the leaf and the atmosphere, while balancing carbon uptake for photosynthesis against water loss through transpiration.
 
-The stomatal conductance process provides the internal leaf CO₂ concentration ratio $\lambda_c$ which determines the intercellular CO₂ partial pressure via
+This coupling is captured through the intercellular-to-ambient CO₂ concentration ratio $\lambda_c$, which is derived in the stomatal conductance model (see [Stomatal conductance](@ref)) from the optimization-based and diffusion-based expressions of stomatal conductance. The intercellular CO₂ partial pressure can then be computed as
 
 ```math
 \begin{equation}
@@ -141,8 +142,7 @@ p_i = \lambda_c \cdot p_a
 \end{equation}
 ```
 
- where $p_a$ is the atmospheric CO2 pressure. $p_i$ is then used to compute $c_1$ and $c_2$, which in turn determine $J_E$ and $J_C$, respectively. 
-
+where $p_a$ is the atmospheric CO₂ partial pressure.
 
 
 ## Methods
