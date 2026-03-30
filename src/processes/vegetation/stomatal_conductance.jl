@@ -47,8 +47,9 @@ Includes minimum conductance and light extinction effects based on LAI, scaled b
     let g_min = stomcond.g_min / 1000, # convert mm/s to m/s
             g₁ = stomcond.g₁,
             k_ext = photo.k_ext
+
         g₀ = g_min * (1 - exp(-k_ext * LAI)) * β
-        gw_can = g₀ + (1 + g₁ / sqrt(vpd)) * An / co2 * NF(1.0e6)
+        gw_can = g₀ + NF(1.6) * (1 + g₁ / sqrt(vpd)) * An / co2 * NF(1.0e6)
         return gw_can
     end
 end
@@ -61,7 +62,7 @@ derived from the optimal stomatal conductance model (Medlyn et al. 2011),
 Eq. 71, PALADYN (Willeit 2016).
 """
 @inline function compute_λc(stomcond::MedlynStomatalConductance{NF}, vpd) where {NF}
-    λc = NF(1.0) - NF(1.6) / (NF(1.0) + stomcond.g₁ / sqrt(vpd * NF(1.0e-3)))
+    λc = NF(1.0) - NF(1.0) / (NF(1.0) + stomcond.g₁ / sqrt(vpd * NF(1.0e-3)))
     return λc
 end
 

@@ -42,6 +42,10 @@ This formulation produces an abrupt transition between the two limiting factors.
 
 where $\theta_r$ is an empirical shape parameter between 0 and 1 used to control the transition between the two limiting factors. 
 
+```@docs; canonical = false
+AbstractPhotosynthesis
+```
+
 ## Light use efficiency (LUE) model
 
 ```@docs; canonical = false
