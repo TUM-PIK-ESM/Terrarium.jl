@@ -57,7 +57,7 @@ using Terrarium
 using RingGrids: FullGaussianGrid
 using CUDA # needs to be seaprately installed
 
-rings = FullGaussianGrid(8) # Gaussian grid with 16 lattitudinal rings (512 points, ~9.0˚ lat/lon)
+rings = FullGaussianGrid(8) # Gaussian grid with 16 latitudinal rings, 8 per hemisphere (512 points, ~9.0˚ lat/lon)
 arch = CUDA.functional() ? GPU() : CPU() # run on the GPU (if available)
 grid = ColumnRingGrid(arch, Float32, ExponentialSpacing(N=10), rings) # create grid
 model = SoilModel(grid)
