@@ -14,6 +14,10 @@ variables(noop::NoCanopyInterception) = (
 
 passthrough_rainfall(::NoCanopyInterception, grid, clock, fields) = fields.rainfall # assumes existence of rainfall field
 
+@inline compute_auxiliary!(state, grid, ::NoCanopyInterception, args...) = nothing
+
+@inline compute_tendencies!(state, grid, ::NoCanopyInterception, args...) = nothing
+
 @propagate_inbounds canopy_water(i, j, grid, fields, ::NoCanopyInterception) = zero(eltype(grid))
 
 @propagate_inbounds saturation_canopy_water(i, j, grid, fields, ::NoCanopyInterception) = zero(eltype(grid))
