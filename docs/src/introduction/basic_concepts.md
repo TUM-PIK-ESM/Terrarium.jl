@@ -34,7 +34,7 @@ The `SoilModel` is then constructed directly from this `grid`. If the
 
 ## Processes
 
-Implementations of `AbstractProcess` represent physical processes characterized by:
+Procceses are the building blocks of all Terrarium models. Implementations of `AbstractProcess` represent physical processes characterized by:
 - Zero or more state `variable`s that vary spatially across any given `grid`,
 - Zero or more *parameters* that are spatially constant and defined somewhere within the process `struct`,
 - One or more functions defining equations that compute quantities of interest from both the state variables and parameters defined by the process.
