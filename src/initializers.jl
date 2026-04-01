@@ -10,8 +10,10 @@ abstract type AbstractInitializer{NF} end
 # Default implementations of initialize!
 initialize!(state, model::AbstractModel, init::AbstractInitializer) = nothing
 initialize!(state, model::AbstractModel) = initialize!(state, model, get_initializer(model))
+
 # Fallback dispatch for initialize! on process types
 initialize!(state, grid, process::AbstractProcess, args...) = nothing
+initialize!(state, grid, ::Nothing, args...) = nothing
 
 """
     $TYPEDSIGNATURES

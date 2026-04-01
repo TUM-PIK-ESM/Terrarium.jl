@@ -100,11 +100,7 @@ variables(::Any) = ()
 # For AbstractCoupledProcesses and AbstractModel types, default to collecting variables on all processes contained therein
 variables(obj::Union{AbstractCoupledProcesses, AbstractModel}) = mapreduce(variables, tuplejoin, processes(obj))
 
-# Default to no-op for initialize!
-@inline initialize!(state, grid, ::AbstractProcess, args...) = nothing
-
 # Allow dispatch on nothing for process types
-@inline initialize!(state, grid, ::Nothing, args...) = nothing
 @inline compute_auxiliary!(state, grid, ::Nothing, args...) = nothing
 @inline compute_tendencies!(state, grid, ::Nothing, args...) = nothing
 
