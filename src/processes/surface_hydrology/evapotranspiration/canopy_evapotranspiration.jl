@@ -82,7 +82,6 @@ variables(::PALADYNCanopyEvapotranspiration{NF}) where {NF} = (
     auxiliary(:transpiration, XY(), units = u"m/s", desc = "Transpiration contribution to surface humidity flux"),
     input(:skin_temperature, XY(); units = u"°C", desc = "Skin temperature"),
     input(:ground_temperature, XY(); default = NF(1), units = u"°C", desc = "Ground surface temperature"),
-    input(:canopy_water_conductance, XY(); default = NF(1), units = u"m/s", desc = "Canopy stomatal conductance"), # consider direct coupling in the future
 )
 
 @propagate_inbounds function surface_humidity_flux(i, j, grid, fields, ::PALADYNCanopyEvapotranspiration)
@@ -98,6 +97,7 @@ function compute_auxiliary!(
         canopy_interception::AbstractCanopyInterception,
         atmos::AbstractAtmosphere,
         constants::PhysicalConstants,
+        vegetation::AbstractVegetation,
         soil::Optional{AbstractSoil} = nothing
     )
     out = auxiliary_fields(state, evapotranspiration)
@@ -120,18 +120,19 @@ for the given scheme `evapotranspiration` and process dependencies.
         canopy_interception::AbstractCanopyInterception,
         atmos::AbstractAtmosphere,
         constants::PhysicalConstants,
+        vegetation::AbstractVegetation,
         soil::Optional{AbstractSoil} = nothing
     )
     # Get inputs
     Ts = fields.skin_temperature[i, j] # skin temperature (top of canopy)
     Tg = fields.ground_temperature[i, j] # ground temeprature (top snow/soil layer)
-    gw_can = fields.canopy_water_conductance[i, j] # stomatal conductance
+    gw_can = fields.canopy_water_conductance[i, j] # stomatal conductance (assumed to be defined by vegetation)
 
     # Compute VPD and resistance terms
     Δqs = compute_humidity_vpd(i, j, grid, fields, atmos, constants, Ts) # humidity gradient between canopy and atmosphere
     Δqg = compute_humidity_vpd(i, j, grid, fields, atmos, constants, Tg) # humidity gradient between ground and canopy
     rₐ = aerodynamic_resistance(i, j, grid, fields, atmos) # aerodynamic resistance
-    rₑ = aerodynamic_resistance(i, j, grid, fields, atmos, evapotranspiration) # aerodynamic resistance between ground and canopy
+    rₑ = aerodynamic_resistance(i, j, grid, fields, atmos, evapotranspiration, vegetation) # aerodynamic resistance between ground and canopy
     f_can = saturation_canopy_water(i, j, grid, fields, canopy_interception)
     β = ground_evaporation_resistance_factor(i, j, grid, fields, evapotranspiration.ground_resistance, soil)
 
@@ -147,7 +148,12 @@ end
 
 Compute the aerodynamic resistance between the ground and canopy as a function of LAI and SAI.
 """
-@inline function aerodynamic_resistance(i, j, grid, fields, atmos::AbstractAtmosphere, evapotranspiration::PALADYNCanopyEvapotranspiration)
+@inline function aerodynamic_resistance(
+        i, j, grid, fields,
+        atmos::AbstractAtmosphere,
+        evapotranspiration::PALADYNCanopyEvapotranspiration,
+        vegetation::AbstractVegetation
+    )
     @inbounds let LAI = fields.leaf_area_index[i, j],
             SAI = fields.SAI[i, j],
             Vₐ = windspeed(i, j, grid, fields, atmos),
