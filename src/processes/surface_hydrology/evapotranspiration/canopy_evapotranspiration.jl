@@ -94,15 +94,15 @@ end
 function compute_auxiliary!(
         state, grid,
         evapotranspiration::PALADYNCanopyEvapotranspiration,
-        canopy_interception::AbstractCanopyInterception,
         atmos::AbstractAtmosphere,
         constants::PhysicalConstants,
+        soil::AbstractSoil,
         vegetation::AbstractVegetation,
-        soil::Optional{AbstractSoil} = nothing
+        canopy_interception::AbstractCanopyInterception
     )
     out = auxiliary_fields(state, evapotranspiration)
-    fields = get_fields(state, evapotranspiration, canopy_interception, atmos, soil; except = out)
-    launch!(grid, XY, compute_auxiliary_kernel!, out, fields, evapotranspiration, canopy_interception, atmos, constants, soil)
+    fields = get_fields(state, evapotranspiration, atmos, soil, vegetation, canopy_interception; except = out)
+    launch!(grid, XY, compute_auxiliary_kernel!, out, fields, evapotranspiration, atmos, constants, soil, vegetation, canopy_interception)
     return nothing
 end
 
@@ -117,11 +117,11 @@ for the given scheme `evapotranspiration` and process dependencies.
 @propagate_inbounds function compute_evapotranspiration!(
         out, i, j, grid, fields,
         evapotranspiration::PALADYNCanopyEvapotranspiration,
-        canopy_interception::AbstractCanopyInterception,
         atmos::AbstractAtmosphere,
         constants::PhysicalConstants,
+        soil::AbstractSoil,
         vegetation::AbstractVegetation,
-        soil::Optional{AbstractSoil} = nothing
+        canopy_interception::AbstractCanopyInterception
     )
     # Get inputs
     Ts = fields.skin_temperature[i, j] # skin temperature (top of canopy)

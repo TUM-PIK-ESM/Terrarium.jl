@@ -17,9 +17,9 @@ end
 BareGroundEvaporation(
     ::Type{NF};
     ground_resistance::GR = ConstantEvaporationResistanceFactor(one(NF))
-) where {NF, GR} = BareGroundEvaporation{NF, GR}(; ground_resistance)
+) where {NF, GR} = BareGroundEvaporation{NF, GR}(ground_resistance)
 
-@propagate_inbounds surface_humidity_flux(i, j, grid, fields, evtr::BareGroundEvaporation) = fields.evaporation_ground[i, j]
+@propagate_inbounds surface_humidity_flux(i, j, grid, fields, evaporation::BareGroundEvaporation, args...) = fields.evaporation_ground[i, j]
 
 # Process methods
 
@@ -33,26 +33,26 @@ function compute_auxiliary!(
         evaporation::BareGroundEvaporation,
         atmos::AbstractAtmosphere,
         constants::PhysicalConstants,
-        soil::Optional{AbstractSoil} = nothing
+        soil::Optional{AbstractSoil} = nothing,
+        args...
     )
     out = auxiliary_fields(state, evaporation)
     fields = get_fields(state, evaporation, atmos, soil; except = out)
-    launch!(grid, XY, compute_evaporation_kernel!, out, fields, evaporation, atmos, constants, soil)
+    launch!(grid, XY, compute_auxiliary_kernel!, out, fields, evaporation, atmos, constants, soil)
     return nothing
 end
 
 # Kernel functions
 
-@propagate_inbounds function compute_evaporation_kernel!(
+@propagate_inbounds function compute_evapotranspiration!(
         out, i, j, grid, fields,
         evaporation::BareGroundEvaporation,
         atmos::AbstractAtmosphere,
         constants::PhysicalConstants,
         soil::Optional{AbstractSoil} = nothing
     )
-    i, j = @index(Global, NTuple)
     Ts = fields.skin_temperature[i, j]
-    rₐ = aerodynamic_resistance(i, j, grid, fields, aerodynamic_resistance) # aerodynamic resistance
+    rₐ = aerodynamic_resistance(i, j, grid, fields, atmos) # aerodynamic resistance
     β = ground_evaporation_resistance_factor(i, j, grid, fields, evaporation.ground_resistance, soil)
     Δq = compute_humidity_vpd(i, j, grid, fields, atmos, constants, Ts)
     # Calculate water evaporation flux in m/s (positive upwards)
