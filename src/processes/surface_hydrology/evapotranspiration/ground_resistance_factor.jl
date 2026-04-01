@@ -1,0 +1,48 @@
+# Ground resistance to evaporation
+
+@kwdef struct ConstantEvaporationResistanceFactor{NF} <: AbstractGroundEvaporationResistanceFactor
+    "Unit interval factor that determines resistance to evaporation; zero corresponds to no evaporation"
+    factor::NF = 1.0
+end
+
+ConstantEvaporationResistanceFactor(::Type{NF}; kwargs...) where {NF} = ConstantEvaporationResistanceFactor{NF}(; kwargs...)
+
+@inline ground_evaporation_resistance_factor(i, j, grid, fields, res::ConstantEvaporationResistanceFactor, args...) = res.factor
+
+"""
+    SoilMoistureResistanceFactor <: AbstractGroundEvaporationResistanceFactor
+
+Implements the soil moisture limiting resistance factor of Lee and Pielke (1992),
+
+```math
+\\beta =
+\\frac{1}{4} \\left[1 - \\cos\\left(π \\theta_1/\\theta_{\\text{fc}} \\right)\\right] \\quad \\text{for } \\theta_1 < \\theta_{\\text{fc}}
+```
+otherwise ``\\beta=1``.
+"""
+struct SoilMoistureResistanceFactor{NF} <: AbstractGroundEvaporationResistanceFactor end
+
+SoilMoistureResistanceFactor(::Type{NF}) where {NF} = SoilMoistureResistanceFactor{NF}()
+
+# Fallback implementation for interface consistency
+ground_evaporation_resistance_factor(i, j, grid, fields, ::SoilMoistureResistanceFactor{NF}, args...) where {NF} = one(NF)
+
+@inline function ground_evaporation_resistance_factor(
+        i, j, grid, fields,
+        ::SoilMoistureResistanceFactor{NF},
+        soil::AbstractSoil
+    ) where {NF}
+    fgrid = get_field_grid(grid)
+    strat = get_stratigraphy(soil)
+    hydrology = get_hydrology(soil)
+    bgc = get_biogeochemistry(soil)
+    soil = soil_volume(i, j, fgrid.Nz, grid, fields, strat, hydrology, bgc)
+    fc = field_capacity(get_hydraulic_properties(hydrology), soil)
+    fracs = volumetric_fractions(soil)
+    if fracs.water < fc
+        β = (1 - cos(π * fracs.water / fc))^2 / 4
+    else
+        β = NF(1)
+    end
+    return β
+end

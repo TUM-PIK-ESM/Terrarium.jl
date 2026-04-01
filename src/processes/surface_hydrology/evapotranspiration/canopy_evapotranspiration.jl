@@ -1,7 +1,7 @@
 """
     $TYPEDEF
 
-Evapotranspiration scheme from PALADYN (Willeit 2016) that includes a canopy
+Canopy evapotranspiration scheme from PALADYN (Willeit 2016) that includes a canopy
 evaporation term based on the saturation fraction of canopy water defined by the
 canopy hydrology scheme.
 
@@ -112,7 +112,7 @@ end
     $TYPEDEF
 
 Compute `transpiration`, `evaporation_ground`, and `evaporation_canopy` fluxes on `grid`
-for the given scheme `evtr` and process dependencies.
+for the given scheme `evapotranspiration` and process dependencies.
 """
 @propagate_inbounds function compute_evapotranspiration!(
         out, i, j, grid, fields,
@@ -124,7 +124,7 @@ for the given scheme `evtr` and process dependencies.
     )
     # Get inputs
     Ts = fields.skin_temperature[i, j] # skin temperature (top of canopy)
-    Tg = fields.ground_temperature[i, j] # ground temperature (top snow/soil layer)
+    Tg = fields.ground_temperature[i, j] # ground temeprature (top snow/soil layer)
     gw_can = fields.canopy_water_conductance[i, j] # stomatal conductance
 
     # Compute VPD and resistance terms
@@ -151,85 +151,8 @@ Compute the aerodynamic resistance between the ground and canopy as a function o
     @inbounds let LAI = fields.leaf_area_index[i, j],
             SAI = fields.SAI[i, j],
             Vₐ = windspeed(i, j, grid, fields, atmos),
-            C = evtr.C_can  # drag coefficient for the canopy
+            C = evapotranspiration.C_can  # drag coefficient for the canopy
         rₙ = (1 - exp(-LAI - SAI)) / (C * Vₐ)
         return rₙ
     end
-end
-
-# Ground resistance to evaporation
-
-"""
-    $TYPEDEF
-
-Represents a spatiotemporally constant, prescribed ground evaporation resistance factor.
-"""
-@kwdef struct ConstantEvaporationResistanceFactor{NF} <: AbstractGroundEvaporationResistanceFactor
-    "Unit interval factor that determines resistance to evaporation; zero corresponds to no evaporation"
-    factor::NF = 1.0
-end
-
-ConstantEvaporationResistanceFactor(::Type{NF}; kwargs...) where {NF} = ConstantEvaporationResistanceFactor{NF}(; kwargs...)
-
-@inline ground_evaporation_resistance_factor(i, j, grid, fields, res::ConstantEvaporationResistanceFactor, args...) = res.factor
-
-"""
-    $TYPEDEF
-
-Implements the soil moisture limiting resistance factor of Lee and Pielke (1992),
-
-```math
-\\beta =
-\\frac{1}{4} \\left[1 - \\cos\\left(π \\theta_1/\\theta_{\\text{fc}} \\right)\\right] \\quad \\text{for } \\theta_1 < \\theta_{\\text{fc}}
-```
-otherwise ``\\beta=1``.
-"""
-struct SoilMoistureResistanceFactor{NF} <: AbstractGroundEvaporationResistanceFactor end
-
-SoilMoistureResistanceFactor(::Type{NF}) where {NF} = SoilMoistureResistanceFactor{NF}()
-
-# Fallback implementation for interface consistency
-ground_evaporation_resistance_factor(i, j, grid, fields, ::SoilMoistureResistanceFactor{NF}, args...) where {NF} = one(NF)
-
-@inline function ground_evaporation_resistance_factor(
-        i, j, grid, fields,
-        ::SoilMoistureResistanceFactor{NF},
-        soil::AbstractSoil
-    ) where {NF}
-    fgrid = get_field_grid(grid)
-    strat = get_stratigraphy(soil)
-    hydrology = get_hydrology(soil)
-    bgc = get_biogeochemistry(soil)
-    soil = soil_volume(i, j, fgrid.Nz, grid, fields, strat, hydrology, bgc)
-    fc = field_capacity(get_hydraulic_properties(hydrology), soil)
-    fracs = volumetric_fractions(soil)
-    if fracs.water < fc
-        β = (1 - cos(π * fracs.water / fc))^2 / 4
-    else
-        β = NF(1)
-    end
-    return β
-end
-
-# Forcing interface for soil hydrology
-
-"""
-    forcing(i, j, k, grid, clock, fields, evtr::AbstractEvapotranspiration, ::AbstractSoilHydrology)
-
-Compute and return the evapotranspiration forcing for soil moisture at the given indices `i, j, k`.
-The ET forcing is just the `surface_humidity_flux` rescaled by the thickness of layer `k`.
-"""
-@inline function forcing(i, j, k, grid, clock, fields, evapotranspiration::AbstractEvapotranspiration, ::AbstractSoilHydrology)
-    let Δz = Δzᵃᵃᶜ(i, j, k, grid),
-            Qh = surface_humidity_flux(i, j, grid, fields, evapotranspiration)
-        ∂θ∂t = -Qh / Δz # rescale by layer thickness to get water content flux
-        return ∂θ∂t * (k == grid.Nz)
-    end
-end
-
-# Kernels
-
-@kernel inbounds = true function compute_auxiliary_kernel!(out, grid, fields, evapotranspiration::AbstractEvapotranspiration, args...)
-    i, j = @index(Global, NTuple)
-    compute_evapotranspiration!(out, i, j, grid, fields, evapotranspiration, args...)
 end

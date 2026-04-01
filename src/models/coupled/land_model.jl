@@ -116,4 +116,10 @@ default_surface_energy_balance(grid::AbstractLandGrid, vegetation, soil) = Surfa
 
 # Default surface hydrology
 default_surface_hydrology(grid::AbstractLandGrid, ::AbstractVegetation, soil) = SurfaceHydrology(eltype(grid))
-default_surface_hydrology(grid::AbstractLandGrid, ::Nothing, soil) = SurfaceHydrology(eltype(grid), canopy_interception = NoCanopyInterception(eltype(grid)))
+function default_surface_hydrology(grid::AbstractLandGrid, ::Nothing, soil)
+    return SurfaceHydrology(
+        eltype(grid),
+        evapotranspiration = BareGroundEvaporation(eltype(grid)),
+        canopy_interception = NoCanopyInterception(eltype(grid))
+    )
+end
