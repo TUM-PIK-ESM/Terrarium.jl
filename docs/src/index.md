@@ -29,7 +29,7 @@ julia --project=. -e "import Pkg; Pkg.instantiate()"
 
 ## Quick start
 
-A natural first step with `Terrarium` is to set up and run your very first `SoilModel`. This represents a standalone model of transient heat, water, and carbon transport over a particular choice of `grid`. We start by chosing a `ColumnGrid` which represents one or more laterally independent vertical columns:
+A natural first step with `Terrarium` is to set up and run your very first `SoilModel`. This represents a standalone model of transient heat, water, and carbon transport over a particular choice of `grid`. We start by choosing a `ColumnGrid` which represents one or more laterally independent vertical columns:
 
 ```@example
 using Terrarium
