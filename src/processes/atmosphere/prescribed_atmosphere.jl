@@ -218,8 +218,8 @@ length [hr].
 struct LongShortWaveRadiation <: AbstractIncomingRadiation end
 
 variables(::LongShortWaveRadiation) = (
-    input(:surface_shortwave_down, XY(), units = u"W/m^2", desc = "Incoming (downwelling) shortwave solar radiation"),
-    input(:surface_longwave_down, XY(), units = u"W/m^2", desc = "Incoming (downwelling) longwave thermal radiation"),
+    input(:surface_shortwave_down, XY(), default = 300, units = u"W/m^2", desc = "Incoming (downwelling) shortwave solar radiation"),
+    input(:surface_longwave_down, XY(), default = 50, units = u"W/m^2", desc = "Incoming (downwelling) longwave thermal radiation"),
     input(:daytime_length, XY(), default = 12, units = u"hr", desc = "Number of daytime hours varying with the season and orbital parameters"),
 )
 

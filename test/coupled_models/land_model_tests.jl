@@ -10,9 +10,12 @@ using Oceananigans.BoundaryConditions: BoundaryCondition, Flux
     hydrology = SoilHydrology(eltype(grid), RichardsEq(); hydraulic_properties)
     soil = SoilEnergyWaterCarbon(eltype(grid); hydrology)
     land = LandModel(grid; soil, vegetation = nothing)
+    # Test vegetation = nothing results in bare ground evaporation and no canopy interception
+    @test land.surface_hydrology.evapotranspiration isa Terrarium.BareGroundEvaporation
+    @test land.surface_hydrology.canopy_interception isa Terrarium.NoCanopyInterception
     # Variably saturated with water table
     initializers = (
-        temperature = (x, z) -> 1.0 - 0.02 * z,
+        temperature = (x, z) -> 5.0 - 0.02 * z,
         saturation_water_ice = (x, z) -> min(1, 0.8 - 0.05 * z),
     )
     integrator = initialize(land, ForwardEuler(); initializers)
@@ -29,6 +32,7 @@ using Oceananigans.BoundaryConditions: BoundaryCondition, Flux
     timestep!(integrator, 60.0)
     @test all(isfinite.(integrator.state.saturation_water_ice))
     @test all(isfinite.(integrator.state.internal_energy))
+    @test all(isfinite.(integrator.state.ground_heat_flux))
 end
 
 @testset "LandModel: Vegetation + Soil" begin
@@ -39,9 +43,11 @@ end
     soil = SoilEnergyWaterCarbon(eltype(grid); hydrology)
     vegetation = VegetationCarbon(eltype(grid))
     land = LandModel(grid; soil, vegetation)
+    @test land.surface_hydrology.evapotranspiration isa Terrarium.PALADYNCanopyEvapotranspiration
+    @test land.surface_hydrology.canopy_interception isa Terrarium.PALADYNCanopyInterception
     # Variably saturated with water table
     initializers = (
-        temperature = (x, z) -> 1.0 - 0.02 * z,
+        temperature = (x, z) -> 5.0 - 0.02 * z,
         saturation_water_ice = (x, z) -> min(1, 0.8 - 0.05 * z),
         carbon_vegetation = 0.1,
     )
@@ -59,6 +65,7 @@ end
     timestep!(integrator, 60.0)
     @test all(isfinite.(integrator.state.saturation_water_ice))
     @test all(isfinite.(integrator.state.internal_energy))
+    @test all(isfinite.(integrator.state.ground_heat_flux))
     @test all(isfinite.(integrator.state.carbon_vegetation))
     # TODO: also check ET and veg processes once they are working...
 end
