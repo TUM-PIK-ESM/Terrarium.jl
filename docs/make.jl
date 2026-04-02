@@ -85,7 +85,7 @@ makedocs(
         prettyurls = get(ENV, "CI", nothing) == "true",
         ansicolor = true,
         collapselevel = 1,
-        canonical = "https://tum-pik-esm.github.io/Terrarium.jl/stable/",
+        canonical = "https://numericalearth.github.io/Terrarium.jl/stable/",
         size_threshold = 600_000,
         mathengine = Documenter.MathJax3(),
     ),
@@ -100,12 +100,13 @@ makedocs(
             "Mathematical formulation" => "introduction/mathematical_formulation.md",
         ],
         "Running Terrarium" => [
-            "Running simulations" => "running/simulations.md",
+            "Initialization" => "running/initialization.md",
+            "Time stepping" => "running/time_stepping.md",
             "Input sources" => "running/input_sources.md",
         ],
         "Extending Terrarium" => [
             "Core interfaces" => "extending/core_interfaces.md",
-            "Adding new processes" => "extending/adding_processes.md",
+            "Implementing processes" => "extending/Implementing_processes.md",
             "Coupling processes" => "extending/coupling_processes.md",
         ],
         "Models" => [
