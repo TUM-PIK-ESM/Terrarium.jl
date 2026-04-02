@@ -98,13 +98,5 @@ compute_ν_tendency
 ## Kernel functions
 
 ```@docs; canonical = false
-compute_ν_tendency
-```
-
-```@docs; canonical = false
 compute_ν_tendencies!
-```
-
-```@docs; canonical = false
-compute_tendencies_kernel!
 ```
