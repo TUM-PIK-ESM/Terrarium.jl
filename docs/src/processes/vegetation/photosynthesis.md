@@ -36,7 +36,7 @@ While $A_g$ remains continuous, this formulation produces an abrupt transition b
 
 ```math
 \begin{equation}
-\theta_r A_g^2 - (J_C + J_E)A_g + J_C J_E = 0
+\theta_r A_g^2 - (J_C + J_E)A_g + J_C J_E = 0,
 \end{equation}
 ```
 
