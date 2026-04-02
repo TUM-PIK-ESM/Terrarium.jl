@@ -45,7 +45,7 @@ Procceses are the building blocks of all Terrarium models. Implementations of `A
 - Zero or more *parameters* that are spatially constant and defined somewhere within the process `struct`,
 - One or more functions defining equations that compute quantities of interest from both the state variables and parameters defined by the process.
 
-Concrete implementations of `AbstractProcess` are `struct` types that typically consist of zero or more parameters or parameter `struct`s (also sometimes referred to as *parameterizations*). Spatially varying parameters should generally be defined as [`InputVariable`s](@ref) (see following section) or computed by [kernel functions](@ref "Kernel programming") based on spatially invariant parameters stored in parameterization `struct`s.
+Concrete implementations of `AbstractProcess` are `struct` types that typically consist of zero or more parameters or parameter `struct`s (also sometimes referred to as *parameterizations*). Spatially varying parameters should generally be defined as [`InputVariable`](@ref)s (see following section) or computed by [kernel functions](@ref "Kernel programming") based on spatially invariant parameters stored in parameterization `struct`s.
 
 ## State variables
 State variables are symbolically defined for each process in their respective implementations of the `variables` method by returning instances of [`AbstractVariable`](@ref) which define (at minimum) its name, dimensionality, and physical units. State variables may be one of three types:
