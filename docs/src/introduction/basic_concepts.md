@@ -45,7 +45,7 @@ Procceses are the building blocks of all Terrarium models. Implementations of `A
 - Zero or more *parameters* that are spatially constant and defined somewhere within the process `struct`,
 - One or more functions defining equations that compute quantities of interest from both the state variables and parameters defined by the process.
 
-Concrete implementations of `AbstractProcess` are `struct` types that typically consist of zero or more parameters or parameter `struct`s (also sometimes referred to as *parameterizations*).
+Concrete implementations of `AbstractProcess` are `struct` types that typically consist of zero or more parameters or parameter `struct`s (also sometimes referred to as *parameterizations*). Spatially varying parameters should generally be defined as [`InputVariable`s](@ref) (see following section) or computed by [kernel functions](@ref "Kernel programming") based on spatially invariant parameters stored in parameterization `struct`s.
 
 ## State variables
 State variables are symbolically defined for each process in their respective implementations of the `variables` method by returning instances of [`AbstractVariable`](@ref) which define (at minimum) its name, dimensionality, and physical units. State variables may be one of three types:
@@ -54,7 +54,8 @@ PrognosticVariable
 AuxiliaryVariable
 InputVariable
 ```
-which can also be instantiated using one of the convenience methods [`prognostic`](@ref), [`auxiliary`](@ref), or [`input`](@ref).
+
+These variables are typically constructed using one of the convenience methods [`prognostic`](@ref), [`auxiliary`](@ref), or [`input`](@ref).
 
 !!! info "Variables vs. `Field`s"
     Within the context of defining and handling model/process state, Terrarium distinguishes between *variables* and *Fields*. Variables are symbolic objects subtyping [`AbstractVariable`](@ref) that contain metadata about the state variable defined by the process or model type. These variables are realized as [`Fields`](@ref) defined over the model grid that contain the actual numerical data of the corresponding variable. 

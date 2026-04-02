@@ -156,11 +156,25 @@ Return the `PhysicalConstants` associated with the given `model`.
 @inline get_constants(model::AbstractModel) = model.constants
 
 """
+    $TYPEDEF
+
+Base type for prognostic variable closure relations for differential equations of the form:
+
+```math
+\\frac{\\partial g(u)}{\\partial t} = F(u)
+```
+where `F` represents the RHS tendency as a function of the state variable `u`, and `g(u)` is a closure or constitutive
+relation that maps `u` to the physical units matching the tendency. Common examples in soil hydrothermal modeling
+are temperature-enthalpy and saturation-pressure relations.
+"""
+abstract type AbstractClosureRelation end
+
+"""
     closure!(state, model::AbstractModel)
 
 Apply all closure relations defined for the given `model`.
 
-    closure!(state, grid, [closure,] process, args...)
+    closure!(state, grid, [closure::AbstractClosureRelation,] process, args...)
 
 Apply the `closure` for `process` with the given `grid` and additional
 implementation-specific `args`. If `closure` is not specified, it is
@@ -175,7 +189,7 @@ closure!(state, grid, closure, ::AbstractProcess, args...) = nothing
 
 Apply the inverse of all closure relations defined for the given `model`.
 
-    invclosure!(state, grid, [closure,] process, args...)
+    invclosure!(state, grid, [closure::AbstractClosureRelation,] process, args...)
 
 Apply the `closure` for `process` with the given `grid` and additional
 implementation-specific `args`. If `closure` is not specified, it is
@@ -186,6 +200,8 @@ invclosure!(state, grid, proc::AbstractProcess, args...) = invclosure!(state, gr
 invclosure!(state, grid, closure, ::AbstractProcess, args...) = nothing
 
 """
+    (::Type{Model})(grid::AbstractLandGrid, args...; kwargs...) where {Model <: AbstractModel}
+
 Convenience constructor for all `AbstractModel` types that allows the `grid` to be passed
 as the first positional argument.
 """

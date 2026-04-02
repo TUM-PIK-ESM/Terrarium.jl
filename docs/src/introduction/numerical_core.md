@@ -33,7 +33,7 @@ In addition to holding data, `Field`s also can also store one or more associated
 
 For a more detailed overview of `Field`s, we recommend checking out the [corresponding page](https://clima.github.io/OceananigansDocumentation/stable/fields/) in the Oceananigans documentation.
 
-## Parallel programming with KernelAbstractions.jl
+## Kernel programming
 
 Like Oceananigans and SpeedyWeather, the numerical core of Terrarium is based on [KernelAbstractions.jl](https://github.com/JuliaGPU/KernelAbstractions.jl) which allows for device-agnostic *parallel programming* via computational *kernels*. The purpose of this design is to allow for highly efficient, scalable, and cross-architecture (e.g. CPU/GPU/TPU) parallelization of all numerical computations. Kernels are defined using the `@kernel` macro from KernelAbstractions:
 
@@ -60,6 +60,12 @@ which automatically passes `grid` as the second argument to the kernel. Note tha
 
 !!! warning
     The kernel launching patterns used in Terrarium are still in an early stage of development and may change in the future.
+
+As a general rule, we try to combine or *fuse* kernel functions as much as possible. Kernel fusion means that we aim to write relatively “large” kernels that fuse as many operations as possible together in one kernel. Kernel fusion leads to more efficient GPU computations by reducing memory demand and kernel launching overhead ([Wang et. al 2000](https://ieeexplore.ieee.org/document/5724850/)). In order to still keep our code well structured and modular, our approach relies on implementing most processes as inlined functions that can be called from a GPU kernel.
+
+To see how this looks in action in Terrarium.jl, you can take a look at the code for [SoilEnergyBalance](https://github.com/NumericalEarth/Terrarium.jl/blob/main/src/processes/soil/energy/soil_energy.jl): There `compute_tendencies!` is the mandatory function for the model component, it launches exactly one kernel `compute_energy_tendency!`, which includes several `@inline` function to compute individual contributions to the energy balance such as `compute_energy_tendency`, `compute_thermal_conductivity` and the `diffusive_heat_flux`.
+
+It's also worth checking out the [Simulation tips](https://clima.github.io/OceananigansDocumentation/stable/simulation_tips/) provided in the documentation for Oceananigans.
 
 ## Numeric types
 

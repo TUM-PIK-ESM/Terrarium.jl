@@ -121,11 +121,3 @@ compute_veg_carbon_auxiliary!
 ```@docs; canonical = false
 compute_veg_carbon_tendencies!
 ```
-
-```@docs; canonical = false
-compute_auxiliary_kernel!
-```
-
-```@docs; canonical = false
-compute_tendencies_kernel!
-```

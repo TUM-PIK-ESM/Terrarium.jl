@@ -117,7 +117,7 @@ which computes the contribution of ET to the soil moisture tendency in each soil
 flux only from the uppermost soil layer.
 
 ```@docs; canonical = false
-forcing(i, j, k, grid, clock, fields, evtr::AbstractEvapotranspiration, ::AbstractSoilHydrology)
+forcing(i, j, k, grid, clock, fields, evapotranspiration::AbstractEvapotranspiration, ::AbstractSoilHydrology)
 ```
 
 ## Kernel functions
