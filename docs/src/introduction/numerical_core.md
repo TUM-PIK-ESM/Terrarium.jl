@@ -18,7 +18,7 @@ All Terrarium `AbstractLandGrid` implementations are required to implement the f
 
 The vertical `Z`-axis is currently limited to representing the subsurface (typically soil) domain, though we plan to expand this to include snow and canopy layers in the future.
 
-!!! info Ordering of vertical layers
+!!! info "Ordering of vertical layers"
     Oceananigans follows a **positive-upwards** convention for the vertical axis. This also implies that the vertical layer at the first index of a 3D Terrarium field is actually the **bottom-most layer** in the ground/soil column; i.e. `interior(temperature)[1,1,1]` for a `Field` called `temperature` would correspond to the vertical layer at the bottom of the first grid cell (i.e. `X = 1`). To get the topmost layer, use instead `interior(temperature)[1,1,end]`. Note that here [`interior`](https://clima.github.io/OceananigansDocumentation/stable/appendix/library/#Oceananigans.Fields.interior-Tuple{Field}) is a function from Oceananigans that retrieves a view of the `Field` excluding halo (boundary condition) cells.
 
 For more information on how Oceananigans grids work, we recommend reading the [corresponding page](https://clima.github.io/OceananigansDocumentation/stable/grids/) in the Oceananigans documentation.
