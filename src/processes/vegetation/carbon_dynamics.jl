@@ -69,7 +69,7 @@ Computes `LAI_b`, the balanced Leaf Area Index based on the vegetation carbon po
 Eqs. 76-79, PALADYN (Willeit 2016).
 """
 @inline function compute_LAI_b(vegcarbon_dynamics::PALADYNCarbonDynamics{NF}, C_veg) where {NF}
-    LAI_b = ((NF(2.0) / vegcarbon_dynamics.SLA) + vegcarbon_dynamics.awl) / (C_veg + eps(NF)) # division by zero risk
+    LAI_b = C_veg / ((NF(2.0) / vegcarbon_dynamics.SLA) + vegcarbon_dynamics.awl)
     return LAI_b
 end
 
