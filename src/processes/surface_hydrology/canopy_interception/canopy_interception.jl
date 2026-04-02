@@ -137,12 +137,12 @@ end
 function compute_auxiliary!(
         state, grid,
         canopy_interception::PALADYNCanopyInterception,
-        atmos::AbstractAtmosphere,
-        constants::PhysicalConstants
+        constants::PhysicalConstants,
+        atmos::AbstractAtmosphere
     )
     out = auxiliary_fields(state, canopy_interception)
     fields = get_fields(state, canopy_interception, atmos; except = out)
-    launch!(grid, XY, compute_auxiliary_kernel!, out, fields, canopy_interception, atmos, constants)
+    launch!(grid, XY, compute_auxiliary_kernel!, out, fields, canopy_interception, constants, atmos)
     return nothing
 end
 
@@ -163,8 +163,8 @@ end
 @propagate_inbounds function compute_canopy_auxiliary!(
         out, i, j, grid, fields,
         canopy_interception::PALADYNCanopyInterception{NF},
-        atmos::AbstractAtmosphere,
         constants::PhysicalConstants,
+        atmos::AbstractAtmosphere,
         args...
     ) where {NF}
     # Get inputs
@@ -196,7 +196,7 @@ end
 @propagate_inbounds function compute_canopy_water_tendency!(
         tendencies, i, j, grid, fields,
         canopy_interception::PALADYNCanopyInterception,
-        evtr::AbstractEvapotranspiration,
+        ::AbstractEvapotranspiration,
         args...
     )
     # Get inputs

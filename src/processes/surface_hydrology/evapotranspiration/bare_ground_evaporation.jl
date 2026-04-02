@@ -31,14 +31,15 @@ variables(::BareGroundEvaporation) = (
 function compute_auxiliary!(
         state, grid,
         evaporation::BareGroundEvaporation,
-        atmos::AbstractAtmosphere,
+        ::NoCanopyInterception,
         constants::PhysicalConstants,
+        atmos::AbstractAtmosphere,
         soil::Optional{AbstractSoil} = nothing,
         args...
     )
     out = auxiliary_fields(state, evaporation)
     fields = get_fields(state, evaporation, atmos, soil; except = out)
-    launch!(grid, XY, compute_auxiliary_kernel!, out, fields, evaporation, atmos, constants, soil)
+    launch!(grid, XY, compute_auxiliary_kernel!, out, fields, evaporation, constants, atmos, soil)
     return nothing
 end
 
@@ -47,8 +48,8 @@ end
 @propagate_inbounds function compute_evapotranspiration!(
         out, i, j, grid, fields,
         evaporation::BareGroundEvaporation,
-        atmos::AbstractAtmosphere,
         constants::PhysicalConstants,
+        atmos::AbstractAtmosphere,
         soil::Optional{AbstractSoil} = nothing
     )
     Ts = fields.skin_temperature[i, j]

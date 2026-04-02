@@ -60,8 +60,8 @@ function compute_auxiliary!(
         state, grid,
         tur::DiagnosedTurbulentFluxes,
         seb::AbstractSurfaceEnergyBalance,
-        atmos::AbstractAtmosphere,
         constants::PhysicalConstants,
+        atmos::AbstractAtmosphere,
         args...
     )
     skinT = seb.skin_temperature
@@ -69,7 +69,7 @@ function compute_auxiliary!(
     fields = get_fields(state, tur, skinT, atmos; except = out)
     launch!(
         grid, XY, compute_auxiliary_kernel!, out, fields,
-        tur, skinT, atmos, constants
+        tur, skinT, constants, atmos
     )
     return nothing
 end
@@ -85,8 +85,8 @@ Compute the sensible heat flux at `i, j` based on the current skin temperature a
         i, j, grid, fields,
         tur::DiagnosedTurbulentFluxes,
         skinT::AbstractSkinTemperature,
-        atmos::AbstractAtmosphere,
-        constants::PhysicalConstants
+        constants::PhysicalConstants,
+        atmos::AbstractAtmosphere
     )
     let ρₐ = constants.ρₐ, # density of air
             cₐ = constants.cₐ, # specific heat capacity of air
@@ -111,8 +111,8 @@ to the latent heat flux.
         i, j, grid, fields,
         tur::DiagnosedTurbulentFluxes,
         skinT::AbstractSkinTemperature,
-        atmos::AbstractAtmosphere,
-        constants::PhysicalConstants
+        constants::PhysicalConstants,
+        atmos::AbstractAtmosphere
     )
     let L = constants.Llg, # specific latent heat of vaporization of water
             ρₐ = constants.ρₐ, # density of air
@@ -154,14 +154,14 @@ end
         out, grid, fields,
         tur::DiagnosedTurbulentFluxes,
         skinT::AbstractSkinTemperature,
-        atmos::AbstractAtmosphere,
-        constants::PhysicalConstants
+        constants::PhysicalConstants,
+        atmos::AbstractAtmosphere
     )
     i, j = @index(Global, NTuple)
     # compute sensible heat flux
-    out.sensible_heat_flux[i, j, 1] = compute_sensible_heat_flux(i, j, grid, fields, tur, skinT, atmos, constants)
+    out.sensible_heat_flux[i, j, 1] = compute_sensible_heat_flux(i, j, grid, fields, tur, skinT, constants, atmos)
     # compute latent heat flux
-    out.latent_heat_flux[i, j, 1] = compute_latent_heat_flux(i, j, grid, fields, tur, skinT, atmos, constants)
+    out.latent_heat_flux[i, j, 1] = compute_latent_heat_flux(i, j, grid, fields, tur, skinT, constants, atmos)
 end
 
 # TODO: Can these dispatches be standardized to reduce redundancy?
@@ -169,13 +169,13 @@ end
         out, grid, fields,
         tur::DiagnosedTurbulentFluxes,
         skinT::AbstractSkinTemperature,
-        atmos::AbstractAtmosphere,
         constants::PhysicalConstants,
+        atmos::AbstractAtmosphere,
         evtr::AbstractEvapotranspiration
     )
     i, j = @index(Global, NTuple)
     # compute sensible heat flux
-    out.sensible_heat_flux[i, j, 1] = compute_sensible_heat_flux(i, j, grid, fields, tur, skinT, atmos, constants)
+    out.sensible_heat_flux[i, j, 1] = compute_sensible_heat_flux(i, j, grid, fields, tur, skinT, constants, atmos)
     # compute latent heat flux
     out.latent_heat_flux[i, j, 1] = compute_latent_heat_flux(i, j, grid, fields, tur, evtr, constants)
 end

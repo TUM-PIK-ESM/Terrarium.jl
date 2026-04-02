@@ -1,6 +1,9 @@
 """
     $TYPEDEF
 
+Default representation of coupled surface hydrology processes including
+canopy rain/snow interception, evapotranspiration, and surface runoff.
+
 Properties:
 $FIELDS
 """
@@ -32,23 +35,19 @@ end
 function compute_auxiliary!(
         state, grid,
         hydrology::SurfaceHydrology,
-        atmos::AbstractAtmosphere,
         constants::PhysicalConstants,
+        atmos::AbstractAtmosphere,
         soil::Optional{AbstractSoil} = nothing,
         vegetation::Optional{AbstractVegetation} = nothing,
         args...
     )
-    compute_auxiliary!(state, grid, hydrology.canopy_interception, atmos, constants)
-    compute_auxiliary!(state, grid, hydrology.evapotranspiration, atmos, constants, soil, vegetation, hydrology.canopy_interception)
+    compute_auxiliary!(state, grid, hydrology.canopy_interception, constants, atmos)
+    compute_auxiliary!(state, grid, hydrology.evapotranspiration, hydrology.canopy_interception, constants, atmos, soil, vegetation)
     compute_auxiliary!(state, grid, hydrology.surface_runoff, hydrology.canopy_interception, soil)
     return nothing
 end
 
-function compute_tendencies!(
-        state, grid,
-        hydrology::SurfaceHydrology,
-        args...,
-    )
+function compute_tendencies!(state, grid, hydrology::SurfaceHydrology, args...)
     # Compute tendencies for canopy interception
     compute_tendencies!(state, grid, hydrology.canopy_interception, hydrology.evapotranspiration)
     return nothing

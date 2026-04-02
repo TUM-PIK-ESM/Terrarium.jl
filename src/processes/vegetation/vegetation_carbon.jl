@@ -65,8 +65,8 @@ end
 function compute_auxiliary!(
         state, grid,
         veg::VegetationCarbon,
-        atmos::AbstractAtmosphere,
         constants::PhysicalConstants,
+        atmos::AbstractAtmosphere,
         soil::Optional{AbstractSoil} = nothing,
         args...
     )
@@ -83,10 +83,10 @@ function compute_auxiliary!(
     # Stomatal conductance: needs atm. inputs(t) and computes λc(t)
     # TODO: Note the (implicit) circular dependency between photosynthesis and stomatal conductance;
     # can this be refactored?
-    compute_auxiliary!(state, grid, veg.stomatal_conductance, veg.photosynthesis, atmos, constants)
+    compute_auxiliary!(state, grid, veg.stomatal_conductance, veg.photosynthesis, constants, atmos)
 
     # Photosynthesis: needs atm. inputs(t), λc(t), LAI(t-1), and computes Rd(t) and GPP(t)
-    compute_auxiliary!(state, grid, veg.photosynthesis, veg.stomatal_conductance, atmos, constants)
+    compute_auxiliary!(state, grid, veg.photosynthesis, veg.stomatal_conductance, constants, atmos)
 
     # Autotrophic respiration: needs atm. inputs(t), GPP(t), Rd(t), C_veg(t-1), phen(t-1) and computes Ra(t) and NPP(t)
     compute_auxiliary!(state, grid, veg.autotrophic_respiration, veg.carbon_dynamics, atmos)

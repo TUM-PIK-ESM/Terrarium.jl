@@ -71,7 +71,7 @@ function initialize!(state, model::LandModel)
     initialize!(state, grid, model.surface_energy_balance)
     initialize!(state, grid, model.surface_hydrology)
     # TODO: change when refactoring model/process types
-    initialize!(state, grid, model.vegetation, model.atmosphere, model.constants)
+    initialize!(state, grid, model.vegetation, model.constants, model.atmosphere)
     initialize!(state, grid, model.soil, model.constants)
     return nothing
 end
@@ -80,10 +80,10 @@ function compute_auxiliary!(state, model::LandModel)
     grid = get_grid(model)
     compute_auxiliary!(state, grid, model.atmosphere)
     compute_auxiliary!(state, grid, model.soil, model.constants)
-    compute_auxiliary!(state, grid, model.vegetation, model.atmosphere, model.constants, model.soil)
-    compute_auxiliary!(state, grid, model.surface_hydrology, model.atmosphere, model.constants, model.soil, model.vegetation)
-    compute_auxiliary!(state, grid, model.surface_energy_balance, model.atmosphere, model.constants, model.surface_hydrology)
-    compute_surface_energy_fluxes!(state, grid, model.surface_energy_balance, model.atmosphere, model.constants, model.surface_hydrology)
+    compute_auxiliary!(state, grid, model.vegetation, model.constants, model.atmosphere, model.soil)
+    compute_auxiliary!(state, grid, model.surface_hydrology, model.constants, model.atmosphere, model.soil, model.vegetation)
+    compute_auxiliary!(state, grid, model.surface_energy_balance, model.constants, model.atmosphere, model.surface_hydrology)
+    compute_surface_energy_fluxes!(state, grid, model.surface_energy_balance, model.constants, model.atmosphere, model.surface_hydrology)
     return nothing
 end
 

@@ -3,7 +3,7 @@ using Test
 
 using Oceananigans.BoundaryConditions: BoundaryCondition, Flux
 
-@testset "LandModel: Soil" begin
+@testset "LandModel: Soil, no vegetation" begin
     grid = ColumnGrid(CPU(), ExponentialSpacing(Δz_max = 1.0, N = 50))
     swrc = VanGenuchten(α = 2.0, n = 2.0)
     hydraulic_properties = ConstantSoilHydraulics(eltype(grid); swrc, unsat_hydraulic_cond = UnsatKVanGenuchten(eltype(grid)))
@@ -35,7 +35,7 @@ using Oceananigans.BoundaryConditions: BoundaryCondition, Flux
     @test all(isfinite.(integrator.state.ground_heat_flux))
 end
 
-@testset "LandModel: Vegetation + Soil" begin
+@testset "LandModel: Coupled vegetation-soil" begin
     grid = ColumnGrid(CPU(), ExponentialSpacing(Δz_max = 1.0, N = 50))
     swrc = VanGenuchten(α = 2.0, n = 2.0)
     hydraulic_properties = ConstantSoilHydraulics(eltype(grid); swrc, unsat_hydraulic_cond = UnsatKVanGenuchten(eltype(grid)))

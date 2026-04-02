@@ -103,7 +103,9 @@ include("surface_energy/surface_energy_balance.jl")
 
 # Surface Hydrology
 
-export PALADYNCanopyEvapotranspiration
+export NoCanopyInterception, PALADYNCanopyInterception
+include("surface_hydrology/canopy_interception/canopy_interception.jl")
+
 include("surface_hydrology/evapotranspiration/evapotranspiration_base.jl")
 
 export SoilMoistureResistanceFactor, ConstantEvaporationResistanceFactor
@@ -114,9 +116,6 @@ include("surface_hydrology/evapotranspiration/bare_ground_evaporation.jl")
 
 export PALADYNCanopyEvapotranspiration
 include("surface_hydrology/evapotranspiration/canopy_evapotranspiration.jl")
-
-export PALADYNCanopyInterception
-include("surface_hydrology/canopy_interception/canopy_interception.jl")
 
 export DirectSurfaceRunoff
 include("surface_hydrology/runoff/direct_surface_runoff.jl")
