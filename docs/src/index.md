@@ -46,7 +46,7 @@ integrator = initialize(model, ForwardEuler(eltype(grid)), boundary_conditions =
 @time run!(integrator, period = Day(10))
 ```
 
-That's it! You already succesfully ran a (very simple) simulation with Terrarium!
+That's it! You already successfully ran a (very simple) simulation with Terrarium!
 
 Note that setting `num_columns = 1` here corresponds to a point simulation for a single vertical column. However, we can easily scale this up by set `num_columns` to any positive integer (up to the memory limit of your system, of course).
 
@@ -55,7 +55,7 @@ We can also easily adapt this code to run a *global* simulation over a suitable 
 ```@example
 using Terrarium
 using RingGrids: FullGaussianGrid
-using CUDA # needs to be seaprately installed
+using CUDA # needs to be separately installed
 
 rings = FullGaussianGrid(8) # Gaussian grid with 16 latitudinal rings, 8 per hemisphere (512 points, ~9.0˚ lat/lon)
 arch = CUDA.functional() ? GPU() : CPU() # run on the GPU (if available)

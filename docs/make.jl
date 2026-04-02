@@ -16,13 +16,20 @@ s = ArgParseSettings()
     "--draft", "-d"
     action = :store_true
     help = "Whether to build docs in draft mode, i.e. skipping execution of examples and doctests"
+    "--no-exec", "-e"
+    action = :store_true
+    help = "Like --draft but applies only to example scripts"
+    "--debug"
+    action = :store_true
+    help = "Enable Documenter.jl debug logging"
 end
 parsed_args = parse_args(ARGS, s)
 
 IS_LOCAL = parsed_args["local"] || parse(Bool, get(ENV, "LOCALDOCS", "false"))
 IS_DRAFT = parsed_args["draft"] || parse(Bool, get(ENV, "DRAFTDOCS", "false"))
-BUILD_EXAMPLE_DOCS = !IS_DRAFT && parse(Bool, get(ENV, "BUILD_EXAMPLE_DOCS", "true"))
-if haskey(ENV, "GITHUB_ACTIONS")
+NO_EXEC = parsed_args["no-exec"] || parse(Bool, get(ENV, "NOEXEC", "false"))
+BUILD_EXAMPLE_DOCS = !IS_DRAFT && !NO_EXEC
+if haskey(ENV, "GITHUB_ACTIONS") || parsed_args["debug"]
     ENV["JULIA_DEBUG"] = "Documenter"
 end
 
@@ -65,14 +72,12 @@ end
 # Pages vector for makedocs
 example_docpages = Pair{String, String}[]
 
-if BUILD_EXAMPLE_DOCS
-    # Build example pages with Literate.jl
-    build_literate_pages()
-    # Add example pages to list
-    for (title, filename) in script_list
-        mdfile = replace(filename, ".jl" => ".md")
-        push!(example_docpages, title => joinpath(EXAMPLES_OUTDIR_RELATIVE, mdfile))
-    end
+# Build example pages with Literate.jl
+build_literate_pages()
+# Add example pages to list
+for (title, filename) in script_list
+    mdfile = replace(filename, ".jl" => ".md")
+    push!(example_docpages, title => joinpath(EXAMPLES_OUTDIR_RELATIVE, mdfile))
 end
 
 makedocs(
@@ -89,13 +94,19 @@ makedocs(
     modules = [Terrarium],
     pages = [
         "Home" => "index.md",
-        "Overview" => [
+        "Introduction" => [
             "Basic concepts" => "introduction/basic_concepts.md",
             "Numerical core" => "introduction/numerical_core.md",
             "Mathematical formulation" => "introduction/mathematical_formulation.md",
         ],
+        "Running Terrarium" => [
+            "Running simulations" => "running/simulations.md",
+            "Input sources" => "running/input_sources.md",
+        ],
         "Extending Terrarium" => [
             "Core interfaces" => "extending/core_interfaces.md",
+            "Adding new processes" => "extending/adding_processes.md",
+            "Coupling processes" => "extending/coupling_processes.md",
         ],
         "Models" => [
             "Soil model" => "models/soil_model.md",
@@ -145,6 +156,8 @@ makedocs(
         "Contributing" => "contributing.md",
         "API Reference" => "api_reference.md",
     ],
+    # linkcheck = false,
+    warnonly = [:cross_references],
     draft = IS_DRAFT,
 )
 
