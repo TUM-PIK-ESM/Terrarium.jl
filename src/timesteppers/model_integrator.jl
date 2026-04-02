@@ -133,9 +133,14 @@ end
 """
     $TYPEDSIGNATURES
 
-Creates and initializes a `ModelIntegrator` for the given `model` with the given `clock` state.
-This method allocates all necessary `Field`s for the state variables and calls `initialize!(::ModelIntegrator)`.
-Note that this method is **not type stable** and should not be called in an Enzyme `autodiff` call.
+Creates and initializes a `ModelIntegrator` for the given `model` and `timestepper` with input variables populated by
+the given `inputs`. This method allocates all necessary `Field`s for the state variables and subsequently calls
+`initialize!(::ModelIntegrator)`.
+
+Note that this method is **not type stable** and thus should not be called from Enzyme `autodiff`. To reinitialize
+the model for an existing `state`, use `initialize!(state, model)`.
+
+See the docstring for [`initialize(::AbstractModel)`](@ref) for further details.
 """
 function initialize(
         model::AbstractModel{NF},

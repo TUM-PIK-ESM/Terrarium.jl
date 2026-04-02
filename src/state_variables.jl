@@ -293,9 +293,12 @@ end
 """
     $TYPEDSIGNATURES
 
-Initialize a `StateVariables` data structure containing `Field`s for all variables defined by `model`
-defined on its associated `grid`. Any predefined `boundary_conditions` and `fields` will be passed
-through to `initialize` for each corresponding variable.
+Initialize a `StateVariables` data structure containing `Field`s for all variables defined by `model` defined on its
+associated `grid`. The `clock` specifies the initial simulation time and is mutated on each time step. User-specified
+`boundary_conditions` and `initializers` can be provided as `NamedTuple`s with keys corresponding to the names of state
+variables to which they should be applied. If the state variables are defined within namespaces, the given `NamedTuple`
+must follow the same structure. The `fields` argument allows for manual preconstruction of `Field`s for the named state
+variables.
 """
 function initialize(
         model::AbstractModel{NF};
@@ -314,8 +317,8 @@ end
     $TYPEDSIGNATURES
 
 Initialize a `StateVariables` data structure containing `Field`s defined on the given `grid`
-for all variables defined by `process`. Any predefined `boundary_conditions` and `fields` will be passed through to `initialize`
-for each variable.
+for all variables defined by `process`. Any predefined `boundary_conditions` and `fields` will
+be passed through to `initialize` for each variable.
 """
 function initialize(
         process::AbstractProcess{NF},
@@ -337,8 +340,8 @@ end
     $TYPEDSIGNATURES
 
 Initialize a `StateVariables` data structure containing `Field`s defined on the given `grid`
-for all variables in `vars`. Any predefined `boundary_conditions` and `fields` will be passed through to `initialize`
-for each variable.
+for all variables in `vars`. Any predefined `boundary_conditions` and `fields` will be passed
+through to `initialize` for each variable.
 """
 function initialize(
         @nospecialize(vars::Variables),
