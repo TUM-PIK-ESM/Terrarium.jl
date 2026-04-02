@@ -23,7 +23,7 @@ A_n = A_g - R_d.
 \end{equation}
 ```
 
-Gross photosynthesis is limited by two processes: RuBisCO activity and light availability. A simple approach is to model $A_g$ as the minimum of these two rates: the RuBisCO-limited rate $J_C$ and the light-limited rate $J_E$.
+Gross photosynthesis is limited by two processes: RuBisCO activity and light availability. A simple approach is to model $A_g$ as the minimum of these two rates: the RuBisCO-limited rate $J_C$ and the light-limited rate $J_E$:
 
 ```math
 \begin{equation}
