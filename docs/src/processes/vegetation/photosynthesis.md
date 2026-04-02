@@ -19,7 +19,7 @@ The net carbon assimilation per leaf area is the difference between carbon uptak
 
 ```math
 \begin{equation}
-A_n = A_g - R_d
+A_n = A_g - R_d.
 \end{equation}
 ```
 
