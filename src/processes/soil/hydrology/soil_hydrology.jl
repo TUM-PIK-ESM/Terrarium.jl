@@ -1,9 +1,13 @@
 """
+    $TYPEDEF
+
 Base type for implementations of soil water flow dynamics.
 """
 abstract type AbstractVerticalFlow end
 
 """
+    $TYPEDEF
+
 Represents a hydrology scheme where soil water is immobile.
 """
 struct NoFlow <: AbstractVerticalFlow end
@@ -45,7 +49,7 @@ function SoilHydrology(
 end
 
 """
-    get_swrc(hydrology::SoilHydrology)
+    $TYPEDSIGNATURES
 
 Return the soil water retention curve from the `hydraulic_properties` associated with
 the given `SoilHydrology` configuration.
@@ -53,14 +57,14 @@ the given `SoilHydrology` configuration.
 @inline get_swrc(hydrology::SoilHydrology) = hydrology.hydraulic_properties.swrc
 
 """
-    get_hydraulic_properties(hydrology::SoilHydrology)
+    $TYPEDSIGNATURES
 
 Return the soil hydraulic properties defined by the given `hydrology` process.
 """
 @inline get_hydraulic_properties(hydrology::SoilHydrology) = hydrology.hydraulic_properties
 
 """
-    get_closure(::SoilHydrology) where {NF}
+    $TYPEDSIGNATURES
 
 Return the saturation-pressure closure defined by the given `hydrology` process, or `nothing`
 if not defined for the given configuration.
@@ -68,6 +72,8 @@ if not defined for the given configuration.
 @inline get_closure(hydrology::SoilHydrology) = hydrology.closure
 
 """
+    $TYPEDSIGNATURES
+
 State variables for `SoilHydrology` processes.
 """
 variables(hydrology::SoilHydrology{NF}) where {NF} = (
