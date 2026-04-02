@@ -4,7 +4,7 @@
 CurrentModule = Terrarium
 ```
 
-```@setup default
+```@setup soilmodel
 using Terrarium
 ```
 
@@ -17,7 +17,7 @@ using Terrarium
 energy, water, and carbon in natural soils. It is the primary model type for simulating heat conduction,
 freeze-thaw processes (e.g. permafrost), and variably saturated water flow in the subsurface.
 
-```@example default
+```@example soilmodel
 arch = CPU()
 grid = ColumnGrid(arch, Float32, ExponentialSpacing(N = 10)) # 10 soil layers
 model = SoilModel(grid)
@@ -78,7 +78,7 @@ The `biogeochem` component simulates the spatial distribution of soil organic ca
 biogeochemical fluxes. The default implementation [`ConstantSoilCarbonDensity`](@ref) which prescribes
 a spatially homogeneous organic carbon density and does not define any prognostic variables.
 
-## Initialization
+## [Initializers](@id soil.init)
 
 Terrarium provides a hierarchy of initializers for `SoilModel`. The top-level initializer is
 [`SoilInitializer`](@ref), which composes separate sub-initializers for energy, hydrology, and
@@ -90,7 +90,7 @@ SoilInitializer
 
 Passing a `SoilInitializer` to `SoilModel` overrides the `DefaultInitializer`:
 
-```@example default
+```@example soilmodel
 initializer = SoilInitializer(Float32;
     energy    = QuasiThermalSteadyState(Float32; T₀ = 2.0f0),
     hydrology = SaturationWaterTable(Float32; water_table_depth = 3.0f0),

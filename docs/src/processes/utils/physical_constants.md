@@ -2,7 +2,7 @@
 CurrentModule = Terrarium
 ```
 
-```@setup default
+```@setup consts
 using Terrarium
 ```
 

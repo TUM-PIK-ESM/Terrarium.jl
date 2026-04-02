@@ -4,7 +4,7 @@
 CurrentModule = Terrarium
 ```
 
-```@setup default
+```@setup vegdynamics
 using Terrarium
 ```
 
@@ -31,7 +31,7 @@ AbstractVegetationDynamics
 PALADYNVegetationDynamics
 ```
 
-```@example default
+```@example vegdynamics
 variables(PALADYNVegetationDynamics(Float32))
 ```
 

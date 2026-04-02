@@ -4,7 +4,7 @@
 CurrentModule = Terrarium
 ```
 
-```@setup default
+```@setup soilenergy
 using Terrarium
 ```
 
@@ -54,7 +54,7 @@ where $L_{\text{sl}}$ and $c_{\text{w}}$ (J/kg) represent the specific latent he
 SoilEnergyBalance
 ```
 
-```@example default
+```@example soilenergy
 variables(SoilEnergyBalance(Float32))
 ```
 

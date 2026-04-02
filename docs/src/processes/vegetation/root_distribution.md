@@ -4,7 +4,7 @@
 CurrentModule = Terrarium
 ```
 
-```@setup default
+```@setup vegroots
 using Terrarium
 ```
 
@@ -45,7 +45,7 @@ This provides the soil moisture limitation factor $\beta$ that constrains photos
 StaticExponentialRootDistribution
 ```
 
-```@example default
+```@example vegroots
 variables(StaticExponentialRootDistribution(Float32))
 ```
 

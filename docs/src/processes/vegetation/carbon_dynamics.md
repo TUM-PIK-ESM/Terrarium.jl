@@ -4,7 +4,7 @@
 CurrentModule = Terrarium
 ```
 
-```@setup default
+```@setup vegcarbon
 using Terrarium
 ```
 
@@ -25,7 +25,7 @@ AbstractVegetationCarbonDynamics
 PALADYNCarbonDynamics
 ```
 
-```@example default
+```@example vegcarbon
 variables(PALADYNCarbonDynamics(Float32))
 ```
 

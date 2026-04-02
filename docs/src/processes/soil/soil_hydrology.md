@@ -4,7 +4,7 @@
 CurrentModule = Terrarium
 ```
 
-```@setup default
+```@setup soilwater
 using Terrarium
 ```
 
@@ -69,7 +69,7 @@ The simplest possible soil hydrology scheme is one in which the soil saturation 
 NoFlow
 ```
 
-```@example default
+```@example soilwater
 variables(SoilHydrology(Float32))
 ```
 
@@ -93,7 +93,7 @@ where $\psi$ (m) is the matric potential. Substituting this equation into the af
 RichardsEq
 ```
 
-```@example default
+```@example soilwater
 variables(SoilHydrology(Float32, RichardsEq()))
 ```
 

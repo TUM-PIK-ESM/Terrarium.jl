@@ -4,7 +4,7 @@
 CurrentModule = Terrarium
 ```
 
-```@setup default
+```@setup vegstomcond
 using Terrarium
 ```
 
@@ -26,7 +26,7 @@ AbstractStomatalConductance
 MedlynStomatalConductance
 ```
 
-```@example default
+```@example vegstomcond
 variables(MedlynStomatalConductance(Float32))
 ```
 

@@ -4,7 +4,7 @@
 CurrentModule = Terrarium
 ```
 
-```@setup default
+```@setup vegphoto
 using Terrarium
 ```
 
@@ -52,7 +52,7 @@ AbstractPhotosynthesis
 LUEPhotosynthesis
 ```
 
-```@example default
+```@example vegphoto
 variables(LUEPhotosynthesis(Float32))
 ```
 

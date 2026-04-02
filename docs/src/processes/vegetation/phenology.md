@@ -4,7 +4,7 @@
 CurrentModule = Terrarium
 ```
 
-```@setup default
+```@setup vegphen
 using Terrarium
 ```
 
@@ -26,7 +26,7 @@ AbstractPhenology
 PALADYNPhenology
 ```
 
-```@example default
+```@example vegphen
 variables(PALADYNPhenology(Float32))
 ```
 

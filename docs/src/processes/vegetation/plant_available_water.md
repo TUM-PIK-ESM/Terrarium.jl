@@ -4,7 +4,7 @@
 CurrentModule = Terrarium
 ```
 
-```@setup default
+```@setup vegpaw
 using Terrarium
 ```
 
@@ -51,7 +51,7 @@ The relationship between soil matric potential and water content depends on soil
 FieldCapacityLimitedPAW
 ```
 
-```@example default
+```@example vegpaw
 variables(FieldCapacityLimitedPAW(Float32))
 ```
 

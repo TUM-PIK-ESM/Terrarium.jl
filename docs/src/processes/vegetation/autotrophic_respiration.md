@@ -40,7 +40,7 @@ AbstractAutotrophicRespiration
 PALADYNAutotrophicRespiration
 ```
 
-```@example default
+```@example vegresp
 using Terrarium
 variables(PALADYNAutotrophicRespiration(Float32))
 ```
