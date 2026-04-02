@@ -30,7 +30,7 @@ is related to the bulk drag coefficient $C_h$ and the near-surface wind speed $V
 
 ```math
 \begin{equation}
-r_a = \frac{1}{C_h V_a}
+r_a = \frac{1}{C_h V_a}.
 \end{equation}
 ```
 
