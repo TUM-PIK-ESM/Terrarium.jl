@@ -56,7 +56,7 @@ deficit is
 
 ```math
 \begin{equation}
-\Delta q = \frac{\varepsilon \Delta e}{p}
+\Delta q = \frac{\varepsilon \Delta e}{p}.
 \end{equation}
 ```
 
