@@ -97,6 +97,20 @@ struct Variable{name, VD, UT} <: AbstractVariable{name, VD, UT}
 end
 
 """
+    $TYPEDEF
+
+Base type for prognostic variable closure relations for differential equations of the form:
+
+```math
+\\frac{\\partial g(u)}{\\partial t} = F(u)
+```
+where `F` represents the RHS tendency as a function of the state variable `u`, and `g(u)` is a closure or constitutive
+relation that maps `u` to the physical units matching the tendency. Common examples in soil hydrothermal modeling
+are temperature-enthalpy and saturation-pressure relations.
+"""
+abstract type AbstractClosureRelation end
+
+"""
 Baste type for process state variables with specific intents, e.g. `prognostic`, `auxiliary`, or `input`.
 """
 abstract type AbstractProcessVariable{name, VD, UT} <: AbstractVariable{name, VD, UT} end

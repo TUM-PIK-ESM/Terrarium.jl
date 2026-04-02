@@ -156,20 +156,6 @@ Return the `PhysicalConstants` associated with the given `model`.
 @inline get_constants(model::AbstractModel) = model.constants
 
 """
-    $TYPEDEF
-
-Base type for prognostic variable closure relations for differential equations of the form:
-
-```math
-\\frac{\\partial g(u)}{\\partial t} = F(u)
-```
-where `F` represents the RHS tendency as a function of the state variable `u`, and `g(u)` is a closure or constitutive
-relation that maps `u` to the physical units matching the tendency. Common examples in soil hydrothermal modeling
-are temperature-enthalpy and saturation-pressure relations.
-"""
-abstract type AbstractClosureRelation end
-
-"""
     closure!(state, model::AbstractModel)
 
 Apply all closure relations defined for the given `model`.
