@@ -337,19 +337,19 @@ function Base.show(io::IO, vars::Variables)
     println(io, "Variables")
     println(io, "├─ Prognostic: ")
     for var in vars.prognostic
-        println("├── $(summary(var))")
+        println(io, "├── $(summary(var))")
     end
     println(io, "├─ Auxiliary: ")
     for var in vars.auxiliary
-        println("├── $(summary(var))")
+        println(io, "├── $(summary(var))")
     end
     println(io, "├─ Inputs: ")
     for var in vars.inputs
-        println("├── $(summary(var))")
+        println(io, "├── $(summary(var))")
     end
     println(io, "├─ Namespaces:")
     for ns in vars.namespaces
-        println("├── $(summary(ns))")
+        println(io, "├── $(summary(ns))")
     end
     return nothing
 end
