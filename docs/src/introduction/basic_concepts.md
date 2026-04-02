@@ -4,10 +4,6 @@
 CurrentModule = Terrarium
 ```
 
-```@setup basics
-using Terrarium
-```
-
 Terrarium should not be thought of as a single model but rather a *framework* or "toolkit" for building a wide range of different possible land models from a set of process-based building blocks. This page provides a brief overview of the core abstractions and concepts that form the basis of this framework. 
 
 ## Models
@@ -72,79 +68,3 @@ variables(::MyProcess) = (
 This will result in a total of five state variables being allocated upon initialization: two auxiliary variables named `auxvar` and `bc` as well as one prognostic variable named `progvar` along with its corresponding tendency variable which is created automatically. The second argument to the variable metadata constructors `prognostic` and `auxiliary` is a subtype of `VarDims` which specifies on which spatial dimensions the state variable should be defined. `XYZ()` corresponds to a 3D `Field` which varies both laterally and with depth.
 
 Currently, Terrarium only supports a single 3D grid representing variables defined in the soil domain, though this may change in the future in order to accommodate multi-layer snow and canopy processes. `XY()` corresponds to a 2D field which is discretized along the lateral dimension only. Note that Terrarium also currently supports only 1D (vertical) dynamics so all grid cells on the X and Y axes will be assumed independent. This is equivalent to what is typically called a *single column* model, or *column-based parameterization* in atmosphere and ocean modeling. However, building on Oceananigans means that we have a clear path to relax this assumption in the future!
-
-## Initialization
-
-Model and process types in Terrarium are *stateless* and *immutable*; i.e. they only specify parameters and model configuration. To allocate state variables for a model or process, we need to use the [`initialize`](@ref) method:
-
-```@docs; canonical = false
-initialize(model::AbstractModel{NF, Grid}) where {NF, Grid}
-initialize(process::AbstractProcess{NF}, grid::AbstractLandGrid{NF}) where {NF}
-```
-
-which will create and return a [`StateVariables`](@ref) structure containing all of the initialized [`Field`](@ref)s corresponding to state variables defined by the model/process.
-
-```@docs; canonical = false
-StateVariables
-```
-
-By default, `Field`s will be initialized with zeros. Some state variable types, such as `input` variables, allow for the specification of alternative default values.
-
-Of course, very few models can do anything useful or interesting starting from (literally) zero. Terrarium provides three complementary mechanisms through which initialization routines for model/process state variables can be defined:
-
-- Direct initialization via the `initializers` keyword argument of [`initialize`](@ref). The keyword argument must be a `NamedTuple` where the keys correspond to the name of the state variable and the values are either scalars, arrays matching the size of the model `grid`, or functions of the form `f(coords...)` where `coords` are the non-`Flat` dimensions of `grid`. For column-based grids, this is generally `f(x,z)` with `x` corresponding to a column index.
-- [`AbstractInitializer`](@ref) types encapsulate a sequence of initialization routines. These `Initializer` types can be supplied to subtypes of `AbstractModel` during construction. Models can/should typically define corresponding `AbstractInitializer` types that represent common initialization strategies appropriate for the processes included in that model; e.g. the `SoilModel` defines [`SoilInitializer`](@ref) with process-specific initialization types like [`QuasiThermalSteadyState`](@ref) and [`SaturationWaterTable`](@ref).
-- Model/process specific dispatches of [`initialize!`](@ref) can be defined for process initialization logic that should be run regardless of the choice of prognostic state variable initialization.
-
-As a general rule, these initializers are invoked in the order that they are listed above. Implementations of `initialize!` should generally assume that the prognostic state has already been initialized by corresponding `Field` or model initializers.
-
-## Timestepping
-
-Terrarium explicitly separates process computations in `compute_auxiliary!` and `compute_tendencies!` from the choice of time stepping scheme. As a general rule, only models can be configured for timestepping. A model can be initialized for timestepping via
-
-```@docs; canonical = false
-initialize(model::AbstractModel, timestepper::AbstractTimeStepper, inputs::InputSource...)
-```
-
-This will return a [`ModelIntegrator`](@ref):
-
-```@docs; canonical = false
-ModelIntegrator
-```
-
-A single time step of the `ModelIntegrator` roughly involves four steps:
-
-1. Invoke [`update_inputs!`](@ref) to populate all input `Field`s from their respective `InputSource`s based on the current `clock` time,
-2. Invoke [`compute_auxiliary!`](@ref) on all model components to derive auxiliary state variables from the current prognostic state,
-3. Invoke [`compute_tendencies!`](@ref) on all model components to calculate tendencies for all prognostic variables,
-4. Apply the tendencies computed in step (3) to update the prognostic state based on the selected timestepping scheme. Higher order explicit or implicit timesteppers may repeat steps 1-3 multiple times within a single time step.
-
-As an example, let's consider the construction and initialization of a [`SoilModel`](@ref):
-
-```@example basics
-arch = CPU()
-grid = ColumnGrid(arch, Float32, ExponentialSpacing(N=10))
-model = SoilModel(grid)
-integrator = initialize(model, ForwardEuler(Float32))
-```
-
-Here `integrator` corresponds to a `ModelIntegrator` configured for a [`ForwardEuler`](@ref) time stepping scheme. `ModelIntegrator` defines dispatches for [`timestep!`](@ref) and [`run!`](@ref) that allow for open-ended simulations starting from the initialized state. We can use [`timestep!`](@ref) to take a single time step,
-
-```@example basics
-timestep!(integrator)
-```
-
-and [`run!`](@ref) to advance multiple timesteps over a specified period,
-
-```@example basics
-run!(integrator, period=Hour(1))
-```
-
-Alternatively, the `integrator` can be passed into an Oceananigans [`Simulation`](https://clima.github.io/OceananigansDocumentation/stable/simulations/simulations_overview) like so,
-
-```@example basics
-sim = Simulation(integrator; stop_time = 3600.0, Δt = 60.0)
-run!(sim)
-```
-
-where the `stop_time` here is the stopping time of the simulation (in seconds) and `Δt` is the timestep size.
