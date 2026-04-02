@@ -27,7 +27,7 @@ Gross photosynthesis is limited by two processes: RuBisCO activity and light ava
 
 ```math
 \begin{equation}
-A_g = \min(J_C, J_E)
+A_g = \min(J_C, J_E).
 \end{equation}
 ```
 
