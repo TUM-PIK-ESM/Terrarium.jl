@@ -1,43 +1,62 @@
-# Plant carbon dynamics and vegetation evolution
+# Vegetation carbon dynamics
 
 ```@meta
 CurrentModule = Terrarium
 ```
 
+```@setup default
+using Terrarium
+```
+
 !!! warning
     This page is a work in progress. If you have any questions or notice any errors, please [raise an issue](https://github.com/NumericalEarth/Terrarium.jl/issues).
 
-## Theory
+## Overview
 
-### Vegetation carbon pools
+Plant biomass is partitioned among multiple carbon pools: leaves, stems, and roots. These pools have different turnover rates and play distinct roles in plant physiology and ecosystem function. Carbon dynamics tracks the total vegetation carbon $C_{\text{veg}}$ [kgC/m²] as the single prognostic variable, with the balanced leaf area index LAI$_b$ computed from it as an auxiliary variable. The splitting of $C_{\text{veg}}$ into separate leaf, stem, and root pools is handled implicitly through fixed allometric relationships.
 
-Plant biomass is partitioned among multiple carbon pools: leaves, stems, and roots. These pools have different turnover rates and play distinct roles in plant physiology and ecosystem function. The carbon dynamics system tracks the total vegetation carbon and derives the balanced leaf area index (LAI) assuming a fixed biomass allocation scheme.
+```@docs; canonical = false
+AbstractVegetationCarbonDynamics
+```
+
+## PALADYN carbon dynamics
+
+```@docs; canonical = false
+PALADYNCarbonDynamics
+```
+
+```@example default
+variables(PALADYNCarbonDynamics(Float32))
+```
 
 ### Leaf area index
 
-The specific leaf area (SLA) and allometric relationships determine how vegetation carbon is distributed:
+The balanced leaf area index LAI$_b$ represents the leaf area that would be in equilibrium with the current carbon pool. It is derived from $C_{\text{veg}}$ using the specific leaf area (SLA) and allometric relationships between leaf, stem, and root biomass (Eqs. 76–79, PALADYN, Willeit 2016):
+
 ```math
 \begin{equation}
 \text{LAI}_b = \frac{C_{\text{leaf}}}{C_0} = \frac{1}{\text{SLA}} \left( C_{\text{veg}} - C_{\text{struct}} \right)
 \end{equation}
 ```
 
-where $C_{\text{veg}}$ is the total vegetation carbon, $C_{\text{struct}}$ is the structural carbon (stems and roots), and LAI$_b$ is the balanced leaf area index that would exist at equilibrium with the current carbon pool.
+where $C_{\text{struct}}$ is the structural carbon (stems and roots) derived from $C_{\text{veg}}$ via allometric scaling, and $C_0$ is a normalisation constant. See [`compute_LAI_b`](@ref) for the implementation.
 
 ### Leaf turnover and litterfall
 
-Leaf turn occurs at a constant annual rate $\gamma_L$ (year$^{-1}$), representing senescence and leaf drop. The litterfall rate integrating across the canopy is given by
+Leaf turnover occurs at a constant annual rate $\gamma_L$ (year$^{-1}$), representing senescence and leaf drop. Roots and stems turn over at their respective rates $\gamma_R$ and $\gamma_S$ (year$^{-1}$). The total local carbon loss rate $\Lambda_{\text{loc}}$, aggregating turnover across all pools, is (Eq. 75, PALADYN, Willeit 2016):
+
 ```math
 \begin{equation}
-\Lambda = \gamma_L C_{\text{leaf}} = \gamma_L \text{SLA}^{-1} \left( C_{\text{veg}} - C_{\text{struct}} \right)
+\Lambda_{\text{loc}} = \left( \frac{\gamma_L}{\text{SLA}} + \frac{\gamma_R}{\text{SLA}} + \gamma_S \cdot a_{wl} \right) \text{LAI}_b
 \end{equation}
 ```
 
-Other carbon pools (roots and stems) turn over at their respective rates $\gamma_R$ and $\gamma_S$ (year$^{-1}$).
+where $a_{wl}$ is the allometric coefficient relating stem biomass to leaf area.
 
 ### Net primary productivity partitioning
 
-Net primary production (NPP) is partitioned between two pathways: increasing vegetation carbon in existing vegetation and enabling the spread of new vegetation. The partitioning factor $\lambda_{\text{NPP}}$ depends on whether the current LAI is above the minimum LAI threshold:
+NPP (computed by the autotrophic respiration model, see [Autotrophic respiration](@ref)) is partitioned between two pathways: increasing vegetation carbon in already-vegetated areas, and enabling PFT expansion into new area. The partitioning factor $\lambda_{\text{NPP}} \in [0, 1]$ depends on whether the current LAI$_b$ exceeds the minimum viable threshold (Eq. 74, PALADYN, Willeit 2016):
+
 ```math
 \begin{equation}
 \lambda_{\text{NPP}} = \begin{cases}
@@ -48,27 +67,15 @@ Net primary production (NPP) is partitioned between two pathways: increasing veg
 \end{equation}
 ```
 
-This ensures that when vegetation is below its minimum viable LAI, all NPP goes to increasing carbon rather than being available for spreading new vegetation. The vegetation carbon tendency is then:
+When $\text{LAI}_b < \text{LAI}_{\min}$, the PFT is below its minimum viable leaf area and all NPP is directed toward building carbon rather than expanding area. $\lambda_{\text{NPP}}$ is also consumed by the vegetation dynamics model to drive PFT area expansion (see [Vegetation dynamics](@ref)). The vegetation carbon tendency is then (Eq. 72, PALADYN, Willeit 2016):
 
 ```math
 \begin{equation}
-\frac{dC_{\text{veg}}}{dt} = (1 - \lambda_{\text{NPP}}) \text{NPP} - \Lambda_{\text{loc}}
+\frac{dC_{\text{veg}}}{dt} = (1 - \lambda_{\text{NPP}}) \cdot \text{NPP} - \Lambda_{\text{loc}}
 \end{equation}
 ```
 
-The first term represents NPP allocated to carbon accumulation on already-vegetated land, while the second term represents carbon losses through litterfall and turnover of all pools.
-
-## Abstract types
-
-```@docs; canonical = false
-AbstractVegetationCarbonDynamics
-```
-
-## Concrete types
-
-```@docs; canonical = false
-PALADYNCarbonDynamics
-```
+The first term is NPP retained for carbon accumulation on existing vegetated land; the second term represents losses through turnover of all pools.
 
 ## Methods
 
@@ -100,4 +107,12 @@ compute_veg_carbon_auxiliary!
 
 ```@docs; canonical = false
 compute_veg_carbon_tendencies!
+```
+
+```@docs; canonical = false
+compute_auxiliary_kernel!
+```
+
+```@docs; canonical = false
+compute_tendencies_kernel!
 ```
