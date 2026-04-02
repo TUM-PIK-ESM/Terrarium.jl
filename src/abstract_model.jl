@@ -159,31 +159,48 @@ Return the `PhysicalConstants` associated with the given `model`.
     closure!(state, model::AbstractModel)
 
 Apply all closure relations defined for the given `model`.
-
-    closure!(state, grid, [closure::AbstractClosureRelation,] process, args...)
-
-Apply the `closure` for `process` with the given `grid` and additional
-implementation-specific `args`. If `closure` is not specified, it is
-automatically inferred from `first(closures(process))`.
 """
 closure!(state, model::AbstractModel) = nothing
-closure!(state, grid, proc::AbstractProcess, args...) = closure!(state, grid, first(closures(proc)), proc, args...)
-closure!(state, grid, closure, ::AbstractProcess, args...) = nothing
+
+"""
+    closure!(state, grid, proc::AbstractProcess, args...)
+
+Apply the forward closure mappings for the process `proc` on the given `grid` with additional implementation-specific `args`
+defined by the coupling interface for the process type. The default implementation calls `invclosure!` with `args` for each
+closure returned by [`closures`](@ref).
+"""
+closure!(state, grid, proc::AbstractProcess, args...) = fastiterate!(closure -> closure!(state, grid, closure, proc, args...), closures(proc))
+
+"""
+    closure!(state, grid, closure::AbstractClosureRelation, process, args...)
+
+Apply `closure` for `process` on the given `grid` with additional implementation-specific `args`.
+"""
+closure!(state, grid, closure::AbstractClosureRelation, ::AbstractProcess, args...) = nothing
 
 """
     invclosure!(state, model::AbstractModel)
 
 Apply the inverse of all closure relations defined for the given `model`.
-
-    invclosure!(state, grid, [closure::AbstractClosureRelation,] process, args...)
-
-Apply the `closure` for `process` with the given `grid` and additional
-implementation-specific `args`. If `closure` is not specified, it is
-automatically inferred from `first(closures(process))`.
 """
 invclosure!(state, model::AbstractModel) = nothing
-invclosure!(state, grid, proc::AbstractProcess, args...) = invclosure!(state, grid, first(closures(proc)), proc, args...)
-invclosure!(state, grid, closure, ::AbstractProcess, args...) = nothing
+
+"""
+    invclosure!(state, grid, proc::AbstractProcess, args...)    
+
+Apply the inverse closure mappings for the process `proc` on the given `grid` with additional implementation-specific `args`
+defined by the coupling interface for the process type. The default implementation calls `invclosure!` with `args` for each
+closure returned by [`closures`](@ref).
+"""
+invclosure!(state, grid, proc::AbstractProcess, args...) = fastiterate!(closure -> invclosure!(state, grid, closure, proc, args...), closures(proc))
+
+"""
+    invclosure!(state, grid, closure::AbstractClosureRelation, process::AbstractProcess, args...)
+
+Apply the inverse of `closure` for the process `proc` on the given `grid` with additional implementation-specific `args`
+defined by the coupling interface for the process type.
+"""
+invclosure!(state, grid, closure::AbstractClosureRelation, ::AbstractProcess, args...) = nothing
 
 """
     (::Type{Model})(grid::AbstractLandGrid, args...; kwargs...) where {Model <: AbstractModel}
