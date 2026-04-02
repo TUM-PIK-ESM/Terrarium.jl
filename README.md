@@ -76,9 +76,9 @@ We can also easily adapt this code to run a *global* simulation over a suitable 
 
 ```julia
 using RingGrids: FullGaussianGrid
-using CUDA # needs to be seaprately installed
+using CUDA # needs to be separately installed
 
-rings = FullGaussianGrid(8) # Gaussian grid with 16 lattitudinal rings (512 points, ~9.5˚)
+rings = FullGaussianGrid(8) # Gaussian grid with 16 latitudinal rings (512 points, ~9.5˚)
 arch = GPU() # run on the GPU!
 grid = ColumnRingGrid(arch, Float32, ExponentialSpacing(N=10), rings)
 model = SoilModel(grid)
