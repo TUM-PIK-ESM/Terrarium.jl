@@ -80,7 +80,7 @@ The saturation fraction of the canopy is:
 
 ```math
 \begin{equation}
-f_{\text{can}} = \frac{w_{\text{can}}}{w_{\text{can, max}}}
+f_{\text{can}} = \frac{w_{\text{can}}}{w_{\text{can, max}}}.
 \end{equation}
 ```
 
