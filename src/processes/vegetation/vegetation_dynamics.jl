@@ -42,8 +42,8 @@ end
 """
     $SIGNATURES
 
-Computes `ν_star` which is the maximum between the current vegetation fraction `ν` and the seed fraction `ν_seed` [-],
-to ensure that a PFT is always seeded.
+Computes `ν_star` which is the maximum of the current vegetation fraction `ν`
+and the seed fraction `ν_seed` [-], to ensure that a PFT is always seeded.
 """
 @inline function compute_ν_star(veg_dynamics::PALADYNVegetationDynamics, ν)
     return max(ν, veg_dynamics.ν_seed)
