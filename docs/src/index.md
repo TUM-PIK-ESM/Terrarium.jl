@@ -27,6 +27,14 @@ cd Terrarium.jl/
 julia --project=. -e "import Pkg; Pkg.instantiate()"
 ```
 
+To run the example scripts, make sure to set the project directory to the `examples/` directory,
+
+```
+julia --project=examples examples/simulations/soil_heat_global.jl
+```
+
+You can also directly `activate` the example project environment from your REPL by first entering the package manager with `]` and then running the command `activate examples` followed by `instantiate`.
+
 ## Quick start
 
 A natural first step with `Terrarium` is to set up and run your very first `SoilModel`. This represents a standalone model of transient heat, water, and carbon transport over a particular choice of `grid`. We start by choosing a `ColumnGrid` which represents one or more laterally independent vertical columns:

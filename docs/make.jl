@@ -4,7 +4,7 @@ using Literate
 
 using Terrarium
 
-const SCRIPTS_DIR = joinpath(dirname(@__DIR__), "examples")
+const SCRIPTS_DIR = joinpath(dirname(@__DIR__), "examples", "extending")
 const EXAMPLES_OUTDIR = joinpath(@__DIR__, "src", "examples")
 const EXAMPLES_OUTDIR_RELATIVE = "examples"
 
@@ -34,10 +34,10 @@ if haskey(ENV, "GITHUB_ACTIONS") || parsed_args["debug"]
 end
 
 # Literate scripts to be built and included in the docs
-# Each entry is (page_title, script_filename)
+# Each entry should be a Pair: page_title => script_filename
 script_list = [
-    "Model Interface" => "model_interface.jl",
-    #"Differentiating Terrarium" => "differentiating_terrarium.jl",  # dont include enzyme example for now while it's bugged
+    "Simple exponential growth model" => "linear_ode_exp_growth.jl",
+    "Degree-day snow melt model" => "simple_snow_ddm.jl",
 ]
 
 """
@@ -77,7 +77,7 @@ build_literate_pages()
 # Add example pages to list
 for (title, filename) in script_list
     mdfile = replace(filename, ".jl" => ".md")
-    push!(example_docpages, title => joinpath(EXAMPLES_OUTDIR_RELATIVE, mdfile))
+    push!(example_docpages, "Example: $title" => joinpath(EXAMPLES_OUTDIR_RELATIVE, mdfile))
 end
 
 makedocs(
@@ -108,6 +108,7 @@ makedocs(
             "Core interfaces" => "extending/core_interfaces.md",
             "Implementing processes" => "extending/implementing_processes.md",
             "Coupling processes" => "extending/coupling_processes.md",
+            example_docpages...,
         ],
         "Models" => [
             "Soil model" => "models/soil_model.md",
@@ -149,10 +150,6 @@ makedocs(
                 "Constants" => "processes/utils/physical_constants.md",
                 "Physics" => "processes/utils/physics_utils.md",
             ],
-        ],
-        "Examples" => [
-            "Overview" => "examples_overview.md",
-            example_docpages...,
         ],
         "Contributing" => "contributing.md",
         "API Reference" => "api_reference.md",
