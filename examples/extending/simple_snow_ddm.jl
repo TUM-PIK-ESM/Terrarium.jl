@@ -4,7 +4,7 @@
 #
 # But typically, our computations will be a bit more complicated than that, and we can't just rely on simple broadcasting operations like what we did in `compute_tendencies!` above. The reason for this is simply efficiency: it is (usually) more efficient to bundle together many scalar operations into operations that can be massively parallelized. But how do we actually achieve this?
 #
-# ## Writing kernelized-code for Terrarium
+# ## Writing kernelized-code in Terrarium
 #
 # Terrarium.jl is a device-agnostic modelling framework that runs across different architectures like x86 CPUs, ARM CPUs, but also most importantly, GPUs. To achieve this wide compatibility, we rely on KernelAbstractions to turn our heavy computations into parallelizable kernels. But don't panic! We provide a lot of utilities and functions that help make this easy and ensure that the resulting models are fast and efficient as well.
 #
@@ -225,4 +225,4 @@ end
 
 # ![Snow storage animation](snow_storage.mp4)
 
-# And just like that we have implemented our snow simulation. In this version the forcing / input is completly static, so we converge to a static point that corresponds to the January climatology. That's why still see a faily big snow cover in the northern hemisphere. An obvious next step for this model would be now to actually use the full seasonal climatology.
+# And just like that we have implemented our snow simulation. In this version the forcing / input is completely static, so we converge to a static point that corresponds to the January climatology. That's why still see a faily big snow cover in the northern hemisphere. An obvious next step for this model would be now to actually use the full seasonal climatology.
