@@ -14,7 +14,7 @@
 #
 # ### Degree Day Model
 #
-# A degree day model models snow melt by assuming that snow storage or snow water equivalent decreases linearly  over time with the temperature when it is above its melting point. Following [Kavetski and Kuczera's formulation](https://agupubs.onlinelibrary.wiley.com/doi/10.1029/2006WR005195) we denote the snow mass balance as
+# A degree day model models snow melt by assuming that snow storage or snow water equivalent decreases linearly  over time with the temperature when it is above its melting point. Following [Kavetski and Kuczera's formulation](https://doi.org/10.1029/2006WR005195) we denote the snow mass balance as
 #
 # ```math
 # \frac{dS}{dt} = P - M
@@ -123,7 +123,7 @@ end
 
 # For a simple process like this, this is of course quite a lot of overhead, but this structure allows us to very efficiently build up complex land models from relatively simple components.
 #
-# There's one additional thing we need to take care of: the snow storage is strictly non-negative, but our model as currently implemented would quickly reach negative values for ``S``. While the aforementioned [Kavetski and Kuczera paper](https://agupubs.onlinelibrary.wiley.com/doi/10.1029/2006WR005195) mitigates this issue by smoothing the model equation, we will in this example do the simplest possible strategy: we simply clip non-negative values during the time stepping of our model. To implement such a clipping we have to extend `timestep!(state::StateVaribales, model::ExpModel, timestepper, Δt)`. This method is applied after each explicit step the time stepper takes (but before any closure relations are applied if they exist). Let's implement the clipping:
+# There's one additional thing we need to take care of: the snow storage is strictly non-negative, but our model as currently implemented would quickly reach negative values for ``S``. While the aforementioned [Kavetski and Kuczera paper](https://doi.org/10.1029/2006WR005195) mitigates this issue by smoothing the model equation, we will in this example do the simplest possible strategy: we simply clip non-negative values during the time stepping of our model. To implement such a clipping we have to extend `timestep!(state::StateVaribales, model::ExpModel, timestepper, Δt)`. This method is applied after each explicit step the time stepper takes (but before any closure relations are applied if they exist). Let's implement the clipping:
 
 function Terrarium.timestep!(state::StateVariables, model::SnowModel, timestepper::Terrarium.AbstractTimeStepper, Δt)
     interior(state.snow_storage) .= max.(interior(state.snow_storage), 0)

@@ -4,7 +4,7 @@
 CurrentModule = Terrarium
 ```
 
-Terrarium is based on the numerics and finite-volume method (FVM) operators provided by [Oceananigans.jl](https://github.com/CliMA/Oceananigans.jl). All state variables are realized as Oceananigans [`Field`s](https://clima.github.io/OceananigansDocumentation/stable/fields/) defined over a particular choice of [grid](https://clima.github.io/OceananigansDocumentation/stable/grids/) which discretizes physical space into a finite number of *volumes* or "cells". This page gives a brief overview of the basic concepts behind the numerical building blocks of Oceananigans and Terrarium.
+Terrarium is based on the numerics and finite-volume method (FVM) operators provided by [Oceananigans.jl](https://github.com/CliMA/Oceananigans.jl). All state variables are realized as Oceananigans [`Field`s](https://clima.github.io/OceananigansDocumentation/stable/fields) defined over a particular choice of [grid](https://clima.github.io/OceananigansDocumentation/stable/grids) which discretizes physical space into a finite number of *volumes* or "cells". This page gives a brief overview of the basic concepts behind the numerical building blocks of Oceananigans and Terrarium.
 
 ## Grids
 Terrarium defines its own `AbstractLandGrid` types as wrappers around Oceananigans `AbstractGrid` types (note that these wrappers may be consolidated into full-fledged `AbstractGrid`s in the future). At the moment, Terrarium grids are based primarily on the Oceananigans `RectilinearGrid`, which represents a rectangular volume divided orthogonally into smaller control volumes along orthogonal X, Y, and Z axes. There are currently two `AbstractLandGrid` implementations:
@@ -19,19 +19,19 @@ All Terrarium `AbstractLandGrid` implementations are required to implement the f
 The vertical `Z`-axis is currently limited to representing the subsurface (typically soil) domain, though we plan to expand this to include snow and canopy layers in the future.
 
 !!! info "Ordering of vertical layers"
-    Oceananigans follows a **positive-upwards** convention for the vertical axis. This also implies that the vertical layer at the first index of a 3D Terrarium field is actually the **bottom-most layer** in the ground/soil column; i.e. `interior(temperature)[1,1,1]` for a `Field` called `temperature` would correspond to the vertical layer at the bottom of the first grid cell (i.e. `X = 1`). To get the topmost layer, use instead `interior(temperature)[1,1,end]`. Note that here [`interior`](https://clima.github.io/OceananigansDocumentation/stable/appendix/library/#Oceananigans.Fields.interior-Tuple{Field}) is a function from Oceananigans that retrieves a view of the `Field` excluding halo (boundary condition) cells.
+    Oceananigans follows a **positive-upwards** convention for the vertical axis. This also implies that the vertical layer at the first index of a 3D Terrarium field is actually the **bottom-most layer** in the ground/soil column; i.e. `interior(temperature)[1,1,1]` for a `Field` called `temperature` would correspond to the vertical layer at the bottom of the first grid cell (i.e. `X = 1`). To get the topmost layer, use instead `interior(temperature)[1,1,end]`. Note that here [`interior`](https://clima.github.io/OceananigansDocumentation/stable/appendix/library#Oceananigans.Fields.interior-Tuple{Field}) is a function from Oceananigans that retrieves a view of the `Field` excluding halo (boundary condition) cells.
 
-For more information on how Oceananigans grids work, we recommend reading the [corresponding page](https://clima.github.io/OceananigansDocumentation/stable/grids/) in the Oceananigans documentation.
+For more information on how Oceananigans grids work, we recommend reading the [corresponding page](https://clima.github.io/OceananigansDocumentation/stable/grids) in the Oceananigans documentation.
 
 ## Fields
 
 `Field`s define `Array`s of data that align with a grid. In Terrarium, `Field`s are used exclusively to represent state and input variables that vary in space (and time). All `Field`s have a corresponding `location(field) = (LX, LY, LZ)` which describes how the `Field` aligns with the underlying grid. Each of `LX`, `LY`, and `LZ` can take on values of either `Center`, `Face`, or `nothing`, where `Center` refers to the spatial centerpoint of the cell (representing the spatial average over that volume in the typical finite-volume sense) and `Face` corresponds to values defined at the interfaces such as fluxes or conductivities. A `nothing` location refers to a reduced quantity averaged or integrated over the corresponding axis.
 
-In addition to holding data, `Field`s also can also store one or more associated [boundary conditions](https://clima.github.io/OceananigansDocumentation/stable/fields/#Halo-regions-and-boundary-conditions) as well as "halo" regions used to define them. Boundary conditions can either be Dirichlet-type (`ValueBoundaryCondition`), Neumann-type (`GradientBoundaryCondition`), or fluxes (`FluxBoundaryCondition`). Boundary conditions can be defined using functions, scalars, `Array`s or other `Field`s.
+In addition to holding data, `Field`s also can also store one or more associated [boundary conditions](https://clima.github.io/OceananigansDocumentation/stable/fields#Halo-regions-and-boundary-conditions) as well as "halo" regions used to define them. Boundary conditions can either be Dirichlet-type (`ValueBoundaryCondition`), Neumann-type (`GradientBoundaryCondition`), or fluxes (`FluxBoundaryCondition`). Boundary conditions can be defined using functions, scalars, `Array`s or other `Field`s.
 
-`Field`s can also serve as the basis for building [expression trees](https://clima.github.io/OceananigansDocumentation/stable/operations/): e.g. writing `C = A * B + 1` where `A` and `B` are both `Field`s results in a derived `Field` `C` that will lazily compute the expression when accessed. Similarly, `Fields` can be reduced over a grid axis using operations like `Integral` and `Average`, though these must be explicitly computed via `compute!`.
+`Field`s can also serve as the basis for building [expression trees](https://clima.github.io/OceananigansDocumentation/stable/operations): e.g. writing `C = A * B + 1` where `A` and `B` are both `Field`s results in a derived `Field` `C` that will lazily compute the expression when accessed. Similarly, `Fields` can be reduced over a grid axis using operations like `Integral` and `Average`, though these must be explicitly computed via `compute!`.
 
-For a more detailed overview of `Field`s, we recommend checking out the [corresponding page](https://clima.github.io/OceananigansDocumentation/stable/fields/) in the Oceananigans documentation.
+For a more detailed overview of `Field`s, we recommend checking out the [corresponding page](https://clima.github.io/OceananigansDocumentation/stable/fields) in the Oceananigans documentation.
 
 ## Kernel programming
 
@@ -65,7 +65,7 @@ As a general rule, we try to combine or *fuse* kernel functions as much as possi
 
 To see how this looks in action in Terrarium.jl, you can take a look at the code for [SoilEnergyBalance](https://github.com/NumericalEarth/Terrarium.jl/blob/main/src/processes/soil/energy/soil_energy.jl): There `compute_tendencies!` is the mandatory function for the model component, it launches exactly one kernel `compute_energy_tendency!`, which includes several `@inline` function to compute individual contributions to the energy balance such as `compute_energy_tendency`, `compute_thermal_conductivity` and the `diffusive_heat_flux`.
 
-It's also worth checking out the [Simulation tips](https://clima.github.io/OceananigansDocumentation/stable/simulation_tips/) provided in the documentation for Oceananigans.
+It's also worth checking out the [Simulation tips](https://clima.github.io/OceananigansDocumentation/stable/simulation_tips) provided in the documentation for Oceananigans.
 
 ## Numeric types
 
