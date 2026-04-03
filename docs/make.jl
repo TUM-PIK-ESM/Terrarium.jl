@@ -38,6 +38,7 @@ end
 script_list = [
     "Simple exponential growth model" => "linear_ode_exp_growth.jl",
     "Degree-day snow melt model" => "simple_snow_ddm.jl",
+    "Linear heat conduction" => "linear_heat_conduction.jl",
 ]
 
 """
