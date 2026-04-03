@@ -4,7 +4,7 @@ using Literate
 
 using Terrarium
 
-const SCRIPTS_DIR = joinpath(dirname(@__DIR__), "examples", "extending")
+const EXAMPLES_DIR = joinpath(dirname(@__DIR__), "examples")
 const EXAMPLES_OUTDIR = joinpath(@__DIR__, "src", "examples")
 const EXAMPLES_OUTDIR_RELATIVE = "examples"
 
@@ -42,12 +42,12 @@ script_list = [
 ]
 
 """
-Convert Literate.jl scripts in `SCRIPTS_DIR` to markdown pages in `EXAMPLES_OUTDIR`.
+Convert Literate.jl scripts in `indir` to markdown pages in `outdir`.
 The differentiation example is never executed during docs builds (Enzyme compile is
 too slow); the model interface example is executed unless IS_DRAFT is set.
 """
-function build_literate_pages()
-    mkpath(EXAMPLES_OUTDIR)
+function build_literate_pages!(outdir, indir)
+    mkpath(outdir)
     for (_, filename) in script_list
         ## the differentiation notebook is never auto-executed (Enzyme compile time)
         should_execute = BUILD_EXAMPLE_DOCS && filename != "differentiating_terrarium.jl"
@@ -62,8 +62,8 @@ function build_literate_pages()
             kwargs[:codefence] = "```julia" => "```"
         end
         Literate.markdown(
-            joinpath(SCRIPTS_DIR, filename),
-            EXAMPLES_OUTDIR;
+            joinpath(indir, filename),
+            outdir;
             kwargs...,
         )
     end
@@ -74,11 +74,14 @@ end
 example_docpages = Pair{String, String}[]
 
 # Build example pages with Literate.jl
-build_literate_pages()
+build_literate_pages!(
+    joinpath(EXAMPLES_OUTDIR, "extending"),
+    joinpath(EXAMPLES_DIR, "extending"),
+)
 # Add example pages to list
 for (title, filename) in script_list
     mdfile = replace(filename, ".jl" => ".md")
-    push!(example_docpages, "Example: $title" => joinpath(EXAMPLES_OUTDIR_RELATIVE, mdfile))
+    push!(example_docpages, "Example: $title" => joinpath(EXAMPLES_OUTDIR_RELATIVE, "extending", mdfile))
 end
 
 makedocs(
@@ -86,12 +89,14 @@ makedocs(
         prettyurls = get(ENV, "CI", nothing) == "true",
         ansicolor = true,
         collapselevel = 1,
-        canonical = "https://numericalearth.github.io/Terrarium.jl/stable/",
+        repolink = "https://github.com/NumericalEarth/Terrarium.jl",
+        canonical = "https://numericalearth.github.io/Terrarium.jl",
+        assets = String[],
         size_threshold = 600_000,
         mathengine = Documenter.MathJax3(),
     ),
     sitename = "Terrarium.jl",
-    authors = "Brian Groenke, Maximillian Galbrecht, Maha Badri, and Contributors",
+    authors = "Brian Groenke, Maximillian Gelbrecht, Maha Badri, and Contributors",
     modules = [Terrarium],
     pages = [
         "Home" => "index.md",
@@ -155,7 +160,7 @@ makedocs(
         "Contributing" => "contributing.md",
         "API Reference" => "api_reference.md",
     ],
-    # linkcheck = false,
+    linkcheck = true,
     warnonly = [:cross_references],
     draft = IS_DRAFT,
 )
