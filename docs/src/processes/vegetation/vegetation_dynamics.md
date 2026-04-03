@@ -13,13 +13,7 @@ using Terrarium
 
 ## Overview
 
-Vegetation dynamics describes how the fractional area coverage $\nu \in [0, 1]$ of a plant functional type (PFT) within a grid cell changes over time. PFTs compete for the available space $(1 - \nu)$ on the landscape, with their ability to expand determined by productivity and limited by disturbance:
-
-- **Productivity**: High net primary productivity (NPP) allows a PFT to expand into unoccupied space
-- **Disturbance**: Fire, disease, and other mortality mechanisms reduce vegetation extent
-- **Seed availability**: A minimum seed fraction ensures PFTs can reestablish after disturbance
-
-Terrarium implements vegetation dynamics following the Lotka–Volterra approach of PALADYN (Willeit 2016), which balances growth and disturbance to determine PFT area fraction dynamics.
+Vegetation dynamics describes the temporal evolution of the fractional coverage of plant functional types (PFTs) within a grid cell. In dynamic vegetation models, PFTs within a grid cell compete for space and resources, and their expansion is driven by establishment and constrained by mortality and disturbance processes such as fire.
 
 ```@docs; canonical = false
 AbstractVegetationDynamics
@@ -35,51 +29,22 @@ PALADYNVegetationDynamics
 variables(PALADYNVegetationDynamics(Float32))
 ```
 
-### Lotka-Volterra vegetation competition
+This implementation follows the Lotka–Volterra approach of PALADYN (Willeit, 2016), in which the vegetation area fraction $\nu_i$ for each PFT $i$ evolves according to:
 
-The vegetation area fraction ($\nu$) for a single PFT evolves according to:
 ```math
 \begin{equation}
-\frac{d\nu}{dt} = \left( \lambda_{\text{NPP}} \frac{C_{\text{veg}}}{\nu^*} \right) (1 - \nu) - \gamma_v \nu^*
+\frac{d\nu_i}{dt} = \lambda_{\text{NPP}} \frac{\text{NPP}}{C_{\text{veg,i}}} \cdot \nu_i^*  (1 - \sum_j c_{ij}\nu_j) - \gamma_v \nu_i^*
 \end{equation}
 ```
 
-where:
-- $\lambda_{\text{NPP}}$ is an NPP-dependent partitioning factor that controls how much productivity is available for expansion (see [Vegetation carbon dynamics](@ref))
-- $C_{\text{veg}}$ is the vegetation carbon pool [kgC/m²]
-- $\nu^* = \max(\nu, \nu_{\text{seed}})$ is the effective PFT fraction, bounded below by the seed fraction to prevent division by zero
-- $\gamma_v$ is the disturbance rate [1/time]
-- $(1 - \nu)$ is the fraction of the grid cell available for expansion
+where $\lambda_{\text{NPP}}$ is the NPP partitioning factor computed by the vegetation carbon dynamics process (see [Vegetation carbon dynamics](@ref)), $\text{NPP}$ is the net primary production, $C_{\text{veg}}$ is the total vegetation carbon pool, $\nu^* = \max(\nu, \nu_{\text{seed}})$ where $\nu_{\text{seed}}$ is a small seeding fraction to ensure that a PFT is always seeded and $\gamma_v$ is the disturbance rate.
 
-**Growth term**: $(\lambda_{\text{NPP}} C_{\text{veg}} / \nu^*) (1 - \nu)$ represents logistic growth, where productive PFTs with high carbon stocks expand rapidly into unoccupied space but slow as $\nu \to 1$.
+The first term on the right-hand side represents the expansion of PFT $i$ driven by the fraction of NPP allocated to spreading. 
 
-**Disturbance term**: $\gamma_v \nu^*$ represents losses due to disturbance, proportional to PFT extent.
+The second term is a Lotka–Volterra competition term that limits expansion through competition with other PFTs for space, with $c_{ij}$ describing the competitive effect of PFT $j$ on PFT $i$. Since only one PFT is considered per grid cell in the current implementation, this competition term is ignored for now.
 
-### Seed fraction and PFT establishment
+The last term represents the loss of vegetation cover due to disturbance, for example from fire or other mortality related processes. In PALADYN, the disturbance coefficient $\gamma_v$ mainly represents fire-induced disturbance through a simple parameterization based on topsoil moisture and aboveground biomass, together with a minimum constant disturbance rate used to represent disturbances other than fire. In the current implementation, fire is ignored, and $\gamma_v = \gamma_{\min}$. 
 
-The effective fraction $\nu^*$ is bounded below by the seed fraction $\nu_{\text{seed}}$ to ensure that a PFT at very low abundance can still persist and recover after disturbance, and to avoid division by zero in the growth term:
-```math
-\begin{equation}
-\nu^* = \max(\nu, \nu_{\text{seed}})
-\end{equation}
-```
-
-Typical values are $\nu_{\text{seed}} \approx 0.001$ (0.1%).
-
-### Disturbance rates
-
-The disturbance rate $\gamma_v$ aggregates losses from fire, pest outbreaks, disease, and senescence. A minimum baseline disturbance rate $\gamma_v^{\text{min}}$ is always enforced:
-```math
-\begin{equation}
-\gamma_v \geq \gamma_v^{\text{min}}
-\end{equation}
-```
-
-In the current implementation, $\gamma_v = \gamma_v^{\text{min}}$ (constant). Future implementations may couple disturbance to soil moisture, fire danger indices, or other vegetation state variables.
-
-### Coupling to productivity
-
-The growth term couples vegetation dynamics to the carbon cycle through $C_{\text{veg}}$ and $\lambda_{\text{NPP}}$, both computed by the carbon dynamics model (see [Vegetation carbon dynamics](@ref)). $\lambda_{\text{NPP}}$ acts as a gate: when a PFT's leaf area index is below its minimum viable threshold, $\lambda_{\text{NPP}} = 0$ and all NPP is directed toward building carbon rather than expanding area. Once the PFT is sufficiently productive, $\lambda_{\text{NPP}} > 0$ and area expansion becomes possible.
 
 ## Methods
 
@@ -91,11 +56,11 @@ compute_γv
 compute_ν_star
 ```
 
+## Kernel functions
+
 ```@docs; canonical = false
 compute_ν_tendency
 ```
-
-## Kernel functions
 
 ```@docs; canonical = false
 compute_ν_tendencies!
