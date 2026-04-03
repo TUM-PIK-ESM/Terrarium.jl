@@ -54,10 +54,6 @@ where $L_{\text{sl}}$ and $c_{\text{w}}$ (J/kg) represent the specific latent he
 SoilEnergyBalance
 ```
 
-```@example soilenergy
-variables(SoilEnergyBalance(Float32))
-```
-
 ### [Process interface](@id soilenergy.dispatches)
 
 ```@docs; canonical = false

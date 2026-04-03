@@ -53,7 +53,7 @@ compute_tendencies!(
     hydrology::SoilHydrology{NF, RichardsEq},
     soil::AbstractSoil,
     constants::PhysicalConstants,
-    evtr::Optional{AbstractEvapotranspiration},
+    evapotranspiration::Optional{AbstractEvapotranspiration},
     runoff::Optional{AbstractSurfaceRunoff},
     args...
 ) where {NF}

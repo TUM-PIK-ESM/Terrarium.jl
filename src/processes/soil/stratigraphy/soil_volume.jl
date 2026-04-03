@@ -47,7 +47,7 @@ mineral_texture(soil::SoilVolume) = mineral_texture(soil.solid)
 
 Calculates the volumetric fractions of all constituents in the given soil volume
 and returns them as a named tuple of the form `(; water, ice, air, solids...)`, where
-`solids` correspodns to the volumetric fractions defined by the solid phase `soil.solid`.
+`solids` corresponds to the volumetric fractions defined by the solid phase `soil.solid`.
 """
 @inline function volumetric_fractions(soil::SoilVolume)
     # unpack relevant quantities
