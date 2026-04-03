@@ -96,7 +96,7 @@ makedocs(
         mathengine = Documenter.MathJax3(),
     ),
     sitename = "Terrarium.jl",
-    authors = "Brian Groenke, Maximillian Gelbrecht, Maha Badri, and Contributors",
+    authors = "Brian Groenke, Maximilian Gelbrecht, Maha Badri, and Contributors",
     modules = [Terrarium],
     pages = [
         "Home" => "index.md",
