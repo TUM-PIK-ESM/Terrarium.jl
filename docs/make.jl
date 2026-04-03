@@ -106,7 +106,7 @@ makedocs(
         ],
         "Extending Terrarium" => [
             "Core interfaces" => "extending/core_interfaces.md",
-            "Implementing processes" => "extending/Implementing_processes.md",
+            "Implementing processes" => "extending/implementing_processes.md",
             "Coupling processes" => "extending/coupling_processes.md",
         ],
         "Models" => [
