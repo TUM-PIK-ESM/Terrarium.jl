@@ -22,7 +22,7 @@ using KernelAbstractions: @kernel, @index
 using Oceananigans.Operators: ∂zᵃᵃᶜ, ∂zᵃᵃᶠ
 using Oceananigans.Utils: launch!
 
-# ## 1. Defining the process types
+# ## Defining the process types
 #
 # A concrete process type is a Julia `struct` parameterized by the numeric float type `NF`.
 # We first define an abstract subtype of `AbstractProcess` for all heat conduction variants.
@@ -46,7 +46,7 @@ LinearHeatConduction(::Type{NF}; kwargs...) where {NF} = LinearHeatConduction{NF
 # the precision of the model. The convenience constructor `LinearHeatConduction(Float32)`
 # lets the caller specify the float type explicitly.
 
-# ## 2. Declaring variables
+# ## Declaring variables
 #
 # The `variables` method should return a tuple of declarations for all spatially-varying state required
 # by this process. Temperature is a 3D column variable ([`XYZ`](@ref)) since it varies with depth.
@@ -59,7 +59,7 @@ Terrarium.variables(::LinearHeatConduction) = (
 # time step. A matching tendency field (`state.tendencies.temperature`) is allocated
 # automatically. No auxiliary or input variables are needed for this simple process.
 
-# ## 3. Process methods
+# ## Process methods
 #
 # Process methods are pure scalar functions — they accept and return scalar values with no
 # spatial indexing or field operations. They implement elementary physics; Fourier's law here.
@@ -76,7 +76,7 @@ end
 proc = LinearHeatConduction(Float64)
 compute_diffusive_flux(proc, 10.0)  # => -10.0 W/m²
 
-# ## 4. Kernel functions
+# ## Kernel functions
 #
 # Kernel functions add the grid indexing layer. They carry explicit `(i, j, k, grid, fields, ...)`
 # index arguments, read scalar values from `Field`s, call process methods, and write results
@@ -133,7 +133,7 @@ end
 # Dispatching on `AbstractHeatConduction` rather than `LinearHeatConduction` means any
 # future subtype that overrides `compute_diffusion_tendency!` is automatically routed here.
 
-# ## 5. Interface methods
+# ## Interface methods
 #
 # Interface methods are the top-level API consumed by the timestepper. They are the
 # **only layer that sees the full `state`** — the full state is never passed to a kernel.
