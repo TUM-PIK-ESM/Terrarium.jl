@@ -71,11 +71,6 @@ if not defined for the given configuration.
 """
 @inline get_closure(hydrology::SoilHydrology) = hydrology.closure
 
-"""
-    $TYPEDSIGNATURES
-
-State variables for `SoilHydrology` processes.
-"""
 variables(hydrology::SoilHydrology{NF}) where {NF} = (
     auxiliary(:saturation_water_ice, XYZ(), domain = UnitInterval(), desc = "Saturation level of water and ice in the pore space"),
     auxiliary(:water_table, XY(), units = u"m", desc = "Elevation of the water table in meters"),

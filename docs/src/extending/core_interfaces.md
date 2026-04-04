@@ -13,7 +13,7 @@ Terrarium relies heavily on a core feature of Julia: *multiple dispatch*. Multip
 
 Multiple dispatch allows us to implement model components based on specific combinations of types. As a concrete example, consider the following method signature from Terrarium's surface hydrology module that computes the aerodynamic resistance beneath the canopy:
 ```julia
-aerodynamic_resistance(i, j, grid, fields, atmos::AbstractAtmosphere, evtr::PALADYNCanopyEvapotranspiration)
+aerodynamic_resistance(i, j, grid, fields, atmos::AbstractAtmosphere, evapotranspiration::PALADYNCanopyEvapotranspiration)
 ```
 This method will be executed when the function `aerodynamic_resistance` is called with any implementation (subtype) of `AbstractAtmosphere` and the `PALADYNCanopyEvapotranspiration` evapotranspiration scheme. We could define further dispatches that have different implementations for specific subtypes of `AbstractAtmosphere` or alternative canopy evapotranspiration schemes which would then be invoked when the user configures a model with that choice of components.
 
@@ -23,6 +23,18 @@ air_temperature(i, j, grid, fields, atmos::AbstractAtmosphere) = fields.air_temp
 ```
 which defaults to assuming that a 2D input `Field` (see [Fields](@ref)) named `air_temperature` has been defined and is available as a property of `fields`. However, alternative implementations could derive this air temperature from other state variables or via some other function, without requiring any changes to the calling code. This kind of interface-based coupling is core to the software design of Terrarium. Method interfaces for individual process and parameterization types are summarized on their respective doc pages. Documentation and method dispatches can also be dynamically queried from the Julia REPL via the help function `?air_temperature` or with `methods(air_temperature)` and `methodswith`.
 
+## Key abstractions
+
+As discussed in [Basic concepts](@ref), Terrarium revolves around two key abstractions: **models** and **processes**. Models represent complete representations of a dynamical system defined over a particular spatial `grid` while processes represent individual components of that system. Both models and processes share a common method interface:
+
+```@docs; canonical=false
+variables
+initialize!
+compute_auxiliary!
+compute_tendencies!
+```
+
+Further details on these interfaces and their practical implementations are given in the following sections.
 
 ## The `AbstractProcess` interface
 
@@ -33,14 +45,7 @@ Implementations of `AbstractProcess` represent physical processes characterized 
 - Zero or more *parameters* that are spatially constant and defined somewhere within the process `struct`,
 - One or more functions defining equations that compute quantities of interest from both the state variables and parameters defined by the process.
 
-Concrete implementations of `AbstractProcess` are `struct` types that typically consist of zero or more parameters or parameter `struct`s (also sometimes referred to as *parameterizations*). Each process type must also implement the following methods:
-
-```@docs; canonical=false
-variables(proc::AbstractProcess)
-initialize!(state, grid, ::AbstractProcess, args...)
-compute_auxiliary!(state, grid, ::AbstractProcess, args...)
-compute_tendencies!(state, grid, ::AbstractProcess, args...)
-```
+Concrete implementations of `AbstractProcess` are `struct` types that typically consist of zero or more parameters or parameter `struct`s (also sometimes referred to as *parameterizations*).
 
 Default (no-op) implementations of [`variables`](@ref) and [`initialize!`](@ref) are provided for convenience. However, to avoid ambiguity, `compute_auxiliary!` and `compute_tendencies!` **must be defined by each process** even if they are not needed.
 
@@ -48,7 +53,7 @@ The required additional `args` may vary for each type of `AbstractProcess`; typi
 
 For more details on the `state` structure and definition of `variables`, see the section on [State variables](@ref) below.
 
-### The `AbstractModel` interface
+## The `AbstractModel` interface
 
 The main difference between a "model" and a "process" in Terrarium lies in the specification of the `grid` and `initializer`. Processes should be generally be defined independently from any particular choice of initialization, boundary conditions, and `grid`. However, it is worth noting that processes can dispatch on specific types of `grid`, if necessary.
 

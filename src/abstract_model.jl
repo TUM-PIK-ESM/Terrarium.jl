@@ -44,6 +44,7 @@ abstract type AbstractModel{NF, Grid <: AbstractLandGrid{NF}}  end
 
 """
     variables(model::AbstractModel)
+    variables(process::AbstractProcess)
 
 Return a `Tuple` of `AbstractVariable`s (i.e. `PrognosticVariable`, `AuxiliaryVariable`, etc.)
 defined by the model or process.
@@ -97,11 +98,18 @@ function compute_tendencies! end
 
 # Allow variables to be defined on any type, defaulting to an empty tuple
 variables(::Any) = ()
-# For AbstractCoupledProcesses and AbstractModel types, default to collecting variables on all processes contained therein
+
+"""
+    $TYPEDSIGNATURES
+
+Default implementation of [`variables`](@ref) for composite [`AbstractModel`](@ref) and
+[`AbstractCoupledProcesses`](@ref) types that automatically collects all variables from all processes defined
+as properties/fields on the given `obj`.
+"""
 variables(obj::Union{AbstractCoupledProcesses, AbstractModel}) = mapreduce(variables, tuplejoin, processes(obj))
 
 """
-    processes(obj::Union{AbstractCoupledProcesses, AbstractModel})
+    $TYPEDSIGNATURES
 
 Return a tuple of `AbstractProces`es contained in the given model or coupled processes type.
 Note that this is a type-stable, `@generated` function that is compiled for each argument type.
@@ -118,7 +126,7 @@ Note that this is a type-stable, `@generated` function that is compiled for each
 end
 
 """
-    closures(process::AbstractProcess)
+    $TYPEDSIGNATURES
 
 Return a tuple of `AbstractClosureRelation`s defined by the given processes type.
 Note that this is a type-stable, `@generated` function that is compiled for each argument type.

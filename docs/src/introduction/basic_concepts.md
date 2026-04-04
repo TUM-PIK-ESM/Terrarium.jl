@@ -8,7 +8,9 @@ Terrarium should not be thought of as a single model but rather a *framework* or
 
 ## Models
 
-A “model” in Terrarium represents a collection of components that fully characterize the dynamics of a land simulation. All models must be defined as `struct`s that subtype [`AbstractModel`](@ref) and typically consist of the following components:
+A “model” in Terrarium represents a collection of components that fully characterize the dynamics of a land simulation. Models are standalone objects that satisfy a common interface for calculating the transient state of the system. See the [Core interfaces](@ref) for further discussion.
+
+All models must be defined as `struct`s that subtype [`AbstractModel`](@ref) and typically consist of the following components:
 - A `grid` that defines both a vertical and lateral discretization of the spatial domain,
 - One or more [Processes](@ref) that define the state variables, parameters, and dynamics of the model,
 - An `initializer` that defines a sequence of initialization routines (as well as any associated parameters) for the state variables declared by all of its components.
