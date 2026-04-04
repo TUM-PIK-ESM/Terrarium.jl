@@ -313,13 +313,13 @@ function compute_auxiliary!(
         state, grid,
         photo::LUEPhotosynthesis,
         stomcond::AbstractStomatalConductance,
-        atmos::AbstractAtmosphere,
         constants::PhysicalConstants,
+        atmos::AbstractAtmosphere,
         args...
     )
     out = auxiliary_fields(state, photo)
     fields = get_fields(state, photo, stomcond, atmos; except = out)
-    launch!(grid, XY, compute_auxiliary_kernel!, out, fields, photo, atmos, constants)
+    launch!(grid, XY, compute_auxiliary_kernel!, out, fields, photo, constants, atmos)
     return nothing
 end
 
@@ -334,8 +334,8 @@ Returns instantaneous rates in [gC/m²/s] and [kgC/m²/s] for integration by the
 @propagate_inbounds function compute_photosynthesis(
         i, j, grid, fields,
         photo::LUEPhotosynthesis,
-        atmos::AbstractAtmosphere,
-        constants::PhysicalConstants
+        constants::PhysicalConstants,
+        atmos::AbstractAtmosphere
     )
     # Get inputs from fields/atmosphere
     T_air = air_temperature(i, j, grid, fields, atmos)
@@ -364,10 +364,10 @@ Calls [`compute_photosynthesis`](@ref) and stores the results in `out`.
 @propagate_inbounds function compute_photosynthesis!(
         out, i, j, grid, fields,
         photo::LUEPhotosynthesis,
-        atmos::AbstractAtmosphere,
-        constants::PhysicalConstants
+        constants::PhysicalConstants,
+        atmos::AbstractAtmosphere
     )
-    Rd, An, GPP = compute_photosynthesis(i, j, grid, fields, photo, atmos, constants)
+    Rd, An, GPP = compute_photosynthesis(i, j, grid, fields, photo, constants, atmos)
     out.leaf_respiration[i, j, 1] = Rd
     out.net_assimilation[i, j, 1] = An
     out.gross_primary_production[i, j, 1] = GPP

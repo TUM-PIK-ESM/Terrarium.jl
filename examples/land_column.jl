@@ -1,7 +1,7 @@
 using Terrarium
 using CUDA
 
-arch = GPU()
+arch = CPU()
 # Define a simple grid with 1 column
 grid = ColumnGrid(arch, ExponentialSpacing(Δz_max = 1.0, N = 30))
 # Set up Richards model for soil hydrology
@@ -15,15 +15,8 @@ land = LandModel(grid; soil, vegetation)
 # Variably saturated with water table at roughly 5 m depth
 initializers = (
     saturation_water_ice = (x, z) -> min(1, 0.5 - 0.1 * z),
-    C_veg = 0.1,
+    carbon_vegetation = 0.1,
 )
 integrator = @time initialize(land, ForwardEuler(); initializers);
-
-using BenchmarkTools
-
-# Benchmark adapt for full state
-res1 = @benchmark adapt(CUDA.KernelAdaptor(), ($integrator.state))
-# Extract fields for soil hydrology
-fields = get_fields(integrator.state, hydrology, soil.biogeochem)
-tendencies = Terrarium.tendency_fields(integrator.state, hydrology)
-res2 = @benchmark adapt(CUDA.KernelAdaptor(), ($tendencies, $fields))
+Δt = 60.0
+@time timestep!(integrator, Δt)

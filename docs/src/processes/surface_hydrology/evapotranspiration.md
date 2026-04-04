@@ -17,12 +17,6 @@ All evapotranspiration pathways are primarily driven by the **vapor pressure def
 
 Each pathway is also modulated by **aerodynamic resistance** $r_a$ (between surface and atmosphere) and/or **stomatal resistance** $r_s$ (in transpiration).
 
-## Bare ground evaporation
-
-```@docs; canonical = false
-GroundEvaporation
-```
-
 ## Coupled canopy evapotranspiration
 
 ```@docs; canonical = false

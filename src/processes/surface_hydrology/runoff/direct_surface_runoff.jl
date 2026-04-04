@@ -51,13 +51,12 @@ end
 
 Compute surface runoff as `precipitation + surface_drainage - infiltration`.
 """
-@inline function compute_surface_runoff(runoff::DirectSurfaceRunoff, precip_ground, surface_drainage, infil)
-    let P = precip_ground,
+@inline function compute_surface_runoff(runoff::DirectSurfaceRunoff, rain, surface_drainage, infil)
+    return let P = rain,
             ∂S∂t = surface_drainage,
             I = infil
         # Compute runoff as residual of precipitation + drainage - infiltration
         surface_runoff = P + ∂S∂t - I
-        return surface_runoff
     end
 end
 
@@ -93,7 +92,7 @@ end
     fgrid = get_field_grid(grid)
 
     # Get inputs
-    precip_ground = ground_precipitation(i, j, grid, fields, canopy_interception)
+    rain = rainfall_ground(i, j, grid, fields, canopy_interception)
     excess_water = surface_excess_water(i, j, grid, fields, soil_hydrology)
     k_unsat = hydraulic_conductivity(i, j, fgrid.Nz, grid, fields, soil_hydrology)
     sat_top = saturation_water_ice(i, j, fgrid.Nz, grid, fields, soil_hydrology)
@@ -108,11 +107,11 @@ end
         # Case 2: No excess water -> rainfall is routed directly to infiltration
     else
         surface_drainage = zero(NF)
-        infil = out.infiltration[i, j, 1] = compute_infiltration(runoff, precip_ground, sat_top, k_unsat)
+        infil = out.infiltration[i, j, 1] = compute_infiltration(runoff, rain, sat_top, k_unsat)
     end
 
     # Compute surface runoff
-    out.surface_runoff[i, j, 1] = compute_surface_runoff(runoff, precip_ground, surface_drainage, infil)
+    out.surface_runoff[i, j, 1] = compute_surface_runoff(runoff, rain, surface_drainage, infil)
     return out
 end
 
