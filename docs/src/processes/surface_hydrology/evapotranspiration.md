@@ -23,13 +23,13 @@ Each pathway is also modulated by **aerodynamic resistance** $r_a$ (between surf
 GroundEvaporation
 ```
 
-## Coupled canopy evapotranspiration
+## Canopy evapotranspiration
 
 ```@docs; canonical = false
 PALADYNCanopyEvapotranspiration
 ```
 
-### Canopy evaporation
+### Evaporation from the canopy
 
 Evaporation of water intercepted by the canopy depends on the saturation state of the canopy (fraction of leaves wet):
 

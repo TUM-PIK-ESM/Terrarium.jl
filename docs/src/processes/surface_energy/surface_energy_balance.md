@@ -1,4 +1,4 @@
-# Surface energy balance
+# Surface Energy Balance
 
 ```@meta
 CurrentModule = Terrarium
