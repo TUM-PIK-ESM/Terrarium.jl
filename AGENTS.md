@@ -135,34 +135,23 @@ src/
 6. **Extending `getproperty` to fix undefined property bugs**: fix on the caller side instead
 7. **"Type is not callable" errors**: variable name shadows a function — rename or qualify
 8. **Quick fixes that break correctness**: if a test fails after a change, revisit the original edit
-9. **Commented-out code**: delete it. Git is the journal — don't leave commented code, debugging
-    artifacts, or stale copy-paste remnants
-10. **2D indexing on fields**: always use 3D indexing (`field[i, j, k]`). 2D indexing works by
-    coincidence on some fields but is unsupported and will break
+9. **Commented-out code**: delete it. Git is the journal — don't leave commented code, debugging artifacts, or stale copy-paste remnants
+10. **2D indexing on fields**: always use 3D indexing (`field[i, j, k]`). 2D indexing works by coincidence on some fields but is unsupported and will break
 11. **Hardcoded Float64**: never use `0.0`, `1.0` in kernels or constructors; use `zero(grid)` etc.
-12. **Scope creep in PRs**: keep changes focused on a single concern. Unrelated cleanup goes
-    in a separate PR
-13. **Modifying Project.toml dependencies**: never add, remove, or change `[deps]` or `[weakdeps]`
-    in the root `Project.toml` unless the task absolutely requires it. Dependency changes have
-    wide-reaching consequences — they affect CI, load time, and downstream compatibility.
-    Only touch `[compat]` bounds when explicitly asked.
-14. **Mutable closures in kernels**: closures that capture mutable state will not differentiate correctly — use
-    explicit parameters instead
-15. **Non-local dependencies in process equations**: process functions must not depend on global state; pass all
-    dependencies as arguments for traceability and differentiability
+12. **Scope creep in PRs**: keep changes focused on a single concern. Unrelated cleanup goes in a separate PR
+13. **Modifying Project.toml dependencies**: never add, remove, or change `[deps]` or `[weakdeps]` in the root `Project.toml` unless the task absolutely requires it. Dependency changes have wide-reaching consequences — they affect CI, load time, and downstream compatibility. Only touch `[compat]` bounds when explicitly asked.
+14. **Mutable function closures in kernels**: function closures that capture mutable state will not differentiate correctly — use explicit parameters instead
+15. **Non-local dependencies in process equations**: process functions must not depend on global state; pass all dependencies as arguments for traceability and differentiability
 
 ## Git Workflow
 
-Follow [ColPrac](https://github.com/SciML/ColPrac). Feature branches, descriptive commits,
-update tests and docs with code changes, check CI before merging.
+Follow [ColPrac](https://github.com/SciML/ColPrac). Feature branches, descriptive commits, update tests and docs with code changes, check CI before merging.
 
 ## Design Principles
 
-- **Dispatch over conditionals**: use Julia's type system and multiple dispatch instead of
-  `if`/`else` branching. Backend-specific code goes in `ext/` extensions, not `if` branches in `src/`
+- **Dispatch over conditionals**: use Julia's type system and multiple dispatch instead of `if`/`else` branching. Backend-specific code goes in `ext/` extensions, not `if` branches in `src/`
 - **Use `on_architecture` for data transfers** — never manual `Array()` / `CuArray()` calls
-- **Defaults serve the common case**: avoid `nothing` defaults when a concrete default (like `CPU()`)
-  covers 80% of usage. Minimize boilerplate for the typical user.
+- **Defaults serve the common case**: avoid `nothing` defaults when a concrete default (like `CPU()`) covers 80% of usage. Minimize boilerplate for the typical user.
 - **Keyword argument names must be consistent** across related types and constructors
 - **Always use explicit `return`** in functions longer than one expression
 - **One operation per line** as default; break long expressions across lines
