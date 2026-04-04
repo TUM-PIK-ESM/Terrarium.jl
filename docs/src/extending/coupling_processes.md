@@ -134,9 +134,17 @@ function compute_auxiliary!(state, grid,
 
 ### Coupled process types
 
-In many cases, it may be helpful to group sets of tightly coupled processes together in a single process type. This can be accomplished by creating subtypes of [`AbstractCoupledProcesses`](@ref) that compose multiple sub-processes into one interface. This allows for the design of *hierarchical* coupling interfaces which can simplify function signatures; e.g. vegetation processes can simply accept coupled [`AbstractSoil`](@ref) types instead of specific soil processes wherever appropriate. Note, however, that such dependencies should be carefully considered since each of these coupled process types carries with it more overhead in the form of larger numbers of state variables.
+In many cases, it may be helpful to group sets of tightly coupled processes together in a single process type. This can be accomplished by creating subtypes of [`AbstractCoupledProcesses`](@ref) that compose multiple sub-processes into one interface:
 
-Coupled process types also have another key benefit: they can define their own custom kernel functions that fuse together kernels from each of their sub-processes wherever possible, thereby resulting in potentially significant efficiency gains. This pattern enables for computationally efficient process coupling while still allowing for each process to be usable standalone during testing and development.
+```@docs; canonical = false
+AbstractCoupledProcesses
+```
+
+It is important to note that `AbstractCoupledProcesses` is itself a subtype of `AbstractProcess` and thus subtypes must also implement the same interface described in [Core interfaces](@ref).
+
+Coupled process types allow for the design of *hierarchical* coupling interfaces which can simplify function signatures; e.g. vegetation processes can simply accept coupled [`AbstractSoil`](@ref) types instead of specific soil processes wherever appropriate. Note, however, that such dependencies should be carefully considered since each of these coupled process types carries with it more overhead in the form of larger numbers of state variables.
+
+These coupling types also have another key benefit: they can define their own custom kernel functions that fuse together kernels from each of their sub-processes wherever possible, thereby resulting in potentially significant efficiency gains. This pattern enables for computationally efficient process coupling while still allowing for each process to be usable standalone during testing and development.
 
 Current examples of coupled process types include:
 - [`SoilEnergyWaterCarbon`](@ref) which couples soil energy, hydrology, and biogeochemistry processes,

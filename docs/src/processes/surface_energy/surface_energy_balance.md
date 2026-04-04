@@ -32,7 +32,7 @@ The [`SurfaceEnergyBalance`](@ref) process is responsible for computing all of t
 SurfaceEnergyBalance
 ```
 
-```@example
+```@example seb
 variables(SurfaceEnergyBalance(Float32))
 ```
 

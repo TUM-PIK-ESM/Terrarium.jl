@@ -23,17 +23,8 @@ air_temperature(i, j, grid, fields, atmos::AbstractAtmosphere) = fields.air_temp
 ```
 which defaults to assuming that a 2D input `Field` (see [Fields](@ref)) named `air_temperature` has been defined and is available as a property of `fields`. However, alternative implementations could derive this air temperature from other state variables or via some other function, without requiring any changes to the calling code. This kind of interface-based coupling is core to the software design of Terrarium. Method interfaces for individual process and parameterization types are summarized on their respective doc pages. Documentation and method dispatches can also be dynamically queried from the Julia REPL via the help function `?air_temperature` or with `methods(air_temperature)` and `methodswith`.
 
-## Core interfaces
 
-
-```@docs; canonical=false
-variables(proc::AbstractProcess)
-initialize!
-compute_auxiliary!
-compute_tendencies!
-```
-
-### The `AbstractProcess` interface
+## The `AbstractProcess` interface
 
 In the example above, both `AbstractAtmosphere` and `PALADYNCanopyEvapotranspiration` are examples of *processes* that subtype the `AbstractProcess` type.
 
@@ -42,22 +33,20 @@ Implementations of `AbstractProcess` represent physical processes characterized 
 - Zero or more *parameters* that are spatially constant and defined somewhere within the process `struct`,
 - One or more functions defining equations that compute quantities of interest from both the state variables and parameters defined by the process.
 
-Concrete implementations of `AbstractProcess` are `struct` types that typically consist of zero or more parameters or parameter `struct`s (also sometimes referred to as *parameterizations*).
+Concrete implementations of `AbstractProcess` are `struct` types that typically consist of zero or more parameters or parameter `struct`s (also sometimes referred to as *parameterizations*). Each process type must also implement the following methods:
+
+```@docs; canonical=false
+variables(proc::AbstractProcess)
+initialize!(state, grid, ::AbstractProcess, args...)
+compute_auxiliary!(state, grid, ::AbstractProcess, args...)
+compute_tendencies!(state, grid, ::AbstractProcess, args...)
+```
 
 Default (no-op) implementations of [`variables`](@ref) and [`initialize!`](@ref) are provided for convenience. However, to avoid ambiguity, `compute_auxiliary!` and `compute_tendencies!` **must be defined by each process** even if they are not needed.
 
 The required additional `args` may vary for each type of `AbstractProcess`; typically they consist of either `AbstractProcess`es on which the process depends or universal parameter types like [`PhysicalConstants`](@ref). These argument types must be clearly documented and standardized for each abstract subtype of `AbstractProcess`. Changes to these interfaces, e.g. the addition of alternative call patterns with different `args`, should be made with great care and only when absolutely necessary. It is recommended for implementations to always include trailing `args...` to ensure forward compatibility.
 
 For more details on the `state` structure and definition of `variables`, see the section on [State variables](@ref) below.
-
-#### Coupled processes
-
-Terrarium also defines a base type for *coupled processes*, i.e. subtypes of `AbstractProcess` that define a physical coupling of two or more sub-processes:
-```@docs; canonical = false
-AbstractCoupledProcesses
-```
-
-It is important to note that `AbstractCoupledProcesses` is itself a subtype of `AbstractProcess` and thus subtypes must also implement the same interface described above. The main reason to subtype `AbstractCoupledProcesses` instead of `AbstractProcess` is to define a coupling interface for logical groups of processes, e.g. [`SoilEnergyWaterCarbon`](@ref) or [`VegetationCarbon`](@ref). Additionally, concrete implementations may provide specialized computation kernels that *fuse* the respective kernel functions from each of the sub-processes for greater efficiency.
 
 ### The `AbstractModel` interface
 
@@ -71,7 +60,7 @@ abstract type AbstractModel{NF, Grid <: AbstractLandGrid{NF}} end
 
 where `NF` is the numeric float type (e.g. `Float32`, `Float64`) and `Grid` is the concrete grid type. These type parameters propagate to all concrete subtypes, making the full model type checkable at compile time.
 
-#### Model type hierarchy
+### Model type hierarchy
 
 Terrarium defines a hierarchy of abstract model subtypes that correspond to the major components defined by most land surface models:
 
@@ -88,7 +77,7 @@ AbstractModel
 
 New component models should subtype the most specific abstract type appropriate for the component being implemented.
 
-#### Required struct fields and accessor methods
+### Required struct fields and accessor methods
 
 By convention, concrete subtypes of `AbstractModel` are expected to store at least three standard fields that are accessed via the corresponding accessor methods:
 
@@ -111,7 +100,7 @@ Note that subtypes of `AbstractModel` and `AbstractCoupledProcesses` also automa
 processes(::Union{AbstractModel, AbstractCoupledProcesses})
 ```
 
-#### Standard constructor for model types
+### Standard constructor for model types
 
 `AbstractModel` provides a universal convenience constructor that allows the `grid` to be passed as the first *positional* argument even when the concrete struct uses `@kwdef`:
 
@@ -121,7 +110,7 @@ SoilModel(grid; soil = SoilEnergyWaterCarbon(eltype(grid)), ...)
 
 This is equivalent to `SoilModel(; grid, soil, ...)` and is the recommended calling convention for all model types.
 
-#### Required method implementations
+### Required method implementations
 
 A concrete `AbstractModel` subtype must implement at minimum the same basic interface as `AbstractProcess`:
 
@@ -140,7 +129,7 @@ Additionally, models with [closure relations](@ref "Closure relations") should i
 
 The typical pattern is to forward each of these model-level calls to the corresponding process-level call, passing the `grid` and `constants` explicitly.
 
-#### The `AbstractInitializer` interface
+### The `AbstractInitializer` interface
 
 Standardized model initialization routines can be defined using the [`AbstractInitializer`](@ref) interface (see also [Initialization](@ref)). Each implementation of `AbstractModel` must allow for a user-defined `initializer` (the type can be constrained where appropriate). The simplest initializer is `DefaultInitializer`, which is a no-op that leaves all `Field`s at their default (zero) values. More complex models define their own composite initializers; for example, `SoilInitializer` composes separate initializers for the energy, hydrology, and biogeochemistry state variables. See [Soil model](@ref) for the full list of available initializer types.
 
@@ -148,7 +137,7 @@ Standardized model initialization routines can be defined using the [`AbstractIn
 AbstractInitializer
 ```
 
-### Closure relations
+## Closure relations
 
 Some physical processes in Terrarium are described by conservation laws that take the form
 
@@ -187,7 +176,7 @@ invclosure!(state, model::AbstractModel)
 ```
 These methods provide a unified interface that can be used by timesteppers, callbacks, and user-defined analysis routines.
 
-#### Soil energy: temperature–enthalpy closure
+### Soil energy: temperature–enthalpy closure
 
 The [`SoilEnergyBalance`](@ref) process uses the [`SoilEnergyTemperatureClosure`](@ref) to
 relate volumetric internal energy $U$ to temperature $T$ and the liquid water fraction $F_l$:
@@ -208,7 +197,7 @@ latent heat of fusion, and $\theta_{wi}$ is the total water-ice content.
 See the [Soil energy balance](@ref) doc page for further details and the full list of
 dispatch signatures.
 
-#### Soil hydrology: saturation–pressure closure
+### Soil hydrology: saturation–pressure closure
 
 The [`SoilHydrology`](@ref) process (Richards equation variant) uses the
 [`SoilSaturationPressureClosure`](@ref) to relate total water–ice saturation $S$ to
@@ -227,7 +216,7 @@ and $\Psi_h$ is the hydrostatic head contributed by free water above the water t
 See the [Soil hydrology](@ref) doc page for further details and the full list of dispatch
 signatures.
 
-#### Implementing a new closure
+### Implementing a new closure
 
 To add a closure relation to a new process:
 
