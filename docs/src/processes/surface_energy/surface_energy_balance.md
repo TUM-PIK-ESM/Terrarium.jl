@@ -33,7 +33,7 @@ SurfaceEnergyBalance
 ```
 
 ```@example
-variables(SurfaceEnergBalance(Float32))
+variables(SurfaceEnergyBalance(Float32))
 ```
 
 !!! warning "Prescribed energy fluxes"
