@@ -19,15 +19,19 @@ s = ArgParseSettings()
     "--no-exec", "-e"
     action = :store_true
     help = "Like --draft but applies only to example scripts"
+    "--check-links", "-c"
+    action = :store_true
+    help = "Check that all external links are functional (`linkcheck=true` in `makedocs`)"
     "--debug"
     action = :store_true
-    help = "Enable Documenter.jl debug logging"
+    help = "Enable Documenter.jl debug logging for more detailed output from examples and doctests"
 end
 parsed_args = parse_args(ARGS, s)
 
 IS_LOCAL = parsed_args["local"] || parse(Bool, get(ENV, "LOCALDOCS", "false"))
 IS_DRAFT = parsed_args["draft"] || parse(Bool, get(ENV, "DRAFTDOCS", "false"))
 NO_EXEC = parsed_args["no-exec"] || parse(Bool, get(ENV, "NOEXEC", "false"))
+CHECK_LINKS = parsed_args["check-links"] || parse(Bool, get(ENV, "CHECK_LINKS", "false"))
 BUILD_EXAMPLE_DOCS = !IS_DRAFT && !NO_EXEC
 if haskey(ENV, "GITHUB_ACTIONS") || parsed_args["debug"]
     ENV["JULIA_DEBUG"] = "Documenter"
@@ -161,7 +165,7 @@ makedocs(
         "Contributing" => "contributing.md",
         "API Reference" => "api_reference.md",
     ],
-    linkcheck = true,
+    linkcheck = CHECK_LINKS,
     warnonly = [:cross_references],
     draft = IS_DRAFT,
 )
