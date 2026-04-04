@@ -43,28 +43,16 @@ Procceses are the building blocks of all Terrarium models. Implementations of `A
 
 Concrete implementations of `AbstractProcess` are `struct` types that typically consist of zero or more parameters or parameter `struct`s (also sometimes referred to as *parameterizations*). Spatially varying parameters should generally be defined as [`InputVariable`](@ref)s (see following section) or computed by [kernel functions](@ref "Kernel programming") based on spatially invariant parameters stored in parameterization `struct`s.
 
-## State variables
-State variables are symbolically defined for each process in their respective implementations of the `variables` method by returning instances of [`AbstractVariable`](@ref) which define (at minimum) its name, dimensionality, and physical units. State variables may be one of three types:
-```@docs; canonical = false
-PrognosticVariable
-AuxiliaryVariable
-InputVariable
-```
+## State variables and `Field`s
+State variables define both the prognostic and derived (auxiliary) state of the system, discretized over the model `grid`, at any given time step. Terrarium models and processes symbolically define required state variables by defining dispatches of the `variables` method. This method should return a tuple of [`AbstractVariable`](@ref) each of which specifies the variable name, spatial dimensions, and physical units. State variables may be one of three types: **prognostic**, **auxiliary**, or **input**.
 
-These variables are typically constructed using one of the convenience methods [`prognostic`](@ref), [`auxiliary`](@ref), or [`input`](@ref).
+Prognostic variables fully define the state of the system at any given time step. They have corresponding tendency (time derivative) variables automatically defined for them which are typically computed in `compute_tendencies!` and updated only by the timestepper (unless otherwise documented).
+
+Auxiliary variables are derived in each time step from the current prognostic state in `compute_auxiliary!`. These variables represent intermediary computations or terms in the equations for the prognostic tendencies. Values of auxiliary variables from previous time steps should generally not be relied upon as they may change depending on the formulation of the time stepping scheme.
+
+Input variables represent entry points for data or physical variables that are external to a particular process or model. They are typically either supplied by [`InputSource`](@ref)s or merged with matching prognostic/auxiliary variables during initialization.
 
 !!! info "Variables vs. `Field`s"
-    Within the context of defining and handling model/process state, Terrarium distinguishes between *variables* and *Fields*. Variables are symbolic objects subtyping [`AbstractVariable`](@ref) that contain metadata about the state variable defined by the process or model type. These variables are realized as [`Fields`](@ref) defined over the model grid that contain the actual numerical data of the corresponding variable. 
+    Terrarium distinguishes between *variables* and *Fields*. Variables are symbolic objects subtyping [`AbstractVariable`](@ref) that contain metadata about the state variable defined by the process or model type. These variables are realized as [`Fields`](@ref) defined over the model grid that contain the actual numerical data of the corresponding variable.
 
-As a simple example, suppose we are implementing a new process `MyProcess` and we want to define the necessary state variables. We do this by defining a new dispatch of the `variables` method:
-```julia
-variables(::MyProcess) = (
-    prognostic(:progvar, XYZ()),
-    auxiliary(:auxvar, XYZ()),
-    auxiliary(:bc, XY()),
-    input(:input, XY())
-)
-```
-This will result in a total of five state variables being allocated upon initialization: two auxiliary variables named `auxvar` and `bc` as well as one prognostic variable named `progvar` along with its corresponding tendency variable which is created automatically. The second argument to the variable metadata constructors `prognostic` and `auxiliary` is a subtype of `VarDims` which specifies on which spatial dimensions the state variable should be defined. `XYZ()` corresponds to a 3D `Field` which varies both laterally and with depth.
-
-Currently, Terrarium only supports a single 3D grid representing variables defined in the soil domain, though this may change in the future in order to accommodate multi-layer snow and canopy processes. `XY()` corresponds to a 2D field which is discretized along the lateral dimension only. Note that Terrarium also currently supports only 1D (vertical) dynamics so all grid cells on the X and Y axes will be assumed independent. This is equivalent to what is typically called a *single column* model, or *column-based parameterization* in atmosphere and ocean modeling. However, building on Oceananigans means that we have a clear path to relax this assumption in the future!
+Currently, Terrarium only supports defining state variables on a single spatial grid where the vertical dimension corresponds to the subsurface (soil) domain. This may change in the future in order to accommodate multi-layer snow and canopy processes. Note that Terrarium also currently implements only 1D (vertical) dynamics so all grid cells on the X and Y axes can be assumed independent. This is equivalent to what is typically called a *single column* model, or *column-based parameterization* in atmosphere and ocean modeling. However, building on Oceananigans means that we have a clear path to relax this assumption in the future!

@@ -112,6 +112,7 @@ makedocs(
         ],
         "Extending Terrarium" => [
             "Core interfaces" => "extending/core_interfaces.md",
+            "State variables" => "extending/state_variables.md",
             "Implementing processes" => "extending/implementing_processes.md",
             "Coupling processes" => "extending/coupling_processes.md",
             example_docpages...,

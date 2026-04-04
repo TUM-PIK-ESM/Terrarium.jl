@@ -1,7 +1,7 @@
 # Core interfaces
 
 !!! warning "🚧🚧 Under construction 🚧🚧"
-    The software architecture of Terrarium.jl is still in a prototype stage and is the subject of ongoing discussion. This page is a non-exhaustive summary of the current working concept and will be updated accordingly if and when the architecture changes.
+    The software architecture of Terrarium.jl is still in a prototype stage and is the subject of ongoing discussion. These pages are a non-exhaustive summary of the current working concept and will be updated accordingly if and when the architecture changes.
 
 ```@meta
 CurrentModule = Terrarium
@@ -111,7 +111,7 @@ Note that subtypes of `AbstractModel` and `AbstractCoupledProcesses` also automa
 processes(::Union{AbstractModel, AbstractCoupledProcesses})
 ```
 
-#### Convenience constructor
+#### Standard constructor for model types
 
 `AbstractModel` provides a universal convenience constructor that allows the `grid` to be passed as the first *positional* argument even when the concrete struct uses `@kwdef`:
 
