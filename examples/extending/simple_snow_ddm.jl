@@ -12,7 +12,7 @@
 #
 # To demonstrate this process, and all tools we have available to facilitate it, we will implement a simplified degree day snow model.
 #
-# ### Degree Day Model
+# ## Degree Day Model
 #
 # A degree day model models snow melt by assuming that snow storage or snow water equivalent decreases linearly  over time with the temperature when it is above its melting point. Following [Kavetski and Kuczera's formulation](https://doi.org/10.1029/2006WR005195) we denote the snow mass balance as
 #
@@ -43,7 +43,7 @@ using JLD2
 ## plotting
 using CairoMakie, GeoMakie
 
-# ### Your first kernel-accelerated model
+# ## Your first kernel-accelerated model
 #
 # First, we need to define our model that holds the snow melting process similar to how we constructed the `ExpModel`:
 
@@ -134,6 +134,7 @@ end
 
 global_grid = FullGaussianGrid(22) # we define the global grid we model on as a HealPIX grid
 
+# ## Input data
 # Now, we get all the input data. We can use the input data provided by `RingGrids` / `SpeedyWeather` in this case:
 
 snow_climatology = RingGrids.get_asset("data/boundary_conditions/snow.nc", from_assets = true, name = "snow", ArrayType = FullGaussianField, FileFormat = NCDataset, output_grid = global_grid) ./ 3.8e10; # ~ conversion from kg/(month * m^2) to m/(s * m^2)
@@ -153,6 +154,7 @@ heatmap(lst_climatology[:, 1], title = "Land Surface Temperature")
 
 heatmap(snow_climatology[:, 1], title = "Snowfall")
 
+# ## Running a simulation
 # Ok, so now let's put everything together!
 #
 # * We defined our model `SnowModel` and dynamics `DegreeDaySnow`
