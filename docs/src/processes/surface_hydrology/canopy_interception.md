@@ -27,12 +27,7 @@ I_{\text{can}} = \alpha_{\text{int}} P (1 - e^{-k_{\text{ext}}(L + S)})
 \end{equation}
 ```
 
-where:
-- $\alpha_{\text{int}}$ is the interception factor (typically 0.2) [dimensionless]
-- $P$ is incident precipitation [m/s]
-- $k_{\text{ext}}$ is the radiation extinction coefficient (typically 0.5) [dimensionless]
-- $L$ is the leaf area index (LAI) [m²/m²]
-- $S$ is the stem area index (SAI) [m²/m²]
+where $\alpha_{\text{int}}$ is the interception factor (-), $P$ is incident precipitation (m/s), $k_{\text{ext}}$ is the radiation extinction coefficient (-), $L$ is the leaf area index (LAI) (m²/m²), and $S$ is the stem area index (SAI) (m²/m²).
 
 The term $(1 - e^{-k_{\text{ext}}(L+S)})$ represents the vegetation cover fraction and increases from 0 (bare ground) toward 1 (dense forest).
 
@@ -46,11 +41,7 @@ The canopy water budget is:
 \end{equation}
 ```
 
-where:
-- $w_{\text{can}}$ is liquid water stored on the canopy [kg/m²]
-- $I_{\text{can}}$ is the interception rate [m/s]
-- $E_{\text{can}}$ is evaporation of intercepted water [m/s]
-- $R_{\text{can}}$ is the removal (drip) rate [m/s]
+where $w_{\text{can}}$ is liquid water stored on the canopy (kg/m²), $I_{\text{can}}$ is the interception rate (m/s), $E_{\text{can}}$ is evaporation of intercepted water (m/s), and $R_{\text{can}}$ is the removal (drip) rate (m/s).
 
 The canopy storage capacity is proportional to vegetation area:
 
@@ -72,9 +63,7 @@ R_{\text{can}} = \frac{w_{\text{can}}}{\rho_w \tau_w}
 \end{equation}
 ```
 
-where:
-- $\rho_w$ is the density of water [kg/m³]
-- $\tau_w$ is the canopy water removal timescale (typically 1 day = 86400 s) [s]
+where $\rho_w$ is the density of water (kg/m³) and $\tau_w$ is the canopy water removal timescale (typically 1 day = 86400 s) (s).
 
 The saturation fraction of the canopy is:
 

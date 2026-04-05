@@ -30,7 +30,7 @@ PALADYNPhenology
 variables(PALADYNPhenology(Float32))
 ```
 
-This implementation follows the phenology scheme of PALADYN (Willeit, 2016), in which raingreen phenology is not represented. The phenology factor $\phi$ (0 to 1) represents the current fraction of the maximum leaf coverage, and $f_{\text{deciduous}}$ (0 to 1) is a climate-dependent smooth transition parameter between evergreen and deciduous behavior.
+This implementation follows the phenology scheme of PALADYN (Willeit, 2016), in which raingreen phenology is not represented. The phenology factor $\phi$ represents the current fraction of the maximum leaf coverage (0 to 1), and $f_{\text{deciduous}}$ is a climate-dependent smooth transition parameter (0 to 1) between evergreen and deciduous behavior.
 
 
 ### Leaf area index computation

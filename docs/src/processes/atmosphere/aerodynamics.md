@@ -16,7 +16,7 @@ using Terrarium
 Aerodynamic processes govern the turbulent exchange of heat, water vapor, and momentum
 between the land surface and the overlying atmosphere. In the bulk aerodynamic
 formulation used by Terrarium, surface fluxes are approximated by assuming that the
-turbulent eddies act like a diffusive process with an effective resistance $r_a$ [s/m]:
+turbulent eddies act like a diffusive process with an effective resistance $r_a$ (s/m):
 
 ```math
 \begin{equation}
@@ -41,9 +41,7 @@ $5 \times 10^{-3}$.
 
 ### Aerodynamic conductance
 
-The aerodynamic conductance $g_a = 1 / r_a = C_h V_a$ [m/s] is the inverse of the
-resistance and often appears in flux expressions alongside stomatal and soil surface
-conductances:
+The aerodynamic conductance $g_a = 1 / r_a = C_h V_a$ is the inverse of the resistance (m/s) and often appears in flux expressions alongside stomatal and soil surface conductances:
 
 ```math
 \begin{equation}

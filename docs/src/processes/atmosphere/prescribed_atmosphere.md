@@ -63,9 +63,7 @@ deficit is
 ### Aerodynamic resistance
 
 The `PrescribedAtmosphere` delegates to an [`AbstractAerodynamics`](@ref) parameterization
-to compute the aerodynamic resistance $r_a$ [s/m] between the land surface and the
-atmosphere, with [`ConstantAerodynamics`](@ref) used by default. See [Aerodynamics](@ref) for
-further discussion.
+to compute the aerodynamic resistance $r_a$ between the land surface and the atmosphere (s/m), with [`ConstantAerodynamics`](@ref) used by default. See [Aerodynamics](@ref) for further discussion.
 
 ## Implementations
 

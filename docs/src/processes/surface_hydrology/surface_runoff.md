@@ -17,11 +17,7 @@ Q = P_{\text{ground}} + D - I
 \end{equation}
 ```
 
-where:
-- $Q$ is surface runoff [m/s]
-- $P_{\text{ground}}$ is precipitation reaching the ground (after canopy interception) [m/s]
-- $D$ is surface drainage from accumulated excess water [m/s]
-- $I$ is infiltration into the upper soil layer [m/s]
+where $Q$ is surface runoff (m/s), $P_{\text{ground}}$ is precipitation reaching the ground (after canopy interception) (m/s), $D$ is surface drainage from accumulated excess water (m/s), and $I$ is infiltration into the upper soil layer (m/s).
 
 Negative runoff (which would represent condensation) cannot occur, so $Q = \max(0, P_{\text{ground}} + D - I)$.
 
@@ -41,9 +37,7 @@ D = \frac{S}{\tau_r}
 \end{equation}
 ```
 
-where:
-- $S$ is the accumulated surface water depth [m]
-- $\tau_r$ is the surface water drainage timescale [s]
+where $S$ is the accumulated surface water depth (m) and $\tau_r$ is the surface water drainage timescale (s).
 
 This represents water pooling on the surface due to topographic depressions or soil sealing, which gradually drains downward as the pressure head increases.
 
@@ -61,9 +55,7 @@ I = \min(P_{\text{ground}}, I_{\max}) \times (1 - f_{\text{sat}})
 \end{equation}
 ```
 
-where:
-- $I_{\max}$ is the maximum infiltration capacity determined by soil hydraulic conductivity [m/s]
-- $f_{\text{sat}}$ is the saturation fraction of the upper soil layer (0 = dry, 1 = saturated) [dimensionless]
+where $I_{\max}$ is the maximum infiltration capacity determined by soil hydraulic conductivity (m/s) and $f_{\text{sat}}$ is the saturation fraction of the upper soil layer (0 = dry, 1 = saturated) (-).
 
 When soil becomes saturated ($f_{\text{sat}} = 1$), infiltration drops to zero and all precipitation becomes either surface runoff or surface water storage.
 

@@ -100,7 +100,7 @@ function compute_tendencies! end
 variables(::Any) = ()
 
 """
-    $TYPEDSIGNATURES
+    variables(obj::Union{AbstractCoupledProcesses, AbstractModel})
 
 Default implementation of [`variables`](@ref) for composite [`AbstractModel`](@ref) and
 [`AbstractCoupledProcesses`](@ref) types that automatically collects all variables from all processes defined
@@ -109,7 +109,7 @@ as properties/fields on the given `obj`.
 variables(obj::Union{AbstractCoupledProcesses, AbstractModel}) = mapreduce(variables, tuplejoin, processes(obj))
 
 """
-    $TYPEDSIGNATURES
+    processes(obj::Union{AbstractCoupledProcesses, AbstractModel})
 
 Return a tuple of `AbstractProces`es contained in the given model or coupled processes type.
 Note that this is a type-stable, `@generated` function that is compiled for each argument type.
@@ -126,7 +126,7 @@ Note that this is a type-stable, `@generated` function that is compiled for each
 end
 
 """
-    $TYPEDSIGNATURES
+    closures(proc::AbstractProcess)
 
 Return a tuple of `AbstractClosureRelation`s defined by the given processes type.
 Note that this is a type-stable, `@generated` function that is compiled for each argument type.

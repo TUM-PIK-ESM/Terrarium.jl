@@ -56,7 +56,7 @@ r(z) = \frac{1}{2} \left[ a \exp(a z) + b \exp(b z) \right]
 \end{equation}
 ```
 
-where $a$ and $b$ [m$^{-1}$] are empirical rate parameters controlling the depth e-folding scales. The first parameter $a$ typically controls shallow roots, while $b$ controls deeper root penetration. Larger values produce shallower distributions.
+where $a$ and $b$ are empirical rate parameters controlling the depth e-folding scales (m⁻¹). The first parameter $a$ typically controls shallow roots, while $b$ controls deeper root penetration. Larger values produce shallower distributions.
 
 Root distributions vary among plant functional types. Shallow-rooted plants (grasses, shrubs) may extract water almost entirely from the top soil layers, while deep-rooted trees access water at greater depths. These differences are captured through PFT-specific values of the rate parameters $a$ and $b$.
 

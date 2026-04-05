@@ -8,9 +8,6 @@ CurrentModule = Terrarium
 using Terrarium
 ```
 
-!!! warning
-    This page is a work in progress. If you have any questions or notice any errors, please [raise an issue](https://github.com/NumericalEarth/Terrarium.jl/issues).
-
 ## Overview
 
 Soil hydrology processes characterize the dynamics of ground water in both saturated and unsaturated soil. It defines parameters and methods needed to compute water fluxes between layers and grid cells within the soil domain. Implementations should extend [`AbstractSoilHydrology`](@ref) and should generally consist of at least four components:
@@ -79,7 +76,7 @@ The vertical flow of water in porous media, such as soils, can be formulated as 
 ```math
     \phi\frac{\partial\vartheta(\psi)}{\partial t} - \boldsymbol{\nabla} \cdot \textbf{j}_{\text{w}} - F_{\text{w}}(z,t) = 0,
 ```
-where $\phi$ is the natural porosity (or saturated water content) of the soil volume and $F_{\text{w}}(z,t)$ (m/s) is an inhomogeneous source/sink (forcing) term.
+where $\phi$ is the natural porosity (or saturated water content) of the soil volume and $F_{\text{w}}(z,t)$ is an inhomogeneous source/sink (forcing) term (m/s).
 
 Vertical fluxes in the soil column be represented by combining gravity-driven advection with Darcy's law
 ```math
@@ -87,7 +84,7 @@ Vertical fluxes in the soil column be represented by combining gravity-driven ad
 \textbf{j}_{\text{w}} \cdot \mathbf{n} = -\kappa_{\text{w}}\frac{\partial \left(\psi + z\right)}{\partial z},
 \end{equation}
 ```
-where $\psi$ (m) is the matric potential. Substituting this equation into the aforementioned conservation law yields the widely known Richardson-Richards equation for variably saturated flow in porous media (Richards 1931).
+where $\psi$ is the matric potential (m). Substituting this equation into the aforementioned conservation law yields the widely known Richardson-Richards equation for variably saturated flow in porous media (Richards 1931).
 
 ```@docs; canonical = false
 RichardsEq
