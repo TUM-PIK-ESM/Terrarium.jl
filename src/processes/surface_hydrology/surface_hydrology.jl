@@ -36,7 +36,7 @@ function compute_auxiliary!(
         constants::PhysicalConstants,
         soil::AbstractSoil
     )
-    compute_auxiliary!(state, grid, hydrology.canopy_interception, atmos, constants)
+    compute_auxiliary!(state, grid, hydrology.canopy_interception, atmos)
     compute_auxiliary!(state, grid, hydrology.evapotranspiration, hydrology.canopy_interception, atmos, constants, soil)
     compute_auxiliary!(state, grid, hydrology.surface_runoff, hydrology.canopy_interception, soil)
     return nothing

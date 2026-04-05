@@ -30,7 +30,7 @@ end
     f_can = compute_canopy_saturation_fraction(canopy_interception, 1.0, 0.0, 0.0)
     @test iszero(f_can)
     # Test saturation is between 0 and 1
-    w_can = 0.1
+    w_can = 1e-4
     f_can = compute_canopy_saturation_fraction(canopy_interception, w_can, 1.0, 0.5)
     @test 0 < f_can < 1
     # Check that f_can decreases when we increase the total LAI + SAI
@@ -40,15 +40,14 @@ end
 
 @testset "compute_canopy_water_removal" begin
     canopy_interception = PALADYNCanopyInterception(Float64)
-    constants = PhysicalConstants()
     # Test flux is zero when there is no stored water
-    ∂w∂t = compute_canopy_water_removal(canopy_interception, constants, 0.0)
+    ∂w∂t = compute_canopy_water_removal(canopy_interception, 0.0)
     @test iszero(∂w∂t)
     # Test that flux is still zero when there is negative water (mass balance violation)
-    ∂w∂t = compute_canopy_water_removal(canopy_interception, constants, -1.0)
+    ∂w∂t = compute_canopy_water_removal(canopy_interception, -1.0)
     @test iszero(∂w∂t)
     # Test flux is positive when there is water
-    ∂w∂t = compute_canopy_water_removal(canopy_interception, constants, 1.0)
+    ∂w∂t = compute_canopy_water_removal(canopy_interception, 1.0)
     @test ∂w∂t > 0
 end
 
