@@ -33,8 +33,8 @@ the integral of `W(z) * r(z)` where `W` is the water availability coefficient an
 """
 function soil_moisture_limiting_factor(::FieldCapacityLimitedPAW, grid, clock, fields)
     Δz = zspacings(get_field_grid(grid), Center(), Center(), Center())
-    PAW = Integral(fields.plant_available_water * fields.root_fraction / Δz, dims = 3)
-    return Field(PAW)
+    β = Integral(fields.plant_available_water * fields.root_fraction / Δz, dims = 3)
+    return Field(β)
 end
 
 # Process methods
@@ -59,6 +59,12 @@ end
 
 # Kernel functions
 
+"""
+    $TYPEDSIGNATURES
+
+Compute the plant avaialble water given the current soil stratigraphy, hydrology, and biogeochemistry
+state in `fields`.
+"""
 @propagate_inbounds function compute_plant_available_water(
         i, j, k, grid, fields,
         paw::FieldCapacityLimitedPAW{NF},
@@ -74,9 +80,15 @@ end
     fracs = volumetric_fractions(vol)
     θw = fracs.water
     # Compute PAW
-    return max(min(NF(1), (θw - θwp) / (θfc - θwp)), NF(0))
+    PAW = max(min(NF(1), (θw - θwp) / (θfc - θwp)), NF(0))
+    return PAW
 end
 
+"""
+    $TYPEDSIGNATURES
+
+Mutating wrapper for [`compute_plant_available_water`](@ref) that stores the result in `out`.
+"""
 @propagate_inbounds function compute_plant_available_water!(
         out, i, j, k, grid, fields,
         paw::FieldCapacityLimitedPAW{NF},

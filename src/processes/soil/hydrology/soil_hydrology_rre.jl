@@ -2,13 +2,7 @@
     RichardsEq{PS} <: AbstractVerticalFlow
 
 [`SoilHydrology`](@ref) flow operator implementing the mixed saturation-pressure form
-of the Richardson-Richards equation:
-
-```math
-\\phi(z) \\frac{\\partial s_{\\mathrm{wi}}(\\Psi(z,t))}{\\partial t} = \\boldsymbol{\\nabla} \\cdot \\left[ K(s_{\\mathrm{wi}}, T) + \\boldsymbol{\\nabla} (\\psi_m + 1)\\right]
-```
-which describes the vertical movement of water according to gravity-driven
-percolation and capillary-driven diffusion.
+of the Richardson-Richards equation.
 
 State variables defined by the Richards' formulation of `SoilHydrology`:
 
@@ -19,7 +13,7 @@ State variables defined by the Richards' formulation of `SoilHydrology`:
 - `liquid_water_fraction`: fraction of unfrozen liquid water in the pore space (dimensionless).
 
 See also [`SoilSaturationPressureClosure`](@ref) and [`AbstractSoilHydraulics`](@ref) for details regarding the
-closure relating saturtion and pressure head.
+closure relating saturation and pressure head.
 """
 @kwdef struct RichardsEq <: AbstractVerticalFlow end
 
@@ -35,6 +29,7 @@ variables(hydrology::SoilHydrology{NF, RichardsEq}) where {NF} = (
 
 # Process methods
 
+""" $TYPEDSIGNATURES """
 function initialize!(
         state, grid,
         hydrology::SoilHydrology{NF, RichardsEq},
@@ -51,6 +46,7 @@ function initialize!(
     return nothing
 end
 
+""" $TYPEDSIGNATURES """
 function compute_auxiliary!(
         state, grid,
         hydrology::SoilHydrology{NF, RichardsEq},
@@ -65,6 +61,7 @@ function compute_auxiliary!(
     return nothing
 end
 
+""" $TYPEDSIGNATURES """
 function compute_tendencies!(
         state, grid,
         hydrology::SoilHydrology{NF, RichardsEq},

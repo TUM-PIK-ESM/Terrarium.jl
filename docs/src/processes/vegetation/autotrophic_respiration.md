@@ -1,0 +1,114 @@
+# Autotrophic respiration
+
+```@meta
+CurrentModule = Terrarium
+```
+
+!!! warning
+    This page is a work in progress. If you have any questions or notice any errors, please [raise an issue](https://github.com/NumericalEarth/Terrarium.jl/issues).
+
+## Overview
+
+Gross primary production
+(GPP) provides the carbon input to the system. A fraction of this carbon is released back to the atmosphere through autotrophic
+respiration $R_a$, which is represented as the sum of two terms: maintenance respiration $R_m$ (the carbon cost of
+maintaining existing plant tissues) and growth respiration $R_g$ (the carbon cost of producing new plant tissues).
+
+
+```math
+\begin{equation}
+R_a = R_m + R_g
+\end{equation}
+```
+
+The remaining
+carbon is the net primary production (NPP), which is then allocated to the different plant components.
+
+```math
+\begin{equation}
+\text{NPP} = \text{GPP} - R_a
+\end{equation}
+```
+
+```@docs; canonical = false
+AbstractAutotrophicRespiration
+```
+
+## PALADYN autotrophic respiration model
+
+```@docs; canonical = false
+PALADYNAutotrophicRespiration
+```
+
+```@example vegresp
+using Terrarium
+variables(PALADYNAutotrophicRespiration(Float32))
+```
+
+This implementation follows the autotrophic respiration scheme of PALADYN [willeitPALADYNV10Comprehensive2016](@cite).
+
+### Maintenance respiration
+
+Maintenance respiration is computed as the sum of leaf, stem, and root respiration
+
+```math
+\begin{equation}
+R_m = R_{\text{leaf}} + R_{\text{stem}} + R_{\text{root}}
+\end{equation}
+```
+
+where $R_{\text{leaf}}$ is the dark respiration computed by the photosynthesis scheme, and $R_{\text{stem}}$ and $R_{\text{root}}$ are each computed from the corresponding tissue carbon pool and their assigned C:N ratios.
+
+### Growth respiration
+
+Growth respiration is taken as a fixed fraction of the carbon available after maintenance respiration
+
+```math
+\begin{equation}
+R_g = 0.25 \cdot (\text{GPP} - R_m)
+\end{equation}
+```
+
+## Methods
+
+```@docs; canonical = false
+compute_f_temp
+```
+
+```@docs; canonical = false
+compute_resp10
+```
+
+```@docs; canonical = false
+compute_Rm
+```
+
+```@docs; canonical = false
+compute_Rg
+```
+
+```@docs; canonical = false
+compute_Ra
+```
+
+```@docs; canonical = false
+compute_NPP
+```
+
+## Kernel functions
+
+```@docs; canonical = false
+compute_autotrophic_respiration
+```
+
+```@docs; canonical = false
+compute_autotrophic_respiration!
+```
+
+## [References](@id "autotrophic_respiration.refs")
+
+```@bibliography
+Pages = ["processes/vegetation/autotrophic_respiration.md"]
+Canonical = false
+```
+

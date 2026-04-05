@@ -24,6 +24,7 @@ variables(::PALADYNVegetationDynamics) = (
     prognostic(:vegetation_area_fraction, XY()), # PFT fractional area coverage [-]
     input(:balanced_leaf_area_index, XY()),
     input(:carbon_vegetation, XY(), units = u"kg/m^2"),
+    input(:net_primary_production, XY(), units = u"kg/m^2/s"),
 )
 
 """
@@ -41,8 +42,8 @@ end
 """
     $SIGNATURES
 
-Computes `ν_star` which is the maximum between the current vegetation fraction `ν` and the seed fraction `ν_seed` [-],
-to ensure that a PFT is always seeded.
+Computes `ν_star` which is the maximum of the current vegetation fraction `ν`
+and the seed fraction `ν_seed` [-], to ensure that a PFT is always seeded.
 """
 @inline function compute_ν_star(veg_dynamics::PALADYNVegetationDynamics, ν)
     return max(ν, veg_dynamics.ν_seed)
@@ -59,6 +60,7 @@ Eq. 73, PALADYN (Willeit 2016).
         vegcarbon_dynamics::PALADYNCarbonDynamics{NF},
         LAI_b::NF,
         C_veg::NF,
+        NPP::NF,
         ν::NF
     ) where {NF}
 
@@ -72,7 +74,7 @@ Eq. 73, PALADYN (Willeit 2016).
     ν_star = compute_ν_star(veg_dynamics, ν)
 
     # Compute the vegetation fraction tendency
-    ν_tendency = (λ_NPP * C_veg / ν_star) * (NF(1.0) - ν) - γv * ν_star
+    ν_tendency = (λ_NPP * NPP / C_veg) * ν_star * (NF(1.0) - ν) - γv * ν_star
     return ν_tendency
 end
 
@@ -97,6 +99,11 @@ end
 
 # Kernel functions
 
+"""
+    $TYPEDSIGNATURES
+
+Compute vegetation area fraction tendency at a single grid point from NPP-productivity and disturbance rates.
+"""
 @propagate_inbounds function compute_ν_tendency(
         i, j, grid, fields,
         veg_dynamics::PALADYNVegetationDynamics,
@@ -105,15 +112,22 @@ end
     # Get inputs
     LAI_b = fields.balanced_leaf_area_index[i, j]
     C_veg = fields.carbon_vegetation[i, j]
+    NPP = fields.net_primary_production[i, j]
 
     # Current state
     ν = fields.vegetation_area_fraction[i, j]
 
     # Compute the vegetation fraction tendency
-    ν_tendency = compute_ν_tendency(veg_dynamics, vegcarbon_dynamics, LAI_b, C_veg, ν)
+    ν_tendency = compute_ν_tendency(veg_dynamics, vegcarbon_dynamics, LAI_b, C_veg, NPP, ν)
     return ν_tendency
 end
 
+
+"""
+    $TYPEDSIGNATURES
+
+Mutating wrapper for [`compute_ν_tendency`](@ref) that stores the result in `tend`.
+"""
 @propagate_inbounds function compute_ν_tendencies!(
         tend, i, j, grid, fields,
         veg_dynamics::PALADYNVegetationDynamics,
