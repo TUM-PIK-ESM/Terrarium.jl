@@ -19,7 +19,7 @@ PALADYNCanopyInterception
 
 ### Interception fraction
 
-Following PALADYN (Willeit 2016), the fraction of precipitation intercepted is:
+Following PALADYN [willeitPALADYNV10Comprehensive2016](@cite), the fraction of precipitation intercepted is:
 
 ```math
 \begin{equation}
@@ -121,4 +121,11 @@ compute_w_can_tendency
 
 ```@docs; canonical = false
 compute_precip_ground
+```
+
+## [References](@id "canopy_interception.refs")
+
+```@bibliography
+Pages = ["processes/surface_hydrology/canopy_interception.md"]
+Canonical = false
 ```

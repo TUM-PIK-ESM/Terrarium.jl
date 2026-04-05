@@ -12,7 +12,7 @@ using Terrarium
 
 ### Heat conduction
 
-Heat transfer along the vertical axis perpendicular to the land surface can be represented according to the heat equation, with the upper boundary set to surface temperature and the lower boundary set to a constant positive heat flux representing heat produced by the inner earth (Lachenbruch 1986, Jaeger 1965). If both the upper and lower boundaries are assumed to be constant over time, the steady-state temperature profile takes the form of a continuous piecewise linear function increasing over depth with the slope determined by the thermal properties of the ground material. The instantaneous temperature field can then be generally represented as
+Heat transfer along the vertical axis perpendicular to the land surface can be represented according to the heat equation, with the upper boundary set to surface temperature and the lower boundary set to a constant positive heat flux representing heat produced by the inner earth [jaegerApplicationTheoryHeat1965,lachenbruchChangingClimateGeothermal1986](@cite). If both the upper and lower boundaries are assumed to be constant over time, the steady-state temperature profile takes the form of a continuous piecewise linear function increasing over depth with the slope determined by the thermal properties of the ground material. The instantaneous temperature field can then be generally represented as
 ```math
 \begin{equation}
 T(z,t) = T_0 + \frac{Q_{\text{geo}}}{\kappa_{\text{h}}(z)}z + \Delta T(z,t)

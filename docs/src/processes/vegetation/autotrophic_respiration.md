@@ -45,7 +45,7 @@ using Terrarium
 variables(PALADYNAutotrophicRespiration(Float32))
 ```
 
-This implementation follows the autotrophic respiration scheme of PALADYN (Willeit, 2016).
+This implementation follows the autotrophic respiration scheme of PALADYN [willeitPALADYNV10Comprehensive2016](@cite).
 
 ### Maintenance respiration
 
@@ -104,3 +104,11 @@ compute_autotrophic_respiration
 ```@docs; canonical = false
 compute_autotrophic_respiration!
 ```
+
+## [References](@id "autotrophic_respiration.refs")
+
+```@bibliography
+Pages = ["processes/vegetation/autotrophic_respiration.md"]
+Canonical = false
+```
+

@@ -29,7 +29,7 @@ PALADYNVegetationDynamics
 variables(PALADYNVegetationDynamics(Float32))
 ```
 
-This implementation follows the Lotka–Volterra approach of PALADYN (Willeit, 2016), in which the vegetation area fraction $\nu_i$ for each PFT $i$ evolves according to:
+This implementation follows the Lotka–Volterra approach of PALADYN [willeitPALADYNV10Comprehensive2016](@cite), in which the vegetation area fraction $\nu_i$ for each PFT $i$ evolves according to:
 
 ```math
 \begin{equation}
@@ -64,4 +64,11 @@ compute_ν_tendency
 
 ```@docs; canonical = false
 compute_ν_tendencies!
+```
+
+## [References](@id "vegetation_dynamics.refs")
+
+```@bibliography
+Pages = ["processes/vegetation/vegetation_dynamics.md"]
+Canonical = false
 ```

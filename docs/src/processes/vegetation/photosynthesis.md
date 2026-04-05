@@ -56,7 +56,7 @@ LUEPhotosynthesis
 variables(LUEPhotosynthesis(Float32))
 ```
 
-This implementation uses the light-use efficiency model of Haxeltine and Prentice (1996), adapted from PALADYN (Willeit, 2016), where the original equations were derived assuming a daily time step. Unlike PALADYN, however, all photosynthetic rates here are computed as instantaneous rates (e.g. mol/m²/s or gC/m²/s) to ensure compatibility with generic timestepping schemes.
+This implementation uses the light-use efficiency model of Haxeltine and Prentice (1996), adapted from PALADYN [willeitPALADYNV10Comprehensive2016](@cite), where the original equations were derived assuming a daily time step. Unlike PALADYN, however, all photosynthetic rates here are computed as instantaneous rates (e.g. mol/m²/s or gC/m²/s) to ensure compatibility with generic timestepping schemes.
 
 ### Light and RuBisCO-limited photosynthesis rates
 
@@ -207,4 +207,11 @@ compute_photosynthesis
 
 ```@docs; canonical = false
 compute_photosynthesis!
+```
+
+## [References](@id "photosynthesis.refs")
+
+```@bibliography
+Pages = ["processes/vegetation/photosynthesis.md"]
+Canonical = false
 ```

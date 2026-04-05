@@ -30,7 +30,7 @@ MedlynStomatalConductance
 variables(MedlynStomatalConductance(Float32))
 ```
 
-This implementation uses the optimal stomatal conductance model of Medlyn et al. (2011), adapted from PALADYN (Willeit, 2016), which derives stomatal conductance from water-use efficiency optimization as follows
+This implementation uses the optimal stomatal conductance model of Medlyn (2011) [medlynReconcilingOptimalEmpirical2011](@cite), adapted from PALADYN [willeitPALADYNV10Comprehensive2016](@cite), which derives stomatal conductance from water-use efficiency optimization as follows
 
 ```math
 \begin{equation}
@@ -77,4 +77,11 @@ compute_stomatal_conductance!
 
 ```@docs; canonical = false
 compute_stomatal_conductance
+```
+
+## [References](@id "stomatal_conductance.refs")
+
+```@bibliography
+Pages = ["processes/vegetation/stomatal_conductance.md"]
+Canonical = false
 ```

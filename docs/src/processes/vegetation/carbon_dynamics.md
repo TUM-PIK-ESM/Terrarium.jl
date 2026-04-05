@@ -29,7 +29,7 @@ PALADYNCarbonDynamics
 variables(PALADYNCarbonDynamics(Float32))
 ```
 
-This implementation is based on PALADYN (Willeit, 2016), in which the temporal evolution of the total vegetation carbon pool $C_{\text{veg}}$ for each PFT is described by an ordinary differential equation, where $C_{\text{veg}}$ is the single prognostic variable. The partitioning of $C_{\text{veg}}$ into the different carbon pools (leaf, stem, and root) is handled afterward through fixed allometric relationships (not yet implemented).
+This implementation is based on PALADYN [willeitPALADYNV10Comprehensive2016](@cite), in which the temporal evolution of the total vegetation carbon pool $C_{\text{veg}}$ for each PFT is described by an ordinary differential equation, where $C_{\text{veg}}$ is the single prognostic variable. The partitioning of $C_{\text{veg}}$ into the different carbon pools (leaf, stem, and root) is handled afterward through fixed allometric relationships (not yet implemented).
 
 ```math
 \begin{equation}
@@ -120,4 +120,11 @@ compute_veg_carbon_auxiliary!
 
 ```@docs; canonical = false
 compute_veg_carbon_tendencies!
+```
+
+## [References](@id "carbon_dynamics.refs")
+
+```@bibliography
+Pages = ["processes/vegetation/carbon_dynamics.md"]
+Canonical = false
 ```
