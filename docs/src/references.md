@@ -9,4 +9,5 @@
 ## Bibliography
 
 ```@bibliography
+Canonical = true
 ```

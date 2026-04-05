@@ -131,3 +131,10 @@ compute_energy_tendencies!
 ```@docs; canonical = false
 compute_thermal_conductivity
 ```
+
+## [References](@id "soilenergy.refs")
+
+```@bibliography
+Pages = ["processes/soil/soil_energy.md"]
+Canonical = false
+```

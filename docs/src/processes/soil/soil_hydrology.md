@@ -84,7 +84,7 @@ Vertical fluxes in the soil column be represented by combining gravity-driven ad
 \textbf{j}_{\text{w}} \cdot \mathbf{n} = -\kappa_{\text{w}}\frac{\partial \left(\psi + z\right)}{\partial z},
 \end{equation}
 ```
-where $\psi$ is the matric potential (m). Substituting this equation into the aforementioned conservation law yields the widely known Richardson-Richards equation for variably saturated flow in porous media (Richards 1931).
+where $\psi$ is the matric potential (m). Substituting this equation into the aforementioned conservation law yields the widely known Richardson-Richards equation for variably saturated flow in porous media [richardsCapillaryConductionLiquids1931](@cite).
 
 ```@docs; canonical = false
 RichardsEq
@@ -156,4 +156,11 @@ water_table
 
 ```@docs; canonical = false
 surface_excess_water
+```
+
+## [References](@id "soilhydrology.refs")
+
+```@bibliography
+Pages = ["processes/soil/soil_hydrology.md"]
+Canonical = false
 ```
