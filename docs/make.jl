@@ -1,5 +1,6 @@
 using ArgParse
 using Documenter
+using DocumenterCitations
 using Literate
 
 using Terrarium
@@ -88,6 +89,12 @@ for (title, filename) in script_list
     push!(example_docpages, "Example: $title" => joinpath(EXAMPLES_OUTDIR_RELATIVE, "extending", mdfile))
 end
 
+# Create bibliography
+bib = CitationBibliography(
+    joinpath(@__DIR__, "src", "references.bib");
+    style=:numeric
+)
+
 makedocs(
     format = Documenter.HTML(
         prettyurls = get(ENV, "CI", nothing) == "true",
@@ -102,6 +109,7 @@ makedocs(
     sitename = "Terrarium.jl",
     authors = "Brian Groenke, Maximilian Gelbrecht, Maha Badri, and Contributors",
     modules = [Terrarium],
+    plugins = [bib],
     pages = [
         "Home" => "index.md",
         "Introduction" => [
@@ -163,7 +171,7 @@ makedocs(
             ],
         ],
         "Contributing" => "contributing.md",
-        "API Reference" => "api_reference.md",
+        "Index of API" => "api_index.md",
     ],
     linkcheck = CHECK_LINKS,
     warnonly = [:cross_references],
