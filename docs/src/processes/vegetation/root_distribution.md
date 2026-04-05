@@ -29,7 +29,7 @@ AbstractRootDistribution
 
 ### Static exponential root distribution
 
-A common choice for $r(z)$ is the average of two exponential distributions with different depth scales following Zeng (2001),
+A common choice for $r(z)$ is the average of two exponential distributions with different depth scales following [zengGlobalVegetationRoot2001](@cite),
 ```math
 \begin{equation}
 r(z) = \frac{1}{2} \left[ a \exp(a z) + b \exp(b z) \right]
@@ -55,4 +55,11 @@ root_density
 
 ```@docs; canonical = false
 root_fraction
+```
+
+## [References](@id "rootdist.refs")
+
+```@bibliography
+Pages = ["processes/vegetation/root_distribution.md"]
+Canonical = false
 ```

@@ -92,7 +92,7 @@ end
 # Create bibliography
 bib = CitationBibliography(
     joinpath(@__DIR__, "src", "references.bib");
-    style=:numeric
+    style = :numeric
 )
 
 makedocs(
@@ -102,7 +102,7 @@ makedocs(
         collapselevel = 1,
         repolink = "https://github.com/NumericalEarth/Terrarium.jl",
         canonical = "https://numericalearth.github.io/Terrarium.jl",
-        assets = String[],
+        assets = ["assets/citations.css"],
         size_threshold = 600_000,
         mathengine = Documenter.MathJax3(),
     ),
@@ -172,6 +172,7 @@ makedocs(
         ],
         "Contributing" => "contributing.md",
         "Index of API" => "api_index.md",
+        "References" => "references.md",
     ],
     linkcheck = CHECK_LINKS,
     warnonly = [:cross_references],
