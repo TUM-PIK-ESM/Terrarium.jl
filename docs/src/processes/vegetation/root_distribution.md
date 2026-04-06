@@ -60,6 +60,6 @@ root_fraction
 ## [References](@id "rootdist.refs")
 
 ```@bibliography
-Pages = ["processes/vegetation/root_distribution.md"]
+Pages = ["root_distribution.md"]
 Canonical = false
 ```

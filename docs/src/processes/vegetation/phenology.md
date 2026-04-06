@@ -73,6 +73,6 @@ compute_phenology!
 ## [References](@id "phenology.refs")
 
 ```@bibliography
-Pages = ["processes/vegetation/phenology.md"]
+Pages = ["phenology.md"]
 Canonical = false
 ```

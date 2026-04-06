@@ -28,7 +28,7 @@ The impact of soil water availability on photosynthesis is aggregated across the
 \end{equation}
 ```
 
-where $r(z)$ is the normalized root fraction at depth $z$, and $z_{\text{max}}$ is the rooting depth. This soil moisture limiting factor $\beta_s \in \[0, 1\]$ directly modulates the rate of [autotrophic respiration](@ref) and thus also the net primary plant productivity of vegetation.
+where $r(z)$ is the normalized root fraction at depth $z$, and $z_{\text{max}}$ is the rooting depth. This soil moisture limiting factor $\beta_s \in \[0, 1\]$ directly modulates the rate of [autotrophic respiration](@ref "Autotrophic respiration") and thus also the net primary plant productivity of vegetation.
 
 ## Implementations
 

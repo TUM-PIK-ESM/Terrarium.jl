@@ -82,6 +82,6 @@ compute_stomatal_conductance
 ## [References](@id "stomatal_conductance.refs")
 
 ```@bibliography
-Pages = ["processes/vegetation/stomatal_conductance.md"]
+Pages = ["stomatal_conductance.md"]
 Canonical = false
 ```

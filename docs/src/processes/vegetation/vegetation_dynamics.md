@@ -69,6 +69,6 @@ compute_ν_tendencies!
 ## [References](@id "vegetation_dynamics.refs")
 
 ```@bibliography
-Pages = ["processes/vegetation/vegetation_dynamics.md"]
+Pages = ["vegetation_dynamics.md"]
 Canonical = false
 ```

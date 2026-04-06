@@ -99,7 +99,7 @@ state.hypotenuse[1,1,1]
 !!! warning "Operators vs. Fields"
     Note that `hypotenuse` is of type `UnaryOperation` not `Field`. While operations typically behave like `Field`s and can be indexed normally in kernel functions, they are not identical and this can lead to errors if some downstream code assumes `hypotenuse` to be an actual `Field` rather than simply an array-like type. In such cases, one should instead return `Field(state.hypotenuse)` in the above constructor and then call `compute!(state.hypotenuse)` in each time step. See also the following example.
 
-As another more concrete example, consider the [`plant_available_water`](@ref) `Field` constructor for [`FieldCapacityLimitedPAW`](@ref):
+As another more concrete example, consider the [`soil_moisture_limiting_factor`](@ref) `Field` constructor for [`FieldCapacityLimitedPAW`](@ref):
 
 ```julia
 function soil_moisture_limiting_factor(::FieldCapacityLimitedPAW, grid, clock, fields)

@@ -27,7 +27,7 @@ Gross photosynthesis is limited by two processes: RuBisCO activity and light ava
 
 ```math
 \begin{equation}
-A_g = \min(J_C, J_E).
+A_g = \min(J_C, J_E)\,.
 \end{equation}
 ```
 
@@ -36,7 +36,7 @@ While $A_g$ remains continuous, this formulation produces an abrupt transition b
 
 ```math
 \begin{equation}
-\theta_r A_g^2 - (J_C + J_E)A_g + J_C J_E = 0,
+\theta_r A_g^2 - (J_C + J_E)A_g + J_C J_E = 0\,,
 \end{equation}
 ```
 
@@ -63,7 +63,7 @@ This implementation uses the light-use efficiency model of Haxeltine and Prentic
 The light-limited photosynthesis rate is
 ```math
 \begin{equation}
-J_E = c_1 \cdot \text{APAR}
+J_E = c_1 \cdot \text{APAR}\,,
 \end{equation}
 ```
 
@@ -71,7 +71,7 @@ with
 
 ```math
 \begin{equation}
-c_1 = \alpha_{C3} \cdot f_{\text{temp}} \cdot C_{\text{mass}} \cdot \frac{p_i - \Gamma^*}{p_i + 2\Gamma^*}
+c_1 = \alpha_{C3} \cdot f_{\text{temp}} \cdot C_{\text{mass}} \cdot \frac{p_i - \Gamma^*}{p_i + 2\Gamma^*}\,,
 \end{equation}
 ```
 
@@ -93,17 +93,17 @@ Assuming that half of the downwelling shortwave radiation is in the photosynthet
 
 ```math
 \begin{equation}
-\text{PAR} = 0.5 \cdot \text{SW} \cdot (1 - \alpha_\text{leaf}) \cdot c_q
+\text{PAR} = 0.5 \cdot \text{SW} \cdot (1 - \alpha_\text{leaf}) \cdot c_q\,,
 \end{equation}
 ```
 
 where $\alpha_\text{leaf}$ is the leaf albedo in the PAR range and $c_q$ is the conversion factor from W/m² to mol/m²/s. 
 
-Absorbed PAR (APAR) can then be computed as follows
+Absorbed PAR (APAR) can then be computed as,
 
 ```math
 \begin{equation}
-\text{APAR} = \alpha_a \cdot \text{PAR} \cdot (1 - e^{-k_{\text{ext}} \cdot \text{LAI}})
+\text{APAR} = \alpha_a \cdot \text{PAR} \cdot (1 - e^{-k_{\text{ext}} \cdot \text{LAI}})\,,
 \end{equation}
 ```
 
@@ -114,7 +114,7 @@ where $\alpha_a$ accounts for reductions in PAR utilization in natural ecosystem
 The RuBisCO-limited (enzyme-limited) photosynthesis rate is:
 ```math
 \begin{equation}
-J_C = c_2 \cdot V_c^{\max}
+J_C = c_2 \cdot V_c^{\max}\,,
 \end{equation}
 ```
 
@@ -122,7 +122,7 @@ where $V_c^{\max}$ is the maximum carboxylation rate and
 
 ```math
 \begin{equation}
-c_2 = \frac{p_i - \Gamma^*}{p_i + K_c(1 + p_o/K_o)}
+c_2 = \frac{p_i - \Gamma^*}{p_i + K_c(1 + p_o/K_o)}\,,
 \end{equation}
 ```
 
@@ -138,7 +138,7 @@ This coupling is captured through the intercellular-to-ambient CO₂ concentrati
 
 ```math
 \begin{equation}
-p_i = \lambda_c \cdot p_a
+p_i = \lambda_c \cdot p_a\,,
 \end{equation}
 ```
 
@@ -212,6 +212,6 @@ compute_photosynthesis!
 ## [References](@id "photosynthesis.refs")
 
 ```@bibliography
-Pages = ["processes/vegetation/photosynthesis.md"]
+Pages = ["photosynthesis.md"]
 Canonical = false
 ```

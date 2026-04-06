@@ -135,6 +135,6 @@ compute_thermal_conductivity
 ## [References](@id "soilenergy.refs")
 
 ```@bibliography
-Pages = ["processes/soil/soil_energy.md"]
+Pages = ["soil_energy.md"]
 Canonical = false
 ```

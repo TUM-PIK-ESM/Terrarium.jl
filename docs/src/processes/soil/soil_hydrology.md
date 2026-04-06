@@ -161,6 +161,6 @@ surface_excess_water
 ## [References](@id "soilhydrology.refs")
 
 ```@bibliography
-Pages = ["processes/soil/soil_hydrology.md"]
+Pages = ["soil_hydrology.md"]
 Canonical = false
 ```

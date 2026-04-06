@@ -108,7 +108,7 @@ compute_autotrophic_respiration!
 ## [References](@id "autotrophic_respiration.refs")
 
 ```@bibliography
-Pages = ["processes/vegetation/autotrophic_respiration.md"]
+Pages = ["autotrophic_respiration.md"]
 Canonical = false
 ```
 

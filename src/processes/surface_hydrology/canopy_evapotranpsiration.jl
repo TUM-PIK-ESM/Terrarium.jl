@@ -24,7 +24,7 @@ end
 
 function PALADYNCanopyEvapotranspiration(
         ::Type{NF};
-        C_can::NF = 0.006,
+        C_can = NF(0.006),
         ground_resistance = ConstantEvaporationResistanceFactor(typeof(C_can))
     ) where {NF}
     return PALADYNCanopyEvapotranspiration{NF, typeof(ground_resistance)}(C_can, ground_resistance)

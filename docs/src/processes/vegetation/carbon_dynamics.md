@@ -125,6 +125,6 @@ compute_veg_carbon_tendencies!
 ## [References](@id "carbon_dynamics.refs")
 
 ```@bibliography
-Pages = ["processes/vegetation/carbon_dynamics.md"]
+Pages = ["carbon_dynamics.md"]
 Canonical = false
 ```

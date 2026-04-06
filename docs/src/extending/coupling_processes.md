@@ -4,7 +4,7 @@
 CurrentModule = Terrarium
 ```
 
-Most realistic land surface simulations require multiple processes that must share information at each time step — for example, a soil energy balance that needs the surface skin temperature computed by a skin temperature scheme, or a canopy interception scheme that consumes the leaf area index produced by the vegetation module. Terrarium allows for two distinct coupling strategies that can be chosen depending on how tightly the coupled processes are bound to one another.
+Most realistic land surface simulations require multiple processes that must share information at each time step: for example, a soil energy balance may apply the ground heat flux at the land surface estimated by the surface energy balance as an upper boundary condition, or a canopy interception scheme might use the leaf area index produced by the vegetation module to determine the amount of rate at which precipitation reaches the ground. Terrarium allows for two distinct coupling strategies that can be chosen depending on how tightly the coupled processes are bound to one another.
 
 ## Indirect coupling
 
@@ -18,7 +18,7 @@ The main advantage of indirect coupling is that the implementations of processes
 
 ### Example: Ground surface temperature
 
-A concrete example of indirect coupling in Terrarium is the `ground_temperature` variable which represents the temperature of the uppermost subsurface layer (not to be confused with [skin temperature](@ref "Skin temperature")). The `ground_temperature` is defined as a derived auxiliary variable by [`SoilEnergyBalance`](@ref), with the resulting `Field` being simply a view of the uppermost soil `temperature` layer:
+A concrete example of indirect coupling in Terrarium is the `ground_temperature` variable which represents the temperature of the uppermost subsurface layer (not to be confused with [skin temperature](@ref "Skin temperature and ground heat flux")). The `ground_temperature` is defined as a derived auxiliary variable by [`SoilEnergyBalance`](@ref), with the resulting `Field` being simply a view of the uppermost soil `temperature` layer:
 
 ```julia
 variables(energy::SoilEnergyBalance) = (

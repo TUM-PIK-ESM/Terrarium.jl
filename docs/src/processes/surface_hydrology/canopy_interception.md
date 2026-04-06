@@ -6,6 +6,7 @@ CurrentModule = Terrarium
 
 ```@setup interception
 using Terrarium
+using InteractiveUtils
 ```
 
 !!! warning
@@ -17,6 +18,10 @@ When precipitation falls on vegetated ground, some fraction is intercepted and s
 
 ```@docs; canonical = false
 AbstractCanopyInterception
+```
+
+```@example runoff
+subtypes(Terrarium.AbstractCanopyInterception)
 ```
 
 ## Canopy interception scheme from PALADYN
