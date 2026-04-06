@@ -20,7 +20,7 @@ When precipitation falls on vegetated ground, some fraction is intercepted and s
 AbstractCanopyInterception
 ```
 
-```@example runoff
+```@example interception
 subtypes(Terrarium.AbstractCanopyInterception)
 ```
 

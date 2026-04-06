@@ -4,6 +4,7 @@ CurrentModule = Terrarium
 
 ```@setup aerodynamics
 using Terrarium
+using InteractiveUtils
 ```
 
 # Aerodynamics
@@ -49,8 +50,15 @@ g_a = C_h V_a
 \end{equation}
 ```
 
-Wind speed is clipped to a small positive minimum $V_{\min}$ (default 0.01 m/s) in
-`PrescribedAtmosphere` to prevent division by zero in near-calm conditions.
+In Terrarium, wind speed is clipped to a small positive minimum $V_{\min}$ (see [`PrescribedAtmosphere`](@ref)) to prevent division by zero in near-calm conditions.
+
+```@docs; canonical = false
+AbstractAerodynamics
+```
+
+```@example aerodynamics
+subtypes(Terrarium.AbstractAerodynamics)
+```
 
 ## Implementations
 

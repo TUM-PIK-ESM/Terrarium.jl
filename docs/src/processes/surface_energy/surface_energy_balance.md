@@ -6,6 +6,7 @@ CurrentModule = Terrarium
 
 ```@setup seb
 using Terrarium
+using InteractiveUtils
 ```
 
 !!! warning

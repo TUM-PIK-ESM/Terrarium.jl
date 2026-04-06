@@ -2,8 +2,9 @@
 CurrentModule = Terrarium
 ```
 
-```@setup prescribed_atmosphere
+```@setup atmosphere
 using Terrarium
+using InteractiveUtils
 ```
 
 # Prescribed atmosphere
@@ -13,11 +14,7 @@ using Terrarium
 
 ## Overview
 
-The atmosphere module in Terrarium provides the meteorological boundary conditions
-for all surface energy, hydrological, and biogeochemical processes. A `PrescribedAtmosphere`
-reads all forcing variables directly from input data — typically reanalysis products
-(e.g. ERA5-Land) or observational records — rather than computing them interactively
-with a coupled atmospheric model.
+The atmosphere module in Terrarium provides the meteorological boundary conditions for all surface energy, hydrological, and biogeochemical processes. A `PrescribedAtmosphere` reads all forcing variables directly from input data — typically reanalysis products (e.g. ERA5-Land) or observational records — rather than computing them interactively with a coupled atmospheric model.
 
 The primary state variables are:
 
@@ -113,16 +110,32 @@ TracerGases
 AbstractAtmosphere
 ```
 
+```@example atmosphere
+subtypes(Terrarium.AbstractAtmosphere)
+```
+
 ```@docs; canonical = false
 AbstractHumidity
+```
+
+```@example atmosphere
+subtypes(Terrarium.AbstractHumidity)
 ```
 
 ```@docs; canonical = false
 AbstractPrecipitation
 ```
 
+```@example atmosphere
+subtypes(Terrarium.AbstractPrecipitation)
+```
+
 ```@docs; canonical = false
 AbstractIncomingRadiation
+```
+
+```@example atmosphere
+subtypes(Terrarium.AbstractIncomingRadiation)
 ```
 
 ## Kernel functions

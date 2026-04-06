@@ -6,6 +6,7 @@ CurrentModule = Terrarium
 
 ```@setup vegdynamics
 using Terrarium
+using InteractiveUtils
 ```
 
 !!! warning
@@ -17,6 +18,10 @@ Vegetation dynamics describes the temporal evolution of the fractional coverage 
 
 ```@docs; canonical = false
 AbstractVegetationDynamics
+```
+
+```@example vegdynamics
+subtypes(Terrarium.AbstractVegetationDynamics)
 ```
 
 ## PALADYN vegetation dynamics

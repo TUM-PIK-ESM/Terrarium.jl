@@ -6,6 +6,7 @@ CurrentModule = Terrarium
 
 ```@setup vegroots
 using Terrarium
+using InteractiveUtils
 ```
 
 !!! warning
@@ -25,6 +26,10 @@ where $R(z)$ is the cumulative fraction of roots from the surface to $z$. The to
 
 ```@docs; canonical = false
 AbstractRootDistribution
+```
+
+```@example vegroots
+subtypes(Terrarium.AbstractRootDistribution)
 ```
 
 ### Static exponential root distribution

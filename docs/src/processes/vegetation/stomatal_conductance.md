@@ -6,6 +6,7 @@ CurrentModule = Terrarium
 
 ```@setup vegstomcond
 using Terrarium
+using InteractiveUtils
 ```
 
 
@@ -18,6 +19,10 @@ Stomata regulate gas exchange between the leaf and atmosphere, directly controll
 
 ```@docs; canonical = false
 AbstractStomatalConductance
+```
+
+```@example vegstomcond
+subtypes(Terrarium.AbstractStomatalConductance)
 ```
 
 ### The Medlyn stomatal conductance model

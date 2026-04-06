@@ -4,6 +4,12 @@
 CurrentModule = Terrarium
 ```
 
+
+```@setup vegresp
+using Terrarium
+using InteractiveUtils
+```
+
 !!! warning
     This page is a work in progress. If you have any questions or notice any errors, please [raise an issue](https://github.com/NumericalEarth/Terrarium.jl/issues).
 
@@ -34,6 +40,10 @@ carbon is the net primary production (NPP), which is then allocated to the diffe
 AbstractAutotrophicRespiration
 ```
 
+```@example vegresp
+subtypes(Terrarium.AbstractAutotrophicRespiration)
+```
+
 ## PALADYN autotrophic respiration model
 
 ```@docs; canonical = false
@@ -41,7 +51,6 @@ PALADYNAutotrophicRespiration
 ```
 
 ```@example vegresp
-using Terrarium
 variables(PALADYNAutotrophicRespiration(Float32))
 ```
 

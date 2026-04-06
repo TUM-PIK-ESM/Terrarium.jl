@@ -6,6 +6,7 @@ CurrentModule = Terrarium
 
 ```@setup vegphoto
 using Terrarium
+using InteractiveUtils
 ```
 
 !!! warning
@@ -44,6 +45,10 @@ where $\theta_r$ is an empirical shape parameter between 0 and 1 used to control
 
 ```@docs; canonical = false
 AbstractPhotosynthesis
+```
+
+```@example vegphoto
+subtypes(Terrarium.AbstractPhotosynthesis)
 ```
 
 ## Light use efficiency (LUE) model

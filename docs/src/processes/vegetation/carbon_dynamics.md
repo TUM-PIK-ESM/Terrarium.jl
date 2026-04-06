@@ -6,6 +6,7 @@ CurrentModule = Terrarium
 
 ```@setup vegcarbon
 using Terrarium
+using InteractiveUtils
 ```
 
 !!! warning
@@ -17,6 +18,10 @@ Gross primary productivity (GPP) is the total carbon uptake by plants through ph
 
 ```@docs; canonical = false
 AbstractVegetationCarbonDynamics
+```
+
+```@example vegcarbon
+subtypes(Terrarium.AbstractVegetationCarbonDynamics)
 ```
 
 ## PALADYN carbon dynamics

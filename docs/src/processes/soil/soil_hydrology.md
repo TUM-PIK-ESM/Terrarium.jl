@@ -6,6 +6,7 @@ CurrentModule = Terrarium
 
 ```@setup soilwater
 using Terrarium
+using InteractiveUtils
 ```
 
 ## Overview
@@ -15,6 +16,16 @@ Soil hydrology processes characterize the dynamics of ground water in both satur
 - A closure parameterization linking soil saturation and pressure head
 - A parameterization for [`soil hydraulic properties`](@ref "Hydraulic properties")
 - A forcing term representing user-defined, internal sources/sinks in the soil domain (not including evapotranspiration)
+
+```@docs; canonical = false
+AbstractSoilHydrology
+```
+
+```@example soilwater
+subtypes(Terrarium.AbstractSoilHydrology)
+```
+
+Terrarium currently provides a single general implementation of `SoilHydrology` following the above interface:
 
 ```@docs; canonical = false
 SoilHydrology

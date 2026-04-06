@@ -6,6 +6,7 @@ CurrentModule = Terrarium
 
 ```@setup vegpaw
 using Terrarium
+using InteractiveUtils
 ```
 
 !!! warning
@@ -17,6 +18,10 @@ The plant available water (PAW) represents the fraction of soil water that is av
 
 ```@docs; canonical = false
 AbstractPlantAvailableWater
+```
+
+```@example vegpaw
+subtypes(Terrarium.AbstractPlantAvailableWater)
 ```
 
 ### Soil moisture limiting factor

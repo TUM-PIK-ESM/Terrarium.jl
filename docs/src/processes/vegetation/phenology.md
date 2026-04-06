@@ -6,6 +6,7 @@ CurrentModule = Terrarium
 
 ```@setup vegphen
 using Terrarium
+using InteractiveUtils
 ```
 
 !!! warning
@@ -18,6 +19,10 @@ Phenology describes the seasonal emergence and senescence of leaves. Models typi
 
 ```@docs; canonical = false
 AbstractPhenology
+```
+
+```@example vegphen
+subtypes(Terrarium.AbstractPhenology)
 ```
 
 ## PALADYN phenology model
