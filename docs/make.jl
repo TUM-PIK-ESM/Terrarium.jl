@@ -161,8 +161,8 @@ makedocs(
                 "Skin temperature" => "processes/surface_energy/skin_temperature.md",
                 "Albedo and emissivity" => "processes/surface_energy/albedo.md",
             ],
-            "Atmosphere" => [
-                "Prescribed atmosphere" => "processes/atmosphere/prescribed_atmosphere.md",
+            "Coupling to atmosphere" => [
+                "Atmosphere interface" => "processes/atmosphere/atmosphere.md",
                 "Aerodynamics" => "processes/atmosphere/aerodynamics.md",
             ],
             "Utilities" => [
