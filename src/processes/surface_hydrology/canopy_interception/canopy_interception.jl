@@ -41,8 +41,8 @@ $FIELDS
     "Extinction coefficient for radiation through vegetation [-]"
     k_ext::NF = 0.5
 
-    "Canopy interception capacity parameter, Verseghy 1991 [kg/m²]"
-    w_can_max::NF = 0.2
+    "Canopy interception capacity parameter, Verseghy 1991 [m]"
+    w_can_max::NF = 2.0e-4
 
     "Canopy water removal timescale [s]"
     τ_w::NF = 86400.0
@@ -51,7 +51,7 @@ end
 PALADYNCanopyInterception(::Type{NF}; kwargs...) where {NF} = PALADYNCanopyInterception{NF}(; kwargs...)
 
 variables(::PALADYNCanopyInterception) = (
-    prognostic(:canopy_water, XY(); desc = "Canopy liquid water", units = u"kg/m^2"),
+    prognostic(:canopy_water, XY(); desc = "Canopy liquid water", units = u"m"),
     auxiliary(:canopy_water_interception, XY(); desc = "Canopy rain interception rate", units = u"m/s"),
     auxiliary(:canopy_water_removal, XY(); desc = "Canopy water removal rate", units = u"m/s"),
     auxiliary(:saturation_canopy_water, XY(); desc = "Fraction of the canopy saturated with water"),
@@ -89,15 +89,13 @@ end
 """
     $TYPEDSIGNATURES
 
-Compute the canopy water removal rate as `w_can / ρw / τw`.
+Compute the canopy water removal rate as `w_can / τw`.
 """
 @inline function compute_canopy_water_removal(
         canopy_interception::PALADYNCanopyInterception{NF},
-        constants::PhysicalConstants{NF},
         w_can
     ) where {NF}
-    # Canopy water storage tendency: interception - evaporation - removal
-    R_can = max(w_can, zero(NF)) / constants.ρw / canopy_interception.τ_w
+    R_can = max(w_can, zero(NF)) / canopy_interception.τ_w
     return R_can
 end
 
@@ -132,29 +130,30 @@ interception and add the removal rate `R_can`.
     return rainfall_ground
 end
 
-# Process methods
+# Top-level interface methods
 
+""" $TYPEDSIGNATURES """
 function compute_auxiliary!(
         state, grid,
         canopy_interception::PALADYNCanopyInterception,
-        constants::PhysicalConstants,
         atmos::AbstractAtmosphere
     )
     out = auxiliary_fields(state, canopy_interception)
     fields = get_fields(state, canopy_interception, atmos; except = out)
-    launch!(grid, XY, compute_auxiliary_kernel!, out, fields, canopy_interception, constants, atmos)
+    launch!(grid, XY, compute_auxiliary_kernel!, out, fields, canopy_interception, atmos)
     return nothing
 end
 
+""" $TYPEDSIGNATURES """
 function compute_tendencies!(
         state, grid,
         canopy_interception::PALADYNCanopyInterception,
-        evtr::AbstractEvapotranspiration,
+        evapotranspiration::AbstractEvapotranspiration,
         args...
     )
     out = tendency_fields(state, canopy_interception)
-    fields = get_fields(state, canopy_interception, evtr; except = out)
-    launch!(grid, XY, compute_tendencies_kernel!, out, fields, canopy_interception, evtr)
+    fields = get_fields(state, canopy_interception, evapotranspiration; except = out)
+    launch!(grid, XY, compute_tendencies_kernel!, out, fields, canopy_interception, evapotranspiration)
     return nothing
 end
 
@@ -163,12 +162,11 @@ end
 @propagate_inbounds function compute_canopy_auxiliary!(
         out, i, j, grid, fields,
         canopy_interception::PALADYNCanopyInterception{NF},
-        constants::PhysicalConstants,
         atmos::AbstractAtmosphere,
         args...
     ) where {NF}
     # Get inputs
-    precip = rainfall(i, j, grid, fields, atmos)
+    rain = rainfall(i, j, grid, fields, atmos)
     LAI = fields.leaf_area_index[i, j]
     SAI = fields.SAI[i, j]
     w_can = fields.canopy_water[i, j]
@@ -177,13 +175,13 @@ end
     f_can = compute_canopy_saturation_fraction(canopy_interception, w_can, LAI, SAI)
 
     # Compute canopy rain interception
-    I_can = compute_canopy_interception(canopy_interception, precip, LAI, SAI)
+    I_can = compute_canopy_interception(canopy_interception, rain, LAI, SAI)
 
     # Compute canopy water removal
-    R_can = compute_canopy_water_removal(canopy_interception, constants, w_can)
+    R_can = compute_canopy_water_removal(canopy_interception, w_can)
 
     # Compute precipitation reaching the ground
-    rainfall_ground = compute_precip_ground(canopy_interception, precip, I_can, R_can)
+    rainfall_ground = compute_precip_ground(canopy_interception, rain, I_can, R_can)
 
     # Store results
     out.canopy_water_interception[i, j, 1] = I_can
@@ -196,7 +194,7 @@ end
 @propagate_inbounds function compute_canopy_water_tendency!(
         tendencies, i, j, grid, fields,
         canopy_interception::PALADYNCanopyInterception,
-        ::AbstractEvapotranspiration,
+        ::AbstractEvapotranspiration, # for dispatch only, not used
         args...
     )
     # Get inputs

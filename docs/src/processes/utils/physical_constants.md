@@ -2,8 +2,9 @@
 CurrentModule = Terrarium
 ```
 
-```@setup default
+```@setup consts
 using Terrarium
+using InteractiveUtils
 ```
 
 # Physical constants

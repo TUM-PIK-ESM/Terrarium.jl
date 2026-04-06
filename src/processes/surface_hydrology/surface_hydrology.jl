@@ -32,6 +32,7 @@ function SurfaceHydrology(
     return SurfaceHydrology{NF, CI, ET, SR}(canopy_interception, evapotranspiration, surface_runoff)
 end
 
+""" $TYPEDSIGNATURES """
 function compute_auxiliary!(
         state, grid,
         hydrology::SurfaceHydrology,
@@ -47,7 +48,12 @@ function compute_auxiliary!(
     return nothing
 end
 
-function compute_tendencies!(state, grid, hydrology::SurfaceHydrology, args...)
+""" $TYPEDSIGNATURES """
+function compute_tendencies!(
+        state, grid,
+        hydrology::SurfaceHydrology,
+        args...,
+    )
     # Compute tendencies for canopy interception
     compute_tendencies!(state, grid, hydrology.canopy_interception, hydrology.evapotranspiration)
     return nothing

@@ -307,8 +307,9 @@ Compute the Gross Primary Production rate [kgC/m²/s].
     return GPP
 end
 
-# Process methods
+# Top-level interface methods
 
+""" $TYPEDSIGNATURES """
 function compute_auxiliary!(
         state, grid,
         photo::LUEPhotosynthesis,

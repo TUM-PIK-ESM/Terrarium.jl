@@ -25,7 +25,7 @@ Albedo can depend on multiple factors:
 - **Surface type**: Snow (0.7–0.9, highly reflective), vegetation (0.1–0.3), bare soil (0.2–0.4), water (0.05–0.15)
 - **Soil moisture**: Darker, wetter soils have lower albedo
 - **Vegetation density**: Denser vegetation lowers albedo
-- **Snow age**: Fresh snow is bright; aging snow darkens with impurities
+- **Snow age**: Fresh snow is bright; aging snow darkens with deposition of impurities and increases in grain size
 
 Emissivity is the efficiency with which the surface emits thermal (longwave) radiation:
 

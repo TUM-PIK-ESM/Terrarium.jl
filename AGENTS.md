@@ -42,7 +42,7 @@ is a top priority and must be continuously tested.
 - **Ensure type stability**: All code in kernels and within state-mutating methods (e.g. `initialize!`, `compute_tendencies!`, `compute_auxiliary!`) must be fully type stable.
 - **Minimize allocations**: Allocations should be avoided wherever possible. Prefer mutation of output `Field`s. Never mutate input or prognostic `Field`s outside of `update_inputs!` or timestepper `timestep!` respectively.
 - **No global state**: Initialize all parameters explicitly; never rely on global variables or implicit state
-- **Test differentiability**: Use Enzyme to test that critical functions compute valid adjoints; include in test suite
+- **Test differentiability**: Use Enzyme to test that critical functions compute valid adjoints; include in test suite. See existing tests in `test/differentiability` for reference.
 - **Document AD limitations**: If a function cannot be differentiated, mark it clearly with comments and docstrings
 
 ### Type Stability & Memory
@@ -75,16 +75,17 @@ is a top priority and must be continuously tested.
 ### Documentation pages
 
 - Doc pages for processes and models should always consist of the following sections:
-    - **Theory**: General overview of of the physical process, what the main inputs and output variables typically are, and general equations relevant for understanding the implementations.
-    - **Abstract types**: Enumeration of all abstract types relevant for the process, both subtypes of `AbstractProcess` and parameterization types.
-    - **Concrete types**: Enumeration of all concrete implementations of the aforementioned abstract types. For implementations `AbstractProcess`es, this should also include an enumeration of signatures for `compute_auxiliary!` and `compute_tendencies!` for each type.
+    - **Overview**: General overview of of the physical process, what the main inputs and output variables typically are, and general equations relevant for understanding the implementations. This section should not contain implementation-specific details.
+    - **Implementations**: There should be sections for each implementation of the abstract process type, describing the general theory and any relevant implementation details. These sections should also each include a non-canonical docstring of the concrete process type.
+        - For each concrete process implementation, provide docstrings for the implementation-specific dispatches of `initialize!`, `compute_auxiliary!`, and `compute_tendencies!` corresponding to each coupling interface.
     - **Methods**: Enumeration of process-specific methods.
-    - **Kernel functions**: Enumeration of **kernel functions**; do NOT include **kernels** (i.e. functions annoated with `@kernel`)
+    - **Kernel functions**: Enumeration of **kernel functions** of the form `compute_something(i, j, k, grid, fields, ...)` or `compute_something!(out, i, j, k, grid, fields, ...)`; do NOT include **kernels** (i.e. functions annotated with `@kernel`)
 - All functions referenced in doc pages should be marked with `canonical = false` since the canonical versions of the docstrings are defined in a separate `@autodocs` block in the index
 - All types and functions referenced in the doc pages must have docstrings otherwise the doc build will fail. Ensure docstrings are defined and add them if they are missing.
 - Doc pages should always be prefaced with appropriate `@meta` and `@setup` blocks
 - If a model or process is not fully implemented, an appropriate warning should be displayed on the doc page
 - Do not use brackets for expressing units as this conflicts with Markdown link syntax; use parentheses instead
+- All code examples should be given as `@example name` blocks, replacing `name` with an appropriate identifier for the page, which are executed by Documenter.jl.
 
 ### Model Constructors
 
@@ -134,34 +135,23 @@ src/
 6. **Extending `getproperty` to fix undefined property bugs**: fix on the caller side instead
 7. **"Type is not callable" errors**: variable name shadows a function — rename or qualify
 8. **Quick fixes that break correctness**: if a test fails after a change, revisit the original edit
-9. **Commented-out code**: delete it. Git is the journal — don't leave commented code, debugging
-    artifacts, or stale copy-paste remnants
-10. **2D indexing on fields**: always use 3D indexing (`field[i, j, k]`). 2D indexing works by
-    coincidence on some fields but is unsupported and will break
+9. **Commented-out code**: delete it. Git is the journal — don't leave commented code, debugging artifacts, or stale copy-paste remnants
+10. **2D indexing on fields**: always use 3D indexing (`field[i, j, k]`). 2D indexing works by coincidence on some fields but is unsupported and will break
 11. **Hardcoded Float64**: never use `0.0`, `1.0` in kernels or constructors; use `zero(grid)` etc.
-12. **Scope creep in PRs**: keep changes focused on a single concern. Unrelated cleanup goes
-    in a separate PR
-13. **Modifying Project.toml dependencies**: never add, remove, or change `[deps]` or `[weakdeps]`
-    in the root `Project.toml` unless the task absolutely requires it. Dependency changes have
-    wide-reaching consequences — they affect CI, load time, and downstream compatibility.
-    Only touch `[compat]` bounds when explicitly asked.
-14. **Mutable closures in kernels**: closures that capture mutable state will not differentiate correctly — use
-    explicit parameters instead
-15. **Non-local dependencies in process equations**: process functions must not depend on global state; pass all
-    dependencies as arguments for traceability and differentiability
+12. **Scope creep in PRs**: keep changes focused on a single concern. Unrelated cleanup goes in a separate PR
+13. **Modifying Project.toml dependencies**: never add, remove, or change `[deps]` or `[weakdeps]` in the root `Project.toml` unless the task absolutely requires it. Dependency changes have wide-reaching consequences — they affect CI, load time, and downstream compatibility. Only touch `[compat]` bounds when explicitly asked.
+14. **Mutable function closures in kernels**: function closures that capture mutable state will not differentiate correctly — use explicit parameters instead
+15. **Non-local dependencies in process equations**: process functions must not depend on global state; pass all dependencies as arguments for traceability and differentiability
 
 ## Git Workflow
 
-Follow [ColPrac](https://github.com/SciML/ColPrac). Feature branches, descriptive commits,
-update tests and docs with code changes, check CI before merging.
+Follow [ColPrac](https://github.com/SciML/ColPrac). Feature branches, descriptive commits, update tests and docs with code changes, check CI before merging.
 
 ## Design Principles
 
-- **Dispatch over conditionals**: use Julia's type system and multiple dispatch instead of
-  `if`/`else` branching. Backend-specific code goes in `ext/` extensions, not `if` branches in `src/`
+- **Dispatch over conditionals**: use Julia's type system and multiple dispatch instead of `if`/`else` branching. Backend-specific code goes in `ext/` extensions, not `if` branches in `src/`
 - **Use `on_architecture` for data transfers** — never manual `Array()` / `CuArray()` calls
-- **Defaults serve the common case**: avoid `nothing` defaults when a concrete default (like `CPU()`)
-  covers 80% of usage. Minimize boilerplate for the typical user.
+- **Defaults serve the common case**: avoid `nothing` defaults when a concrete default (like `CPU()`) covers 80% of usage. Minimize boilerplate for the typical user.
 - **Keyword argument names must be consistent** across related types and constructors
 - **Always use explicit `return`** in functions longer than one expression
 - **One operation per line** as default; break long expressions across lines

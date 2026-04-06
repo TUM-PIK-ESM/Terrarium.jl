@@ -2,22 +2,19 @@
 CurrentModule = Terrarium
 ```
 
-```@setup prescribed_atmosphere
+```@setup atmosphere
 using Terrarium
+using InteractiveUtils
 ```
 
-# Prescribed atmosphere
+# Atmospheric inputs
 
 !!! warning
     This page is a work in progress. If you have any questions or notice any errors, please [raise an issue](https://github.com/NumericalEarth/Terrarium.jl/issues).
 
 ## Overview
 
-The atmosphere module in Terrarium provides the meteorological boundary conditions
-for all surface energy, hydrological, and biogeochemical processes. A `PrescribedAtmosphere`
-reads all forcing variables directly from input data — typically reanalysis products
-(e.g. ERA5-Land) or observational records — rather than computing them interactively
-with a coupled atmospheric model.
+The atmosphere module in Terrarium provides the meteorological boundary conditions for all surface energy, hydrological, and biogeochemical processes. A `PrescribedAtmosphere` reads all forcing variables directly from input data — typically reanalysis products (e.g. ERA5-Land) or observational records — rather than computing them interactively with a coupled atmospheric model.
 
 The primary state variables are:
 
@@ -36,6 +33,14 @@ The primary state variables are:
 
 All of these are treated as spatially and temporally varying input fields that may be updated in
 each timestep by their corresponding [`InputSource`](@ref)s.
+
+```@docs; canonical = false
+AbstractAtmosphere
+```
+
+```@example atmosphere
+subtypes(Terrarium.AbstractAtmosphere)
+```
 
 ### Vapor pressure deficit
 
@@ -56,28 +61,33 @@ deficit is
 
 ```math
 \begin{equation}
-\Delta q = \frac{\varepsilon \Delta e}{p}
+\Delta q = \frac{\varepsilon \Delta e}{p}.
 \end{equation}
 ```
 
 ### Aerodynamic resistance
 
 The `PrescribedAtmosphere` delegates to an [`AbstractAerodynamics`](@ref) parameterization
-to compute the aerodynamic resistance $r_a$ [s/m] between the land surface and the
-atmosphere, with [`ConstantAerodynamics`](@ref) used by default. See [Aerodynamics](@ref) for
-further discussion.
+to compute the aerodynamic resistance $r_a$ between the land surface and the atmosphere (s/m), with [`ConstantAerodynamics`](@ref) used by default. See [Aerodynamics](@ref) for further discussion.
 
-## Implementations
+## Prescribed atmosphere
 
 ```@docs; canonical = false
 PrescribedAtmosphere
 ```
 
-`compute_auxiliary!` and `compute_tendencies!` are both no-ops for `PrescribedAtmosphere`:
-all state variables are provided as inputs and updated by the input layer rather than
-computed from process equations.
+`compute_auxiliary!` and `compute_tendencies!` are both no-ops for `PrescribedAtmosphere`;
+all state variables are provided as inputs and assumed to be updated by either the user or relevant `InputSource`s.
 
 ### Humidity parameterizations
+
+```@docs; canonical = false
+AbstractHumidity
+```
+
+```@example atmosphere
+subtypes(Terrarium.AbstractHumidity)
+```
 
 ```@docs; canonical = false
 SpecificHumidity
@@ -86,10 +96,26 @@ SpecificHumidity
 ### Precipitation parameterizations
 
 ```@docs; canonical = false
+AbstractPrecipitation
+```
+
+```@example atmosphere
+subtypes(Terrarium.AbstractPrecipitation)
+```
+
+```@docs; canonical = false
 RainSnow
 ```
 
 ### Radiation parameterizations
+
+```@docs; canonical = false
+AbstractIncomingRadiation
+```
+
+```@example atmosphere
+subtypes(Terrarium.AbstractIncomingRadiation)
+```
 
 ```@docs; canonical = false
 LongShortWaveRadiation
@@ -107,24 +133,6 @@ AmbientCO2
 
 ```@docs; canonical = false
 TracerGases
-```
-
-## Abstract types
-
-```@docs; canonical = false
-AbstractAtmosphere
-```
-
-```@docs; canonical = false
-AbstractHumidity
-```
-
-```@docs; canonical = false
-AbstractPrecipitation
-```
-
-```@docs; canonical = false
-AbstractIncomingRadiation
 ```
 
 ## Kernel functions

@@ -4,9 +4,6 @@
 CurrentModule = Terrarium
 ```
 
-!!! warning
-    This page is a work in progress. If you have any questions or notice any errors, please [raise an issue](https://github.com/NumericalEarth/Terrarium.jl/issues).
-
 ## Overview
 
 ### Soil composition and material properties
@@ -41,7 +38,7 @@ The total volumetric fractions of each component can then be trivially derived f
 \theta_{\text{org}} &= \omega (1 - \phi) \,,\\
 \theta_{\text{min}} &= (1 - \omega) (1 - \phi)\,,\\
 1 &= \theta_{\text{liq}} + \theta_{\text{ice}} + \theta_{\text{air}} + \theta_{\text{org}} + \theta_{\text{min}}
-\end{align*}
+\end{align*}.
 ```
 
 ## Stratigraphy types

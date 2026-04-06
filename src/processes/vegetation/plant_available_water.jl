@@ -33,15 +33,16 @@ the integral of `W(z) * r(z)` where `W` is the water availability coefficient an
 """
 function soil_moisture_limiting_factor(::FieldCapacityLimitedPAW, grid, clock, fields)
     Δz = zspacings(get_field_grid(grid), Center(), Center(), Center())
-    PAW = Integral(fields.plant_available_water * fields.root_fraction / Δz, dims = 3)
-    return Field(PAW)
+    β = Integral(fields.plant_available_water * fields.root_fraction / Δz, dims = 3)
+    return Field(β)
 end
 
-# Process methods
+# Top-level interface methods
 
 # No-op when no soil is available; soil_moisture_limiting_factor defaults to 1
 compute_auxiliary!(state, grid, ::AbstractPlantAvailableWater, ::Nothing, args...) = nothing
 
+""" $TYPEDSIGNATURES """
 function compute_auxiliary!(
         state, grid,
         paw::FieldCapacityLimitedPAW,

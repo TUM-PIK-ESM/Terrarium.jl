@@ -4,12 +4,10 @@
 CurrentModule = Terrarium
 ```
 
-```@setup default
+```@setup soilwater
 using Terrarium
+using InteractiveUtils
 ```
-
-!!! warning
-    This page is a work in progress. If you have any questions or notice any errors, please [raise an issue](https://github.com/NumericalEarth/Terrarium.jl/issues).
 
 ## Overview
 
@@ -20,13 +18,32 @@ Soil hydrology processes characterize the dynamics of ground water in both satur
 - A forcing term representing user-defined, internal sources/sinks in the soil domain (not including evapotranspiration)
 
 ```@docs; canonical = false
+AbstractSoilHydrology
+```
+
+```@example soilwater
+subtypes(Terrarium.AbstractSoilHydrology)
+```
+
+Terrarium currently provides a single general implementation of `SoilHydrology` following the above interface:
+
+```@docs; canonical = false
 SoilHydrology
 ```
 
 ### [Process interface](@id soilhydrology.interface)
 
+Dispatches for `NoFlow`:
 ```@docs; canonical = false
 initialize!(state, grid, hydrology::SoilHydrology, soil::AbstractSoil, args...)
+
+compute_auxiliary!(state, grid, hydrology::SoilHydrology, soil::AbstractSoil, args...)
+
+compute_tendencies!(state, grid, hydrology::SoilHydrology, soil::AbstractSoil, args...)
+```
+
+Dispatches for `RichardsEq`:
+```@docs; canonical = false
 initialize!(
     state, grid,
     hydrology::SoilHydrology{NF, RichardsEq},
@@ -34,26 +51,20 @@ initialize!(
     constants::PhysicalConstants,
     args...
 ) where {NF}
-```
 
-```@docs; canonical = false
-compute_auxiliary!(state, grid, hydrology::SoilHydrology, soil::AbstractSoil, args...)
 compute_auxiliary!(
     state, grid,
     hydrology::SoilHydrology{NF, RichardsEq},
     soil::AbstractSoil,
     args...
 ) where {NF}
-```
 
-```@docs; canonical = false
-compute_tendencies!(state, grid, hydrology::SoilHydrology, soil::AbstractSoil, args...)
 compute_tendencies!(
     state, grid,
     hydrology::SoilHydrology{NF, RichardsEq},
     soil::AbstractSoil,
     constants::PhysicalConstants,
-    evtr::Optional{AbstractEvapotranspiration},
+    evapotranspiration::Optional{AbstractEvapotranspiration},
     runoff::Optional{AbstractSurfaceRunoff},
     args...
 ) where {NF}
@@ -69,8 +80,8 @@ The simplest possible soil hydrology scheme is one in which the soil saturation 
 NoFlow
 ```
 
-```@example default
-variables(SoilHydrology(Float32))
+```@example soilwater
+variables(SoilHydrology(Float32, NoFlow()))
 ```
 
 ### Richardson-Richards equation for variably saturated flow
@@ -79,7 +90,7 @@ The vertical flow of water in porous media, such as soils, can be formulated as 
 ```math
     \phi\frac{\partial\vartheta(\psi)}{\partial t} - \boldsymbol{\nabla} \cdot \textbf{j}_{\text{w}} - F_{\text{w}}(z,t) = 0,
 ```
-where $\phi$ is the natural porosity (or saturated water content) of the soil volume and $F_{\text{w}}(z,t)$ (m/s) is an inhomogeneous source/sink (forcing) term.
+where $\phi$ is the natural porosity (or saturated water content) of the soil volume and $F_{\text{w}}(z,t)$ is an inhomogeneous source/sink (forcing) term (m/s).
 
 Vertical fluxes in the soil column be represented by combining gravity-driven advection with Darcy's law
 ```math
@@ -87,13 +98,13 @@ Vertical fluxes in the soil column be represented by combining gravity-driven ad
 \textbf{j}_{\text{w}} \cdot \mathbf{n} = -\kappa_{\text{w}}\frac{\partial \left(\psi + z\right)}{\partial z},
 \end{equation}
 ```
-where $\psi$ (m) is the matric potential. Substituting this equation into the aforementioned conservation law yields the widely known Richardson-Richards equation for variably saturated flow in porous media (Richards 1931).
+where $\psi$ is the matric potential (m). Substituting this equation into the aforementioned conservation law yields the widely known Richardson-Richards equation for variably saturated flow in porous media [richardsCapillaryConductionLiquids1931](@cite).
 
 ```@docs; canonical = false
 RichardsEq
 ```
 
-```@example default
+```@example soilwater
 variables(SoilHydrology(Float32, RichardsEq()))
 ```
 
@@ -159,4 +170,11 @@ water_table
 
 ```@docs; canonical = false
 surface_excess_water
+```
+
+## [References](@id "soilhydrology.refs")
+
+```@bibliography
+Pages = ["soil_hydrology.md"]
+Canonical = false
 ```

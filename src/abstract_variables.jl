@@ -39,20 +39,6 @@ vardims(::AbstractField{LX, LY, Nothing}) where {LX, LY} = XY(LX(), LY())
 vardims(::AbstractField{LX, LY, LZ}) where {LX, LY, LZ} = XYZ(LX(), LY(), LZ())
 
 """
-    $TYPEDEF
-
-Base type for prognostic variable closure relations for differential equations of the form:
-
-```math
-\\frac{\\partial g(u)}{\\partial t} = F(u)
-```
-where `F` represents the RHS tendency as a function of the state variable `u`, and `g(u)` is a closure or constitutive
-relation that maps `u` to the physical units matching the tendency. Common examples in soil hydrothermal modeling
-are temperature-enthalpy and saturation-pressure relations.
-"""
-abstract type AbstractClosureRelation end
-
-"""
 Base type for state variable placeholder types.
 """
 abstract type AbstractVariable{name, VD, UT} end
@@ -111,6 +97,20 @@ struct Variable{name, VD, UT} <: AbstractVariable{name, VD, UT}
 end
 
 """
+    $TYPEDEF
+
+Base type for prognostic variable closure relations for differential equations of the form:
+
+```math
+\\frac{\\partial g(u)}{\\partial t} = F(u)
+```
+where `F` represents the RHS tendency as a function of the state variable `u`, and `g(u)` is a closure or constitutive
+relation that maps `u` to the physical units matching the tendency. Common examples in soil hydrothermal modeling
+are temperature-enthalpy and saturation-pressure relations.
+"""
+abstract type AbstractClosureRelation end
+
+"""
 Baste type for process state variables with specific intents, e.g. `prognostic`, `auxiliary`, or `input`.
 """
 abstract type AbstractProcessVariable{name, VD, UT} <: AbstractVariable{name, VD, UT} end
@@ -158,7 +158,8 @@ end
 """
     $TYPEDEF
 
-Represents an input (e.g. forcing) variable with the given `name` and spatial `dims`.
+Represents a spatially varying input (e.g. forcing) variable with the given `name` and spatial `dims`.
+Input variables can also be made to vary in time through the use of [`InputSource`](@ref)s.
 """
 struct InputVariable{
         name,
@@ -184,7 +185,12 @@ end
 """
     $TYPEDEF
 
-Represents a prognostic state variable with the given `name` and spatial `dims`.
+Represents a prognostic state variable with the given `name` and spatial `dims`. Prognostic variables
+are those which are integrated by the timestepper and fully define the state of the system at any given
+point in (simulation) time. From a computational perspective, they can be seen as the "roots" of the
+computational graph for `update_state!`/`timestep!`. Prognostic variables generally should not be modified
+by any code not belonging to the timestepper or user. They automatically define a `tendency` (auxiliary)
+variable which is used to hold the value of their instantaneous time derivative computed by `compute_tendencies!`.
 """
 struct PrognosticVariable{
         name,
@@ -331,19 +337,19 @@ function Base.show(io::IO, vars::Variables)
     println(io, "Variables")
     println(io, "├─ Prognostic: ")
     for var in vars.prognostic
-        println("├── $(summary(var))")
+        println(io, "├── $(summary(var))")
     end
     println(io, "├─ Auxiliary: ")
     for var in vars.auxiliary
-        println("├── $(summary(var))")
+        println(io, "├── $(summary(var))")
     end
     println(io, "├─ Inputs: ")
     for var in vars.inputs
-        println("├── $(summary(var))")
+        println(io, "├── $(summary(var))")
     end
     println(io, "├─ Namespaces:")
     for ns in vars.namespaces
-        println("├── $(summary(ns))")
+        println(io, "├── $(summary(ns))")
     end
     return nothing
 end

@@ -14,7 +14,7 @@ struct PrescribedRadiativeFluxes{NF} <: AbstractRadiativeFluxes{NF} end
 
 PrescribedRadiativeFluxes(::Type{NF}) where {NF} = PrescribedRadiativeFluxes{NF}()
 
-## Process methods
+## Top-level interface methods
 
 variables(::PrescribedRadiativeFluxes) = (
     input(:surface_shortwave_up, XY(), units = u"W/m^2", desc = "Outgoing (upwelling) shortwave radiation"),
@@ -22,6 +22,7 @@ variables(::PrescribedRadiativeFluxes) = (
     auxiliary(:surface_net_radiation, XY(), units = u"W/m^2", desc = "Net outgoing (positive up) radiation"),
 )
 
+""" $TYPEDSIGNATURES """
 function compute_auxiliary!(
         state, grid,
         rad::PrescribedRadiativeFluxes,
@@ -98,7 +99,7 @@ Compute outgoing longwave radiation from incoming `surface_longwave_down`, surfa
     return surface_longwave_up
 end
 
-## Process methods
+## Top-level interface methods
 
 variables(::DiagnosedRadiativeFluxes) = (
     auxiliary(:surface_shortwave_up, XY(), units = u"W/m^2", desc = "Outgoing (upwelling) shortwave radiation"),
@@ -106,6 +107,7 @@ variables(::DiagnosedRadiativeFluxes) = (
     auxiliary(:surface_net_radiation, XY(), units = u"W/m^2", desc = "Net radiation budget"),
 )
 
+""" $TYPEDSIGNATURES """
 function compute_auxiliary!(
         state, grid,
         rad::DiagnosedRadiativeFluxes,

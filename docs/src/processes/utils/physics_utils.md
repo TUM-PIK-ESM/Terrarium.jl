@@ -4,6 +4,7 @@ CurrentModule = Terrarium
 
 ```@setup physics_utils
 using Terrarium
+using InteractiveUtils
 ```
 
 # Physics utilities

@@ -72,13 +72,13 @@ That's it! You already succesfully ran a (very simple) simulation with Terrarium
 
 Note that setting `num_columns = 1` here corresponds to a point simulation for a single vertical column. However, we can easily scale this up by set `num_columns` to any positive integer (up to the memory limit of your system, of course).
 
-We can also easily adapt this code to run a *global* simulation over a suitable spatial grid. For this, we'll need to have [`RingGrids`](https://github.com/SpeedyWeather/RingGrids.jl) installed (or import it directly from Terrarium with `using Terrarium.RingGrids`). Optionally, if a GPU is available and [CUDA.jl](https://github.com/JuliaGPU/CUDA.jl) is installed in the current project or global Julia environment, we can accelerate the global simulation by simply changing `CPU` to `GPU`:
+We can also easily adapt this code to run a *global* simulation over a suitable spatial grid. For this, we'll need to have [`RingGrids`](https://github.com/SpeedyWeather/SpeedyWeather.jl/tree/main/RingGrids) installed (or import it directly from Terrarium with `using Terrarium.RingGrids`). Optionally, if a GPU is available and [CUDA.jl](https://github.com/JuliaGPU/CUDA.jl) is installed in the current project or global Julia environment, we can accelerate the global simulation by simply changing `CPU` to `GPU`:
 
 ```julia
 using RingGrids: FullGaussianGrid
-using CUDA # needs to be seaprately installed
+using CUDA # needs to be separately installed
 
-rings = FullGaussianGrid(8) # Gaussian grid with 16 lattitudinal rings (512 points, ~9.5˚)
+rings = FullGaussianGrid(8) # Gaussian grid with 16 latitudinal rings (512 points, ~9.5˚)
 arch = GPU() # run on the GPU!
 grid = ColumnRingGrid(arch, Float32, ExponentialSpacing(N=10), rings)
 model = SoilModel(grid)

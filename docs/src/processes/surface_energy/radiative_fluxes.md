@@ -17,15 +17,7 @@ R_{\text{net}}(T_s) = \text{SW}_{\uparrow} - \text{SW}_{\downarrow} + \text{LW}_
 \end{equation}
 ```
 
-where
-- $\text{SW}_{\uparrow} = \alpha \text{SW}_{\downarrow}$ is upwelling (reflected) shortwave radiation [W/m²]
-- $\text{SW}_{\downarrow}$ is downwelling (incident) shortwave radiation [W/m²]
-- $\text{LW}_{\uparrow} = \epsilon \sigma T_0^4 + (1-\epsilon) L_{\downarrow}$ is upwelling longwave radiation from the surface and reflected downwelling longwave [W/m²]
-- $\text{LW}_{\downarrow}$ is downwelling (incident) longwave radiation [W/m²]
-- $\epsilon$ is the surface emissivity (see [Albedo and Emissivity](albedo.md))
-- $\alpha$ is the surface albedo (see [Albedo and Emissivity](albedo.md))
-- $\sigma$ is the Stefan-Boltzmann constant
-- $T_s$ is the skin temperature
+where $\text{SW}_{\uparrow} = \alpha \text{SW}_{\downarrow}$ is upwelling (reflected) shortwave radiation (W/m²), $\text{SW}_{\downarrow}$ is downwelling (incident) shortwave radiation (W/m²), $\text{LW}_{\uparrow} = \epsilon \sigma T_0^4 + (1-\epsilon) L_{\downarrow}$ is upwelling longwave radiation from the surface and reflected downwelling longwave (W/m²), $\text{LW}_{\downarrow}$ is downwelling (incident) longwave radiation (W/m²), $\epsilon$ is the surface emissivity (see [Albedo and Emissivity](albedo.md)) (-), $\alpha$ is the surface albedo (see [Albedo and Emissivity](albedo.md)) (-), $\sigma$ is the Stefan-Boltzmann constant (W/m²/K⁴), and $T_s$ is the skin temperature (K).
 
 ### Shortwave radiation
 
@@ -54,6 +46,16 @@ PrescribedRadiativeFluxes
 ```
 
 This may be useful for testing or in cases where you want to couple Terrarium with another model that will take care of computing the incoming and outgoing radiative fluxes.
+
+## Process interface
+
+```@docs; canonical = false
+compute_auxiliary!(state, grid, rad::PrescribedRadiativeFluxes, seb::AbstractSurfaceEnergyBalance, atmos::AbstractAtmosphere, args...)
+```
+
+```@docs; canonical = false
+compute_auxiliary!(state, grid, rad::DiagnosedRadiativeFluxes, seb::AbstractSurfaceEnergyBalance, atmos::AbstractAtmosphere, consts::PhysicalConstants, args...)
+```
 
 ## Methods
 

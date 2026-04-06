@@ -1,7 +1,12 @@
-# Surface energy balance
+# Surface Energy Balance
 
 ```@meta
 CurrentModule = Terrarium
+```
+
+```@setup seb
+using Terrarium
+using InteractiveUtils
 ```
 
 !!! warning
@@ -24,10 +29,21 @@ The [`SurfaceEnergyBalance`](@ref) process is responsible for computing all of t
 - An implementation of [`AbstractTurbulentFluxes`](@ref) that compute the turbulent (sensible and latent) heat fluxes. Sensible and latent heat fluxes are driven by temperature and humidity gradients between the surface and atmosphere, quantified through bulk aerodynamic approaches. These fluxes depend on wind speed, atmospheric stability, surface roughness, and the availability of soil moisture. See [Turbulent fluxes](@ref) for further details.
 - A scheme for representing the [albedo](@ref "Albedo and emissivity") in the [Radiative energy budget](@ref "Radiative fluxes").
 
-## Implementations
-
 ```@docs; canonical = false
 SurfaceEnergyBalance
+```
+
+```@example seb
+variables(SurfaceEnergyBalance(Float32))
+```
+
+!!! warning "Prescribed energy fluxes"
+    `SurfaceEnergyBalance` allows you to mix and match which terms in the SEB are diagnosed vs. prescribed depending on the choice of implementation. While this has the potential to be convenient in cases where data on skin temperature or turbulent heat fluxes is available, it should be noted that this may result in surface energy fluxes that are inconsistent and do not fully satisfy the SEB equation.
+
+## Process interface
+
+```@docs; canonical = false
+compute_auxiliary!(state, grid, seb::SurfaceEnergyBalance, atmos::AbstractAtmosphere, constants::PhysicalConstants, hydrology::Optional{AbstractSurfaceHydrology}, args...)
 ```
 
 ## Methods

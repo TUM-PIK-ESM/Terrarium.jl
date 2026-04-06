@@ -44,6 +44,7 @@ abstract type AbstractModel{NF, Grid <: AbstractLandGrid{NF}}  end
 
 """
     variables(model::AbstractModel)
+    variables(process::AbstractProcess)
 
 Return a `Tuple` of `AbstractVariable`s (i.e. `PrognosticVariable`, `AuxiliaryVariable`, etc.)
 defined by the model or process.
@@ -97,7 +98,14 @@ function compute_tendencies! end
 
 # Allow variables to be defined on any type, defaulting to an empty tuple
 variables(::Any) = ()
-# For AbstractCoupledProcesses and AbstractModel types, default to collecting variables on all processes contained therein
+
+"""
+    variables(obj::Union{AbstractCoupledProcesses, AbstractModel})
+
+Default implementation of [`variables`](@ref) for composite [`AbstractModel`](@ref) and
+[`AbstractCoupledProcesses`](@ref) types that automatically collects all variables from all processes defined
+as properties/fields on the given `obj`.
+"""
 variables(obj::Union{AbstractCoupledProcesses, AbstractModel}) = mapreduce(variables, tuplejoin, processes(obj))
 
 # Allow dispatch on nothing for process types
@@ -122,7 +130,7 @@ Note that this is a type-stable, `@generated` function that is compiled for each
 end
 
 """
-    closures(process::AbstractProcess)
+    closures(proc::AbstractProcess)
 
 Return a tuple of `AbstractClosureRelation`s defined by the given processes type.
 Note that this is a type-stable, `@generated` function that is compiled for each argument type.
@@ -163,33 +171,52 @@ Return the `PhysicalConstants` associated with the given `model`.
     closure!(state, model::AbstractModel)
 
 Apply all closure relations defined for the given `model`.
-
-    closure!(state, grid, [closure,] process, args...)
-
-Apply the `closure` for `process` with the given `grid` and additional
-implementation-specific `args`. If `closure` is not specified, it is
-automatically inferred from `first(closures(process))`.
 """
 closure!(state, model::AbstractModel) = nothing
-closure!(state, grid, proc::AbstractProcess, args...) = closure!(state, grid, first(closures(proc)), proc, args...)
-closure!(state, grid, closure, ::AbstractProcess, args...) = nothing
+
+"""
+    closure!(state, grid, proc::AbstractProcess, args...)
+
+Apply the forward closure mappings for the process `proc` on the given `grid` with additional implementation-specific `args`
+defined by the coupling interface for the process type. The default implementation calls `invclosure!` with `args` for each
+closure returned by [`closures`](@ref).
+"""
+closure!(state, grid, proc::AbstractProcess, args...) = fastiterate!(closure -> closure!(state, grid, closure, proc, args...), closures(proc))
+
+"""
+    closure!(state, grid, closure::AbstractClosureRelation, process, args...)
+
+Apply `closure` for `process` on the given `grid` with additional implementation-specific `args`.
+"""
+closure!(state, grid, closure::AbstractClosureRelation, ::AbstractProcess, args...) = nothing
 
 """
     invclosure!(state, model::AbstractModel)
 
 Apply the inverse of all closure relations defined for the given `model`.
-
-    invclosure!(state, grid, [closure,] process, args...)
-
-Apply the `closure` for `process` with the given `grid` and additional
-implementation-specific `args`. If `closure` is not specified, it is
-automatically inferred from `first(closures(process))`.
 """
 invclosure!(state, model::AbstractModel) = nothing
-invclosure!(state, grid, proc::AbstractProcess, args...) = invclosure!(state, grid, first(closures(proc)), proc, args...)
-invclosure!(state, grid, closure, ::AbstractProcess, args...) = nothing
 
 """
+    invclosure!(state, grid, proc::AbstractProcess, args...)    
+
+Apply the inverse closure mappings for the process `proc` on the given `grid` with additional implementation-specific `args`
+defined by the coupling interface for the process type. The default implementation calls `invclosure!` with `args` for each
+closure returned by [`closures`](@ref).
+"""
+invclosure!(state, grid, proc::AbstractProcess, args...) = fastiterate!(closure -> invclosure!(state, grid, closure, proc, args...), closures(proc))
+
+"""
+    invclosure!(state, grid, closure::AbstractClosureRelation, process::AbstractProcess, args...)
+
+Apply the inverse of `closure` for the process `proc` on the given `grid` with additional implementation-specific `args`
+defined by the coupling interface for the process type.
+"""
+invclosure!(state, grid, closure::AbstractClosureRelation, ::AbstractProcess, args...) = nothing
+
+"""
+    (::Type{Model})(grid::AbstractLandGrid, args...; kwargs...) where {Model <: AbstractModel}
+
 Convenience constructor for all `AbstractModel` types that allows the `grid` to be passed
 as the first positional argument.
 """

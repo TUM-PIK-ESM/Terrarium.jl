@@ -49,13 +49,14 @@ function compute_latent_heat_flux(::DiagnosedTurbulentFluxes, Q_h, ρₐ, Lsl)
     return Hₗ
 end
 
-## Process methods
+## Top-level interface methods
 
 variables(::DiagnosedTurbulentFluxes) = (
     auxiliary(:sensible_heat_flux, XY(), units = u"W/m^2", desc = "Sensible heat flux at the surface [W m⁻²]"),
     auxiliary(:latent_heat_flux, XY(), units = u"W/m^2", desc = "Latent heat flux at the surface [W m⁻²]"),
 )
 
+""" $TYPEDSIGNATURES """
 function compute_auxiliary!(
         state, grid,
         tur::DiagnosedTurbulentFluxes,

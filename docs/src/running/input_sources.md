@@ -1,0 +1,194 @@
+# Input sources
+
+```@meta
+CurrentModule = Terrarium
+```
+
+Input sources supply both static and time-varying input data for the [`InputVariable`](@ref)s in a Terrarium simulation. Recall that input variables are distinct from model/process *parameters*: parameters are specified as properties of process/parameterization `struct`s and are spatially invariant, whereas inputs are defined over the model `grid`; from the perspective of a process implementation, input variables look and behave exactly like any other `Field` in the `state`.
+
+## The `InputSource` interface
+
+```@docs; canonical=false
+InputSource
+```
+
+All `InputSource`s implement the following interface:
+
+```@docs; canonical = false
+variables(::InputSource)
+initialize!(state, ::InputSource, ::Clock)
+update_inputs!(state, ::InputSource, ::Clock)
+```
+
+## Built-in input source types
+
+### Static input `Field`s
+
+A `FieldInputSource` holds a single `Field` that is copied into the state once at
+initialization and is thereafter unchanged. This is the appropriate input source for
+spatially-varying but time-constant forcings (e.g. maps of soil properties or prescribed climatology).
+
+```@docs; canonical = false
+InputSource(grid::AbstractLandGrid{NF}, field::FS) where {NF, FS <: AnyField{NF}}
+```
+
+```julia
+using Oceananigans: Field
+
+# Existing Field or array on the model grid
+albedo_field = Field(grid_2d)
+set!(albedo_field, 0.3)
+
+source = InputSource(grid, albedo_field; name = :albedo)
+```
+
+For a `ColumnRingGrid`, a `RingGrids.Field` can be passed directly and will be
+converted automatically:
+
+```julia
+albedo_ring = RingGrids.Field(albedo_data, global_grid)
+source = InputSource(snow_grid, albedo_ring; name = :albedo)
+```
+
+### Time-varying `Field` inputs
+
+A `FieldTimeSeriesInputSource` wraps an Oceananigans `FieldTimeSeries`. At each time
+step the input field is set to the snapshot in the time series that is closest to
+`clock.time` (using `FieldTimeSeries[Time(t)]`).
+
+```julia
+using Oceananigans.Units: hours
+
+# Allocate and populate a FieldTimeSeries
+times = 0.0:3600.0:86400.0 # hourly for one day (seconds)
+fts = FieldTimeSeries(grid, XY(), times)
+fts.data .= randn(size(fts)) # fill with data
+source = InputSource(fts; name = :air_temperature, units = u"°C")
+```
+
+```@docs; canonical = false
+InputSource(grid::AbstractLandGrid{NF}, field::FS) where {NF, FS <: AnyFieldTimeSeries{NF}}
+```
+
+The `FieldTimeSeries` can also be loaded from a file using the relevant constructors
+provided by Oceananigans.
+
+### Inputs from raster data
+
+Alternatively, Terrarium provides an extension module for [`Rasters.jl`](https://github.com/rafaqz/Rasters.jl) with a `RasterInputSource` that reads data directly from any format supported by Rasters.jl
+(NetCDF, GeoTIFF, Zarr, etc.) and supports both static and time-varying inputs.
+
+!!! note
+    Load `Rasters` together  with `Terrarium` to activate the extension:
+    ```julia
+    using Terrarium, Rasters
+    ```
+
+**Static raster input**
+
+If the `Raster` has no time dimension, `initialize!` copies the data once and
+`update_inputs!` is a no-op:
+
+```julia
+using Rasters
+
+raster = Raster("path/to/temperature.nc"; name = :temperature)
+source = InputSource(grid, raster)   # Defaults to using name of Raster
+```
+
+**Time-varying raster input**
+
+If the `Raster` has a `Ti` (time) dimension, values are linearly interpolated between
+the two nearest time points at each call to `update_inputs!`. Outside the bounds of the
+time axis the nearest available snapshot is used (flat extrapolation).
+
+```julia
+raster = Raster("path/to/forcing_timeseries.nc"; name = :air_temperature)
+source = InputSource(grid, raster; reftime = DateTime(2000, 1, 1))
+```
+
+The `reftime` keyword maps the simulation's numeric `clock.time` (seconds) to wall-clock
+`DateTime`. If `reftime` is `nothing` (the default), the first time-axis value is used as
+the reference point. Pass `reftime` explicitly when the simulation clock does not start
+at the first record of the dataset:
+
+```julia
+# Simulation starts at t=0 s, but data begins on Jan 1 2000
+source = InputSource(grid, raster; reftime = DateTime(2000, 1, 1))
+```
+
+## Multiple input sources
+
+Multiple `InputSource` objects are passed to `initialize` as positional arguments:
+
+```julia
+integrator = initialize(model, Heun(Δt = 3600.0), source1, source2, source3)
+```
+
+Internally they are collected into an `InputSources` container, which iterates over
+each source in order when calling `initialize!` and `update_inputs!`.
+
+A standalone `InputSources` can also be constructed manually for inspection:
+
+```julia
+sources = InputSources(source1, source2)
+variables(sources)   # union of all declared input variables
+```
+
+## Using inputs inside process kernels
+
+Input variables are stored in `state.inputs` and are also accessible through the top-level
+`state` shorthand, just like prognostic or auxiliary variables. Inside a kernel
+function, inputs appear as named fields and are retrieved the same way as any other field:
+
+```julia
+@propagate_inbounds function compute_snow_flux_tendency(i, j, grid, fields, snow_melt::DegreeDaySnow)
+    T = fields.air_temperature[i, j, 1]   # input variable
+    P = fields.snow_fall[i, j, 1]         # input variable
+    k = snow_melt.k
+    T_melt = snow_melt.T_melt
+    return ifelse(T > T_melt, P - k * (T - T_melt), P)
+end
+```
+
+The minimum set of input fields needed by a process is declared by including `input`
+variables in the `variables` method of the relevant `AbstractProcess`:
+
+```julia
+Terrarium.variables(snow::DegreeDaySnow{NF}) where {NF} = (
+    input(:air_temperature, XY(), units = u"°C"),
+    input(:snow_fall,       XY(), units = u"m/s"),
+    prognostic(:snow_storage, XY()),
+)
+```
+
+Terrarium's `get_fields` utility then automatically collects only the fields named in
+`variables` when assembling the argument list for kernel launch.
+
+## Implementing a custom input source
+
+To add a new input source backend:
+
+1. Define a `struct` subtyping `InputSource{NF, name}` where `NF` is the numeric float
+   type and `name` is a `Symbol` identifying the variable.
+2. Implement `variables(source::MySource)` returning a tuple of `input(...)` variable
+   descriptors.
+3. Implement `initialize!(fields, source::MySource, clock)` for any one-time setup.
+4. Implement `update_inputs!(fields, source::MySource, clock::Clock)` to update the
+   input field at each time step.
+5. Optionally provide a convenience `InputSource(grid, ...; name, units)` constructor
+   dispatch so users do not need to reference the concrete type name.
+
+```julia
+struct MyInputSource{NF} <: InputSource{NF, :my_var}
+    data::Vector{NF}
+end
+
+Terrarium.variables(::MyInputSource{NF}) where {NF} = (input(:my_var, XY()),)
+
+function Terrarium.update_inputs!(fields, source::MyInputSource, clock::Clock)
+    # populate fields.my_var from source.data at clock.time
+    ...
+end
+```
+

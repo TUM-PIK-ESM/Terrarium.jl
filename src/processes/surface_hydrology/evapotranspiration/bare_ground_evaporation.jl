@@ -21,13 +21,14 @@ BareGroundEvaporation(
 
 @propagate_inbounds surface_humidity_flux(i, j, grid, fields, evaporation::BareGroundEvaporation, args...) = fields.evaporation_ground[i, j]
 
-# Process methods
+# Top-level interface methods
 
 variables(::BareGroundEvaporation) = (
     auxiliary(:evaporation_ground, XY(), units = u"m/s", desc = "Ground evaporation contribution to surface humidity flux"),
     input(:skin_temperature, XY(), units = u"°C", desc = "Skin temperature of the surface"),
 )
 
+""" $TYPEDSIGNATURES """
 function compute_auxiliary!(
         state, grid,
         evaporation::BareGroundEvaporation,

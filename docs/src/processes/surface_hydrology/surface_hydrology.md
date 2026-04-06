@@ -9,7 +9,7 @@ CurrentModule = Terrarium
 
 ## Overview
 
-The [`SurfaceHydrology](@ref) process manages water exchange between the atmosphere and land, including three tightly coupled processes:
+The [SurfaceHydrology](@ref) process manages water exchange between the atmosphere and land, including three tightly coupled processes:
 
 1. [Canopy interception](@ref): Temporary storage and removal of intercepted rainfall
 2. [Evapotranspiration](@ref): Water vapor fluxes from ground, canopy, and plant stomata
@@ -21,4 +21,14 @@ For detailed physics and governing equations of each process, see the dedicated 
 
 ```@docs; canonical = false
 SurfaceHydrology
+```
+
+## Process interface
+
+```@docs; canonical = false
+compute_auxiliary!(state, grid, hydrology::SurfaceHydrology, atmos::AbstractAtmosphere, constants::PhysicalConstants, soil::AbstractSoil)
+```
+
+```@docs; canonical = false
+compute_tendencies!(state, grid, hydrology::SurfaceHydrology, args...)
 ```

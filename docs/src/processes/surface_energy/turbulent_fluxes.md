@@ -37,12 +37,7 @@ H_s = c_a \rho_a \frac{\Delta T}{r_a}
 \end{equation}
 ```
 
-where:
-- $c_a$ is the specific heat capacity of air [J/kg/K]
-- $\rho_a$ is the air density [kg/m³]
-- $\Delta T = T_s - T_a$ is the temperature difference (positive if surface warmer than air) [K]
-- $r_a$ is the aerodynamic resistance [s/m]
-- $H_s$ is **positive when surface is warmer than air** (heat flows upward), and **negative when surface is cooler** (heat flows downward)
+where $c_a$ is the specific heat capacity of air (J/kg/K), $\rho_a$ is the air density (kg/m³), $\Delta T = T_s - T_a$ is the temperature difference (K) (positive if surface warmer than air), and $r_a$ is the aerodynamic resistance (s/m). $H_s$ is **positive when surface is warmer than air** (heat flows upward), and **negative when surface is cooler** (heat flows downward).
 
 
 ### Latent heat flux
@@ -55,12 +50,7 @@ H_l = L \rho_a \frac{\Delta q}{r_a}
 \end{equation}
 ```
 
-where:
-- $L$ is the latent heat of vaporization or sublimation [J/kg]
-- $\rho_a$ is the air density [kg/m³]
-- $\Delta q = q_{\text{sat}}(T_s) - q_a$ is the specific humidity gradient [kg/kg] derived from the vapor pressure deficit
-- $r_a$ is the aerodynamic resistance [s/m]
-- $H_l$ is **always non-negative** (≥ 0) and represents energy lost due to evaporation, transpiration, or sublimation. Currently, condensation (dew formation) is neglected so $\Delta q \geq 0$ and negative latent heat fluxes cannot occur
+where $L$ is the latent heat of vaporization or sublimation (J/kg) and $\Delta q = q_{\text{sat}}(T_s) - q_a$ is the specific humidity gradient (kg/kg) derived from the vapor pressure deficit. $H_l$ is **always non-negative** (≥ 0) and represents energy lost due to evaporation, transpiration, or sublimation. Currently, condensation (dew formation) is neglected so $\Delta q \geq 0$ and negative latent heat fluxes cannot occur.
 
 The latent heat flux is directly tied to:
 - **Vegetation**: Transpiration through stomata (see [Photosynthesis](@ref))
@@ -77,6 +67,12 @@ DiagnosedTurbulentFluxes
 
 ```@docs; canonical = false
 PrescribedTurbulentFluxes
+```
+
+## Process interface
+
+```@docs; canonical = false
+compute_auxiliary!(state, grid, tur::DiagnosedTurbulentFluxes, seb::AbstractSurfaceEnergyBalance, atmos::AbstractAtmosphere, constants::PhysicalConstants, args...)
 ```
 
 ## Methods

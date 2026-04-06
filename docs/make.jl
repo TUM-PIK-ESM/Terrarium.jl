@@ -1,10 +1,11 @@
 using ArgParse
 using Documenter
+using DocumenterCitations
 using Literate
 
 using Terrarium
 
-const SCRIPTS_DIR = joinpath(dirname(@__DIR__), "examples")
+const EXAMPLES_DIR = joinpath(dirname(@__DIR__), "examples")
 const EXAMPLES_OUTDIR = joinpath(@__DIR__, "src", "examples")
 const EXAMPLES_OUTDIR_RELATIVE = "examples"
 
@@ -16,30 +17,42 @@ s = ArgParseSettings()
     "--draft", "-d"
     action = :store_true
     help = "Whether to build docs in draft mode, i.e. skipping execution of examples and doctests"
+    "--no-exec", "-e"
+    action = :store_true
+    help = "Like --draft but applies only to example scripts"
+    "--check-links", "-c"
+    action = :store_true
+    help = "Check that all external links are functional (`linkcheck=true` in `makedocs`)"
+    "--debug"
+    action = :store_true
+    help = "Enable Documenter.jl debug logging for more detailed output from examples and doctests"
 end
 parsed_args = parse_args(ARGS, s)
 
 IS_LOCAL = parsed_args["local"] || parse(Bool, get(ENV, "LOCALDOCS", "false"))
 IS_DRAFT = parsed_args["draft"] || parse(Bool, get(ENV, "DRAFTDOCS", "false"))
-BUILD_EXAMPLE_DOCS = !IS_DRAFT && parse(Bool, get(ENV, "BUILD_EXAMPLE_DOCS", "true"))
-if haskey(ENV, "GITHUB_ACTIONS")
+NO_EXEC = parsed_args["no-exec"] || parse(Bool, get(ENV, "NOEXEC", "false"))
+CHECK_LINKS = parsed_args["check-links"] || parse(Bool, get(ENV, "CHECK_LINKS", "false"))
+BUILD_EXAMPLE_DOCS = !IS_DRAFT && !NO_EXEC
+if haskey(ENV, "GITHUB_ACTIONS") || parsed_args["debug"]
     ENV["JULIA_DEBUG"] = "Documenter"
 end
 
 # Literate scripts to be built and included in the docs
-# Each entry is (page_title, script_filename)
+# Each entry should be a Pair: page_title => script_filename
 script_list = [
-    "Model Interface" => "model_interface.jl",
-    #"Differentiating Terrarium" => "differentiating_terrarium.jl",  # dont include enzyme example for now while it's bugged
+    "Simple exponential growth model" => "linear_ode_exp_growth.jl",
+    "Degree-day snow melt model" => "simple_snow_ddm.jl",
+    "Linear heat conduction" => "linear_heat_conduction.jl",
 ]
 
 """
-Convert Literate.jl scripts in `SCRIPTS_DIR` to markdown pages in `EXAMPLES_OUTDIR`.
+Convert Literate.jl scripts in `indir` to markdown pages in `outdir`.
 The differentiation example is never executed during docs builds (Enzyme compile is
 too slow); the model interface example is executed unless IS_DRAFT is set.
 """
-function build_literate_pages()
-    mkpath(EXAMPLES_OUTDIR)
+function build_literate_pages!(outdir, indir)
+    mkpath(outdir)
     for (_, filename) in script_list
         ## the differentiation notebook is never auto-executed (Enzyme compile time)
         should_execute = BUILD_EXAMPLE_DOCS && filename != "differentiating_terrarium.jl"
@@ -54,8 +67,8 @@ function build_literate_pages()
             kwargs[:codefence] = "```julia" => "```"
         end
         Literate.markdown(
-            joinpath(SCRIPTS_DIR, filename),
-            EXAMPLES_OUTDIR;
+            joinpath(indir, filename),
+            outdir;
             kwargs...,
         )
     end
@@ -65,37 +78,56 @@ end
 # Pages vector for makedocs
 example_docpages = Pair{String, String}[]
 
-if BUILD_EXAMPLE_DOCS
-    # Build example pages with Literate.jl
-    build_literate_pages()
-    # Add example pages to list
-    for (title, filename) in script_list
-        mdfile = replace(filename, ".jl" => ".md")
-        push!(example_docpages, title => joinpath(EXAMPLES_OUTDIR_RELATIVE, mdfile))
-    end
+# Build example pages with Literate.jl
+build_literate_pages!(
+    joinpath(EXAMPLES_OUTDIR, "extending"),
+    joinpath(EXAMPLES_DIR, "extending"),
+)
+# Add example pages to list
+for (title, filename) in script_list
+    mdfile = replace(filename, ".jl" => ".md")
+    push!(example_docpages, "Example: $title" => joinpath(EXAMPLES_OUTDIR_RELATIVE, "extending", mdfile))
 end
+
+# Create bibliography
+bib = CitationBibliography(
+    joinpath(@__DIR__, "src", "references.bib");
+    style = :numeric
+)
 
 makedocs(
     format = Documenter.HTML(
         prettyurls = get(ENV, "CI", nothing) == "true",
         ansicolor = true,
         collapselevel = 1,
-        canonical = "https://tum-pik-esm.github.io/Terrarium.jl/stable/",
+        repolink = "https://github.com/NumericalEarth/Terrarium.jl",
+        canonical = "https://numericalearth.github.io/Terrarium.jl",
+        assets = ["assets/citations.css"],
         size_threshold = 600_000,
         mathengine = Documenter.MathJax3(),
     ),
     sitename = "Terrarium.jl",
-    authors = "Brian Groenke, Maximillian Galbrecht, Maha Badri, and Contributors",
+    authors = "Brian Groenke, Maximilian Gelbrecht, Maha Badri, and Contributors",
     modules = [Terrarium],
+    plugins = [bib],
     pages = [
         "Home" => "index.md",
-        "Overview" => [
+        "Introduction" => [
             "Basic concepts" => "introduction/basic_concepts.md",
             "Numerical core" => "introduction/numerical_core.md",
             "Mathematical formulation" => "introduction/mathematical_formulation.md",
         ],
+        "Running Terrarium" => [
+            "Initialization" => "running/initialization.md",
+            "Time stepping" => "running/time_stepping.md",
+            "Input sources" => "running/input_sources.md",
+        ],
         "Extending Terrarium" => [
             "Core interfaces" => "extending/core_interfaces.md",
+            "State variables" => "extending/state_variables.md",
+            "Implementing processes" => "extending/implementing_processes.md",
+            "Coupling processes" => "extending/coupling_processes.md",
+            example_docpages...,
         ],
         "Models" => [
             "Soil model" => "models/soil_model.md",
@@ -113,7 +145,7 @@ makedocs(
                 "Autotrophic respiration" => "processes/vegetation/autotrophic_respiration.md",
                 "Carbon dynamics" => "processes/vegetation/carbon_dynamics.md",
                 "Vegetation dynamics" => "processes/vegetation/vegetation_dynamics.md",
-                "Vegetation phenology" => "processes/vegetation/vegetation_phenology.md",
+                "Phenology" => "processes/vegetation/phenology.md",
                 "Root distribution" => "processes/vegetation/root_distribution.md",
             ],
             "Surface hydrology" => [
@@ -126,11 +158,11 @@ makedocs(
                 "Surface energy balance" => "processes/surface_energy/surface_energy_balance.md",
                 "Radiative fluxes" => "processes/surface_energy/radiative_fluxes.md",
                 "Turbulent fluxes" => "processes/surface_energy/turbulent_fluxes.md",
-                "Skin temperature and ground heat" => "processes/surface_energy/skin_temperature.md",
+                "Skin temperature" => "processes/surface_energy/skin_temperature.md",
                 "Albedo and emissivity" => "processes/surface_energy/albedo.md",
             ],
-            "Atmosphere" => [
-                "Prescribed atmosphere" => "processes/atmosphere/prescribed_atmosphere.md",
+            "Coupling to atmosphere" => [
+                "Atmosphere interface" => "processes/atmosphere/atmosphere.md",
                 "Aerodynamics" => "processes/atmosphere/aerodynamics.md",
             ],
             "Utilities" => [
@@ -138,13 +170,12 @@ makedocs(
                 "Physics" => "processes/utils/physics_utils.md",
             ],
         ],
-        "Examples" => [
-            "Overview" => "examples_overview.md",
-            example_docpages...,
-        ],
         "Contributing" => "contributing.md",
-        "API Reference" => "api_reference.md",
+        "Index of API" => "api_index.md",
+        "References" => "references.md",
     ],
+    linkcheck = CHECK_LINKS,
+    warnonly = [:cross_references],
     draft = IS_DRAFT,
 )
 

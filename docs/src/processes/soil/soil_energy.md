@@ -4,24 +4,20 @@
 CurrentModule = Terrarium
 ```
 
-```@setup default
+```@setup soilenergy
 using Terrarium
+using InteractiveUtils
 ```
-
-!!! warning
-    This page is a work in progress. If you have any questions or notice any errors, please [raise an issue](https://github.com/NumericalEarth/Terrarium.jl/issues).
 
 ## Overview
 
-### Heat conduction
-
-Heat transfer along the vertical axis perpendicular to the land surface can be represented according to the heat equation, with the upper boundary set to surface temperature and the lower boundary set to a constant positive heat flux representing heat produced by the inner earth (Lachenbruch 1986, Jaeger 1965). If both the upper and lower boundaries are assumed to be constant over time, the steady-state temperature profile takes the form of a continuous piecewise linear function increasing over depth with the slope determined by the thermal properties of the ground material. The instantaneous temperature field can then be generally represented as
+Heat transfer in the subsurface can be represented according to the heat equation, with the upper boundary set to surface temperature and the lower boundary set to a constant positive heat flux representing heat produced by the inner earth [jaegerApplicationTheoryHeat1965,lachenbruchChangingClimateGeothermal1986](@cite). If both the upper and lower boundaries are assumed to be constant over time, the steady-state temperature profile takes the form of a continuous piecewise linear function increasing over depth with the slope determined by the thermal properties of the ground material. The instantaneous temperature field can then be generally represented as
 ```math
 \begin{equation}
 T(z,t) = T_0 + \frac{Q_{\text{geo}}}{\kappa_{\text{h}}(z)}z + \Delta T(z,t)
 \end{equation}
 ```
-where $T(z,t)$ is the temperature field (K) over depth $z$ (m) and time $t$ (s), $T_0$ is the mean annual GST (K), $Q_{\text{geo}}$ is the geothermal heat flux (W/m²), and $\kappa_{\text{h}}(z)$ (W/m K) is the thermal conductivity which may vary with depth depending on the material. The last term $\Delta T(z,t)$ represents transient disturbances to the steady state temperature profile due to both seasonal and long-term fluctuations in the upper and lower boundary conditions of the vertical domain. Simulating the impacts of these transient changes is one of the primary objectives of most numerical permafrost and land surface models.
+where $T(z,t)$ is the temperature field (K) over depth $z$ (m) and time $t$ (s), $T_0$ is the mean annual GST (K), $Q_{\text{geo}}$ is the geothermal heat flux (W/m²), and $\kappa_{\text{h}}(z)$ is the thermal conductivity which may vary with depth depending on the material (W/m K). The last term $\Delta T(z,t)$ represents transient disturbances to the steady state temperature profile due to both seasonal and long-term fluctuations in the upper and lower boundary conditions of the vertical domain. Simulating the impacts of these transient changes is one of the primary objectives of most numerical permafrost and land surface models.
 
 Diffusive heat flow in a solid medium is governed by Fourier's law,
 ```math
@@ -29,7 +25,7 @@ Diffusive heat flow in a solid medium is governed by Fourier's law,
     \mathbf{j}_\text{h} \cdot \mathbf{n}_z = -\kappa_{\text{h}}\frac{\partial T}{\partial z}\,,
 \end{equation}
 ```
-where $\mathbf{j}_\text{h}$ (W/m²) is the diffusive heat flux vector and $\mathbf{n}_z$ is the upward facing normal vector along the vertical $z$ axis.
+where $\mathbf{j}_\text{h}$ is the diffusive heat flux vector (W/m²) and $\mathbf{n}_z$ is the upward facing normal vector along the vertical $z$ axis.
 
 
 ### Phase change of pore water/ice
@@ -40,7 +36,7 @@ Since ground materials are often porous, i.e., there exists void space between t
 \frac{\partial U(T,\theta)}{\partial t} - \boldsymbol{\nabla} \cdot \left(\mathbf{j}_\text{h} + \mathbf{j}_h^{\text{w}}\right) - F_h(z,t) = 0\,,
 \end{equation}
 ```
-where $U(T,\theta)$ (J/m³) is the volumetric internal energy as a function of temperature and total water/ice content $\theta$ (m³/m³), and $F_h(z,t)$ is an inhomogeneous heat source/sink (forcing) term.
+where $U(T,\theta)$ is the volumetric internal energy as a function of temperature and total water/ice content $\theta$ (m³/m³) (J/m³), and $F_h(z,t)$ is an inhomogeneous heat source/sink (forcing) term.
 
 The advective heat flux $j_{\text{h}}^{\text{w}}$ can be represented as,
 ```math
@@ -54,21 +50,13 @@ where $L_{\text{sl}}$ and $c_{\text{w}}$ (J/kg) represent the specific latent he
 SoilEnergyBalance
 ```
 
-```@example default
-variables(SoilEnergyBalance(Float32))
-```
-
-### [Process interface](@id soilenergy.dispatches)
+## [Process interface](@id soilenergy.dispatches)
 
 ```@docs; canonical = false
 initialize!(state, grid, energy::SoilEnergyBalance, soil::AbstractSoil, constants::PhysicalConstants, args...)
-```
 
-```@docs; canonical = false
 compute_auxiliary!(state, grid, energy::SoilEnergyBalance, soil::AbstractSoil, args...)
-```
 
-```@docs; canonical = false
 compute_tendencies!(state, grid, energy::SoilEnergyBalance, soil::AbstractSoil, args...)
 ```
 
@@ -89,7 +77,7 @@ where $\tilde{C}$ is referred to as the *effective* or *apparent* heat capacity 
 \overbrace{\rho_{\text{w}} L_{\text{sl}} \frac{\partial\theta_{\text{w}}}{\partial T}}^{\text{Latent}}\,,
 \end{equation}
 ```
-where $\theta_{\text{w}}(T,\theta)$ is the volumetric unfrozen water content as a function of temperature and total water/ice content is the bulk volumetric material heat capacity of the volume as a function of the unfrozen and total water contents;  $\rho_{\text{w}}$ (kg/m³) and $L_{\text{sl}}$ (J/kg) correspond to the density and specific latent heat of fusion of water, respectively. The grouping of terms on the right-hand side show the partitioning of energy change into **sensible** and **latent** heat. The sensible component represents the energy necessary to heat a volume of the material to a particular temperature, whereas the latent component corresponds to the energy required for the phase change of water in the volume from solid (frozen) to liquid (thawed).
+where $\theta_{\text{w}}(T,\theta)$ is the volumetric unfrozen water content as a function of temperature and total water/ice content is the bulk volumetric material heat capacity of the volume as a function of the unfrozen and total water contents;  $\rho_{\text{w}}$ and $L_{\text{sl}}$ correspond to the density (kg/m³) and specific latent heat of fusion (J/kg) of water, respectively. The grouping of terms on the right-hand side show the partitioning of energy change into **sensible** and **latent** heat. The sensible component represents the energy necessary to heat a volume of the material to a particular temperature, whereas the latent component corresponds to the energy required for the phase change of water in the volume from solid (frozen) to liquid (thawed).
 
 In the simplest case where we neglect the effect of capillary action in the soil, the energy-temperature relation can be derived according to that of "free" water (i.e. unbound by the soil matrix),
 ```math
@@ -137,4 +125,11 @@ compute_energy_tendencies!
 
 ```@docs; canonical = false
 compute_thermal_conductivity
+```
+
+## [References](@id "soilenergy.refs")
+
+```@bibliography
+Pages = ["soil_energy.md"]
+Canonical = false
 ```
