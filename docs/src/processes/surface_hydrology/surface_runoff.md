@@ -65,6 +65,12 @@ This simplified surface runoff scheme does not explicitly model subsurface drain
 
 In riparian areas or regions with high water tables, more sophisticated approaches (e.g., variable source areas) would be necessary to capture saturation-excess runoff.
 
+## Process interface
+
+```@docs; canonical = false
+compute_auxiliary!(state, grid, runoff::DirectSurfaceRunoff, canopy_interception::AbstractCanopyInterception, soil::AbstractSoil, args...)
+```
+
 ## Kernel functions
 
 ```@docs; canonical = false

@@ -35,6 +35,12 @@ This procedure can be iterated until convergence; however, the current implement
 PrescribedSkinTemperature
 ```
 
+## Process interface
+
+```@docs; canonical = false
+compute_auxiliary!(state, grid, skinT::ImplicitSkinTemperature, seb::AbstractSurfaceEnergyBalance, args...)
+```
+
 ## Methods
 
 ```@docs; canonical = false

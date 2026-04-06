@@ -51,6 +51,16 @@ The second term is a Lotka–Volterra competition term that limits expansion thr
 The last term represents the loss of vegetation cover due to disturbance, for example from fire or other mortality related processes. In PALADYN, the disturbance coefficient $\gamma_v$ mainly represents fire-induced disturbance through a simple parameterization based on topsoil moisture and aboveground biomass, together with a minimum constant disturbance rate used to represent disturbances other than fire. In the current implementation, fire is ignored, and $\gamma_v = \gamma_{\min}$. 
 
 
+## Process interface
+
+```@docs; canonical = false
+compute_auxiliary!(state, grid, veg_dynamics::PALADYNVegetationDynamics, args...)
+```
+
+```@docs; canonical = false
+compute_tendencies!(state, grid, veg_dynamics::PALADYNVegetationDynamics, vegcarbon_dynamics::PALADYNCarbonDynamics, args...)
+```
+
 ## Methods
 
 ```@docs; canonical = false

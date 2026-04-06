@@ -94,6 +94,16 @@ The PALADYN approach combines all three pathways,
 ```
 to obtain a total ET flux that can be converted into the [latent heat flux][@ref "Latent heat flux"] for use in the [surface energy balance](@ref "Surface energy balance").
 
+## Process interface
+
+```@docs; canonical = false
+compute_auxiliary!(state, grid, evap::GroundEvaporation, atmos::AbstractAtmosphere, constants::PhysicalConstants, soil::Optional{AbstractSoil})
+```
+
+```@docs; canonical = false
+compute_auxiliary!(state, grid, evap::PALADYNCanopyEvapotranspiration, canopy_interception::AbstractCanopyInterception, atmos::AbstractAtmosphere, constants::PhysicalConstants, soil::Optional{AbstractSoil})
+```
+
 ## Ground resistance parameterizations
 
 ```@docs; canonical = false

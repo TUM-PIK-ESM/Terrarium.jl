@@ -55,6 +55,12 @@ FieldCapacityLimitedPAW
 variables(FieldCapacityLimitedPAW(Float32))
 ```
 
+## Process interface
+
+```@docs; canonical = false
+compute_auxiliary!(state, grid, paw::FieldCapacityLimitedPAW, soil::AbstractSoil, args...)
+```
+
 ## Methods
 
 ```@docs; canonical = false

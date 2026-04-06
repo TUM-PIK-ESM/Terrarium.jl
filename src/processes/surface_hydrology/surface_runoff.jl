@@ -68,6 +68,7 @@ variables(::DirectSurfaceRunoff) = (
     auxiliary(:infiltration, XY(), units = u"m/s", desc = "Infiltration flux"),
 )
 
+""" $TYPEDSIGNATURES """
 function compute_auxiliary!(
         state, grid,
         runoff::DirectSurfaceRunoff,

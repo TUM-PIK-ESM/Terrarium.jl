@@ -91,6 +91,16 @@ P_{\text{ground}} = P - I_{\text{can}} + R_{\text{can}} - E_{\text{can}}\,.
 
 This represents the water available for soil infiltration and surface runoff.
 
+## Process interface
+
+```@docs; canonical = false
+compute_auxiliary!(state, grid, canopy_interception::PALADYNCanopyInterception, atmos::AbstractAtmosphere)
+```
+
+```@docs; canonical = false
+compute_tendencies!(state, grid, canopy_interception::PALADYNCanopyInterception, evapotranspiration::AbstractEvapotranspiration, args...)
+```
+
 ## Methods
 
 ```@docs; canonical = false

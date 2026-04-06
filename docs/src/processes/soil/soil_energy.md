@@ -50,17 +50,13 @@ where $L_{\text{sl}}$ and $c_{\text{w}}$ (J/kg) represent the specific latent he
 SoilEnergyBalance
 ```
 
-### [Process interface](@id soilenergy.dispatches)
+## [Process interface](@id soilenergy.dispatches)
 
 ```@docs; canonical = false
 initialize!(state, grid, energy::SoilEnergyBalance, soil::AbstractSoil, constants::PhysicalConstants, args...)
-```
 
-```@docs; canonical = false
 compute_auxiliary!(state, grid, energy::SoilEnergyBalance, soil::AbstractSoil, args...)
-```
 
-```@docs; canonical = false
 compute_tendencies!(state, grid, energy::SoilEnergyBalance, soil::AbstractSoil, args...)
 ```
 

@@ -47,6 +47,16 @@ PrescribedRadiativeFluxes
 
 This may be useful for testing or in cases where you want to couple Terrarium with another model that will take care of computing the incoming and outgoing radiative fluxes.
 
+## Process interface
+
+```@docs; canonical = false
+compute_auxiliary!(state, grid, rad::PrescribedRadiativeFluxes, seb::AbstractSurfaceEnergyBalance, atmos::AbstractAtmosphere, args...)
+```
+
+```@docs; canonical = false
+compute_auxiliary!(state, grid, rad::DiagnosedRadiativeFluxes, seb::AbstractSurfaceEnergyBalance, atmos::AbstractAtmosphere, consts::PhysicalConstants, args...)
+```
+
 ## Methods
 
 ```@docs; canonical = false

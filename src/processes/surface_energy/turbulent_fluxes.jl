@@ -56,6 +56,7 @@ variables(::DiagnosedTurbulentFluxes) = (
     auxiliary(:latent_heat_flux, XY(), units = u"W/m^2", desc = "Latent heat flux at the surface [W m⁻²]"),
 )
 
+""" $TYPEDSIGNATURES """
 function compute_auxiliary!(
         state, grid,
         tur::DiagnosedTurbulentFluxes,

@@ -33,8 +33,17 @@ SoilHydrology
 
 ### [Process interface](@id soilhydrology.interface)
 
+Dispatches for `NoFlow`:
 ```@docs; canonical = false
 initialize!(state, grid, hydrology::SoilHydrology, soil::AbstractSoil, args...)
+
+compute_auxiliary!(state, grid, hydrology::SoilHydrology, soil::AbstractSoil, args...)
+
+compute_tendencies!(state, grid, hydrology::SoilHydrology, soil::AbstractSoil, args...)
+```
+
+Dispatches for `RichardsEq`:
+```@docs; canonical = false
 initialize!(
     state, grid,
     hydrology::SoilHydrology{NF, RichardsEq},
@@ -42,20 +51,14 @@ initialize!(
     constants::PhysicalConstants,
     args...
 ) where {NF}
-```
 
-```@docs; canonical = false
-compute_auxiliary!(state, grid, hydrology::SoilHydrology, soil::AbstractSoil, args...)
 compute_auxiliary!(
     state, grid,
     hydrology::SoilHydrology{NF, RichardsEq},
     soil::AbstractSoil,
     args...
 ) where {NF}
-```
 
-```@docs; canonical = false
-compute_tendencies!(state, grid, hydrology::SoilHydrology, soil::AbstractSoil, args...)
 compute_tendencies!(
     state, grid,
     hydrology::SoilHydrology{NF, RichardsEq},
@@ -78,7 +81,7 @@ NoFlow
 ```
 
 ```@example soilwater
-variables(SoilHydrology(Float32))
+variables(SoilHydrology(Float32, NoFlow()))
 ```
 
 ### Richardson-Richards equation for variably saturated flow

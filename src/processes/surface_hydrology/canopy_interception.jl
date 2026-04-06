@@ -107,6 +107,7 @@ end
 
 # Top-level interface methods
 
+""" $TYPEDSIGNATURES """
 function compute_auxiliary!(
         state, grid,
         canopy_interception::PALADYNCanopyInterception,
@@ -118,6 +119,7 @@ function compute_auxiliary!(
     return nothing
 end
 
+""" $TYPEDSIGNATURES """
 function compute_tendencies!(
         state, grid,
         canopy_interception::PALADYNCanopyInterception,

@@ -92,6 +92,7 @@ variables(::PALADYNCanopyEvapotranspiration{NF}) where {NF} = (
     return E_gnd + E_can + T_can
 end
 
+""" $TYPEDSIGNATURES """
 function compute_auxiliary!(
         state, grid,
         evap::PALADYNCanopyEvapotranspiration,

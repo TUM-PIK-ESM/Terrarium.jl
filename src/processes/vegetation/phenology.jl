@@ -67,6 +67,7 @@ end
 
 # Top-level interface methods
 
+""" $TYPEDSIGNATURES """
 function compute_auxiliary!(state, grid, phenol::PALADYNPhenology)
     out = auxiliary_fields(state, phenol)
     fields = get_fields(state, phenol; except = out)

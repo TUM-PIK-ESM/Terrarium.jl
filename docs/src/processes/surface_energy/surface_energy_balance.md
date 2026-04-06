@@ -40,6 +40,12 @@ variables(SurfaceEnergyBalance(Float32))
 !!! warning "Prescribed energy fluxes"
     `SurfaceEnergyBalance` allows you to mix and match which terms in the SEB are diagnosed vs. prescribed depending on the choice of implementation. While this has the potential to be convenient in cases where data on skin temperature or turbulent heat fluxes is available, it should be noted that this may result in surface energy fluxes that are inconsistent and do not fully satisfy the SEB equation.
 
+## Process interface
+
+```@docs; canonical = false
+compute_auxiliary!(state, grid, seb::SurfaceEnergyBalance, atmos::AbstractAtmosphere, constants::PhysicalConstants, hydrology::Optional{AbstractSurfaceHydrology}, args...)
+```
+
 ## Methods
 
 ```@docs; canonical = false

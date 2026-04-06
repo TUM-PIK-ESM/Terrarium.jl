@@ -22,6 +22,7 @@ variables(::PrescribedRadiativeFluxes) = (
     auxiliary(:surface_net_radiation, XY(), units = u"W/m^2", desc = "Net outgoing (positive up) radiation"),
 )
 
+""" $TYPEDSIGNATURES """
 function compute_auxiliary!(
         state, grid,
         rad::PrescribedRadiativeFluxes,
@@ -106,6 +107,7 @@ variables(::DiagnosedRadiativeFluxes) = (
     auxiliary(:surface_net_radiation, XY(), units = u"W/m^2", desc = "Net radiation budget"),
 )
 
+""" $TYPEDSIGNATURES """
 function compute_auxiliary!(
         state, grid,
         rad::DiagnosedRadiativeFluxes,

@@ -28,6 +28,7 @@ variables(::GroundEvaporation) = (
     input(:skin_temperature, XY(), units = u"°C", desc = "Skin temperature of the surface"),
 )
 
+""" $TYPEDSIGNATURES """
 function compute_auxiliary!(
         state, grid,
         evap::GroundEvaporation,

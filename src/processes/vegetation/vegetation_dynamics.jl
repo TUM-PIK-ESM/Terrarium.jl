@@ -80,11 +80,13 @@ end
 
 # Top-level interface methods
 
+""" $TYPEDSIGNATURES """
 function compute_auxiliary!(state, grid, veg_dynamics::PALADYNVegetationDynamics, args...)
     # Nothing needed here for now
     return nothing
 end
 
+""" $TYPEDSIGNATURES """
 function compute_tendencies!(
         state, grid,
         veg_dynamics::PALADYNVegetationDynamics,

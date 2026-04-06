@@ -87,6 +87,7 @@ variables(::ImplicitSkinTemperature) = (
     input(:ground_temperature, XY(), units = u"°C", desc = "Temperature of the uppermost ground or soil grid cell in °C"),
 )
 
+""" $TYPEDSIGNATURES """
 @inline function compute_auxiliary!(
         state, grid,
         skinT::ImplicitSkinTemperature,

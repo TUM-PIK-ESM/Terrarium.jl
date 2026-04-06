@@ -51,6 +51,12 @@ The leaf area index (LAI) is computed from the balanced LAI $\text{LAI}_b$ as fo
 !!! warning
     Phenology is not fully implemented yet: currently $\phi = 1$ and $f_{\text{deciduous}} = 0$ which assumes an evergreen phenology.
 
+## Process interface
+
+```@docs; canonical = false
+compute_auxiliary!(state, grid, phenol::PALADYNPhenology)
+```
+
 ## Methods
 
 ```@docs; canonical = false

@@ -69,6 +69,12 @@ DiagnosedTurbulentFluxes
 PrescribedTurbulentFluxes
 ```
 
+## Process interface
+
+```@docs; canonical = false
+compute_auxiliary!(state, grid, tur::DiagnosedTurbulentFluxes, seb::AbstractSurfaceEnergyBalance, atmos::AbstractAtmosphere, constants::PhysicalConstants, args...)
+```
+
 ## Methods
 
 ```@docs; canonical = false

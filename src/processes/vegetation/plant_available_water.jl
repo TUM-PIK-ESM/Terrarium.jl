@@ -39,6 +39,7 @@ end
 
 # Top-level interface methods
 
+""" $TYPEDSIGNATURES """
 function compute_auxiliary!(
         state, grid,
         paw::FieldCapacityLimitedPAW,

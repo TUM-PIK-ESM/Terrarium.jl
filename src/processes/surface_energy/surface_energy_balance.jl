@@ -43,6 +43,7 @@ variables(seb::SurfaceEnergyBalance) = tuplejoin(
     variables(seb.turbulent_fluxes)
 )
 
+""" $TYPEDSIGNATURES """
 @inline function compute_auxiliary!(
         state, grid,
         seb::SurfaceEnergyBalance,

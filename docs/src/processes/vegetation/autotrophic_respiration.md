@@ -104,6 +104,12 @@ compute_Ra
 compute_NPP
 ```
 
+## Process interface
+
+```@docs; canonical = false
+compute_auxiliary!(state, grid, autoresp::PALADYNAutotrophicRespiration, vegcarbon::AbstractVegetationCarbonDynamics, atmos::AbstractAtmosphere)
+```
+
 ## Kernel functions
 
 ```@docs; canonical = false

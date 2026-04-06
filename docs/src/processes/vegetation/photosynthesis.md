@@ -150,6 +150,12 @@ p_i = \lambda_c \cdot p_a\,,
 where $p_a$ is the atmospheric CO₂ partial pressure.
 
 
+## Process interface
+
+```@docs; canonical = false
+compute_auxiliary!(state, grid, photo::LUEPhotosynthesis, stomcond::AbstractStomatalConductance, atmos::AbstractAtmosphere, constants::PhysicalConstants, args...)
+```
+
 ## Methods
 
 ```@docs; canonical = false

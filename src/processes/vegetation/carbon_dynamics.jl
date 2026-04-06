@@ -107,6 +107,7 @@ end
 
 # Top-level interface methods
 
+""" $TYPEDSIGNATURES """
 function compute_auxiliary!(state, grid, vegcarbon_dynamics::PALADYNCarbonDynamics, args...)
     out = auxiliary_fields(state, vegcarbon_dynamics)
     fields = get_fields(state, vegcarbon_dynamics; except = out)
@@ -114,6 +115,7 @@ function compute_auxiliary!(state, grid, vegcarbon_dynamics::PALADYNCarbonDynami
     return nothing
 end
 
+""" $TYPEDSIGNATURES """
 function compute_tendencies!(state, grid, vegcarbon_dynamics::PALADYNCarbonDynamics, args...)
     out = tendency_fields(state, vegcarbon_dynamics)
     fields = get_fields(state, vegcarbon_dynamics)
