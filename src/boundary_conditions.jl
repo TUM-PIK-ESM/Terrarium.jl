@@ -17,15 +17,19 @@ Recursively merge an arbitrary number of field/variable boundary conditions.
 merge_boundary_conditions(bcs::FieldBCs...) = merge_recursive(bcs...)
 
 """
+    getbc(::Variable{name}, i::Integer, j::Integer, grid::Oceananigans.Grids.AbstractGrid, clock, fields) where {name}
+
 Implementation of `Oceananigans.BoundaryConditions.getbc` for variable placeholders that retrieves the input `Field` from
-`state` and returns the value at the given index.
+`fields` and returns the value at the given index.
 """
-@inline function BoundaryConditions.getbc(::Variable{name}, i::Integer, j::Integer, grid::Oceananigans.Grids.AbstractGrid, clock, state::StateVariables) where {name}
-    field = getproperty(state, name)
+@inline function BoundaryConditions.getbc(::Variable{name}, i::Integer, j::Integer, grid::Oceananigans.Grids.AbstractGrid, clock, fields) where {name}
+    field = getproperty(fields, name)
     return @inbounds field[i, j]
 end
 
 """
+    compute_z_bcs!(tendency, progvar, grid::AbstractLandGrid, state)
+
 Convenience alias for `Oceananigans.BoundaryConditions.compute_z_bcs!` that adds flux BCs for `progvar`
 to its corresponding `tendency`.
 """
