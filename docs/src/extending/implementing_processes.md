@@ -12,10 +12,10 @@ For a concrete, self-contained worked example that follows the workflow below st
 
 Every process in Terrarium is implemented across three levels of abstraction:
 I. **Top-level interface methods** for `AbstractProcess`, i.e. `variables`, `initialize!`, `compute_auxiliary!`, and `compute_tendencies!` (see doc section on the [`AbstractProcess` interface](@ref "The AbstractProcess interface"))
-II. **Kernel functions**; this includes both the `@kernel` entry point and inlined functions with signatures of the form `compute_*(i,j[,k], grid, fields, ::Process, args...)`
-III. **Compute methods** defined directly by the subtype of `AbstractProcess`. These are typically scalar-valued functions corresponding to individual terms or expressions in the mathematical formulation of the process physics.
+II. **Kernel functions**; this includes both the `@kernel` entry point and subsequently inlined functions with signatures of the form `compute_*(i,j[,k], grid, fields, ::Process, args...)`
+III. **Primitive methods** defined directly by the subtype of `AbstractProcess`. These are scalar-valued, grid-independent functions corresponding to individual terms or expressions in the mathematical formulation of the process physics.
 
-The flow of execution is I → II  → III: top-level methods are invoked by the enclosing `AbstractModel`, these methods then `launch!` their corresponding `@kernel`s which in turn call the inner kernel functions.
+The flow of execution is I → II  → III: top-level  interface methods are invoked by the enclosing `AbstractModel`, these methods then `launch!` their corresponding `@kernel`s which in turn call the inner kernel functions.
 
 ## Development workflow
 

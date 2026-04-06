@@ -105,7 +105,7 @@ Eq. 72, PALADYN (Willeit 2016)
     return C_veg_tendency
 end
 
-# Process methods
+# Top-level interface methods
 
 function compute_auxiliary!(state, grid, vegcarbon_dynamics::PALADYNCarbonDynamics, args...)
     out = auxiliary_fields(state, vegcarbon_dynamics)

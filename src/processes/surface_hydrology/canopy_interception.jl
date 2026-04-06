@@ -105,7 +105,7 @@ interception and add the removal rate `R_can`.
     return precip_ground
 end
 
-# Process methods
+# Top-level interface methods
 
 function compute_auxiliary!(
         state, grid,

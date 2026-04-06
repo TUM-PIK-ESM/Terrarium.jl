@@ -15,7 +15,7 @@ end
 
 PrescribedSkinTemperature(::Type{NF}; kwargs...) where {NF} = PrescribedSkinTemperature{NF}(; kwargs...)
 
-## Process methods
+## Top-level interface methods
 
 variables(::PrescribedSkinTemperature) = (
     auxiliary(:ground_heat_flux, XY(), units = u"W/m^2", desc = "Ground heat flux"),
@@ -79,7 +79,7 @@ sensible `H_s` and latent `H_l` heat flux.
     return G
 end
 
-## Process methods
+## Top-level interface methods
 
 variables(::ImplicitSkinTemperature) = (
     prognostic(:skin_temperature, XY(), units = u"°C", desc = "Longwave emission temperature of the land surface in °C"),

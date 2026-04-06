@@ -148,7 +148,7 @@ in [kgC/m²/s].
     return NPP
 end
 
-# Process methods
+# Top-level interface methods
 
 function compute_auxiliary!(
         state, grid,

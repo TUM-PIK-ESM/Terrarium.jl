@@ -21,7 +21,7 @@ GroundEvaporation(
 
 @propagate_inbounds surface_humidity_flux(i, j, grid, fields, evtr::GroundEvaporation) = fields.evaporation_ground[i, j]
 
-# Process methods
+# Top-level interface methods
 
 variables(::GroundEvaporation) = (
     auxiliary(:evaporation_ground, XY(), units = u"m/s", desc = "Ground evaporation contribution to surface humidity flux"),

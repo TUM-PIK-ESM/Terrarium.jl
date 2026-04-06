@@ -59,14 +59,17 @@ Terrarium.variables(::LinearHeatConduction) = (
 # time step. A matching tendency field (`state.tendencies.temperature`) is allocated
 # automatically. No auxiliary or input variables are needed for this simple process.
 
-# ## Process methods
+# ## Primitive methods
 #
-# Process methods are pure scalar functions — they accept and return scalar values with no
-# spatial indexing or field operations. They implement elementary physics; Fourier's law here.
-# Always mark them `@inline` so the compiler can fold them directly into the calling kernel.
+# Primitive methods are pure scalar functions accepting and returning scalar values with no
+# completely independently of the spatial grid. They should generally be used to implement
+# elementary physical equations such as Fourier's law in the case of heat conduction. Primitive
+# methods should always be marked with `@inline` so the compiler can inline them directly into the
+# calling kernel function.
 
 @inline function compute_diffusive_flux(proc::LinearHeatConduction{NF}, ∂T∂z::NF) where {NF}
-    return -proc.κ * ∂T∂z
+    q = -proc.κ * ∂T∂z
+    return q
 end
 
 # This function can be tested directly in the REPL without constructing a grid or model,

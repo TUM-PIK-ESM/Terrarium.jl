@@ -78,7 +78,7 @@ Eq. 73, PALADYN (Willeit 2016).
     return ν_tendency
 end
 
-# Process methods
+# Top-level interface methods
 
 function compute_auxiliary!(state, grid, veg_dynamics::PALADYNVegetationDynamics, args...)
     # Nothing needed here for now

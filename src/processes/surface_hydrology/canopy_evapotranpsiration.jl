@@ -74,7 +74,7 @@ Compute evaporation of water intercepted by the canopy from humidity gradient `Î
     return E_can
 end
 
-# Process methods
+# Top-level interface methods
 
 variables(::PALADYNCanopyEvapotranspiration{NF}) where {NF} = (
     auxiliary(:evaporation_canopy, XY(); desc = "Canopy evaporation contribution to surface humidity flux", units = u"m/s"),

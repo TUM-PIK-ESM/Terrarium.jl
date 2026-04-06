@@ -66,7 +66,7 @@ Eq. 71, PALADYN (Willeit 2016).
     return λc
 end
 
-# Process methods
+# Top-level interface methods
 
 function compute_auxiliary!(
         state, grid,

@@ -27,7 +27,7 @@ variables(hydrology::SoilHydrology{NF, RichardsEq}) where {NF} = (
 
 @propagate_inbounds surface_excess_water(i, j, grid, fields, ::SoilHydrology{NF, RichardsEq}) where {NF} = fields.surface_excess_water[i, j]
 
-# Process methods
+# Top-level interface methods
 
 """ $TYPEDSIGNATURES """
 function initialize!(
