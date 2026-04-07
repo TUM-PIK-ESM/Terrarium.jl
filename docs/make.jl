@@ -85,16 +85,20 @@ extending_example_docpages = Pair{String, String}[]
 
 # Temporary solution: copy input files to src
 @info "Copying input files"
-cp("inputs", joinpath(EXAMPLES_OUTDIR, "simulations", "inputs"))
+running_examples_outdir = joinpath(EXAMPLES_OUTDIR, "simulations")
+extending_examples_outdir = joinpath(EXAMPLES_OUTDIR, "extending")
+mkpath(running_examples_outdir)
+mkpath(extending_examples_outdir)
+cp("inputs", joinpath(running_examples_outdir, "inputs"))
 
 # Build example pages with Literate.jl
 build_literate_pages!(
-    joinpath(EXAMPLES_OUTDIR, "simulations"),
+    running_examples_outdir,
     joinpath(EXAMPLES_DIR, "simulations"),
     running_scripts
 )
 build_literate_pages!(
-    joinpath(EXAMPLES_OUTDIR, "extending"),
+    extending_examples_outdir,
     joinpath(EXAMPLES_DIR, "extending"),
     extending_scripts
 )
