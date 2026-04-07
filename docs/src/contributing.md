@@ -35,7 +35,13 @@ chmod +x .git/hooks/pre-commit
 
 All pull requests that implement new features or modify existing functionality must have associated documentation. At bare minimum, this should consist of docstrings on all of the relevant functions and types. However, in many cases, it can be helpful to add a documentation page or example script that showcases the feature(s) and helps the user understand holistically how it fits into the Terrarium framework.
 
-The docs can be built locally by running
+The docs can be built locally by first installing the needed dependencies with
+
+```
+julia --project=docs/ -e 'using Pkg; Pkg.develop(PackageSpec(path=pwd())); Pkg.instantiate()'
+```
+
+and then running
 
 ```
 julia --project=docs docs/make.jl --local
