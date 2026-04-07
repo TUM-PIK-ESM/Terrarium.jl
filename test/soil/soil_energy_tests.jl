@@ -112,12 +112,13 @@ end
     )
     energy = SoilEnergyBalance(eltype(grid); thermal_properties)
     soil = SoilEnergyWaterCarbon(eltype(grid); energy, strat, biogeochem)
-    model = SoilModel(grid; soil)
+    initializer = DefaultInitializer(eltype(grid))
+    model = SoilModel(grid; soil, initializer)
     # periodic upper boundary temperature
     upperbc(z, t) = T₀ + A * sin(2π * t / P)
     bcs = PrescribedSurfaceTemperature(:Tsurf, upperbc)
     # temperature initial condition
-    initializers = (temperature = (x, z) -> T_sol(-z, 0.0),)
+    initializers = (temperature = (x, z) -> T_sol(-z, 0.0), saturation_water_ice = 0.0)
     integrator = initialize(model, ForwardEuler(); initializers, boundary_conditions = bcs)
     # TODO: Rewrite this part once we have a proper output handling system
     Ts_buf = [deepcopy(integrator.state.temperature)]
@@ -145,7 +146,7 @@ end
     # model setup
     grid = ColumnGrid(CPU(), Float64, ExponentialSpacing(Δz_min = 0.01, Δz_max = 100.0, N = 100))
     # temperature initial condition
-    initializer = SoilInitializer(eltype(grid), energy = ConstantInitialSoilTemperature(T₀))
+    initializer = SoilInitializer(eltype(grid), energy = ConstantSoilTemperature(T₀))
     # set carbon content to zero so the soil has only a mineral constituent
     biogeochem = ConstantSoilCarbonDensity(ρ_soc = 0.0)
     # set porosity to zero to remove influence of pore space;
