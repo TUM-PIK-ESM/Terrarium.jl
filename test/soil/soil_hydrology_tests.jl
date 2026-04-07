@@ -128,8 +128,8 @@ end
     hydraulic_properties = ConstantSoilHydraulics(Float64; swrc, unsat_hydraulic_cond = UnsatKVanGenuchten(Float64))
     hydrology = SoilHydrology(eltype(grid), RichardsEq(); hydraulic_properties)
     soil = SoilEnergyWaterCarbon(eltype(grid); hydrology)
-
-    model = SoilModel(grid; soil)
+    initializer = DefaultInitializer(eltype(grid))
+    model = SoilModel(grid; soil, initializer)
     # Fully saturated, steady state
     initializers = (saturation_water_ice = (x, z) -> 1.0,)
     integrator = initialize(model, ForwardEuler(); initializers)

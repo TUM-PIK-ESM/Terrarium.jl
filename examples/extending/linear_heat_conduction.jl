@@ -34,7 +34,7 @@ abstract type AbstractHeatConduction{NF} <: Terrarium.AbstractProcess{NF} end
 
 @kwdef struct LinearHeatConduction{NF} <: AbstractHeatConduction{NF}
     "Bulk thermal conductivity [W m⁻¹ K⁻¹]"
-    κ::NF = 1.0
+    κ::NF = 2.0
 
     "Volumetric heat capacity [J K⁻¹ m⁻³]"
     c::NF = 2.0e6
@@ -204,7 +204,7 @@ model = HeatModel(grid)
 # decreasing with depth.
 
 initializers = (
-    temperature = (x, z) -> 10 + 2 * sin(2π * z / 5),
+    temperature = (x, z) -> ifelse(z < -0.5, 0, 10),
 )
 integrator = initialize(model, ForwardEuler(eltype(grid)); initializers)
 T_init = copy(vec(interior(integrator.state.temperature)))
@@ -226,7 +226,7 @@ T_final = vec(interior(integrator.state.temperature))
 let fig = Figure(),
         ax = Axis(fig[1, 1], xlabel = "Temperature (°C)", ylabel = "Depth (m)")
     lines!(ax, T_init, z; color = :gray, linestyle = :dash, label = "Initial (t = 0)")
-    lines!(ax, T_final, z; label = "Final (t = 10 days)")
+    lines!(ax, T_final, z; label = "Final (t = 2 days)")
     axislegend(ax, position = :rb)
     fig
 end

@@ -101,7 +101,7 @@ model = SoilModel(grid; initializer)
 ### Energy initializers
 
 ```@docs; canonical = false
-ConstantInitialSoilTemperature
+ConstantSoilTemperature
 ```
 
 ```@docs; canonical = false
