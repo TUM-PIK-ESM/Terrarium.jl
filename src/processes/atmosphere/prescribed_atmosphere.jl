@@ -136,6 +136,12 @@ Retrieve or compute the windspeed at the current time step.
 """
 @propagate_inbounds windspeed(i, j, grid, fields, atmos::PrescribedAtmosphere) = max(fields.windspeed[i, j], atmos.min_windspeed)
 
+"""
+    $TYPEDEF
+
+Humidity parameterization in which the near-surface specific humidity [kg/kg] is
+provided directly as an input field.
+"""
 struct SpecificHumidity <: AbstractHumidity end
 
 variables(::SpecificHumidity) = (
@@ -175,6 +181,12 @@ Computes the vapor pressure deficit over a surface at temperature `Ts` from the 
     return compute_vpd(c, pres, q_air, Ts)
 end
 
+"""
+    $TYPEDEF
+
+Precipitation parameterization in which liquid rainfall [m/s] and frozen snowfall [m/s]
+are provided as separate input fields.
+"""
 struct RainSnow <: AbstractPrecipitation end
 
 variables(::RainSnow) = (
@@ -196,6 +208,13 @@ Retrieve or compute the frozen precipitation (snowfall) at the current time step
 """
 @inline snowfall(i, j, grid, fields, ::AbstractAtmosphere{NF, <:RainSnow}) where {NF} = fields.snowfall[i, j]
 
+"""
+    $TYPEDEF
+
+Incoming radiation parameterization in which downwelling shortwave [W/m²] and
+longwave [W/m²] radiation are provided as separate input fields, along with daytime
+length [hr].
+"""
 struct LongShortWaveRadiation <: AbstractIncomingRadiation end
 
 variables(::LongShortWaveRadiation) = (

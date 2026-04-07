@@ -15,16 +15,6 @@ Regardless of how you choose to contribute, we thank you for your participation,
 
 Terrarium.jl adheres to software development standards for automated testing via continuous integration. We write unit tests for every function of our model. In some cases this might appear trivial, but we still want to achieve a near complete coverage of our code in the tests. The majority of the tests should cover the smallest possible units over different input arguments and types (if applicable). Unit tests should typically call the tested functions in a way that is representative for their use in the model, but try to reduce the computational complexity (e.g. by choosing very low dimensional inputs) to keep the overall CI time manageable. Additionally, we have some tests that ensure top-level functionality and stability of the model as well. Every additional proposed feature in a Pull Request has to come with unit tests. Tests verifying differentiability and GPU compatibility will also be requried.
 
-### Kernel programming
-
-Terrarium.jl is a device-agnostic model that runs on CPUs and GPUs by using [KernelAbstractions.jl](https://github.com/JuliaGPU/KernelAbstractions.jl). This means that most computations need to be implemented within kernel functions that follow KernelAbstractions’ syntax. Each thread in the CPU or GPU will then compute the discretized equations for a single grid point.
-
-For writing kernels we follow a strategy closely inspired by Oceaninanigans.jl: we want to fuse kernels as much as possible. Kernel fusion means that in practice we write very “large” kernels that fuse as many operations as possible together in one kernel. Kernel fusion leads to more efficient GPU computations, especially by reducing memory demand ([Wang et. al 2000](https://ieeexplore.ieee.org/document/5724850/)). In order to still keep our code well structured and modular, our approach relies on implementing most processes as inlined functions that can be called from a GPU kernel. We have not yet found any significant limitations to this approach.
-
-How this looks in action in Terrarium.jl you can already see in the prototype code, e.g. for the [SoilEnergyBalance](https://github.com/NumericalEarth/Terrarium.jl/blob/main/src/processes/soil/soil_energy.jl): There `compute_tendencies!` is the mandatory function for the model component, it launches exactly one kernel `compute_energy_tendency!`, which includes several `@inline` function to compute individual contributions to the energy balance such as `compute_energy_tendency`, `compute_thermal_conductivity` and the `diffusive_heat_flux`.
-
-It's also worth checking out the [Simulation tips](https://clima.github.io/OceananigansDocumentation/stable/simulation_tips/) provided in the documentation for Oceananigans.
-
 ### Automatic Differentiation with Enzyme 
 
 For AD, we rely primarily on reverse mode differentiation via [Enzyme.jl](https://enzyme.mit.edu/julia/stable/). In contrast to many other AD systems, Enzyme doesn’t put particularly strong restrictions on coding style. For example, Array mutations are not only allowed, they are even encouraged!
@@ -40,3 +30,21 @@ We use [Runic.jl](https://github.com/fredrikekre/Runic.jl) for automatted code f
 cp .githooks/pre-commit .git/hooks/pre-commit
 chmod +x .git/hooks/pre-commit
 ```
+
+## Documentation
+
+All pull requests that implement new features or modify existing functionality must have associated documentation. At bare minimum, this should consist of docstrings on all of the relevant functions and types. However, in many cases, it can be helpful to add a documentation page or example script that showcases the feature(s) and helps the user understand holistically how it fits into the Terrarium framework.
+
+The docs can be built locally by running
+
+```
+julia --project=docs docs/make.jl --local
+```
+
+To skip running doctests and example scripts, you can also add `--draft` or `-d` for short.
+
+Preview builds of the documentation associated with pull requests can be reviewed at
+
+https://numericalearth.github.io/Terrarium.jl/previews/PR##
+
+replacing `##` with the pull request ID number.

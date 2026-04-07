@@ -148,8 +148,9 @@ in [kgC/m²/s].
     return NPP
 end
 
-# Process methods
+# Top-level interface methods
 
+""" $TYPEDSIGNATURES """
 function compute_auxiliary!(
         state, grid,
         autoresp::PALADYNAutotrophicRespiration,

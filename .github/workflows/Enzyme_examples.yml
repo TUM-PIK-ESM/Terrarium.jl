@@ -1,4 +1,4 @@
-name: Notebooks CI
+name: Enzyme Examples CI
 on:
   pull_request:
     branches:
@@ -24,10 +24,8 @@ jobs:
           version: ${{ matrix.version }}
           arch: ${{ matrix.arch }}
       - uses: julia-actions/cache@v2
-      - name: Install dependencies (notebooks)
-        run: julia --project=examples/notebooks/ -e 'using Pkg; Pkg.develop(PackageSpec(path=pwd())); Pkg.instantiate()'
-      # - name: Run Pluto Notebook Differentiate
-      #   run: |
-      #     cd examples/notebooks/ 
-      #     julia --project=. ./differentiate-notebook.jl
+      - name: Install dependencies (scripts)
+        run: julia --project=examples/ -e 'using Pkg; Pkg.develop(PackageSpec(path=pwd())); Pkg.instantiate()'
+      #- name: Run Differentiating Terrarium Example
+      #  run: julia --project=examples/ examples/differentiating_terrarium.jl
         

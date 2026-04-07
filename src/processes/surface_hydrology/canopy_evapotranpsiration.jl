@@ -24,7 +24,7 @@ end
 
 function PALADYNCanopyEvapotranspiration(
         ::Type{NF};
-        C_can::NF = 0.006,
+        C_can = NF(0.006),
         ground_resistance = ConstantEvaporationResistanceFactor(typeof(C_can))
     ) where {NF}
     return PALADYNCanopyEvapotranspiration{NF, typeof(ground_resistance)}(C_can, ground_resistance)
@@ -74,7 +74,7 @@ Compute evaporation of water intercepted by the canopy from humidity gradient `Î
     return E_can
 end
 
-# Process methods
+# Top-level interface methods
 
 variables(::PALADYNCanopyEvapotranspiration{NF}) where {NF} = (
     auxiliary(:evaporation_canopy, XY(); desc = "Canopy evaporation contribution to surface humidity flux", units = u"m/s"),
@@ -92,6 +92,7 @@ variables(::PALADYNCanopyEvapotranspiration{NF}) where {NF} = (
     return E_gnd + E_can + T_can
 end
 
+""" $TYPEDSIGNATURES """
 function compute_auxiliary!(
         state, grid,
         evap::PALADYNCanopyEvapotranspiration,

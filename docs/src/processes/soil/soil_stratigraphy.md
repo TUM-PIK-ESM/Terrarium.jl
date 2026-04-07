@@ -4,74 +4,58 @@
 CurrentModule = Terrarium
 ```
 
-!!! warning
-    This page is a work in progress. If you have any questions or notice any errors, please [raise an issue](https://github.com/NumericalEarth/Terrarium.jl/issues).
-
-## Theory
+## Overview
 
 ### Soil composition and material properties
 
-The subsurface soil column consists of multiple material constituents that determine its physical and chemical properties. These constituents include water and ice occupying the pore space, air filling unsaturated pores, and a solid matrix composed of mineral and organic material. To accurately represent many soil proccesses in land surface models, it is necessary to characterize both the spatial distribution of soil material properties (stratigraphy) and the material composition of each soil volume element.
+The subsurface soil column consists of multiple material constituents that determine its physical and chemical properties. These constituents include water and ice occupying the pore space, air filling unsaturated pores, and a solid matrix composed of mineral and organic material. To accurately represent many soil processes in land surface models, it is necessary to characterize both the lateral and vertical distribution of each soil constituent along with its relevant material properties.
 
-The stratigraphy of a soil column defines its layering structure and spatial variation in texture and other properties. Soil texture refers to the relative proportions of sand, silt, and clay in the mineral soil component, which is a fundamental property affecting hydraulic conductivity, water retention, and thermal properties. These textural classes are typically classified according to soil classification systems such as USDA or FAO standards.
+The *stratigraphy* of a soil column defines its vertical layering structure both in terms of texture as well as other properties. Soil texture refers to the relative proportions of sand, silt, and clay in the mineral soil component. Textures are characterized by their particle size distribution, which is a fundamental property affecting hydraulic conductivity, water retention, and thermal properties.
 
-The total void space available in a soil volume, termed porosity, controls the maximum amount of water and air that can occupy the pore space. Porosity varies depending on soil type, bulk density, and the presence of organic material. Organic soil components typically have higher porosity than mineral soil, reflecting their loose, aggregated structure.
+The total void space available in a soil volume controls the maximum amount of water and air that can occupy the pore space. The ratio of void space to the total soil volume is called *porosity*. Porosity varies depending on soil type, bulk density, and the presence of organic material. Organic soil components typically have higher porosity than mineral soil due to their loose, aggregated structure.
 
 ### Soil volume composition
 
-An elementary volume $V$ of soil can be decomposed into its constituent phases,
+An elementary volume $V$ of soil can be represented as the sum of the volume of solid material and void space (soil pores),
 ```math
 \begin{equation}
-V = V_{\text{water}} + V_{\text{ice}} + V_{\text{air}} + V_{\text{solids}}
+V = V_{\text{por}} + V_{\text{solid}} = \overbrace{V_{\text{liq}} + V_{\text{ice}} + V_{\text{air}}}^{\text{pore constituents}} + \overbrace{V_{\text{min}} + V_{\text{org}}}^{\text{solid constituents}}\,.
 \end{equation}
 ```
+$V_{\text{liq}}$ and $V_{\text{ice}}$ correspond to the liquid and ice phases of water and ice stored in the pore space while $V_{\text{air}}$ is residual air in unsaturated conditions; $V_{\text{min}}$ and $V_{\text{org}}$ are the mineral and organic solid constituents respectively. Note that the air is here assumed to be a constant mixture of gases and thus changes in the gas phase of water are neglected.
 
-The volumetric fractions of these constituents are related through saturation and liquid water content,
+For many physical calculations depending on soil composition, it is more convenient to work directly with volume-invariant (intensive) quantities such as *volumetric* (m³/m³) or *characteristic* fractions such as **porosity** $\phi = \frac{V_{\text{por}}}{V}$, **saturation** of pore water/ice $\xi = \frac{V_{\text{liq}} + V_{\text{ice}}}{V_{\text{por}}}$, **liquid water fraction** $\ell = \frac{V_{\text{liq}}}{V_{\text{liq}} + V_{\text{ice}}}$, and the **organic** fraction of solid material $\omega = \frac{V_{\text{org}}}{V_{\text{solid}}}$. In permafrost environments, an additional characteristic fraction for excess or segregated ground ice is sometimes included. This is, however, currently neglected in Terrarium.
+
+![Soil characteristic fractions](soil_diagram_cryogrid.drawio.png)
+
+The total volumetric fractions of each component can then be trivially derived from the characteristic fractions:
+
 ```math
-\begin{equation}
-\theta_{\text{por}} = \frac{V_{\text{pore}}}{V_{\text{total}}} = \frac{V_{\text{water}} + V_{\text{ice}} + V_{\text{air}}}{V_{\text{total}}}
-\end{equation}
+\begin{align*}
+\theta_{\text{liq}} &= \ell \xi \phi\,,\\
+\theta_{\text{ice}} &= (1 - \ell) \xi \phi \,,\\
+\theta_{\text{air}} &= (1 - \xi) \phi\,,\\
+\theta_{\text{org}} &= \omega (1 - \phi) \,,\\
+\theta_{\text{min}} &= (1 - \omega) (1 - \phi)\,,\\
+1 &= \theta_{\text{liq}} + \theta_{\text{ice}} + \theta_{\text{air}} + \theta_{\text{org}} + \theta_{\text{min}}
+\end{align*}.
 ```
 
-where saturation $S \in [0,1]$ represents the fraction of pore space occupied by liquid water and ice,
-```math
-\begin{equation}
-S = \frac{V_{\text{water}} + V_{\text{ice}}}{V_{\text{pore}}}
-\end{equation}
-```
+## Stratigraphy types
 
-The liquid fraction $\ell \in [0,1]$ represents the fraction of water in the pore space that is unfrozen,
-```math
-\begin{equation}
-\ell = \frac{V_{\text{water}}}{V_{\text{water}} + V_{\text{ice}}}
-\end{equation}
-```
-
-The [solid matrix](@ref AbstractSoilMatrix) may contain both mineral constituents (sand, silt, clay fractions) and organic material (e.g., soil organic matter). The organic fraction influences both thermal and hydraulic properties due to its distinct density and structural characteristics.
-
-## Abstract types
+### Homogeneous stratigraphy
 
 ```@docs; canonical = false
-AbstractStratigraphy
+HomogeneousStratigraphy
 ```
 
-```@docs; canonical = false
-AbstractSoilMatrix
-```
-
-```@docs; canonical = false
-AbstractSoilPorosity
-```
-
-## Concrete types
+## Soil texture
 
 ```@docs; canonical = false
 SoilTexture
 ```
 
-```@docs; canonical = false
-HomogeneousStratigraphy
-```
+## Soil porosity
 
 ```@docs; canonical = false
 ConstantSoilPorosity
@@ -81,15 +65,19 @@ ConstantSoilPorosity
 SoilPorositySURFEX
 ```
 
+## Soil volume
+
 ```@docs; canonical = false
 SoilVolume
 ```
+
+## Solid matrix
 
 ```@docs; canonical = false
 MineralOrganic
 ```
 
-## Methods
+## Kernel functions
 
 ```@docs; canonical = false
 soil_texture
@@ -114,8 +102,6 @@ organic_porosity
 ```@docs; canonical = false
 volumetric_fractions
 ```
-
-## Kernel functions
 
 ```@docs; canonical = false
 organic_fraction

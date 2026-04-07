@@ -7,11 +7,9 @@ CurrentModule = Terrarium
 !!! warning
     This page is a work in progress. If you have any questions or notice any errors, please [raise an issue](https://github.com/NumericalEarth/Terrarium.jl/issues).
 
-## Theory
+## Overview
 
-### Overview
-
-The surface hydrology module manages water exchange between the atmosphere and land, including three tightly coupled processes:
+The [SurfaceHydrology](@ref) process manages water exchange between the atmosphere and land, including three tightly coupled processes:
 
 1. [Canopy interception](@ref): Temporary storage and removal of intercepted rainfall
 2. [Evapotranspiration](@ref): Water vapor fluxes from ground, canopy, and plant stomata
@@ -21,16 +19,16 @@ These processes couple the water and energy cycles: evapotranspiration removes e
 
 For detailed physics and governing equations of each process, see the dedicated pages linked above.
 
-## Abstract types
-
-```@docs; canonical = false
-AbstractSurfaceHydrology
-```
-
-## Concrete types
-
-### Surface Hydrology
-
 ```@docs; canonical = false
 SurfaceHydrology
+```
+
+## Process interface
+
+```@docs; canonical = false
+compute_auxiliary!(state, grid, hydrology::SurfaceHydrology, atmos::AbstractAtmosphere, constants::PhysicalConstants, soil::AbstractSoil)
+```
+
+```@docs; canonical = false
+compute_tendencies!(state, grid, hydrology::SurfaceHydrology, args...)
 ```

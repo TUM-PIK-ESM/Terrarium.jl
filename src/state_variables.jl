@@ -291,22 +291,17 @@ end
 # Initialization of StateVariables from models and processes
 
 """
-    initialize(
-        process::AbstractProcess,
-        grid::AbstractLandGrid{NF};
-        clock = Clock(time=zero(NF)),
-        input_variables = (),
-        boundary_conditions = (;),
-        initializers = (;),
-        fields = (;)
-    ) where {NF}
+    $TYPEDSIGNATURES
 
-Initialize a `StateVariables` data structure containing `Field`s for all variables defined by `model`,
-initialized on its associated `grid`. Any predefined `boundary_conditions` and `fields` will be passed
-through to `initialize` for each variable.
+Initialize a `StateVariables` data structure containing `Field`s for all variables defined by `model` defined on its
+associated `grid`. The `clock` specifies the initial simulation time and is mutated on each time step. User-specified
+`boundary_conditions` and `initializers` can be provided as `NamedTuple`s with keys corresponding to the names of state
+variables to which they should be applied. If the state variables are defined within namespaces, the given `NamedTuple`
+must follow the same structure. The `fields` argument allows for manual preconstruction of `Field`s for the named state
+variables.
 """
 function initialize(
-        @nospecialize(model::AbstractModel{NF});
+        model::AbstractModel{NF};
         clock = Clock(time = zero(NF)),
         input_variables = (),
         boundary_conditions = (;),
@@ -319,22 +314,14 @@ function initialize(
 end
 
 """
-    initialize(
-        process::AbstractProcess,
-        grid::AbstractLandGrid{NF};
-        clock = Clock(time=zero(NF)),
-        input_variables = (),
-        boundary_conditions = (;),
-        initializers = (;),
-        fields = (;)
-    ) where {NF}
+    $TYPEDSIGNATURES
 
 Initialize a `StateVariables` data structure containing `Field`s defined on the given `grid`
-for all variables defined by `process`. Any predefined `boundary_conditions` and `fields` will be passed through to `initialize`
-for each variable.
+for all variables defined by `process`. Any predefined `boundary_conditions` and `fields` will
+be passed through to `initialize` for each variable.
 """
 function initialize(
-        process::AbstractProcess,
+        process::AbstractProcess{NF},
         grid::AbstractLandGrid{NF};
         clock = Clock(time = zero(NF)),
         input_variables = (),
@@ -350,18 +337,11 @@ end
 # Initialization from variable metadata
 
 """
-    initialize(
-        vars::Variables,
-        grid::AbstractLandGrid{NF};
-        clock::Clock = Clock(time=0.0),
-        boundary_conditions = (;),
-        initializers = (;),
-        fields = (;)
-    ) where {NF}
+    $TYPEDSIGNATURES
 
 Initialize a `StateVariables` data structure containing `Field`s defined on the given `grid`
-for all variables in `vars`. Any predefined `boundary_conditions` and `fields` will be passed through to `initialize`
-for each variable.
+for all variables in `vars`. Any predefined `boundary_conditions` and `fields` will be passed
+through to `initialize` for each variable.
 """
 function initialize(
         @nospecialize(vars::Variables),
@@ -404,13 +384,7 @@ end
 initialize(::NamedTuple{(), Tuple{}}, ::AbstractLandGrid, ::Clock, ::NamedTuple, ::NamedTuple) = (;)
 
 """
-    initialize(
-        vars::NamedTuple{names, <:Tuple{Vararg{AbstractVariable}}},
-        grid::AbstractLandGrid,
-        clock::Clock,
-        boundary_conditions::NamedTuple,
-        fields::NamedTuple
-    ) where {names}
+    $TYPEDSIGNATURES
 
 Initialize `Field`s on `grid` for each of the variables in the given named tuple `vars`.
 Any predefined `boundary_conditions` and `fields` will be passed through to `initialize`
@@ -434,7 +408,7 @@ function initialize(
 end
 
 """
-    initialize(var::AbstractVariable, grid::AbstractLandGrid, clock::Clock, boundary_conditions::NamedTuple, fields::NamedTuple)
+    $TYPEDSIGNATURES    
 
 Initialize a `Field` on `grid` based on the given `var` metadata. The named tuple of `boundary_conditions` should follow the standard convention of
 `(var1 = (; top, bottom, ...), var2 = (; top, bottom, ...))`. If `fields` contains a `Field` matching the name of `var`, this field
@@ -456,6 +430,11 @@ function initialize(@nospecialize(var::AbstractVariable), grid::AbstractLandGrid
 end
 
 # Intialization for auxiliary variables that may define custom Field constructors
+"""
+    $TYPEDSIGNATURES
+
+Initialize a `Field` on `grid` for the given [`AuxiliaryVariable`](@ref).
+"""
 function initialize(@nospecialize(var::AuxiliaryVariable), grid::AbstractLandGrid, clock::Clock, boundary_conditions::NamedTuple, fields::NamedTuple)
     if hasproperty(fields, varname(var))
         return getproperty(fields, varname(var))

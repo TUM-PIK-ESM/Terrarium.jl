@@ -1,87 +1,89 @@
-# Photosynthesis and gas exchange
+# Photosynthesis
 
 ```@meta
 CurrentModule = Terrarium
 ```
 
+```@setup vegphoto
+using Terrarium
+using InteractiveUtils
+```
+
 !!! warning
     This page is a work in progress. If you have any questions or notice any errors, please [raise an issue](https://github.com/NumericalEarth/Terrarium.jl/issues).
 
-## Theory
+## Overview
 
-Photosynthesis is the process by which plants convert solar radiation into chemical energy (sugars). The rate of photosynthesis depends on photosynthetically active radiation (PAR), ambient CO₂ concentration, leaf temperature, and leaf water status. Terrarium currently implements the mechanistic approach of Haxeltine and Prentice (1996) adapted from PALADYN (Willeit 2016), which explicitly represents two limitations to photosynthesis: light availability and enzyme (RuBisCO) activity.
+Photosynthesis is the process by which plants use solar radiation to convert carbon dioxide into chemical energy (stored in carbohydrates) and occurs in two stages: light-dependent reactions and light independent reactions (also known as dark reactions or the Calvin cycle). In the first stage, light energy is used to produce two compounds (ATP and NADPH) which are then used during the second stage to produce carbohydrates from carbon dioxide.
 
-Unlike in PALADYN, however, all photosynthetic rates are computed as **instantaneous rates** (e.g. mol/m²/s or gC/m²/s) to ensure compatibility with generic timestepping schemes.
+The net carbon assimilation per leaf area is the difference between carbon uptake and carbon losses, for example through mitochondrial respiration (also known as dark respiration). Net photosynthesis, $A_n$, is usually modeled as the difference between gross photosynthesis, $A_g$, and dark respiration, $R_d$
 
-### Light and RuBisCO-limited photosynthesis (two-leaf model)
-
-The Haxeltine and Prentice (1996) approach computes photosynthesis by considering two potentially limiting processes and smoothly interpolating between them.
-
-First, absorbed photosynthetically active radiation (APAR) is computed accounting for canopy light extinction:
 ```math
 \begin{equation}
-\text{APAR} = \alpha_a \cdot \text{PAR} \cdot (1 - e^{-k_{\text{ext}} \cdot \text{LAI}})
+A_n = A_g - R_d.
 \end{equation}
 ```
 
-where $\alpha_a$ is the canopy light-use efficiency, PAR is incident photosynthetically active radiation, $k_{\text{ext}}$ is the light extinction coefficient, and LAI is leaf area index.
+Gross photosynthesis is limited by two processes: RuBisCO activity and light availability. A simple approach is to model $A_g$ as the minimum of these two rates: the RuBisCO-limited rate $J_C$ and the light-limited rate $J_E$:
 
-The light-limited photosynthesis rate is:
 ```math
 \begin{equation}
-J_E = c_1 \cdot \text{APAR}
+A_g = \min(J_C, J_E)\,.
 \end{equation}
 ```
 
-where $c_1$ depends on the intrinsic quantum efficiency $\alpha_{C3}$ and enzyme kinetics:
+While $A_g$ remains continuous, this formulation produces an abrupt transition between the two limiting factors. Under some conditions, however, photosynthesis can be co-limited by both light availability and RuBisCO activity. This co-limitation allows for a smoother transition and can be represented by taking the smaller root of the following quadratic equation:
+
+
 ```math
 \begin{equation}
-c_1 = \alpha_{C3} \cdot f_{\text{temp}} \cdot C_{\text{mass}} \cdot \frac{p_i - \Gamma^*}{p_i + 2\Gamma^*}
+\theta_r A_g^2 - (J_C + J_E)A_g + J_C J_E = 0\,,
 \end{equation}
 ```
 
-where $p_i$ is intercellular CO₂ partial pressure and $f_{\text{temp}}$ is the temperature stress factor. $\Gamma^*$ is the CO₂ compensation point which represents the intercellular CO₂ concentration
-at which no CO₂ uptake occurs in the absence of mitochondrial respiration.
+where $\theta_r$ is an empirical shape parameter between 0 and 1 used to control the transition between the two limiting factors. 
 
-The RuBisCO-limited (enzyme-limited) photosynthesis rate is:
+```@docs; canonical = false
+AbstractPhotosynthesis
+```
+
+```@example vegphoto
+subtypes(Terrarium.AbstractPhotosynthesis)
+```
+
+## Light use efficiency (LUE) model
+
+```@docs; canonical = false
+LUEPhotosynthesis
+```
+
+```@example vegphoto
+variables(LUEPhotosynthesis(Float32))
+```
+
+This implementation uses the light-use efficiency model of Haxeltine and Prentice (1996), adapted from PALADYN [willeitPALADYNV10Comprehensive2016](@cite), where the original equations were derived assuming a daily time step. Unlike PALADYN, however, all photosynthetic rates here are computed as instantaneous rates (e.g. mol/m²/s or gC/m²/s) to ensure compatibility with generic timestepping schemes.
+
+### Light and RuBisCO-limited photosynthesis rates
+
+The light-limited photosynthesis rate is
 ```math
 \begin{equation}
-J_C = c_2 \cdot V_c^{\max}
+J_E = c_1 \cdot \text{APAR}\,,
 \end{equation}
 ```
 
-where $V_c^{\max}$ is the maximum carboxylation rate and:
+with 
+
 ```math
 \begin{equation}
-c_2 = \frac{p_i - \Gamma^*}{p_i + K_c(1 + p_O/K_o)}
+c_1 = \alpha_{C3} \cdot f_{\text{temp}} \cdot C_{\text{mass}} \cdot \frac{p_i - \Gamma^*}{p_i + 2\Gamma^*}\,,
 \end{equation}
 ```
 
-with $K_c$ and $K_o$ being Michaelis-Menten constants for CO₂ and O₂, and $p_O$ the O₂ partial pressure.
+where $\alpha_{C3}$ is the intrinsic quantum efficiency of CO2 uptake in C3 plants, $C_{mass}$ is the carbon atomic mass, $p_i$ is intercellular CO₂ partial pressure and $\Gamma^*$ is the CO2 compensation point. 
 
-### Smooth minimum between light and RuBisCO limitations
+The temperature stress factor $f_{\text{temp}}$ is defined as
 
-Rather than taking a simple minimum, the two rates are blended smoothly using:
-```math
-\begin{equation}
-A_g = \frac{J_E + J_C - \sqrt{(J_E + J_C)^2 - 4\theta_r J_E J_C}}{2\theta_r} \cdot \beta
-\end{equation}
-```
-
-where $\theta_r$ is a shape parameter (typically 0.7), and $\beta$ is the soil moisture limitation factor. This smooth minimum approach avoids unrealistic discontinuities at the transition between light and enzyme limitation.
-
-The net photosynthesis is then:
-```math
-\begin{equation}
-A_n = A_g - R_d
-\end{equation}
-```
-
-where $R_d$ is the leaf dark respiration rate.
-
-### Temperature stress on photosynthesis
-
-Temperature has a critical impact on photosynthetic enzyme kinetics and overall physiological capacity. A temperature stress factor $f_{\text{temp}}$ modulates the light-limited rate, with performance decreasing outside the range $[T_{\text{CO2,low}}, T_{\text{CO2,high}}]$ (PFT-specific):
 ```math
 \begin{equation}
 f_{\text{temp}}(T) = 
@@ -92,31 +94,69 @@ f_{\text{temp}}(T) =
 \end{equation}
 ```
 
-where $\sigma_{\text{low}}$ and $\sigma_{\text{high}}$ are sigmoid-shaped functions controlling the lower and upper temperature boundaries. This representation captures the observation that photosynthesis is inhibited both by cold and heat stress.
+Assuming that half of the downwelling shortwave radiation is in the photosynthetically active wavelength range, photosynthetically active radiation (PAR) can be computed as
+
+```math
+\begin{equation}
+\text{PAR} = 0.5 \cdot \text{SW} \cdot (1 - \alpha_\text{leaf}) \cdot c_q\,,
+\end{equation}
+```
+
+where $\alpha_\text{leaf}$ is the leaf albedo in the PAR range and $c_q$ is the conversion factor from W/m² to mol/m²/s. 
+
+Absorbed PAR (APAR) can then be computed as,
+
+```math
+\begin{equation}
+\text{APAR} = \alpha_a \cdot \text{PAR} \cdot (1 - e^{-k_{\text{ext}} \cdot \text{LAI}})\,,
+\end{equation}
+```
+
+where $\alpha_a$ accounts for reductions in PAR utilization in natural ecosystems, $k_{\text{ext}}$ is the light extinction coefficient, and LAI is the leaf area index.
+
+
+
+The RuBisCO-limited (enzyme-limited) photosynthesis rate is:
+```math
+\begin{equation}
+J_C = c_2 \cdot V_c^{\max}\,,
+\end{equation}
+```
+
+where $V_c^{\max}$ is the maximum carboxylation rate and
+
+```math
+\begin{equation}
+c_2 = \frac{p_i - \Gamma^*}{p_i + K_c(1 + p_o/K_o)}\,,
+\end{equation}
+```
+
+where $K_c$ and $K_o$ are the temperature-dependent Michaelis-Menten constants for CO₂ and O₂, respectively, and $p_O$ is the O₂ partial pressure.
+
 
 ### Stomatal conductance coupling
 
-Stomatal conductance (gas exchange) is computed separately from photosynthesis using the Medlyn et al. (2011) optimal stomatal control theory (see [Stomatal conductance](@ref)). This gives the internal leaf CO₂ concentration ratio $\lambda_c$ that drives the intercellular CO₂ pressure: $p_i = \lambda_c \cdot p_a$, which is used in the photosynthesis calculation above.
+Both light-limited and RuBisCO-limited photosynthesis rates $J_E$ and $J_C$ depend on the intercellular CO₂ partial pressure $p_i$.
+The exchange of carbon during photosynthesis is regulated by stomata, which open and close to control gas exchanges between the leaf and the atmosphere, while balancing carbon uptake for photosynthesis against water loss through transpiration.
 
-The stomatal conductance model captures the empirical observation that stomata open more when CO₂ uptake is high and close when air is dry (high VPD), creating a tight coupling between photosynthesis, transpiration, and atmospheric water demand.
+This coupling is captured through the intercellular-to-ambient CO₂ concentration ratio $\lambda_c$, which is derived in the stomatal conductance model (see [Stomatal conductance](@ref)) from the optimization-based and diffusion-based expressions of stomatal conductance. The intercellular CO₂ partial pressure can then be computed as
 
-## Abstract types
-
-```@docs; canonical = false
-AbstractPhotosynthesis
+```math
+\begin{equation}
+p_i = \lambda_c \cdot p_a\,,
+\end{equation}
 ```
 
-## Concrete types
+where $p_a$ is the atmospheric CO₂ partial pressure.
+
+
+## Process interface
 
 ```@docs; canonical = false
-LUEPhotosynthesis
+compute_auxiliary!(state, grid, photo::LUEPhotosynthesis, stomcond::AbstractStomatalConductance, atmos::AbstractAtmosphere, constants::PhysicalConstants, args...)
 ```
 
 ## Methods
-
-### Photosynthesis helper functions
-
-These functions compute the intermediate quantities needed for the Haxeltine and Prentice (1996) photosynthesis scheme:
 
 ```@docs; canonical = false
 compute_kinetic_parameters
@@ -163,7 +203,7 @@ compute_Ag
 ```
 
 ```@docs; canonical = false
-compute_photosynthesis
+compute_respiration_assimilation
 ```
 
 ```@docs; canonical = false
@@ -178,4 +218,11 @@ compute_photosynthesis
 
 ```@docs; canonical = false
 compute_photosynthesis!
+```
+
+## [References](@id "photosynthesis.refs")
+
+```@bibliography
+Pages = ["photosynthesis.md"]
+Canonical = false
 ```

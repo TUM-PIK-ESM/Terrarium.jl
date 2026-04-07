@@ -1,88 +1,50 @@
-# Surface energy balance
+# Surface Energy Balance
 
 ```@meta
 CurrentModule = Terrarium
 ```
 
+```@setup seb
+using Terrarium
+using InteractiveUtils
+```
+
 !!! warning
     This page is a work in progress. If you have any questions or notice any errors, please [raise an issue](https://github.com/NumericalEarth/Terrarium.jl/issues).
 
-## Theory
+## Overview
 
-### Energy balance fundamentals
-
-The surface energy balance describes how solar radiation, thermal radiation, and heat fluxes interact at the land-atmosphere interface. The balance states that net radiation must be partitioned among sensible heat, latent heat (evaporation), and ground heat conduction:
+The surface energy balance (SEB) describes how solar radiation, thermal radiation, and heat fluxes interact at the interface between the land and the atmosphere. The SEB broadly consists of four key components: the net radiation budget $R_\text{net}$ (W/m²), sensible heat flux $H_s$ (W/m²), latent heat flux $H_l$ (W/m²), and ground heat flux $G$ (W/m²). The energy balance can be expressed as a simple sum of each flux term:
 
 ```math
 \begin{equation}
-R_{\text{net}} = H_s + H_l + G
+R_{\text{net}} = H_s + H_l + G\,.
 \end{equation}
 ```
+Following the standard convention of Terrarium and Oceananigans, all surface energy fluxes are defined **positive upward** (away from surface).
 
-where all fluxes are **positive upward** (away from surface, toward atmosphere):
-- $R_{\text{net}}$ is the net radiation (W/m², positive upward)
-- $H_s$ is the sensible heat flux (W/m², positive upward)
-- $H_l$ is the latent heat flux (W/m², positive upward)
-- $G$ is the ground heat flux (W/m², positive downward into soil, negative in upward-positive convention)
-
-The surface energy balance couples radiative processes (shortwave and longwave), atmospheric turbulence (aerodynamic exchange), and surface properties (albedo, emissivity, thermal conductivity).
-
-### Radiative energy budget
-
-The net radiation is determined by shortwave and longwave components. With the upward-positive convention, net radiation is the sum of upwelling and downwelling fluxes:
-
-```math
-\begin{equation}
-R_{\text{net}} = S_{\uparrow} - S_{\downarrow} + L_{\uparrow} - L_{\downarrow}
-\end{equation}
-```
-
-where:
-- $S_{\uparrow} = \alpha S_{\downarrow}$ is reflected (upwelling) shortwave radiation
-- $S_{\downarrow}$ is incident (downwelling) shortwave radiation (W/m²)
-- $L_{\uparrow} = \epsilon \sigma T_0^4 + (1-\epsilon) L_{\downarrow}$ is total upwelling longwave radiation
-- $L_{\downarrow}$ is incident (downwelling) longwave radiation (W/m²)
-- $\alpha$ is surface albedo (fraction of shortwave radiation reflected)
-- $\epsilon$ is surface emissivity (fraction of thermal radiation emitted)
-- $\sigma$ is the Stefan-Boltzmann constant
-- $T_0$ is the skin temperature
-
-This can be equivalently written as:
-
-```math
-\begin{equation}
-R_{\text{net}} = -(1 - \alpha) S_{\downarrow} + \epsilon \sigma T_0^4 - \epsilon L_{\downarrow}
-\end{equation}
-```
-
-### Turbulent fluxes
-
-Sensible and latent heat fluxes are driven by temperature and humidity gradients between the surface and atmosphere, quantified through bulk aerodynamic approaches. These fluxes depend on wind speed, atmospheric stability, surface roughness, and the availability of soil moisture.
-
-### Skin temperature determination
-
-The skin temperature $T_0$ is the effective radiative temperature of the land surface. For an implicit approach, $T_0$ self-consistently satisfies the energy balance at each time step. For a prescribed approach, $T_0$ is given as input. The ground heat flux at the surface is derived either directly or as a residual from the energy balance.
-
-## Abstract types
-
-```@docs; canonical = false
-AbstractSurfaceEnergyBalance
-```
-
-## Concrete types
-
-### Surface Energy Balance
+The [`SurfaceEnergyBalance`](@ref) process is responsible for computing all of the above flux terms and thus closing the energy balance between the atmosphere and land surface. Implementations of [`AbstractSurfaceEnergyBalance`](@ref) should generally include, at minimum, representations of each of the four SEB components:
+- An implementation of [`AbstractSkinTemperature`](@ref) that defines and updates both the skin temperature $T_s$ and the ground heat flux $G$. The skin temperature $T_0$ is the effective radiative temperature of the land surface. For an implicit approach, $T_0$ self-consistently satisfies the energy balance at each time step. For a prescribed approach, $T_0$ is given as input. The ground heat flux at the surface is derived either directly or as a residual from the energy balance. See [Skin temperature and ground heat flux](@ref) for further details.
+- An implementation of [`AbstractRadiativeFluxes`](@ref) that compute the partitioning of the radiation budget. The radiative energy budge $R_{\text{net}}$ is the sum of all incoming and outgoing radiative fluxes at the interface between the atmosphere and the land surface. This typically consists of both  *shortwave* and *longwave* radiation bands. See [Radiative fluxes](@ref) for further details.
+- An implementation of [`AbstractTurbulentFluxes`](@ref) that compute the turbulent (sensible and latent) heat fluxes. Sensible and latent heat fluxes are driven by temperature and humidity gradients between the surface and atmosphere, quantified through bulk aerodynamic approaches. These fluxes depend on wind speed, atmospheric stability, surface roughness, and the availability of soil moisture. See [Turbulent fluxes](@ref) for further details.
+- A scheme for representing the [albedo](@ref "Albedo and emissivity") in the [Radiative energy budget](@ref "Radiative fluxes").
 
 ```@docs; canonical = false
 SurfaceEnergyBalance
 ```
 
-### Supporting components
+```@example seb
+variables(SurfaceEnergyBalance(Float32))
+```
 
-- **Skin temperature**: See [Skin Temperature and Ground Heat](skin_temperature.md)
-- **Radiative fluxes**: See [Radiative Fluxes](radiative_fluxes.md)
-- **Turbulent fluxes**: See [Turbulent Fluxes](turbulent_fluxes.md)
-- **Albedo**: See [Albedo and Emissivity](albedo.md)
+!!! warning "Prescribed energy fluxes"
+    `SurfaceEnergyBalance` allows you to mix and match which terms in the SEB are diagnosed vs. prescribed depending on the choice of implementation. While this has the potential to be convenient in cases where data on skin temperature or turbulent heat fluxes is available, it should be noted that this may result in surface energy fluxes that are inconsistent and do not fully satisfy the SEB equation.
+
+## Process interface
+
+```@docs; canonical = false
+compute_auxiliary!(state, grid, seb::SurfaceEnergyBalance, atmos::AbstractAtmosphere, constants::PhysicalConstants, hydrology::Optional{AbstractSurfaceHydrology}, args...)
+```
 
 ## Methods
 

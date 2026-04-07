@@ -29,6 +29,7 @@ function SurfaceHydrology(
     return SurfaceHydrology{NF, typeof(canopy_interception), typeof(canopy_ET), typeof(surface_runoff)}(canopy_interception, canopy_ET, surface_runoff)
 end
 
+""" $TYPEDSIGNATURES """
 function compute_auxiliary!(
         state, grid,
         hydrology::SurfaceHydrology,
@@ -36,12 +37,13 @@ function compute_auxiliary!(
         constants::PhysicalConstants,
         soil::AbstractSoil
     )
-    compute_auxiliary!(state, grid, hydrology.canopy_interception, atmos, constants)
+    compute_auxiliary!(state, grid, hydrology.canopy_interception, atmos)
     compute_auxiliary!(state, grid, hydrology.evapotranspiration, hydrology.canopy_interception, atmos, constants, soil)
     compute_auxiliary!(state, grid, hydrology.surface_runoff, hydrology.canopy_interception, soil)
     return nothing
 end
 
+""" $TYPEDSIGNATURES """
 function compute_tendencies!(
         state, grid,
         hydrology::SurfaceHydrology,

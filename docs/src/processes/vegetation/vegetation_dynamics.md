@@ -1,77 +1,64 @@
-# Vegetation dynamics and competition
+# Vegetation dynamics 
 
 ```@meta
 CurrentModule = Terrarium
 ```
 
+```@setup vegdynamics
+using Terrarium
+using InteractiveUtils
+```
+
 !!! warning
     This page is a work in progress. If you have any questions or notice any errors, please [raise an issue](https://github.com/NumericalEarth/Terrarium.jl/issues).
 
-## Theory
+## Overview
 
-Plant functional types (PFTs) compete for resources and space on a landscape. Vegetation dynamics describes how the fractional area occupied by a PFT changes over time in response to:
-- **Productivity**: High net primary productivity (NPP) allows a PFT to expand
-- **Disturbance**: Fire, disease, and other mortality mechanisms limit vegetation extent
-- **Seed availability**: A minimum seed fraction ensures PFTs can reestablish
-
-Terrarium implements vegetation dynamics following the Lotka–Volterra approach of PALADYN (Willeit 2016), which balances growth and disturbance to determine PFT area fraction dynamics.
-
-### Lotka-Volterra vegetation competition
-
-The vegetation area fraction ($\nu$) for a single PFT evolves according to:
-```math
-\begin{equation}
-\frac{d\nu}{dt} = \left( \lambda_{\text{NPP}} \frac{C_{\text{veg}}}{\nu^*} \right) (1 - \nu) - \gamma_v \nu^*
-\end{equation}
-```
-
-where:
-- $\lambda_{\text{NPP}}$ is an NPP-dependent rate parameter (from carbon dynamics)
-- $C_{\text{veg}}$ is the accumulated vegetation carbon
-- $\nu^* = \max(\nu, \nu_{\text{seed}})$ is the effective PFT fraction (always at least the seed fraction)
-- $\gamma_v$ is the disturbance rate (mortality, fire, disease) [1/time]
-- $(1 - \nu)$ is the available space for expansion
-
-**Growth term**: $(λ_{\text{NPP}} C_{\text{veg}} / \nu^*) (1 - \nu)$ represents logistic growth where productive PFTs expand into unoccupied space.
-
-**Disturbance term**: $\gamma_v \nu^*$ represents losses due to disturbance, proportional to PFT extent.
-
-### Seed fraction and PFT establishment
-
-The seed fraction $\nu_{\text{seed}}$ ensures that a PFT at very low abundance can still persist and reestablish after disturbance:
-```math
-\begin{equation}
-\nu^* = \max(\nu, \nu_{\text{seed}})
-\end{equation}
-```
-
-Typical values are $\nu_{\text{seed}} \approx 0.001$ (0.1%) to allow slow recovery from local extinction.
-
-### Disturbance rates
-
-The disturbance rate $\gamma_v$ represents losses from fire, pest outbreaks, disease, and senescence. A minimum baseline disturbance rate is specified:
-```math
-\begin{equation}
-\gamma_v \geq \gamma_v^{\text{min}}
-\end{equation}
-```
-
-In the current implementation, $\gamma_v = \gamma_v^{\text{min}}$ (constant). Future implementations may tie disturbance to soil moisture, fire danger, or vegetation state variables.
-
-### Coupling to productivity
-
-Vegetation expansion is controlled by vegetation carbon ($C_{\text{veg}}$) and the NPP-productivity parameter ($\lambda_{\text{NPP}}$) computed by the carbon dynamics model. Higher NPP accelerates vegetation expansion; lower NPP leads to vegetation retreat when disturbance exceeds growth.
-
-## Abstract types
+Vegetation dynamics describes the temporal evolution of the fractional coverage of plant functional types (PFTs) within a grid cell. In dynamic vegetation models, PFTs within a grid cell compete for space and resources, and their expansion is driven by establishment and constrained by mortality and disturbance processes such as fire.
 
 ```@docs; canonical = false
 AbstractVegetationDynamics
 ```
 
-## Concrete types
+```@example vegdynamics
+subtypes(Terrarium.AbstractVegetationDynamics)
+```
+
+## PALADYN vegetation dynamics
 
 ```@docs; canonical = false
 PALADYNVegetationDynamics
+```
+
+```@example vegdynamics
+variables(PALADYNVegetationDynamics(Float32))
+```
+
+This implementation follows the Lotka–Volterra approach of PALADYN [willeitPALADYNV10Comprehensive2016](@cite), in which the vegetation area fraction $\nu_i$ for each PFT $i$ evolves according to:
+
+```math
+\begin{equation}
+\frac{d\nu_i}{dt} = \lambda_{\text{NPP}} \frac{\text{NPP}}{C_{\text{veg,i}}} \cdot \nu_i^*  (1 - \sum_j c_{ij}\nu_j) - \gamma_v \nu_i^*
+\end{equation}
+```
+
+where $\lambda_{\text{NPP}}$ is the NPP partitioning factor computed by the vegetation carbon dynamics process (see [Vegetation carbon dynamics](@ref)), $\text{NPP}$ is the net primary production, $C_{\text{veg}}$ is the total vegetation carbon pool, $\nu^* = \max(\nu, \nu_{\text{seed}})$ where $\nu_{\text{seed}}$ is a small seeding fraction to ensure that a PFT is always seeded and $\gamma_v$ is the disturbance rate.
+
+The first term on the right-hand side represents the expansion of PFT $i$ driven by the fraction of NPP allocated to spreading. 
+
+The second term is a Lotka–Volterra competition term that limits expansion through competition with other PFTs for space, with $c_{ij}$ describing the competitive effect of PFT $j$ on PFT $i$. Since only one PFT is considered per grid cell in the current implementation, this competition term is ignored for now.
+
+The last term represents the loss of vegetation cover due to disturbance, for example from fire or other mortality related processes. In PALADYN, the disturbance coefficient $\gamma_v$ mainly represents fire-induced disturbance through a simple parameterization based on topsoil moisture and aboveground biomass, together with a minimum constant disturbance rate used to represent disturbances other than fire. In the current implementation, fire is ignored, and $\gamma_v = \gamma_{\min}$. 
+
+
+## Process interface
+
+```@docs; canonical = false
+compute_auxiliary!(state, grid, veg_dynamics::PALADYNVegetationDynamics, args...)
+```
+
+```@docs; canonical = false
+compute_tendencies!(state, grid, veg_dynamics::PALADYNVegetationDynamics, vegcarbon_dynamics::PALADYNCarbonDynamics, args...)
 ```
 
 ## Methods
@@ -84,6 +71,19 @@ compute_γv
 compute_ν_star
 ```
 
+## Kernel functions
+
 ```@docs; canonical = false
 compute_ν_tendency
+```
+
+```@docs; canonical = false
+compute_ν_tendencies!
+```
+
+## [References](@id "vegetation_dynamics.refs")
+
+```@bibliography
+Pages = ["vegetation_dynamics.md"]
+Canonical = false
 ```

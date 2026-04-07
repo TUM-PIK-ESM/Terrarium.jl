@@ -1,5 +1,5 @@
 """
-    GroundEvaporation{NF, GR} <: AbstractEvapotranspiration
+    $TYPEDEF
 
 Evaporation scheme for bare ground that calculates the humidity flux as
 
@@ -17,17 +17,18 @@ end
 GroundEvaporation(
     ::Type{NF};
     ground_resistance::GR = ConstantEvaporationResistanceFactor(one(NF))
-) where {NF, GR} = GroundEvaporation{NF, GR}(; ground_resistance)
+) where {NF, GR} = GroundEvaporation{NF, GR}(ground_resistance)
 
 @propagate_inbounds surface_humidity_flux(i, j, grid, fields, evtr::GroundEvaporation) = fields.evaporation_ground[i, j]
 
-# Process methods
+# Top-level interface methods
 
 variables(::GroundEvaporation) = (
     auxiliary(:evaporation_ground, XY(), units = u"m/s", desc = "Ground evaporation contribution to surface humidity flux"),
     input(:skin_temperature, XY(), units = u"°C", desc = "Skin temperature of the surface"),
 )
 
+""" $TYPEDSIGNATURES """
 function compute_auxiliary!(
         state, grid,
         evap::GroundEvaporation,

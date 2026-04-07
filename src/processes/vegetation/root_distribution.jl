@@ -2,9 +2,8 @@
     $TYPEDEF
 
 Static vegetation root distribution implementation in PALADYN (Willeit 2016)
-based on the scheme proposed by Zeng (2001). The PDF of the root distribution
-is modeled as
-
+based on the scheme proposed by Zeng (2001). The continuous density of the
+root distribution is modeled as
 ```math
 \\frac{\\partial R}{\\partial z} = \\frac{1}{2} \\left[ a \\exp(a z) + b \\exp(b z) \\right]
 ```
@@ -40,6 +39,8 @@ variables(rootdist::StaticExponentialRootDistribution) = (
 )
 
 """
+    $TYPEDEF
+
 Returns a `FunctionField` that lazily computes the static root distribution on a 1D column grid.
 """
 function root_fraction(rootdist::StaticExponentialRootDistribution{NF}, grid::AbstractColumnGrid, clock, fields) where {NF}
