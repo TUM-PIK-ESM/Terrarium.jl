@@ -1,43 +1,45 @@
+# # [Soil heat conduction at global scale](@id "soil_heat_global")
+# Here we extend the single column soil heat conduction [example](@ref "soil_heat_column")
+# to do global scale simulations, accelerated by GPU (if available).
+
 using Terrarium
 
 using CUDA
 using Dates
 using Rasters, NCDatasets
-using Statistics
 
 using CairoMakie, GeoMakie
 
-import RingGrids
-import SpeedyWeather
-
-# run on GPU if available
+# First we check if GPU is available and choose the architecture correspondingly.
 arch = CUDA.functional() ? GPU() : CPU()
 
-# Load land-sea mask at ~1° resolution
+# Next, we load a land-sea mask at ~1° resolution:
 land_sea_frac = convert.(Float32, dropdims(Raster("inputs/era5-land_land_sea_mask_N72.nc"), dims = Ti))
 land_sea_frac_field = RingGrids.FullGaussianField(Matrix(land_sea_frac), input_as = Matrix)
 heatmap(land_sea_frac_field)
 
-# Set up grids
-land_mask = land_sea_frac_field .> 0.5 # select only grid points with > 50% land
+# Then we set up a masked [`ColumnRingGrid`](@ref), selecting only grid points
+# with >50% land cover:
+land_mask = land_sea_frac_field .> 0.5
 grid = ColumnRingGrid(arch, Float64, ExponentialSpacing(N = 30), land_mask.grid, land_mask)
-lon, lat = RingGrids.get_londlatds(grid.rings)
 
-# Initial conditions
-initializer = SoilInitializer(eltype(grid))
-model = SoilModel(grid; initializer)
-# Periodic surface temperature with annual cycle
+# Now we create our [`SoilModel`](@ref), this time with the default initialization:
+model = SoilModel(grid)
+
+# We impose a periodic temperature boundary condition at the surface to represent the annual cycle:
 bc = PrescribedSurfaceTemperature(:T_ub, (x, t) -> 30 * sin(2π * t / (24 * 3600 * 365)))
-state = initialize(model, ForwardEuler(), boundary_conditions = bc)
-# advance one timestep with Δt = 15 minutes
-@time timestep!(state, 900.0)
-# run multiple timesteps over a given time period
-@time run!(state, period = Day(1), Δt = 900.0)
+integrator = initialize(model, ForwardEuler(), boundary_conditions = bc)
+
+# We will do a quick check, advancing the simulation by one timestep with Δt = 15 minutes (900 seconds)
+timestep!(integrator, 900.0)
+@time timestep!(integrator, 900.0)
+
+# ...then run the simulation for one day.
+@time run!(integrator, period = Day(1), Δt = 900.0)
 
 using Oceananigans.OutputWriters: JLD2Writer, AveragedTimeInterval
 using Oceananigans.Units: days
 
-# set up and run an Oceananigans Simulation
-sim = Simulation(state; Δt = 900.0, stop_iteration = 100)
-# sim.output_writers[:temperature] = JLD2Writer(state, get_fields(state, :temperature); filename="output/soil_model_temperature.jld2", schedule=AveragedTimeInterval(1days))
+# We can also wrap the `integrator` in an Oceananigans `Simulation`:
+sim = Simulation(integrator; Δt = 900.0, stop_time = 30days)
 run!(sim)
