@@ -83,6 +83,10 @@ end
 running_example_docpages = Pair{String, String}[]
 extending_example_docpages = Pair{String, String}[]
 
+# Temporary solution: copy input files to src
+@info "Copying input files"
+cp("inputs", joinpath(EXAMPLES_OUTDIR, "simulations", "inputs"))
+
 # Build example pages with Literate.jl
 build_literate_pages!(
     joinpath(EXAMPLES_OUTDIR, "simulations"),

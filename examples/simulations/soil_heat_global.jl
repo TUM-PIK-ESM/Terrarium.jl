@@ -10,11 +10,16 @@ using Rasters, NCDatasets
 
 using CairoMakie, GeoMakie
 
+import RingGrids
+
+input_dir = "inputs" # hide
+@info "Current working directory: $(pwd())" # hide
+
 # First we check if GPU is available and choose the architecture correspondingly.
 arch = CUDA.functional() ? GPU() : CPU()
 
 # Next, we load a land-sea mask at ~1° resolution:
-land_sea_frac = convert.(Float32, dropdims(Raster("inputs/era5-land_land_sea_mask_N72.nc"), dims = Ti))
+land_sea_frac = convert.(Float32, dropdims(Raster(joinpath(input_dir, "era5-land_land_sea_mask_N72.nc")), dims = Ti))
 land_sea_frac_field = RingGrids.FullGaussianField(Matrix(land_sea_frac), input_as = Matrix)
 heatmap(land_sea_frac_field)
 
