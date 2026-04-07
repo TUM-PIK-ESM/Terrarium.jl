@@ -60,7 +60,7 @@ function build_literate_pages!(outdir, indir, scripts)
     for (_, filename) in scripts
         ## the differentiation notebook is never auto-executed (Enzyme compile time)
         should_execute = BUILD_EXAMPLE_DOCS && filename != "differentiating_terrarium.jl"
-        kwargs = Dict{Symbol,Any}(
+        kwargs = Dict{Symbol, Any}(
             :execute => should_execute,
             :documenter => true,
             :flavor => Literate.DocumenterFlavor(),
@@ -80,8 +80,8 @@ function build_literate_pages!(outdir, indir, scripts)
 end
 
 # Pages vector for makedocs
-running_example_docpages = Pair{String,String}[]
-extending_example_docpages = Pair{String,String}[]
+running_example_docpages = Pair{String, String}[]
+extending_example_docpages = Pair{String, String}[]
 
 # Temporary solution: copy input files to src
 @info "Copying input files"
@@ -89,7 +89,7 @@ running_examples_outdir = joinpath(EXAMPLES_OUTDIR, "simulations")
 extending_examples_outdir = joinpath(EXAMPLES_OUTDIR, "extending")
 mkpath(running_examples_outdir)
 mkpath(extending_examples_outdir)
-cp("inputs", joinpath(running_examples_outdir, "inputs"))
+cp("inputs", joinpath(running_examples_outdir, "inputs"), force = true)
 
 # Build example pages with Literate.jl
 build_literate_pages!(
@@ -116,25 +116,25 @@ end
 # Create bibliography
 bib = CitationBibliography(
     joinpath(@__DIR__, "src", "references.bib");
-    style=:numeric
+    style = :numeric
 )
 
 makedocs(
-    format=Documenter.HTML(
-        prettyurls=get(ENV, "CI", nothing) == "true",
-        ansicolor=true,
-        collapselevel=1,
-        repolink="https://github.com/NumericalEarth/Terrarium.jl",
-        canonical="https://numericalearth.github.io/Terrarium.jl",
-        assets=["assets/citations.css"],
-        size_threshold=600_000,
-        mathengine=Documenter.MathJax3(),
+    format = Documenter.HTML(
+        prettyurls = get(ENV, "CI", nothing) == "true",
+        ansicolor = true,
+        collapselevel = 1,
+        repolink = "https://github.com/NumericalEarth/Terrarium.jl",
+        canonical = "https://numericalearth.github.io/Terrarium.jl",
+        assets = ["assets/citations.css"],
+        size_threshold = 600_000,
+        mathengine = Documenter.MathJax3(),
     ),
-    sitename="Terrarium.jl",
-    authors="Brian Groenke, Maximilian Gelbrecht, Maha Badri, and Contributors",
-    modules=[Terrarium],
-    plugins=[bib],
-    pages=[
+    sitename = "Terrarium.jl",
+    authors = "Brian Groenke, Maximilian Gelbrecht, Maha Badri, and Contributors",
+    modules = [Terrarium],
+    plugins = [bib],
+    pages = [
         "Home" => "index.md",
         "Introduction" => [
             "Basic concepts" => "introduction/basic_concepts.md",
@@ -199,9 +199,9 @@ makedocs(
         "Index of API" => "api_index.md",
         "References" => "references.md",
     ],
-    linkcheck=CHECK_LINKS,
-    warnonly=[:cross_references],
-    draft=IS_DRAFT,
+    linkcheck = CHECK_LINKS,
+    warnonly = [:cross_references],
+    draft = IS_DRAFT,
 )
 
 deployconfig = Documenter.auto_detect_deploy_system()
@@ -210,8 +210,8 @@ deployconfig = Documenter.auto_detect_deploy_system()
 # rm(joinpath(@__DIR__, "build", ".gitignore"))
 
 deploydocs(
-    repo="github.com/NumericalEarth/Terrarium.jl.git",
-    push_preview=true,
-    versions=["v0" => "v^", "v#.#", "dev" => "dev"],
-    deploy_config=deployconfig,
+    repo = "github.com/NumericalEarth/Terrarium.jl.git",
+    push_preview = true,
+    versions = ["v0" => "v^", "v#.#", "dev" => "dev"],
+    deploy_config = deployconfig,
 )
