@@ -17,6 +17,7 @@ input_dir = "inputs" # hide
 
 # First we check if GPU is available and choose the architecture correspondingly.
 arch = CUDA.functional() ? GPU() : CPU()
+@info "Setting up simulation on $arch"
 
 # Next, we load a land-sea mask at ~1° resolution:
 land_sea_frac = convert.(Float32, dropdims(Raster(joinpath(input_dir, "era5-land_land_sea_mask_N72.nc")), dims = Ti))
@@ -39,12 +40,14 @@ integrator = initialize(model, ForwardEuler(), boundary_conditions = bc)
 timestep!(integrator, 900.0)
 @time timestep!(integrator, 900.0)
 
-# ...then run the simulation for one day.
+# ...then run the simulation for one day. If you have a GPU available, try changing `period = Year(1)`
+# to run a full year!
 @time run!(integrator, period = Day(1), Δt = 900.0)
 
 using Oceananigans.OutputWriters: JLD2Writer, AveragedTimeInterval
 using Oceananigans.Units: days
 
-# We can also wrap the `integrator` in an Oceananigans `Simulation`:
-sim = Simulation(integrator; Δt = 900.0, stop_time = 30days)
+# We can also wrap the `integrator` in an Oceananigans `Simulation` which can be used to add
+# callbacks and save outputs.
+sim = Simulation(integrator; Δt = 900.0, stop_time = 1days)
 run!(sim)
