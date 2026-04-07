@@ -42,7 +42,7 @@ function compute_auxiliary!(
         vegetation::Optional{AbstractVegetation} = nothing,
         args...
     )
-    compute_auxiliary!(state, grid, hydrology.canopy_interception, constants, atmos)
+    compute_auxiliary!(state, grid, hydrology.canopy_interception, atmos)
     compute_auxiliary!(state, grid, hydrology.evapotranspiration, hydrology.canopy_interception, constants, atmos, soil, vegetation)
     compute_auxiliary!(state, grid, hydrology.surface_runoff, hydrology.canopy_interception, soil)
     return nothing
