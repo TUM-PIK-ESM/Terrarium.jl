@@ -4,6 +4,6 @@
 exec 1>&2
 
 # Run Runic on added and modified files
-git diff-index -z --name-only --diff-filter=AM master | \
+git diff-index -z --name-only --diff-filter=AM main | \
     grep -z '\.jl$' | \
     xargs -0 --no-run-if-empty julia --project=@runic --startup-file=no -m Runic --check --diff

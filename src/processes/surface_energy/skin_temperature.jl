@@ -15,7 +15,7 @@ end
 
 PrescribedSkinTemperature(::Type{NF}; kwargs...) where {NF} = PrescribedSkinTemperature{NF}(; kwargs...)
 
-## Process methods
+## Top-level interface methods
 
 variables(::PrescribedSkinTemperature) = (
     auxiliary(:ground_heat_flux, XY(), units = u"W/m^2", desc = "Ground heat flux"),
@@ -35,12 +35,12 @@ variables(::PrescribedSkinTemperature) = (
 """
     $TYPEDEF
 
-Scheme for an implicit skin temperature ``T_0`` satisfying:
+Scheme for an implicit skin temperature ``T_s`` satisfying:
 ```math
-R_{\\text{net}}(T_0) = H_s(T_0) + H_l(T_0) + G(T_0, T_1)
+R_{\\text{net}}(T_s) = H_s(T_s) + H_l(T_s) + G(T_s, T_g)
 ```
 where ``R_{\\text{net}}`` is the net radiation budget, ``H_s`` is the sensible heat flux, ``H_l`` is the latent
-heat flux from sublimation and evapotranspiration, ``G`` is the ground heat flux, and ``T_1`` is the ground
+heat flux from sublimation and evapotranspiration, ``G`` is the ground heat flux, and ``T_g`` is the ground
 temperature, or temperature of the uppermost subsurface (soil or snow) layer.
 
 Properties:
@@ -79,7 +79,7 @@ sensible `H_s` and latent `H_l` heat flux.
     return G
 end
 
-## Process methods
+## Top-level interface methods
 
 variables(::ImplicitSkinTemperature) = (
     prognostic(:skin_temperature, XY(), units = u"°C", desc = "Longwave emission temperature of the land surface in °C"),
@@ -87,6 +87,7 @@ variables(::ImplicitSkinTemperature) = (
     input(:ground_temperature, XY(), units = u"°C", desc = "Temperature of the uppermost ground or soil grid cell in °C"),
 )
 
+""" $TYPEDSIGNATURES """
 @inline function compute_auxiliary!(
         state, grid,
         skinT::ImplicitSkinTemperature,
@@ -97,6 +98,11 @@ variables(::ImplicitSkinTemperature) = (
     return nothing
 end
 
+"""
+    $TYPEDSIGNATURES
+
+Update `skin_temperature` according to the current state of `ground_heat_flux`.
+"""
 function update_skin_temperature!(state, grid, skinT::ImplicitSkinTemperature)
     out = prognostic_fields(state, skinT)
     fields = get_fields(state, skinT; except = out)
@@ -104,6 +110,11 @@ function update_skin_temperature!(state, grid, skinT::ImplicitSkinTemperature)
     return nothing
 end
 
+"""
+    $TYPEDSIGNATURES
+
+Compute `ground_heat_flux` as the residual `R_\\text{net} - H_s - H_l`.
+"""
 function compute_ground_heat_flux!(
         state, grid,
         skinT::AbstractSkinTemperature,
@@ -119,6 +130,11 @@ end
 
 ## Kernel functions
 
+"""
+    $TYPEDSIGNATURES
+
+Estimate the skin temperature from the current `ground_heat_flux` at grid cell `i, j`.
+"""
 @propagate_inbounds function compute_skin_temperature(
         i, j, grid, fields,
         skinT::ImplicitSkinTemperature
@@ -130,9 +146,15 @@ end
     G = fields.ground_heat_flux[i, j]
     # Get ground temperature
     Tg = fields.ground_temperature[i, j]
-    return compute_skin_temperature(skinT, Tg, G, Δz₁)
+    Ts = compute_skin_temperature(skinT, Tg, G, Δz₁)
+    return Ts
 end
 
+"""
+    $TYPEDSIGNATURES
+
+Compute the ground heat flux from the surface net radiation and sensible/latent heat flux at grid cell `i, j`.
+"""
 @propagate_inbounds function compute_ground_heat_flux(
         i, j, grid, fields,
         skinT::AbstractSkinTemperature,
@@ -143,8 +165,9 @@ end
     R_net = fields.surface_net_radiation[i, j]
     H_s = fields.sensible_heat_flux[i, j]
     H_l = fields.latent_heat_flux[i, j]
-
-    return compute_ground_heat_flux(skinT, R_net, H_s, H_l)
+    # Compute ground heat flux
+    G = compute_ground_heat_flux(skinT, R_net, H_s, H_l)
+    return G
 end
 
 # Kernels

@@ -2,6 +2,9 @@
     $TYPEDEF
 
 A collection of general physical constants that do not (usually) need to be varied in parameter calibration.
+
+Properties:
+$FIELDS
 """
 @kwdef struct PhysicalConstants{NF}
     "Density of water in kg/m^3"
@@ -42,6 +45,9 @@ A collection of general physical constants that do not (usually) need to be vari
 
     "Specific gas constant of air in J/(kg*K)"
     Rₐ::NF = 287.058
+
+    "Atomic mass of carbon [gC/mol]"
+    C_mass::NF = 12.0
 end
 
 PhysicalConstants(::Type{NF}; kwargs...) where {NF} = PhysicalConstants{NF}(; kwargs...)

@@ -25,7 +25,7 @@ jobs:
           arch: ${{ matrix.arch }}
       - uses: julia-actions/cache@v2
       - name: Install dependencies (scripts)
-        run: julia --project=examples/scripts/ -e 'using Pkg; Pkg.develop(PackageSpec(path=pwd())); Pkg.instantiate()'
+        run: julia --project=examples/ -e 'using Pkg; Pkg.develop(PackageSpec(path=pwd())); Pkg.instantiate()'
       #- name: Run Differentiating Terrarium Example
-      #  run: julia --project=examples/scripts/ examples/scripts/differentiating_terrarium.jl
+      #  run: julia --project=examples/ examples/differentiating_terrarium.jl
         

@@ -115,7 +115,7 @@ current_time(integrator::ModelIntegrator) = integrator.clock.time
 get_fields(integrator::ModelIntegrator, queries...) = get_fields(integrator.state, queries...)
 
 """
-    $SIGNATURES
+    $TYPEDSIGNATURES
 
 Advance the model forward by one timestep with optional timestep size `Δt`. If `finalize = true`,
 `compute_auxiliary!` is called after the time step in order to update the values of auxiliary/diagnostic
@@ -131,11 +131,16 @@ function timestep!(integrator::ModelIntegrator, Δt; finalize = true)
 end
 
 """
-    $TYPEDEF
+    $TYPEDSIGNATURES
 
-Creates and initializes a `ModelIntegrator` for the given `model` with the given `clock` state.
-This method allocates all necessary `Field`s for the state variables and calls `initialize!(::ModelIntegrator)`.
-Note that this method is **not type stable** and should not be called in an Enzyme `autodiff` call.
+Creates and initializes a `ModelIntegrator` for the given `model` and `timestepper` with input variables populated by
+the given `inputs`. This method allocates all necessary `Field`s for the state variables and subsequently calls
+`initialize!(::ModelIntegrator)`.
+
+Note that this method is **not type stable** and thus should not be called from Enzyme `autodiff`. To reinitialize
+the model for an existing `state`, use `initialize!(state, model)`.
+
+See the docstring for [`initialize(::AbstractModel)`](@ref) for further details.
 """
 function initialize(
         model::AbstractModel{NF},

@@ -28,7 +28,7 @@ using Oceananigans.Operators: ∂zᵃᵃᶜ, ∂zᵃᵃᶠ, ℑzᵃᵃᶠ, Δz�
 using Oceananigans.OutputReaders: FieldTimeSeries
 using Oceananigans.Simulations: Simulation, run!, timestepper
 using Oceananigans.TimeSteppers: Clock, update_state!, time_step!, tick!, reset!
-using Oceananigans.Units: Time
+using Oceananigans.Units: Time, seconds, hours, days
 using Oceananigans.Utils: launch!
 
 # Boundary conditions
@@ -66,7 +66,7 @@ const BCType = AbstractBoundaryConditionClassification
 # Re-export selected types and methods from Oceananigans
 export Simulation, Field, FieldTimeSeries, CPU, GPU, Clock, Center, Face
 export Value, Flux, Gradient, ValueBoundaryCondition, GradientBoundaryCondition, FluxBoundaryCondition, NoFluxBoundaryCondition
-export run!, time_step!, set!, compute!, interior, architecture, on_architecture, znodes, zspacings, location
+export run!, time_step!, set!, reset!, compute!, interior, architecture, on_architecture, znodes, zspacings, location
 
 # Re-export selected types from FreezeCurves
 export SFCC, SWRC, FreeWater, VanGenuchten, BrooksCorey

@@ -20,7 +20,7 @@ Terrarium is being developed alongside [SpeedyWeather.jl](https://github.com/Spe
 > [!WARNING]
 > 🚧🚧 Under Construction! 🚧🚧
 >
-> Terrarium.jl is still in a prototyping stage and is not production-ready. Expect things to change rapidly and break often. If, however, you share our vision for a new paradigm of Earth system modeling and would like to get involved in the project, please don’t hesitate to reach out by creating an issue on GitHub issues or sending us an email. We are always happy to welcome new collaborators!
+> Terrarium.jl is still in a prototype stage and is not production-ready. Expect things to change rapidly and break often. If, however, you share our vision for a new paradigm of Earth system modeling and would like to get involved in the project, please don’t hesitate to reach out by creating an issue on GitHub issues or sending us an email. We are always happy to welcome new collaborators!
 
 ## Our goals
 We want a land surface (and subsurface) model that is
@@ -39,7 +39,7 @@ It is important to emphasize, however, what Terrarium is not:
 
 ## Installation
 
-Terrarium is still in an early prototype stage and is not yet registered as a package in the Julia General registry.
+Terrarium is still in a prototype stage and is not yet registered as a package in the Julia General registry.
 
 However, you can still install the package from the repository via the package manager (type `]` in your REPL):
 
@@ -72,13 +72,13 @@ That's it! You already succesfully ran a (very simple) simulation with Terrarium
 
 Note that setting `num_columns = 1` here corresponds to a point simulation for a single vertical column. However, we can easily scale this up by set `num_columns` to any positive integer (up to the memory limit of your system, of course).
 
-We can also easily adapt this code to run a *global* simulation over a suitable spatial grid. For this, we'll need to have [`RingGrids`](https://github.com/SpeedyWeather/RingGrids.jl) installed (or import it directly from Terrarium with `using Terrarium.RingGrids`). Optionally, if a GPU is available and [CUDA.jl](https://github.com/JuliaGPU/CUDA.jl) is installed in the current project or global Julia environment, we can accelerate the global simulation by simply changing `CPU` to `GPU`:
+We can also easily adapt this code to run a *global* simulation over a suitable spatial grid. For this, we'll need to have [`RingGrids`](https://github.com/SpeedyWeather/SpeedyWeather.jl/tree/main/RingGrids) installed (or import it directly from Terrarium with `using Terrarium.RingGrids`). Optionally, if a GPU is available and [CUDA.jl](https://github.com/JuliaGPU/CUDA.jl) is installed in the current project or global Julia environment, we can accelerate the global simulation by simply changing `CPU` to `GPU`:
 
 ```julia
 using RingGrids: FullGaussianGrid
-using CUDA # needs to be seaprately installed
+using CUDA # needs to be separately installed
 
-rings = FullGaussianGrid(8) # Gaussian grid with 16 lattitudinal rings (512 points, ~9.5˚)
+rings = FullGaussianGrid(8) # Gaussian grid with 16 latitudinal rings (512 points, ~9.5˚)
 arch = GPU() # run on the GPU!
 grid = ColumnRingGrid(arch, Float32, ExponentialSpacing(N=10), rings)
 model = SoilModel(grid)
@@ -113,7 +113,7 @@ Terrarium.jl is free and open source licensed under the [European Union Public L
 What does that mean for you? You are 100% free to
 - Copy, modify, and redistribute the code
 - Use the software as a package in your own project (regardless of license or copyright status)
-- Use the software for both commercial and non-commerical purposes
+- Use the software for both commercial and non-commercial purposes
 
 However, if you make changes or modification to the code, excluding those made purely for the purpose of interoperability, **you are required to re-distribute the modified software under the EUPL v1.2 or a compatible license**. This is vital to ensure the long-term survival of the project and to foster an open, supportive, and diverse community.
 
