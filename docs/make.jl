@@ -40,7 +40,11 @@ end
 
 # Literate scripts to be built and included in the docs
 # Each entry should be a Pair: page_title => script_filename
-script_list = [
+running_scripts = [
+    "Soil column heat conduction" => "soil_heat_column.jl",
+    "Global soil heat conduction" => "soil_heat_global.jl",
+]
+extending_scripts = [
     "Simple exponential growth model" => "linear_ode_exp_growth.jl",
     "Degree-day snow melt model" => "simple_snow_ddm.jl",
     "Linear heat conduction" => "linear_heat_conduction.jl",
@@ -51,9 +55,9 @@ Convert Literate.jl scripts in `indir` to markdown pages in `outdir`.
 The differentiation example is never executed during docs builds (Enzyme compile is
 too slow); the model interface example is executed unless IS_DRAFT is set.
 """
-function build_literate_pages!(outdir, indir)
+function build_literate_pages!(outdir, indir, scripts)
     mkpath(outdir)
-    for (_, filename) in script_list
+    for (_, filename) in scripts
         ## the differentiation notebook is never auto-executed (Enzyme compile time)
         should_execute = BUILD_EXAMPLE_DOCS && filename != "differentiating_terrarium.jl"
         kwargs = Dict{Symbol, Any}(
@@ -76,17 +80,29 @@ function build_literate_pages!(outdir, indir)
 end
 
 # Pages vector for makedocs
-example_docpages = Pair{String, String}[]
+running_example_docpages = Pair{String, String}[]
+extending_example_docpages = Pair{String, String}[]
 
 # Build example pages with Literate.jl
 build_literate_pages!(
+    joinpath(EXAMPLES_OUTDIR, "simulations"),
+    joinpath(EXAMPLES_DIR, "simulations"),
+    running_scripts
+)
+build_literate_pages!(
     joinpath(EXAMPLES_OUTDIR, "extending"),
     joinpath(EXAMPLES_DIR, "extending"),
+    extending_scripts
 )
-# Add example pages to list
-for (title, filename) in script_list
+
+# Add example pages to lists
+for (title, filename) in running_scripts
     mdfile = replace(filename, ".jl" => ".md")
-    push!(example_docpages, "Example: $title" => joinpath(EXAMPLES_OUTDIR_RELATIVE, "extending", mdfile))
+    push!(running_example_docpages, "Example: $title" => joinpath(EXAMPLES_OUTDIR_RELATIVE, "running", mdfile))
+end
+for (title, filename) in extending_scripts
+    mdfile = replace(filename, ".jl" => ".md")
+    push!(extending_example_docpages, "Example: $title" => joinpath(EXAMPLES_OUTDIR_RELATIVE, "extending", mdfile))
 end
 
 # Create bibliography
@@ -121,13 +137,14 @@ makedocs(
             "Initialization" => "running/initialization.md",
             "Time stepping" => "running/time_stepping.md",
             "Input sources" => "running/input_sources.md",
+            running_example_docpages...,
         ],
         "Extending Terrarium" => [
             "Core interfaces" => "extending/core_interfaces.md",
             "State variables" => "extending/state_variables.md",
             "Implementing processes" => "extending/implementing_processes.md",
             "Coupling processes" => "extending/coupling_processes.md",
-            example_docpages...,
+            extending_example_docpages...,
         ],
         "Models" => [
             "Soil model" => "models/soil_model.md",
