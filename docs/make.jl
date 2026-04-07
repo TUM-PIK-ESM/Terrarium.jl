@@ -106,7 +106,7 @@ build_literate_pages!(
 # Add example pages to lists
 for (title, filename) in running_scripts
     mdfile = replace(filename, ".jl" => ".md")
-    push!(running_example_docpages, "Example: $title" => joinpath(EXAMPLES_OUTDIR_RELATIVE, "running", mdfile))
+    push!(running_example_docpages, "Example: $title" => joinpath(EXAMPLES_OUTDIR_RELATIVE, "simulations", mdfile))
 end
 for (title, filename) in extending_scripts
     mdfile = replace(filename, ".jl" => ".md")
