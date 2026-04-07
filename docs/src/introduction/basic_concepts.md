@@ -54,7 +54,7 @@ Auxiliary variables are derived in each time step from the current prognostic st
 
 Input variables represent entry points for data or physical variables that are external to a particular process or model. They are typically either supplied by [`InputSource`](@ref)s or merged with matching prognostic/auxiliary variables during initialization.
 
-!!! info "Variables vs. `Field`s"
+!!! info "Variables vs. Fields"
     Terrarium distinguishes between *variables* and *Fields*. Variables are symbolic objects subtyping [`AbstractVariable`](@ref) that contain metadata about the state variable defined by the process or model type. These variables are realized as [`Fields`](@ref) defined over the model grid that contain the actual numerical data of the corresponding variable.
 
 Currently, Terrarium only supports defining state variables on a single spatial grid where the vertical dimension corresponds to the subsurface (soil) domain. This may change in the future in order to accommodate multi-layer snow and canopy processes. Note that Terrarium also currently implements only 1D (vertical) dynamics so all grid cells on the X and Y axes can be assumed independent. This is equivalent to what is typically called a *single column* model, or *column-based parameterization* in atmosphere and ocean modeling. However, building on Oceananigans means that we have a clear path to relax this assumption in the future!
