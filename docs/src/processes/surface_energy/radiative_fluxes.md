@@ -54,7 +54,7 @@ compute_auxiliary!(state, grid, rad::PrescribedRadiativeFluxes, seb::AbstractSur
 ```
 
 ```@docs; canonical = false
-compute_auxiliary!(state, grid, rad::DiagnosedRadiativeFluxes, seb::AbstractSurfaceEnergyBalance, atmos::AbstractAtmosphere, consts::PhysicalConstants, args...)
+compute_auxiliary!(state, grid, rad::DiagnosedRadiativeFluxes, seb::AbstractSurfaceEnergyBalance, consts::PhysicalConstants, atmos::AbstractAtmosphere, args...)
 ```
 
 ## Methods

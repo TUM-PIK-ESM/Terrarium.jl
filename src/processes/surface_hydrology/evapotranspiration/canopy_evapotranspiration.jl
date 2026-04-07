@@ -99,7 +99,8 @@ function compute_auxiliary!(
         constants::PhysicalConstants,
         atmos::AbstractAtmosphere,
         soil::AbstractSoil,
-        vegetation::AbstractVegetation
+        vegetation::AbstractVegetation,
+        args...
     )
     out = auxiliary_fields(state, evapotranspiration)
     fields = get_fields(state, evapotranspiration, canopy_interception, atmos, soil, vegetation; except = out)
@@ -122,7 +123,8 @@ for the given scheme `evapotranspiration` and process dependencies.
         constants::PhysicalConstants,
         atmos::AbstractAtmosphere,
         soil::AbstractSoil,
-        vegetation::AbstractVegetation
+        vegetation::AbstractVegetation,
+        args...
     )
     # Get inputs
     Ts = fields.skin_temperature[i, j] # skin temperature (top of canopy)
@@ -153,7 +155,7 @@ Compute the aerodynamic resistance between the ground and canopy as a function o
         i, j, grid, fields,
         atmos::AbstractAtmosphere,
         evapotranspiration::PALADYNCanopyEvapotranspiration,
-        vegetation::AbstractVegetation
+        ::AbstractVegetation # included just to make explicit the dependence on vegetation fields
     )
     @inbounds let LAI = fields.leaf_area_index[i, j],
             SAI = fields.SAI[i, j],

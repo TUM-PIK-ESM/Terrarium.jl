@@ -43,7 +43,7 @@ variables(SurfaceEnergyBalance(Float32))
 ## Process interface
 
 ```@docs; canonical = false
-compute_auxiliary!(state, grid, seb::SurfaceEnergyBalance, atmos::AbstractAtmosphere, constants::PhysicalConstants, hydrology::Optional{AbstractSurfaceHydrology}, args...)
+compute_auxiliary!(state, grid, seb::SurfaceEnergyBalance, constants::PhysicalConstants, atmos::AbstractAtmosphere, hydrology::Optional{AbstractSurfaceHydrology}, args...)
 ```
 
 ## Methods
