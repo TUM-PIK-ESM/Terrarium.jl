@@ -83,16 +83,122 @@ and voila! We have just run a GPU-accelerated, global-scale simulation of soil t
 
 ## Table of contents
 
+### Introduction
 ```@contents
 Pages = [
     "introduction/basic_concepts.md",
     "introduction/numerical_core.md",
     "introduction/mathematical_formulation.md",
+]
+Depth = 2
+```
+
+### Running Terrarium
+```@contents
+Pages = [
+    "running/initialization.md",
+    "running/time_stepping.md",
+    "running/input_sources.md",
+]
+Depth = 2
+```
+
+### Extending Terrarium
+```@contents
+Pages = [
     "extending/core_interfaces.md",
+    "extending/state_variables.md",
+    "extending/implementing_processes.md",
+    "extending/coupling_processes.md",
+    "examples/extending/linear_ode_exp_growth.md",
+    "examples/extending/simple_snow_ddm.md",
+    "examples/extending/linear_heat_conduction.md",
+]
+Depth = 2
+```
+
+### Models
+```@contents
+Pages = [
     "models/soil_model.md",
-    "examples_overview.md",
+]
+Depth = 2
+```
+
+### Processes
+
+#### Soil
+```@contents
+Pages = [
+    "processes/soil/soil_hydrology.md",
+    "processes/soil/soil_energy.md",
+    "processes/soil/soil_stratigraphy.md",
+]
+Depth = 2
+```
+
+#### Vegetation
+```@contents
+Pages = [
+    "processes/vegetation/photosynthesis.md",
+    "processes/vegetation/stomatal_conductance.md",
+    "processes/vegetation/plant_available_water.md",
+    "processes/vegetation/autotrophic_respiration.md",
+    "processes/vegetation/carbon_dynamics.md",
+    "processes/vegetation/vegetation_dynamics.md",
+    "processes/vegetation/phenology.md",
+    "processes/vegetation/root_distribution.md",
+]
+Depth = 2
+```
+
+#### Surface hydrology
+```@contents
+Pages = [
+    "processes/surface_hydrology/surface_hydrology.md",
+    "processes/surface_hydrology/canopy_interception.md",
+    "processes/surface_hydrology/evapotranspiration.md",
+    "processes/surface_hydrology/surface_runoff.md",
+]
+Depth = 2
+```
+
+#### Surface energy fluxes
+```@contents
+Pages = [
+    "processes/surface_energy/surface_energy_balance.md",
+    "processes/surface_energy/radiative_fluxes.md",
+    "processes/surface_energy/turbulent_fluxes.md",
+    "processes/surface_energy/skin_temperature.md",
+    "processes/surface_energy/albedo.md",
+]
+Depth = 2
+```
+
+#### Coupling to atmosphere
+```@contents
+Pages = [
+    "processes/atmosphere/atmosphere.md",
+    "processes/atmosphere/aerodynamics.md",
+]
+Depth = 2
+```
+
+#### Utilities
+```@contents
+Pages = [
+    "processes/utils/physical_constants.md",
+    "processes/utils/physics_utils.md",
+]
+Depth = 2
+```
+
+### Other
+```@contents
+Pages = [
     "contributing.md",
-    "api_reference.md",
+    "api_index.md",
+    "references.md",
 ]
 Depth = 2
 ```
