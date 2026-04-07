@@ -124,8 +124,8 @@ makedocs(
         repolink = "https://github.com/NumericalEarth/Terrarium.jl",
         canonical = "https://numericalearth.github.io/Terrarium.jl",
         assets = ["assets/citations.css"],
-        size_threshold_warn = 500_000,
-        size_threshold = 1_000_000,
+        size_threshold_warn = 500 * 1024, # 500 KiB
+        size_threshold = 3 * 1024^2, # 3 MiB
         mathengine = Documenter.MathJax3(),
     ),
     sitename = "Terrarium.jl",

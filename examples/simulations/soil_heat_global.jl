@@ -13,17 +13,20 @@ using CairoMakie, GeoMakie
 
 import RingGrids
 
-input_dir = "inputs" # hide
-@info "Current working directory: $(pwd())" # hide
+import DisplayAs #hide
+
+input_dir = "inputs" #hide
+@info "Current working directory: $(pwd())" #hide
 
 # First we check if GPU is available and choose the architecture correspondingly.
 arch = CUDA.functional() ? GPU() : CPU()
-@info "Setting up simulation on $arch"
+@info "Setting up simulation on $arch" #hide
 
 # Next, we load a land-sea mask at ~1° resolution:
 land_sea_frac = convert.(Float32, dropdims(Raster(joinpath(input_dir, "era5-land_land_sea_mask_N72.nc")), dims = Ti))
 land_sea_frac_field = RingGrids.FullGaussianField(Matrix(land_sea_frac), input_as = Matrix)
-heatmap(land_sea_frac_field)
+fig = heatmap(land_sea_frac_field)
+DisplayAs.PNG(fig) #hide
 
 # Then we set up a masked [`ColumnRingGrid`](@ref), selecting only grid points
 # with >50% land cover:
@@ -39,7 +42,8 @@ model = SoilModel(grid)
 # the poles.
 mean_annual_temperature(lat) = 20 - abs(40 * sin(lat)) # maximum at equator
 
-heatmap(RingGrids.Field(mean_annual_temperature.(grid_lat), grid.rings))
+fig = heatmap(RingGrids.Field(mean_annual_temperature.(grid_lat), grid.rings))
+DisplayAs.PNG(fig) #hide
 
 # The initial temperature profiles will be linear temperature profiles similar to what we would get from
 # [`QuasiThermalSteadyState`](@ref) but with a hardcoded geothermal gradient of 0.05 K/m. We don't use
@@ -86,23 +90,25 @@ integrator = initialize(model, ForwardEuler(), boundary_conditions = bc, initial
 
 # Let's already plot the initial surface temperature state to see what it looks like:
 T_surface_initial = RingGrids.Field(CPU(), interior(integrator.state.ground_temperature), grid)
-heatmap(T_surface_initial[:, 1, 1], title = "Temperature of uppermost soil layer", colorrange = (-20, 20), size = (800, 400))
+fig = heatmap(T_surface_initial[:, 1, 1], title = "Temperature of uppermost soil layer", colorrange = (-20, 20))
+DisplayAs.PNG(fig) #hide
 
 # We will do a quick check, advancing the simulation by one timestep with Δt = 15 minutes (900 seconds)
-timestep!(integrator, 60.0)
-@time timestep!(integrator, 60.0)
+timestep!(integrator)
+@time timestep!(integrator)
 
 # ...then run the simulation for 12 hours to see the temperature change!
-@time run!(integrator, period = Hour(12), Δt = 300.0)
+@time run!(integrator, period = Hour(12), Δt = 600.0)
 
 # Now we can plot the resulting soil (surface) temperature map using RingGrids + GeoMakie:
 T_surface = RingGrids.Field(CPU(), interior(integrator.state.ground_temperature), grid)
-heatmap(T_surface[:, 1, 1], title = "Temperature of uppermost soil layer", colorrange = (-20, 20), size = (800, 400))
+fig = heatmap(T_surface[:, 1, 1], title = "Temperature of uppermost soil layer", colorrange = (-20, 20))
+DisplayAs.PNG(fig) #hide
 
 # We can also wrap the `integrator` in an Oceananigans `Simulation` which can be used to add
 # callbacks and save outputs.
 using Oceananigans.OutputWriters: JLD2Writer, AveragedTimeInterval
 using Oceananigans.Units: days
 
-sim = Simulation(integrator; Δt = 900.0, stop_time = 2days)
+sim = Simulation(integrator; Δt = 600.0, stop_time = 2days)
 run!(sim)
