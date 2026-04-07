@@ -204,9 +204,6 @@ makedocs(
 
 deployconfig = Documenter.auto_detect_deploy_system()
 
-# remove gitignore from build files
-# rm(joinpath(@__DIR__, "build", ".gitignore"))
-
 deploydocs(
     repo = "github.com/NumericalEarth/Terrarium.jl.git",
     push_preview = true,
