@@ -57,18 +57,18 @@ end
 # device specified by `arch`, and ii) ensure that the compiler is able to infer the correct type of the
 # coordinate values in the boundary condition function.
 function get_temperature_bc(lon::AbstractVector, lat::AbstractVector, amplitude = 10.0)
-    # make sure coordinate arrays are on the same device
+    ## make sure coordinate arrays are on the same device
     lon_device = on_architecture(arch, Float32.(lon))
     lat_device = on_architecture(arch, Float32.(lat))
-    # Create function matching the expected signature for boundary conditions on a column-based grid
+    ## function matching the expected signature for boundary conditions on a column-based grid
     function periodic_bc(x::NF, t::NF) where {NF}
-        # x coordinate is just the grid cell index
+        ## x coordinate is just the grid cell index
         lonₓ = lon_device[round(Int, x)]
         latₓ = lat_device[round(Int, x)]
-        # use climatology at latₓ as the mean of BC
+        ## use climatology at latₓ as the mean of BC
         T₀ = mean_annual_temperature(latₓ)
         seconds_per_day = NF(24 * 3600)
-        # shift BC by longitude to (roughly) mimic the global daily cycle
+        ## shift BC by longitude to (roughly) mimic the global daily cycle
         T = T₀ + NF(amplitude) * sin(2π * t / seconds_per_day - lonₓ)
         return T
     end
