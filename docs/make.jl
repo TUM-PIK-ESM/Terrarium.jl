@@ -84,21 +84,18 @@ running_example_docpages = Pair{String, String}[]
 extending_example_docpages = Pair{String, String}[]
 
 # Temporary solution: copy input files to src
-@info "Copying input files"
-running_examples_outdir = joinpath(EXAMPLES_OUTDIR, "simulations")
-extending_examples_outdir = joinpath(EXAMPLES_OUTDIR, "extending")
-mkpath(running_examples_outdir)
-mkpath(extending_examples_outdir)
-cp("inputs", joinpath(running_examples_outdir, "inputs"))
+@info "Copying input files to $(EXAMPLES_OUTDIR)"
+mkpath(EXAMPLES_OUTDIR)
+cp("inputs", joinpath(EXAMPLES_OUTDIR, "inputs"), force = true)
 
 # Build example pages with Literate.jl
 build_literate_pages!(
-    running_examples_outdir,
+    EXAMPLES_OUTDIR,
     joinpath(EXAMPLES_DIR, "simulations"),
     running_scripts
 )
 build_literate_pages!(
-    extending_examples_outdir,
+    EXAMPLES_OUTDIR,
     joinpath(EXAMPLES_DIR, "extending"),
     extending_scripts
 )
@@ -106,11 +103,11 @@ build_literate_pages!(
 # Add example pages to lists
 for (title, filename) in running_scripts
     mdfile = replace(filename, ".jl" => ".md")
-    push!(running_example_docpages, "Example: $title" => joinpath(EXAMPLES_OUTDIR_RELATIVE, "simulations", mdfile))
+    push!(running_example_docpages, "Example: $title" => joinpath(EXAMPLES_OUTDIR_RELATIVE, mdfile))
 end
 for (title, filename) in extending_scripts
     mdfile = replace(filename, ".jl" => ".md")
-    push!(extending_example_docpages, "Example: $title" => joinpath(EXAMPLES_OUTDIR_RELATIVE, "extending", mdfile))
+    push!(extending_example_docpages, "Example: $title" => joinpath(EXAMPLES_OUTDIR_RELATIVE, mdfile))
 end
 
 # Create bibliography
