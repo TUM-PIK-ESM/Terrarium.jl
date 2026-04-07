@@ -25,7 +25,7 @@ For more information on how Oceananigans grids work, we recommend reading the [c
 
 ## Fields
 
-`Field`s define `Array`s of data that align with a grid. In Terrarium, `Field`s are used exclusively to represent state and input variables that vary in space (and time). All `Field`s have a corresponding `location(field) = (LX, LY, LZ)` which describes how the `Field` aligns with the underlying grid. Each of `LX`, `LY`, and `LZ` can take on values of either `Center`, `Face`, or `nothing`, where `Center` refers to the spatial centerpoint of the cell (representing the spatial average over that volume in the typical finite-volume sense) and `Face` corresponds to values defined at the interfaces such as fluxes or conductivities. A `nothing` location refers to a reduced quantity averaged or integrated over the corresponding axis.
+[`Field`s](@extref Oceananigans.Fields.Field) define `Array`s of data that align with a grid. In Terrarium, [`Field`](@ref)s are used exclusively to represent state and input variables that vary in space (and time). All `Field`s have a corresponding `location(field) = (LX, LY, LZ)` which describes how the `Field` aligns with the underlying grid. Each of `LX`, `LY`, and `LZ` can take on values of either `Center`, `Face`, or `nothing`, where `Center` refers to the spatial centerpoint of the cell (representing the spatial average over that volume in the typical finite-volume sense) and `Face` corresponds to values defined at the interfaces such as fluxes or conductivities. A `nothing` location refers to a reduced quantity averaged or integrated over the corresponding axis.
 
 In addition to holding data, `Field`s also can also store one or more associated [boundary conditions](https://clima.github.io/OceananigansDocumentation/stable/fields#Halo-regions-and-boundary-conditions) as well as "halo" regions used to define them. Boundary conditions ([`BoundaryCondition`](@extref Oceananigans.BoundaryConditions.BoundaryCondition))can either be Dirichlet-type (`ValueBoundaryCondition`), Neumann-type (`GradientBoundaryCondition`), or fluxes (`FluxBoundaryCondition`). Boundary conditions can be defined using functions, scalars, `Array`s or other `Field`s.
 
@@ -35,7 +35,7 @@ For a more detailed overview of `Field`s, we recommend checking out the [corresp
 
 ## Kernel programming
 
-Like Oceananigans and SpeedyWeather, the numerical core of Terrarium is based on [KernelAbstractions.jl](https://github.com/JuliaGPU/KernelAbstractions.jl) which allows for device-agnostic *parallel programming* via computational *kernels*. The purpose of this design is to allow for highly efficient, scalable, and cross-architecture (e.g. CPU/GPU/TPU) parallelization of all numerical computations. Kernels are defined using the `@kernel` macro from KernelAbstractions:
+Like Oceananigans and SpeedyWeather, the numerical core of Terrarium is based on [KernelAbstractions.jl](https://github.com/JuliaGPU/KernelAbstractions.jl) which allows for device-agnostic *parallel programming* via computational *kernels*. The purpose of this design is to allow for highly efficient, scalable, and cross-architecture (e.g. CPU/GPU/TPU) parallelization of all numerical computations. Kernels are defined using the [`@kernel`](@extref KernelAbstractions.@kernel) macro from KernelAbstractions:
 
 ```julia
 @kernel function square_kernel!(output, input, other_args...)
@@ -45,9 +45,9 @@ end
 ```
 where `input` and `output` are here assumed to be 3D `Array`s or `Field`s. Note that kernels can also accept any arbitrary number of arguments of any plain data type (including immutable `struct`s) for which `isbits(arg)` is true.
 
-Kernels represent self-contained programs that can be execute in parallel by large number of worker threads or processes. Intuitively, you can think of the kernel function as the body of a `for` loop that executes over all finite volumes defined on the grid. The [`@index`](https://juliagpu.github.io/KernelAbstractions.jl/stable/api/#KernelAbstractions.@index) macro extracts the index of the executing thread within the parallel kernel; `Global` here refers to the index across all workgroups (or "blocks" in CUDA language).
+Kernels represent self-contained programs that can be execute in parallel by large number of worker threads or processes. Intuitively, you can think of the kernel function as the body of a `for` loop that executes over all finite volumes defined on the grid. The [`@index`](@extref KernelAbstractions.@index) macro extracts the index of the executing thread within the parallel kernel; `Global` here refers to the index across all workgroups (or "blocks" in CUDA language).
 
-Terrarium and Oceananigans kernels are typically launched over a `grid` (or some subset thereof) via `launch!`,
+Terrarium and Oceananigans kernels are typically launched over a `grid` (or some subset thereof) via [`launch!`](@extref Oceananigans.Utils.launch!),
 ```julia
 launch!(architecture(grid), grid, :xyz, square_kernel!, output_field, input_field)
 ```
@@ -56,16 +56,16 @@ where `:xyz` indicates the dimensions of the grid over which the kernel should b
 ```julia
 launch!(grid, XYZ, square_kernel!, output_field, input_field)
 ```
-which automatically passes `grid` as the second argument to the kernel. Note that, in order to make use of this convenience dispatch of `launch!`, the above kernel would need to be modified to have the signature `square_kernel!(output, grid, input, other_args...)`. We generally find this convenient since it makes the kernel's dependence on the `grid` more explicit. However, it comes with a small amount of runtime overhead in cases where the `grid` is not needed. Note also the argument `XYZ` (or `XY` for 2D) corresponds to a `VarDims` type used to define Terrarium state variables; this syntax can be used interchangeably with the Oceananigans `Symbol` syntax.
+which automatically passes `grid` as the second argument to the kernel. Note that, in order to make use of this convenience dispatch of `launch!`, the above kernel would need to be modified to have the signature `square_kernel!(output, grid, input, other_args...)`. We generally find this convenient since it makes the kernel's dependence on the `grid` more explicit. However, it comes with a small amount of runtime overhead in cases where the `grid` is not needed. Note also the argument [`XYZ`](@ref) (or [`XY`](@ref) for 2D) corresponds to a `VarDims` type used to define Terrarium state variables; this syntax can be used interchangeably with the Oceananigans `Symbol` syntax.
 
 !!! warning
     The kernel launching patterns used in Terrarium are still in an early stage of development and may change in the future.
 
 As a general rule, we try to combine or *fuse* kernel functions as much as possible. Kernel fusion means that we aim to write relatively “large” kernels that fuse as many operations as possible together in one kernel. Kernel fusion leads to more efficient GPU computations by reducing memory demand and kernel launching overhead ([Wang et. al 2000](https://ieeexplore.ieee.org/document/5724850/)). In order to still keep our code well structured and modular, our approach relies on implementing most processes as inlined functions that can be called from a GPU kernel.
 
-To see how this looks in action in Terrarium.jl, you can take a look at the code for [SoilEnergyBalance](https://github.com/NumericalEarth/Terrarium.jl/blob/main/src/processes/soil/energy/soil_energy.jl): There `compute_tendencies!` is the mandatory function for the model component, it launches exactly one kernel `compute_energy_tendency!`, which includes several `@inline` function to compute individual contributions to the energy balance such as `compute_energy_tendency`, `compute_thermal_conductivity` and the `diffusive_heat_flux`.
+To see how this looks in action in Terrarium.jl, you can take a look at the code for [SoilEnergyBalance](https://github.com/NumericalEarth/Terrarium.jl/blob/main/src/processes/soil/energy/soil_energy.jl): There [`compute_tendencies!`](@ref) is the mandatory function for the model component, it launches exactly one kernel [`compute_tendencies_kernel!`], which includes several `@inline` functions to compute individual contributions to the energy balance such as [`compute_energy_tendency`](@ref), [`compute_thermal_conductivity`](@ref) and the `diffusive_heat_flux`.
 
-It's also worth checking out the [Simulation tips](https://clima.github.io/OceananigansDocumentation/stable/simulation_tips) provided in the documentation for Oceananigans.
+It's also worth checking out the [Simulation tips](https://clima.github.io/OceananigansDocumentation/stable/simulation@_tips) provided in the documentation for Oceananigans.
 
 ## Numeric types
 
