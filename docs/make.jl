@@ -1,6 +1,7 @@
 using ArgParse
 using Documenter
 using DocumenterCitations
+using DocumenterInterLinks
 using Literate
 
 using Terrarium
@@ -119,6 +120,12 @@ bib = CitationBibliography(
     style = :numeric
 )
 
+# Add documentation interlinking
+links = InterLinks(
+    "Oceananigans" => "https://clima.github.io/OceananigansDocumentation/stable/",
+)
+
+
 makedocs(
     format = Documenter.HTML(
         prettyurls = get(ENV, "CI", nothing) == "true",
@@ -133,7 +140,7 @@ makedocs(
     sitename = "Terrarium.jl",
     authors = "Brian Groenke, Maximilian Gelbrecht, Maha Badri, and Contributors",
     modules = [Terrarium],
-    plugins = [bib],
+    plugins = [bib, links],
     pages = [
         "Home" => "index.md",
         "Introduction" => [
