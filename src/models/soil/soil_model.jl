@@ -23,7 +23,7 @@ $(TYPEDFIELDS)
     constants::Constants = PhysicalConstants(eltype(grid))
 
     "State variable initializer"
-    initializer::Initializer = DefaultInitializer(eltype(grid))
+    initializer::Initializer = SoilInitializer(eltype(grid))
 end
 
 # Model interface methods
