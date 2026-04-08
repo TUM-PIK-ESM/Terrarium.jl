@@ -140,6 +140,7 @@ makedocs(
             "Mathematical formulation" => "introduction/mathematical_formulation.md",
         ],
         "Running Terrarium" => [
+            "Configuring models" => "running/configuring.md",
             "Initialization" => "running/initialization.md",
             "Time stepping" => "running/time_stepping.md",
             "Input sources" => "running/input_sources.md",
