@@ -34,7 +34,7 @@ compute_auxiliary!
 compute_tendencies!
 ```
 
-Further details on these interfaces and their practical implementations are given in the following sections.
+Further details on these interfaces and their practical implementations are given in the following sections. Remember from [Intialization](@ref) that `state` is a [StateVariables](@ref) structure formed during initialization of a model or process. 
 
 ## The `AbstractProcess` interface
 
