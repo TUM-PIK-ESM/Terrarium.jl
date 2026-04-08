@@ -49,9 +49,7 @@ source = InputSource(snow_grid, albedo_ring; name = :albedo)
 
 ### Time-varying `Field` inputs
 
-A [`FieldTimeSeriesInputSource`](@ref) wraps an Oceananigans [`FieldTimeSeries`](@extref Oceananigans.OutputReaders.FieldTimeSeries-Tuple{JLD2.JLDFile, String}). At each time
-step the input field is set to the snapshot in the time series that is closest to
-`clock.time` (using `FieldTimeSeries[Time(t)]`).
+A [`FieldTimeSeriesInputSource`](@ref) wraps an Oceananigans [`FieldTimeSeries`](@extref Oceananigans.OutputReaders.FieldTimeSeries-Tuple{JLD2.JLDFile, String}). At each time step the input field is set to the snapshot in the time series that is closest to `clock.time` (using `FieldTimeSeries[Time(t)]`).
 
 ```julia
 using Oceananigans.Units: hours
@@ -67,13 +65,11 @@ source = InputSource(fts; name = :air_temperature, units = u"°C")
 InputSource(grid::AbstractLandGrid{NF}, field::FS) where {NF, FS <: AnyFieldTimeSeries{NF}}
 ```
 
-The `FieldTimeSeries` can also be loaded from a file using the relevant constructors
-provided by Oceananigans.
+The `FieldTimeSeries` can also be loaded from a file using the relevant constructors provided by Oceananigans.
 
 ### Inputs from raster data
 
-Alternatively, Terrarium provides an extension module for [`Rasters.jl`](https://github.com/rafaqz/Rasters.jl) with a `RasterInputSource` that reads data directly from any format supported by Rasters.jl
-(NetCDF, GeoTIFF, Zarr, etc.) and supports both static and time-varying inputs.
+Alternatively, Terrarium provides an extension module for [`Rasters.jl`](https://github.com/rafaqz/Rasters.jl) with a `RasterInputSource` that reads data directly from any format supported by Rasters.jl (NetCDF, GeoTIFF, Zarr, etc.) and supports both static and time-varying inputs.
 
 !!! note
     Load `Rasters` together  with `Terrarium` to activate the extension:
@@ -83,8 +79,7 @@ Alternatively, Terrarium provides an extension module for [`Rasters.jl`](https:/
 
 **Static raster input**
 
-If the `Raster` has no time dimension, `initialize!` copies the data once and
-`update_inputs!` is a no-op:
+If the `Raster` has no time dimension, `initialize!` copies the data once and `update_inputs!` is a no-op:
 
 ```julia
 using Rasters
@@ -95,19 +90,14 @@ source = InputSource(grid, raster)   # Defaults to using name of Raster
 
 **Time-varying raster input**
 
-If the `Raster` has a `Ti` (time) dimension, values are linearly interpolated between
-the two nearest time points at each call to `update_inputs!`. Outside the bounds of the
-time axis the nearest available snapshot is used (flat extrapolation).
+If the `Raster` has a `Ti` (time) dimension, values are linearly interpolated between the two nearest time points at each call to `update_inputs!`. Outside the bounds of the time axis the nearest available snapshot is used (flat extrapolation).
 
 ```julia
 raster = Raster("path/to/forcing_timeseries.nc"; name = :air_temperature)
 source = InputSource(grid, raster; reftime = DateTime(2000, 1, 1))
 ```
 
-The `reftime` keyword maps the simulation's numeric `clock.time` (seconds) to wall-clock
-`DateTime`. If `reftime` is `nothing` (the default), the first time-axis value is used as
-the reference point. Pass `reftime` explicitly when the simulation clock does not start
-at the first record of the dataset:
+The `reftime` keyword maps the simulation's numeric `clock.time` (seconds) to wall-clock `DateTime`. If `reftime` is `nothing` (the default), the first time-axis value is used as the reference point. Pass `reftime` explicitly when the simulation clock does not start at the first record of the dataset:
 
 ```julia
 # Simulation starts at t=0 s, but data begins on Jan 1 2000
@@ -122,8 +112,7 @@ Multiple `InputSource` objects are passed to `initialize` as positional argument
 integrator = initialize(model, Heun(Δt = 3600.0), source1, source2, source3)
 ```
 
-Internally they are collected into an `InputSources` container, which iterates over
-each source in order when calling `initialize!` and `update_inputs!`.
+Internally they are collected into an `InputSources` container, which iterates over each source in order when calling `initialize!` and `update_inputs!`.
 
 A standalone `InputSources` can also be constructed manually for inspection:
 
@@ -134,9 +123,7 @@ variables(sources)   # union of all declared input variables
 
 ## Using inputs inside process kernels
 
-Input variables are stored in `state.inputs` and are also accessible through the top-level
-`state` shorthand, just like prognostic or auxiliary variables. Inside a kernel
-function, inputs appear as named fields and are retrieved the same way as any other field:
+Input variables are stored in `state.inputs` and are also accessible through the top-level `state` shorthand, just like prognostic or auxiliary variables. Inside a kernel function, inputs appear as named fields and are retrieved the same way as any other field:
 
 ```julia
 @propagate_inbounds function compute_snow_flux_tendency(i, j, grid, fields, snow_melt::DegreeDaySnow)
@@ -148,8 +135,7 @@ function, inputs appear as named fields and are retrieved the same way as any ot
 end
 ```
 
-The minimum set of input fields needed by a process is declared by including `input`
-variables in the `variables` method of the relevant `AbstractProcess`:
+The minimum set of input fields needed by a process is declared by including `input` variables in the `variables` method of the relevant `AbstractProcess`:
 
 ```julia
 Terrarium.variables(snow::DegreeDaySnow{NF}) where {NF} = (
@@ -159,8 +145,7 @@ Terrarium.variables(snow::DegreeDaySnow{NF}) where {NF} = (
 )
 ```
 
-Terrarium's [`get_fields`](@ref) utility then automatically collects only the fields named in
-`variables` when assembling the argument list for kernel launch.
+Terrarium's [`get_fields`](@ref) utility then automatically collects only the fields named in `variables` when assembling the argument list for kernel launch.
 
 ## Implementing a custom input source
 
