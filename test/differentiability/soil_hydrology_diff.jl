@@ -6,14 +6,14 @@ using FreezeCurves
 using Statistics
 
 function build_soil_energy_hydrology_model(
-        arch, ::Type{NF}, vertflow = RichardsEq();
+        arch, ::Type{NF}, vertical_flow = RichardsEq();
         porosity = ConstantSoilPorosity(NF),
         hydrology_kwargs...
     ) where {NF}
     grid = ColumnGrid(arch, Float64, ExponentialSpacing(N = 10))
     # initial conditions
     initializer = SoilInitializer(eltype(grid))
-    hydrology = SoilHydrology(eltype(grid), vertflow; hydrology_kwargs...)
+    hydrology = SoilHydrology(eltype(grid), vertical_flow; hydrology_kwargs...)
     strat = HomogeneousStratigraphy(eltype(grid); porosity)
     soil = SoilEnergyWaterCarbon(eltype(grid); hydrology, strat)
     model = SoilModel(grid; soil, initializer)
