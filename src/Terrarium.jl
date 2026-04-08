@@ -86,7 +86,7 @@ include("utils/utils.jl")
 # debugging utilities
 include("diagnostics/debugging.jl")
 
-export PrognosticVariable, AuxiliaryVariable, InputVariable, Input, XY, XYZ
+export PrognosticVariable, AuxiliaryVariable, InputVariable, Input, XY, XYZ, prognostic, auxiliary, input
 include("abstract_variables.jl")
 
 # grids
