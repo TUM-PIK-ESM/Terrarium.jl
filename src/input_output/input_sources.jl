@@ -14,28 +14,28 @@ abstract type InputSource{NF, name} end
 InputSource(; kwargs...) = InputSource(kwargs...)
 
 """
-    $SIGNATURES
+    $TYPEDSIGNATURES
 
 Returns a tuple of `Symbol`s corresponding to variable names supported by this `InputSource`.
 """
 variables(::InputSource) = ()
 
 """
-    $SIGNATURES
+    $TYPEDSIGNATURES
 
 Returns the name of the input source.
 """
-inputname(::InputSource{NF, name}) where {NF, name} = name
+varname(::InputSource{NF, name}) where {NF, name} = name
 
 """
-    $SIGNATURES
+    $TYPEDSIGNATURES
 
 Initializes the input source. Default implementation does nothing.
 """
 initialize!(fields, ::InputSource, clock) = nothing
 
 """
-    $SIGNATURES
+    $TYPEDSIGNATURES
 
 Updates the values of input variables stored in `fields` from the given input `source`.
 Default implementation simply returns `nothing`.
@@ -62,14 +62,14 @@ function initialize!(fields, sources::InputSources, clock::Clock)
     for source in sources.sources
         initialize!(fields, source, clock)
     end
-    return
+    return nothing
 end
 
 function update_inputs!(fields, sources::InputSources, clock::Clock)
     for source in sources.sources
         update_inputs!(fields, source, clock)
     end
-    return
+    return nothing
 end
 
 """
@@ -98,7 +98,7 @@ function initialize!(fields, source::FieldInputSource{NF, name}, clock = nothing
 end
 
 """
-    $SIGNATURES
+    $TYPEDSIGNATURES
 
 Create a `FieldInputSource` with the given grid and input variable `fields`. Use it for static input fields.
 """
@@ -116,7 +116,7 @@ function InputSource(grid::AbstractLandGrid{NF}, field::FS; name, units = NoUnit
 end
 
 """
-    $SIGNATURES
+    $TYPEDSIGNATURES
 
 Convenience function to create a `FieldInputSource` from a `RingGrids.Field`.
 Converts the RingGrids field to an Oceananigans field and then creates the input source.
