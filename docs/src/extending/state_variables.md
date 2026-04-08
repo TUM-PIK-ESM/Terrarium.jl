@@ -38,7 +38,7 @@ variables(::MyProcess) = (
     input(:input, XY())
 )
 ```
-This will result in a total of five state variables being allocated upon initialization: two auxiliary variables named `auxvar` and `bc` as well as one prognostic variable named `progvar` along with its corresponding tendency variable which is created automatically. The second argument to the variable metadata constructors `prognostic` and `auxiliary` is a subtype of `VarDims` which specifies on which spatial dimensions the state variable should be defined. `XYZ()` corresponds to a 3D `Field` which varies both laterally and with depth. `XY()` corresponds to a 2D field which is discretized along the lateral X and Y dimensions only.
+This will result in a total of five state variables being allocated upon initialization: one input variable, two auxiliary variables named `auxvar` and `bc` and one prognostic variable named `progvar` along with its corresponding tendency variable which is created automatically. The second argument to the variable metadata constructors `prognostic` and `auxiliary` is a subtype of `VarDims` which specifies on which spatial dimensions the state variable should be defined. `XYZ()` corresponds to a 3D `Field` which varies both laterally and with depth. `XY()` corresponds to a 2D field which is discretized along the lateral X and Y dimensions only.
 
 ## Merging and promotion rules
 
