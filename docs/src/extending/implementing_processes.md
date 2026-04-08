@@ -26,4 +26,4 @@ We recommend to start implementing new processes using the following workflow:
 4. Implement the `compute_*(i, j[, k], grid, fields, ...)` kernel functions with the corresponding `@kernel` entry points `compute_auxiliary_kernel!` and `compute_tendencies_kernel!` (**level II**). Functions which might be independently useful outside of the process interface (e.g. [`adjust_saturation_profile!`](@ref) in `SoilHydrology`) can also define their own `@kernel` entry points.
 5. Finally, write implement the top-level process methods for `initialize!`, `compute_auxiliary!` and `compute_tendencies!` that `launch!` their respective `@kernel`s (**level I**).
 
-See the example [Linear heat conduction](@ref) for a detailed walkthrough of this workflow.
+As mentioned above, see the example [Implementing a process: 1D linear heat diffusion](@ref) for a detailed walkthrough of this workflow.
