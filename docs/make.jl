@@ -153,15 +153,20 @@ makedocs(
             extending_example_docpages...,
         ],
         "Models" => [
+            "Land model" => "models/land_model.md",
             "Soil model" => "models/soil_model.md",
+            "Vegetation model" => "model/vegetation_model.md",
         ],
         "Processes" => [
             "Soil" => [
+                "Overview" => "processes/soil/soil.md",
                 "Soil hydrology" => "processes/soil/soil_hydrology.md",
                 "Soil energy" => "processes/soil/soil_energy.md",
+                "Soil biogeochemistry" => "processes/soil/soil_biogeochemistry.md",
                 "Soil stratigraphy" => "processes/soil/soil_stratigraphy.md",
             ],
             "Vegetation" => [
+                "Overview" => "processes/vegetation/vegetation.md",
                 "Photosynthesis" => "processes/vegetation/photosynthesis.md",
                 "Stomatal conductance" => "processes/vegetation/stomatal_conductance.md",
                 "Plant available water" => "processes/vegetation/plant_available_water.md",
