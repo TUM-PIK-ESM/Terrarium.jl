@@ -31,11 +31,11 @@ As a general rule, these initializers are invoked in the order that they are lis
 
 ## Direct initialization of `Field`s
 
-The keyword argument must be a `NamedTuple` where the keys correspond to the name of the state variable and the values are either scalars, arrays matching the size of the model `grid`, or functions of the form `f(coords...)` where `coords` are the non-`Flat` dimensions of `grid`. For column-based grids, this is generally `f(x,z)` with `x` corresponding to a column index.
+The keyword argument must be a `NamedTuple` where the keys correspond to the name of the state variable and the values are either scalars, arrays matching the size of the model `grid`, or functions of the form `f(coords...)` where `coords` are the non-[`Flat`](@extref Oceananigans.Grids.Flat) dimensions of `grid`. For column-based grids, this is generally `f(x,z)` with `x` corresponding to a column index.
 
 ## Model initializers
 
-These `Initializer` types can be supplied to subtypes of `AbstractModel` during construction. Models can/should typically define corresponding `AbstractInitializer` types that represent common initialization strategies appropriate for the processes included in that model; e.g. the `SoilModel` defines [`SoilInitializer`](@ref) with process-specific initialization types like [`QuasiThermalSteadyState`](@ref) and [`SaturationWaterTable`](@ref).
+These `Initializer` types can be supplied to subtypes of [`AbstractModel`](@ref) during construction. Models can/should typically define corresponding [`AbstractInitializer`](@ref) types that represent common initialization strategies appropriate for the processes included in that model; e.g. the [`SoilModel`](@ref) defines [`SoilInitializer`](@ref) with process-specific initialization types like [`QuasiThermalSteadyState`](@ref) and [`SaturationWaterTable`](@ref).
 
 ## Built-in initialization routines
 
