@@ -123,7 +123,8 @@ bib = CitationBibliography(
 # Add documentation interlinking
 links = InterLinks(
     "Oceananigans" => "https://clima.github.io/OceananigansDocumentation/stable/",
-    "KernelAbstractions" => "https://juliagpu.github.io/KernelAbstractions.jl/stable/"
+    "KernelAbstractions" => "https://juliagpu.github.io/KernelAbstractions.jl/stable/",
+    "SpeedyWeather" => "https://speedyweather.github.io/SpeedyWeatherDocumentation/stable/"
 )
 
 
