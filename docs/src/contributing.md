@@ -41,7 +41,7 @@ The docs can be built locally by running
 julia --project=docs docs/make.jl --local
 ```
 
-To skip running doctests and example scripts, you can also add `--draft` or `-d` for short.
+To skip running doctests and example scripts, you can also add `--draft` or `-d` for short. To skip only the example scripts, use `--skip-examples`. You can also add `--debug` when running locally to get detailed output from Documenter during execution of doctests and in-page `@example` blocks.
 
 Preview builds of the documentation associated with pull requests can be reviewed at
 

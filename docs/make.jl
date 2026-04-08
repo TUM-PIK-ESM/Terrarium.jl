@@ -17,7 +17,7 @@ s = ArgParseSettings()
     "--draft", "-d"
     action = :store_true
     help = "Whether to build docs in draft mode, i.e. skipping execution of examples and doctests"
-    "--no-exec", "-e"
+    "--skip-examples", "-e"
     action = :store_true
     help = "Like --draft but applies only to example scripts"
     "--check-links", "-c"
@@ -31,9 +31,9 @@ parsed_args = parse_args(ARGS, s)
 
 IS_LOCAL = parsed_args["local"] || parse(Bool, get(ENV, "LOCALDOCS", "false"))
 IS_DRAFT = parsed_args["draft"] || parse(Bool, get(ENV, "DRAFTDOCS", "false"))
-NO_EXEC = parsed_args["no-exec"] || parse(Bool, get(ENV, "NOEXEC", "false"))
+SKIP_EXAMPLES = parsed_args["skip-examples"] || parse(Bool, get(ENV, "SKIP_EXAMPLES", "false"))
 CHECK_LINKS = parsed_args["check-links"] || parse(Bool, get(ENV, "CHECK_LINKS", "false"))
-BUILD_EXAMPLE_DOCS = !IS_DRAFT && !NO_EXEC
+BUILD_EXAMPLE_DOCS = !IS_DRAFT && !SKIP_EXAMPLES
 if haskey(ENV, "GITHUB_ACTIONS") || parsed_args["debug"]
     ENV["JULIA_DEBUG"] = "Documenter"
 end
