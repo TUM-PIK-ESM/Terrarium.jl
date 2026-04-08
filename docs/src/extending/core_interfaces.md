@@ -38,7 +38,7 @@ Further details on these interfaces and their practical implementations are give
 
 ## The `AbstractProcess` interface
 
-In the example above, both `AbstractAtmosphere` and `PALADYNCanopyEvapotranspiration` are examples of *processes* that subtype the `AbstractProcess` type.
+In the example above, both `AbstractAtmosphere` and `PALADYNCanopyEvapotranspiration` are examples of *processes* that subtype the [`AbstractProcess`](@ref) type.
 
 Implementations of `AbstractProcess` represent physical processes characterized by:
 - Zero or more state `variable`s that vary spatially across any given `grid`,
@@ -57,7 +57,7 @@ For more details on the `state` structure and definition of `variables`, see the
 
 The main difference between a "model" and a "process" in Terrarium lies in the specification of the `grid` and `initializer`. Processes should be generally be defined independently from any particular choice of initialization, boundary conditions, and `grid`. However, it is worth noting that processes can dispatch on specific types of `grid`, if necessary.
 
-`AbstractModel` is parameterized by two type arguments:
+[`AbstractModel`](@ref) is parameterized by two type arguments:
 
 ```julia
 abstract type AbstractModel{NF, Grid <: AbstractLandGrid{NF}} end
@@ -155,7 +155,7 @@ energy $U$ (J m⁻³), but the tendency $F$ — the divergence of the heat flux 
 naturally evaluated in terms of temperature $T$ (°C). The mapping $U \leftrightarrow T$ is
 therefore a *closure relation*.
 
-`AbstractClosureRelation` is the base type for all such relations in Terrarium. A process
+[`AbstractClosureRelation`](@ref) is the base type for all such relations in Terrarium. A process
 that requires a closure stores its closure as a field and reports it via the `closures`
 method (which is auto-generated from the field types). The two primary interface methods are:
 
