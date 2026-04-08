@@ -149,5 +149,5 @@ soil = SoilEnergyWaterCarbon(eltype(grid); energy)
 model = SoilModel(grid; soil)
 ```
 
-``` todo "Improved parameter handling"
+!!! todo "Improved parameter handling"
     We will soon make it easier to collect, select, and modify parameters *after* model construction using a parameter handling system based on [`ModelParameters`](https://github.com/rafaqz/ModelParameters.jl). Stay tuned!
