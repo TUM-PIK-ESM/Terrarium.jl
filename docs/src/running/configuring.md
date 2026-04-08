@@ -6,6 +6,7 @@ CurrentModule = Terrarium
 
 ```@setup configuring
 using Terrarium
+using InteractiveUtils
 ```
 
 ## Overview
