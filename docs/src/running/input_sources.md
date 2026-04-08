@@ -12,7 +12,7 @@ Input sources supply both static and time-varying input data for the [`InputVari
 InputSource
 ```
 
-All `InputSource`s implement the following interface:
+All [`InputSource`](@ref)s implement the following interface:
 
 ```@docs; canonical = false
 variables(::InputSource)
@@ -24,9 +24,7 @@ update_inputs!(state, ::InputSource, ::Clock)
 
 ### Static input `Field`s
 
-A `FieldInputSource` holds a single `Field` that is copied into the state once at
-initialization and is thereafter unchanged. This is the appropriate input source for
-spatially-varying but time-constant forcings (e.g. maps of soil properties or prescribed climatology).
+A [`FieldInputSource`](@ref) holds a single `Field` that is copied into the state once at initialization and is thereafter unchanged. This is the appropriate input source for spatially-varying but time-constant forcings (e.g. maps of soil properties or prescribed climatology).
 
 ```@docs; canonical = false
 InputSource(grid::AbstractLandGrid{NF}, field::FS) where {NF, FS <: AnyField{NF}}
@@ -42,8 +40,7 @@ set!(albedo_field, 0.3)
 source = InputSource(grid, albedo_field; name = :albedo)
 ```
 
-For a `ColumnRingGrid`, a `RingGrids.Field` can be passed directly and will be
-converted automatically:
+For a [`ColumnRingGrid`](@ref), a [`RingGrids.Field`](@extref SpeedyWeather RingGrids.Field) can be passed directly and will be converted automatically:
 
 ```julia
 albedo_ring = RingGrids.Field(albedo_data, global_grid)
@@ -52,7 +49,7 @@ source = InputSource(snow_grid, albedo_ring; name = :albedo)
 
 ### Time-varying `Field` inputs
 
-A `FieldTimeSeriesInputSource` wraps an Oceananigans `FieldTimeSeries`. At each time
+A [`FieldTimeSeriesInputSource`](@ref) wraps an Oceananigans [`FieldTimeSeries`](@extref Oceananigans.OutputReaders.FieldTimeSeries-Tuple{JLD2.JLDFile, String}). At each time
 step the input field is set to the snapshot in the time series that is closest to
 `clock.time` (using `FieldTimeSeries[Time(t)]`).
 
@@ -162,7 +159,7 @@ Terrarium.variables(snow::DegreeDaySnow{NF}) where {NF} = (
 )
 ```
 
-Terrarium's `get_fields` utility then automatically collects only the fields named in
+Terrarium's [`get_fields`](@ref) utility then automatically collects only the fields named in
 `variables` when assembling the argument list for kernel launch.
 
 ## Implementing a custom input source
