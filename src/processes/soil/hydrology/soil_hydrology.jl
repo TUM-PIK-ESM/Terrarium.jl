@@ -39,13 +39,17 @@ struct SoilHydrology{
 end
 
 function SoilHydrology(
-        ::Type{NF},
-        vertical_flow::AbstractVerticalFlow = NoFlow();
+        ::Type{NF};
+        vertical_flow::AbstractVerticalFlow = NoFlow(),
         closure::AbstractSoilWaterClosure = SoilSaturationPressureClosure(),
         hydraulic_properties::AbstractSoilHydraulics = SoilHydraulicsSURFEX(NF),
         vwc_forcing::Union{Nothing, AbstractForcing} = nothing,
     ) where {NF}
     return SoilHydrology(vertical_flow, closure, hydraulic_properties, vwc_forcing)
+end
+
+function SoilHydrology(::Type{NF}, vertical_flow::AbstractVerticalFlow; kwargs...) where {NF}
+    return SoilHydrology(NF; vertical_flow, kwargs...)
 end
 
 """
