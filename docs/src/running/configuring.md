@@ -52,9 +52,13 @@ model.soil.hydrology
 
 we can see that it has a property `vertical_flow`. As a general rule, most process and parameterization types in Terrarium declare abstract base types which can help us figure out what our choices are. We can use some built-in Julia tools for this.
 
-
 ```@example configuring
-subtypes(supertype(model.soil.hydrology))
+# First get the type of vertical_flow
+vftype = typeof(model.soil.hydrology.vertical_flow)
+# Then get the "super" type (i.e. the abstract type it inherits from)
+suptype = supertype(vftype)
+# Then list all of the subtypes of the abstract type
+subtypes(suptype)
 ```
 
 Aha! We see here a second implementation `RichardsEq`. This happens to correspond to the configuration option for `SoilHydrology` that enables vertical water flow governed by the Richardson-Richards equation. We can enable this by changing `vertical_flow` when constructing the process and then building back up the `SoilModel` from there.

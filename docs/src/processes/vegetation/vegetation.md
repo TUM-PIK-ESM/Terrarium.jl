@@ -31,7 +31,7 @@ These individual processes are composed together in implementations [`AbstractVe
 AbstractVegetation
 ```
 
-```@example interception
+```@example vegetation
 subtypes(Terrarium.AbstractVegetation)
 ```
 
