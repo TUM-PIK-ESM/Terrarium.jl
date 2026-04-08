@@ -1,9 +1,13 @@
 """
+    $TYPEDEF
+
 Base type for implementations of soil water flow dynamics.
 """
 abstract type AbstractVerticalFlow end
 
 """
+    $TYPEDEF
+
 Represents a hydrology scheme where soil water is immobile.
 """
 struct NoFlow <: AbstractVerticalFlow end
@@ -24,7 +28,7 @@ struct SoilHydrology{
     "Soil water vertical flow operator"
     vertflow::VerticalFlow
 
-    "Closure relation for mapping between saturation water potential (hydraulic head)"
+    "Closure relation for the soil hydrology state"
     closure::SaturationClosure
 
     "Soil hydraulic properties parameterization"
@@ -45,7 +49,7 @@ function SoilHydrology(
 end
 
 """
-    get_swrc(hydrology::SoilHydrology)
+    $TYPEDSIGNATURES
 
 Return the soil water retention curve from the `hydraulic_properties` associated with
 the given `SoilHydrology` configuration.
@@ -53,39 +57,26 @@ the given `SoilHydrology` configuration.
 @inline get_swrc(hydrology::SoilHydrology) = hydrology.hydraulic_properties.swrc
 
 """
-    get_hydraulic_properties(hydrology::SoilHydrology)
+    $TYPEDSIGNATURES
 
 Return the soil hydraulic properties defined by the given `hydrology` process.
 """
 @inline get_hydraulic_properties(hydrology::SoilHydrology) = hydrology.hydraulic_properties
 
 """
-    get_closure(::SoilHydrology) where {NF}
+    $TYPEDSIGNATURES
 
 Return the saturation-pressure closure defined by the given `hydrology` process, or `nothing`
 if not defined for the given configuration.
 """
 @inline get_closure(hydrology::SoilHydrology) = hydrology.closure
 
-"""
-State variables for `SoilHydrology` processes.
-"""
 variables(hydrology::SoilHydrology{NF}) where {NF} = (
     auxiliary(:saturation_water_ice, XYZ(), domain = UnitInterval(), desc = "Saturation level of water and ice in the pore space"),
     auxiliary(:water_table, XY(), units = u"m", desc = "Elevation of the water table in meters"),
     auxiliary(:hydraulic_conductivity, XYZ(z = Face()), units = u"m/s", desc = "Hydraulic conductivity of soil volumes in m/s"),
     input(:liquid_water_fraction, XYZ(), default = 1, domain = UnitInterval(), desc = "Fraction of unfrozen water in the pore space"),
 )
-
-@propagate_inbounds saturation_water_ice(i, j, k, grid, fields, ::SoilHydrology) = fields.saturation_water_ice[i, j, k]
-
-@propagate_inbounds hydraulic_conductivity(i, j, k, grid, fields, ::SoilHydrology) = fields.hydraulic_conductivity[i, j, k]
-
-@propagate_inbounds liquid_water_fraction(i, j, k, grid, fields, ::SoilHydrology) = fields.liquid_water_fraction[i, j, k]
-
-@propagate_inbounds water_table(i, j, grid, fields, ::SoilHydrology) = fields.water_table[i, j]
-
-@propagate_inbounds surface_excess_water(i, j, grid, fields, ::SoilHydrology{NF}) where {NF} = zero(NF)
 
 function compute_water_table!(state, grid, hydrology::SoilHydrology)
     launch!(
@@ -114,17 +105,33 @@ end
 
 # Immobile soil water (NoFlow)
 
+""" $TYPEDSIGNATURES """
 function initialize!(state, grid, hydrology::SoilHydrology, soil::AbstractSoil, args...)
     compute_hydraulics!(state, grid, hydrology, soil)
     compute_water_table!(state, grid, hydrology)
     return nothing
 end
 
-@inline compute_auxiliary!(state, grid, hydrology::SoilHydrology, args...) = nothing
+""" $TYPEDSIGNATURES """
+@inline function compute_auxiliary!(state, grid, hydrology::SoilHydrology, soil::AbstractSoil, args...)
+    compute_hydraulics!(state, grid, hydrology, soil, args...)
+    return nothing
+end
 
-@inline compute_tendencies!(state, grid, hydrology::SoilHydrology, args...) = nothing
+""" $TYPEDSIGNATURES """
+@inline compute_tendencies!(state, grid, hydrology::SoilHydrology, soil::AbstractSoil, args...) = nothing
 
 # Kernel functions
+
+@propagate_inbounds saturation_water_ice(i, j, k, grid, fields, ::SoilHydrology) = fields.saturation_water_ice[i, j, k]
+
+@propagate_inbounds hydraulic_conductivity(i, j, k, grid, fields, ::SoilHydrology) = fields.hydraulic_conductivity[i, j, k]
+
+@propagate_inbounds liquid_water_fraction(i, j, k, grid, fields, ::SoilHydrology) = fields.liquid_water_fraction[i, j, k]
+
+@propagate_inbounds water_table(i, j, grid, fields, ::SoilHydrology) = fields.water_table[i, j]
+
+@propagate_inbounds surface_excess_water(i, j, grid, fields, ::SoilHydrology{NF}) where {NF} = zero(NF)
 
 """
     $TYPEDSIGNATURES
@@ -140,7 +147,7 @@ Kernel function that computes soil hydraulics and unsaturated hydraulic conducti
     # Get underlying grid
     fgrid = get_field_grid(grid)
     # compute hydraulic conductivity
-    return @inbounds if k <= 1
+    @inbounds if k <= 1
         out.hydraulic_conductivity[i, j, k] = hydraulic_conductivity(i, j, 1, fgrid, fields, hydrology, strat, bgc)
     elseif k >= fgrid.Nz
         out.hydraulic_conductivity[i, j, k] = hydraulic_conductivity(i, j, fgrid.Nz, fgrid, fields, hydrology, strat, bgc)
@@ -148,6 +155,7 @@ Kernel function that computes soil hydraulics and unsaturated hydraulic conducti
     else
         out.hydraulic_conductivity[i, j, k] = min_zᵃᵃᶠ(i, j, k, fgrid, hydraulic_conductivity, fields, hydrology, strat, bgc)
     end
+    return nothing
 end
 
 """
@@ -158,7 +166,8 @@ Kernel function that diagnoses the water table at grid cell `i, j` given the cur
 @propagate_inbounds function compute_water_table!(water_table, i, j, grid, sat, ::SoilHydrology{NF}) where {NF}
     zs = znodes(get_field_grid(grid), Center(), Center(), Face())
     # scan z axis starting from the bottom (index 1) to find first non-saturated grid cell
-    return water_table[i, j, 1] = findfirst_z(i, j, <(one(NF)), zs, sat)
+    water_table[i, j, 1] = findfirst_z(i, j, <(one(NF)), zs, sat)
+    return nothing
 end
 
 """
@@ -201,7 +210,8 @@ any remaining excess water is added to the `surface_excess_water` pool.
 
     # If the lowermost (bottom) layer has a deficit, just set to zero.
     # This constitutes a mass balance violation but should not happen under realistic conditions.
-    return sat[i, j, 1] = max(sat[i, j, 1], zero(NF))
+    sat[i, j, 1] = max(sat[i, j, 1], zero(NF))
+    return nothing
 end
 
 """ $TYPEDSIGNATURES """
@@ -218,7 +228,8 @@ end
     # Get porosity
     por = porosity(i, j, k, grid, fields, strat, bgc)
     # Rescale by porosity to get saturation tendency
-    return saturation_water_ice_tendency[i, j, k] += ∂θ∂t / por
+    saturation_water_ice_tendency[i, j, k] += ∂θ∂t / por
+    return nothing
 end
 
 """

@@ -61,13 +61,14 @@ Compute surface runoff as `precipitation + surface_drainage - infiltration`.
     end
 end
 
-# Process methods
+# Top-level interface methods
 
 variables(::DirectSurfaceRunoff) = (
     auxiliary(:surface_runoff, XY(), units = u"m/s", desc = "Total surface runoff"),
     auxiliary(:infiltration, XY(), units = u"m/s", desc = "Infiltration flux"),
 )
 
+""" $TYPEDSIGNATURES """
 function compute_auxiliary!(
         state, grid,
         runoff::DirectSurfaceRunoff,

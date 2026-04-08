@@ -45,16 +45,16 @@ Initializer for soil/ground temperature that sets the temperature profile to a c
 Properties:
 $TYPEDFIELDS
 """
-@kwdef struct ConstantInitialSoilTemperature{NF} <: AbstractInitializer{NF}
+@kwdef struct ConstantSoilTemperature{NF} <: AbstractInitializer{NF}
     T₀::NF = 0.0
 end
 
 """
 Creates a constant soil temperature initializer.
 """
-ConstantInitialSoilTemperature(::Type{NF}; kwargs...) where {NF} = ConstantInitialSoilTemperature{NF}(; kwargs...)
+ConstantSoilTemperature(::Type{NF}; kwargs...) where {NF} = ConstantSoilTemperature{NF}(; kwargs...)
 
-initialize!(state, ::AbstractModel, init::ConstantInitialSoilTemperature) = set!(state.temperature, init.T₀)
+initialize!(state, ::AbstractModel, init::ConstantSoilTemperature) = set!(state.temperature, init.T₀)
 
 """
     $TYPEDEF
@@ -76,7 +76,8 @@ end
 QuasiThermalSteadyState(::Type{NF}; kwargs...) where {NF} = QuasiThermalSteadyState{NF}(; kwargs...)
 
 function initialize!(state, ::AbstractModel, init::QuasiThermalSteadyState)
-    return set!(state.temperature, (x, z) -> init.T₀ - init.Qgeo / init.k_eff * z)
+    set!(state.temperature, (x, z) -> init.T₀ - init.Qgeo / init.k_eff * z)
+    return nothing
 end
 
 """
@@ -107,10 +108,27 @@ end
 
 function initialize!(state, ::AbstractModel, init::PiecewiseLinearInitialSoilTemperature)
     f = piecewise_linear(init.knots...)
-    return set!(state.temperature, (x, z) -> f(z))
+    set!(state.temperature, (x, z) -> f(z))
+    return nothing
 end
 
 # Soil hydrology initializers
+
+"""
+    $TYPEDEF
+
+Initializer for soil water/ice sets the saturation profile to a constant value.
+
+Properties:
+$TYPEDFIELDS
+"""
+@kwdef struct ConstantSaturation{NF} <: AbstractInitializer{NF}
+    sat::NF = 1.0
+end
+
+ConstantSaturation(::Type{NF}; kwargs...) where {NF} = ConstantSaturation{NF}(; kwargs...)
+
+initialize!(state, ::AbstractModel, init::ConstantSaturation) = set!(state.saturation_water_ice, init.sat)
 
 """
     $TYPEDEF
@@ -129,5 +147,6 @@ end
 SaturationWaterTable(::Type{NF}; kwargs...) where {NF} = SaturationWaterTable{NF}(; kwargs...)
 
 function initialize!(state, ::AbstractModel, init::SaturationWaterTable{NF}) where {NF}
-    return set!(state.saturation_water_ice, (x, z) -> z <= init.water_table_depth ? one(NF) : init.vadose_zone_saturation)
+    set!(state.saturation_water_ice, (x, z) -> z <= init.water_table_depth ? one(NF) : init.vadose_zone_saturation)
+    return nothing
 end
