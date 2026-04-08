@@ -27,7 +27,7 @@ SoilModel
 ```
 
 ```@example soilmodel
-variable(model)
+variables(model)
 ```
 
 ## Components
@@ -55,7 +55,7 @@ The `hydrology` component governs the vertical movement of water in the soil col
 
 ### Biogeochemistry
 
-The `biogeochem` component simulates the spatial distribution of soil organic carbon and associated biogeochemical fluxes. The default implementation [`ConstantSoilCarbonDensity`](@ref) which prescribes a spatially homogeneous organic carbon density and does not define any prognostic variables.
+The `biogeochem` component simulates the spatial distribution of soil organic carbon and associated biogeochemical fluxes. The default implementation is [`ConstantSoilCarbonDensity`](@ref), which prescribes a spatially homogeneous organic carbon density and does not define any prognostic variables.
 
 ## [Initializers](@id soil.init)
 

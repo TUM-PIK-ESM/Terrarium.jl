@@ -27,12 +27,12 @@ LandModel
 ```
 
 ```@example landmodel
-variable(model)
+variables(model)
 ```
 
 ## Components
 
-[`LandModel`](@ref) integrates five major sub-processes: **atmosphere**, **soil**, **surface energy balance**, **surface hydrology**, and **vegetation**. Each component can be configured separately when constructing a `LandModel`; see the linked process pages for available implementations and parameterizations.
+[`LandModel`](@ref) integrates five major sub-processes: **atmosphere**, **soil**, **surface energy balance**, **surface hydrology**, and **vegetation**:
 
 | Field | Type | Scope | Process page |
 |-------|------|-------|---------------|
@@ -42,7 +42,7 @@ variable(model)
 | `surface_hydrology` | [`AbstractSurfaceHydrology`](@ref) | Infiltration, evapotranspiration, interception | [Surface hydrology](@ref) |
 | `vegetation` | `Optional{`[`AbstractVegetation`](@ref)`}` | Coupled vegetation carbon processes | [Vegetation](@ref) |
 
-Each component is summarized briefly below. See the linked pages for further details about each component process.
+Each component can be configured separately when constructing a `LandModel`. `vegetation` is optional and can be disabled by setting `vegetation = nothing` in the constructor; this corresponds to a bare ground land-atmosphere coupling. Each component of `LandModel` is summarized briefly below. See the linked pages for further details about each component process.
 
 ### Atmosphere
 
@@ -52,6 +52,17 @@ The `atmosphere` component provides (possibly time-varying) meteorological input
 
 The `soil` component represents the solid land surface extending from the topmost soil layer down to an arbitrary depth determined by the `grid`. The default configuration of `LandModel` uses [`SoilEnergyWaterCarbon`](@ref) which represents coupled energy, water, and carbon transport within the soil column. See [Soil processes](@ref) for detailed descriptions of energy, hydrology, and biogeochemistry implementations.
 
+### Surface energy balance
+
+The `surface_energy_balance` component computes the energy fluxes at the land-atmosphere interface, including solar radiation, thermal radiation, and turbulent heat fluxes. The default implementation is [`SurfaceEnergyBalance`](@ref). See [Surface energy balance](@ref) for details.
+
+### Surface hydrology
+
+The `surface_hydrology` component manages water exchange between the atmosphere and the land surface, including canopy interception, evapotranspiration, and surface runoff partitioning. The default implementation is [`SurfaceHydrology`](@ref). See [Surface hydrology](@ref) for details.
+
+### Vegetation
+
+The `vegetation` component represents vegetation carbon cycling, including photosynthesis, stomatal conductance, respiration, phenology, and carbon dynamics. The default implementation is [`VegetationCarbon`](@ref). See [Vegetation](@ref) for details.
 
 ## Initializers
 

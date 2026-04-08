@@ -13,7 +13,7 @@ using Terrarium
 
 ## Overview
 
-[`VegetationModel`](@ref) is a standalone model for vegetation processes that simulates the integrated dynamics of plant carbon cycling, photosynthesis, respiration, phenology, and water stress on a single plant functional type (PFT). It is designed as a modular building block that couples vegetation with atmospheric forcing and physical constants, providing a focused representation of terrestrial vegetation suitable for single-column simulations or as a component in multi-PFT ensemble models.
+[`VegetationModel`](@ref) is a standalone model for vegetation processes that simulates the integrated dynamics of plant carbon cycling, including photosynthesis, respiration, phenology, and water stress for a single plant functional type (PFT). It is designed as a standalone model wrapper around a [`AbstractVegetation`](@ref) component coupled with an atmospheric forcing, providing a focused representation of terrestrial vegetation suitable for conceptual simulations of vegetation processes. Interactions with soil are neglected or idealized (e.g. infinite soil moisture availability) where appropriate.
 
 ```@example vegmodel
 arch = CPU()
@@ -39,7 +39,7 @@ variables(model)
 | `vegetation` | [`AbstractVegetation`](@ref) | Coupled vegetation carbon processes | [Vegetation](@ref) |
 | `atmosphere` | [`AbstractAtmosphere`](@ref) | Meteorological input variables | [Atmosphere](@ref) |
 
-Both components are summarized briefly below. Interactions with soil are neglected or idealized (e.g. infinite soil moisture availability) where appropriate. See the linked process pages for more details.
+Both components are summarized briefly below. See the linked process pages for more details.
 
 ### Vegetation
 
