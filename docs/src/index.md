@@ -85,10 +85,18 @@ Pages = [
     "introduction/numerical_core.md",
     "introduction/mathematical_formulation.md",
     "extending/core_interfaces.md",
+    "extending/implementing_processes.md",
+    "extending/coupling_processes.md",
+    "running/configuring.md",
+    "running/initialization.md",
+    "running/input_sources.md",
+    "running/time_stepping.md",
+    "models/land_model.md",
     "models/soil_model.md",
-    "examples_overview.md",
+    "models/vegetation_model.md",
     "contributing.md",
-    "api_reference.md",
+    "api_index.md",
+    "references.md",
 ]
 Depth = 2
 ```
