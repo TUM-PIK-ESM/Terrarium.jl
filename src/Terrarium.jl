@@ -101,7 +101,7 @@ export update_inputs!
 include("input_output/input_sources.jl")
 
 # process/model interface
-export get_grid, get_initializer, variables, processes, compute_auxiliary!, compute_tendencies!
+export get_constants, get_grid, get_initializer, variables, processes, compute_auxiliary!, compute_tendencies!
 include("abstract_model.jl")
 
 # state variables
