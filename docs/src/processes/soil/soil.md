@@ -30,9 +30,9 @@ variables(SoilEnergyWaterCarbon(Float32))
 ### Process Interface
 
 ```@docs; canonical = false
-initialize!(::Any, ::SoilEnergyWaterCarbon, constants::PhysicalConstants)
-compute_auxiliary!(::Any, ::SoilEnergyWaterCarbon, constants::PhysicalConstants)
-compute_tendencies!(::Any, ::SoilEnergyWaterCarbon, constants::PhysicalConstants)
+initialize!(state, grid, ::SoilEnergyWaterCarbon, constants::PhysicalConstants)
+compute_auxiliary!(state, grid, ::SoilEnergyWaterCarbon, constants::PhysicalConstants)
+compute_tendencies!(state, grid, ::SoilEnergyWaterCarbon, constants::PhysicalConstants)
 ```
 
 ## Methods

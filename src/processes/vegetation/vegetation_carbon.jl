@@ -62,6 +62,13 @@ function VegetationCarbon(
     )
 end
 
+"""
+    $TYPEDSIGNATURES
+
+Compute auxiliary variables for all vegetation component processes based on the given
+atmospheric inputs defined by `atmos` and (optionally) `soil` state. If `soil = nothing`,
+stress factors due to soil temperature and moisture availability will be ignored.
+"""
 function compute_auxiliary!(
         state, grid,
         veg::VegetationCarbon,
@@ -96,6 +103,11 @@ function compute_auxiliary!(
     return nothing
 end
 
+"""
+    $TYPEDSIGNATURES
+
+Compute tendencies for carbon and vegetation dynamics.
+"""
 function compute_tendencies!(state, grid, veg::VegetationCarbon, args...)
     # Needs NPP(t), C_veg(t-1), LAI_b(t-1) and computes tendency for C_veg
     compute_tendencies!(state, grid, veg.carbon_dynamics)
