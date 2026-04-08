@@ -61,7 +61,7 @@ which automatically passes `grid` as the second argument to the kernel. Note tha
 !!! warning
     The kernel launching patterns used in Terrarium are still in an early stage of development and may change in the future.
 
-As a general rule, we try to combine or *fuse* kernel functions as much as possible. Kernel fusion means that we aim to write relatively “large” kernels that fuse as many operations as possible together in one kernel. Kernel fusion leads to more efficient GPU computations by reducing memory demand and kernel launching overhead ([Wang et. al 2000](https://ieeexplore.ieee.org/document/5724850/)). In order to still keep our code well structured and modular, our approach relies on implementing most processes as inlined functions that can be called from a GPU kernel.
+As a general rule, we try to combine or *fuse* kernel functions as much as possible. Kernel fusion means that we aim to write relatively “large” kernels that fuse as many operations as possible together in one kernel. Kernel fusion leads to more efficient GPU computations by reducing memory demand and kernel launching overhead [wangKernelFusion2000](@cite). In order to still keep our code well structured and modular, our approach relies on implementing most processes as inlined functions that can be called from a GPU kernel.
 
 To see how this looks in action in Terrarium.jl, you can take a look at the code for [SoilEnergyBalance](https://github.com/NumericalEarth/Terrarium.jl/blob/main/src/processes/soil/energy/soil_energy.jl): There [`compute_tendencies!`](@ref) is the mandatory function for the model component, it launches exactly one kernel [`compute_tendencies_kernel!`], which includes several `@propagate_inbounds` functions to compute individual contributions to the energy balance such as [`compute_energy_tendency`](@ref), [`compute_thermal_conductivity`](@ref) and the `diffusive_heat_flux`.
 
@@ -86,3 +86,10 @@ or
 SomeParameters(::Type{NF}; a::NF = 1.0, b::NF = 2.0) where {NF} = SomeParameters(a, b)
 ```
 In the latter case, the `@kwdef` macro on the `struct` definition may be omitted.
+
+## References
+
+```@bibliography
+Pages = ["numerical_core.md"]
+Canonical = false
+```
