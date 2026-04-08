@@ -1,4 +1,4 @@
-# Soil model
+# Soil models
 
 ```@meta
 CurrentModule = Terrarium
@@ -51,7 +51,7 @@ The `energy` component represents heat conduction in the soil column, including 
 
 ### Hydrology
 
-The `hydrology` component governs the vertical movement of water in the soil column. The default implementation is [`SoilHydrology`](@ref), which evolves total saturation (liquid + ice) as the prognostic variable. Vertical flow is disabled by default ([`NoFlow`](@ref)); enabling the Richards equation requires selecting [`RichardsEq`](@ref) as the `vertflow` operator. See [Soil hydrology](@ref) for details.
+The `hydrology` component governs the vertical movement of water in the soil column. The default implementation is [`SoilHydrology`](@ref), which evolves total saturation (liquid + ice) as the prognostic variable. Vertical flow is disabled by default ([`NoFlow`](@ref)); enabling the Richards equation requires selecting [`RichardsEq`](@ref) as the `vertical_flow` operator. See [Soil hydrology](@ref) for details.
 
 ### Biogeochemistry
 

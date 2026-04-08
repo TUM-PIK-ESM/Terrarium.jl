@@ -1,4 +1,4 @@
-# Vegetation model
+# Vegetation models
 
 ```@meta
 CurrentModule = Terrarium
