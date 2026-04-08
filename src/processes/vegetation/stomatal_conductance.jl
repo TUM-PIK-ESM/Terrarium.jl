@@ -17,7 +17,7 @@ $TYPEDFIELDS
     g_min::NF = 0.5
 end
 
-MedlynStomatalConductance(::Type{NF}; kwargs...) where {NF} = MedlynStomatalConductance(; kwargs...)
+MedlynStomatalConductance(::Type{NF}; kwargs...) where {NF} = MedlynStomatalConductance{NF}(; kwargs...)
 
 variables(::MedlynStomatalConductance) = (
     auxiliary(:canopy_water_conductance, XY(), units = u"m/s"), # Canopy conducatance for water vapor

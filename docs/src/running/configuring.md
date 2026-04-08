@@ -73,7 +73,7 @@ thermal_properties = SoilThermalProperties(eltype(grid))
 energy = SoilEnergyBalance(eltype(grid); thermal_properties)
 hydrology = SoilHydrology(eltype(grid), RichardsEq()) # also a valid constructor, same as above
 biogeochem = ConstantSoilCarbonDensity(eltype(grid))
-soil = SoilEnergyWaterCarbon(Float32; energy, hydrology, biogeochem)
+soil = SoilEnergyWaterCarbon(eltype(grid); energy, hydrology, biogeochem)
 model = SoilModel(grid; soil)
 ```
 
@@ -120,13 +120,13 @@ model = LandModel(grid; vegetation)
 We could also customize surface energy balance processes, e.g. prescribed surface energy balance fluxes:
 
 ```@example configuring
-radiative_fluxes = PrescribedRadiativeFluxes(Float32)
-turbulent_fluxes = PrescribedTurbulentFluxes(Float32)
-seb = SurfaceEnergyBalance(Float32;
+radiative_fluxes = PrescribedRadiativeFluxes(eltype(grid))
+turbulent_fluxes = PrescribedTurbulentFluxes(eltype(grid))
+seb = SurfaceEnergyBalance(eltype(grid);
     radiative_fluxes,
     turbulent_fluxes
 )
-vegetation = VegetationCarbon(Float32)
+vegetation = VegetationCarbon(eltype(grid))
 model = LandModel(grid; vegetation, surface_energy_balance = seb)
 ```
 
@@ -140,7 +140,7 @@ As an example, consider again the above example with `SoilModel`. Suppose we wan
 conductivities = SoilThermalConductivities(eltype(grid); mineral = 3.0, organic = 0.8)
 thermal_properties = SoilThermalProperties(eltype(grid); conductivities)
 energy = SoilEnergyBalance(eltype(grid); thermal_properties)
-soil = SoilEnergyWaterCarbon(Float32; energy)
+soil = SoilEnergyWaterCarbon(eltype(grid); energy)
 model = SoilModel(grid; soil)
 ```
 

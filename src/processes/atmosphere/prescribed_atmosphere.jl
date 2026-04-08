@@ -80,7 +80,7 @@ function PrescribedAtmosphere(
         precip::AbstractPrecipitation = RainSnow(),
         radiation::AbstractIncomingRadiation = LongShortWaveRadiation(),
         humidity::AbstractHumidity = SpecificHumidity(),
-        aerodynamics::AbstractAerodynamics = ConstantAerodynamics(),
+        aerodynamics::AbstractAerodynamics = ConstantAerodynamics(NF),
         tracers::NamedTuple = TracerGases(AmbientCO2()),
     ) where {NF}
     return PrescribedAtmosphere(altitude, min_windspeed, precip, radiation, humidity, aerodynamics, tracers)
