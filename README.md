@@ -3,10 +3,11 @@
 ---
 
 <a href="https://numericalearth.github.io/Terrarium.jl/dev">
-<img alt="Development documentation" src="https://img.shields.io/badge/documentation-in%20development-orange?style=flat-square">
+<img alt="Development documentation" src="https://img.shields.io/badge/documentation-latest_release-blue.svg">
 </a>
-<a href="https://www.repostatus.org/#wip"><img src="https://www.repostatus.org/badges/latest/wip.svg" alt="Project Status: WIP – Initial development is in progress, but there has not yet been a stable, usable release suitable for the public." /></a>
+<a href="https://github.com/NumericalEarth/Terrarium.jl/actions/workflows/CI.yml"><img src="https://github.com/NumericalEarth/Terrarium.jl/actions/workflows/CI.yml/badge.svg" alt="Build status: CI" /></a>
 <a href="https://eupl.eu/1.2/en">
+<a href="https://www.repostatus.org/#wip"><img src="https://www.repostatus.org/badges/latest/wip.svg" alt="Project Status: WIP – Initial development is in progress, but there has not yet been a stable, usable release suitable for the public." /></a>
     <img alt="EUPLv1.2 license" src="https://img.shields.io/badge/License-EUPLv1.2-blue.svg?style=flat-square">
 </a>
 <a href="https://github.com/fredrikekre/Runic.jl">
