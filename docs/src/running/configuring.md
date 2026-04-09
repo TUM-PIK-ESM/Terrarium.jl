@@ -71,7 +71,7 @@ model = SoilModel(grid; soil)
 variables(model)
 ```
 
-We could also do something similar for 
+We could also do something similar for the soil thermal properties:
 
 ```@example configuring
 thermal_properties = SoilThermalProperties(eltype(grid))
