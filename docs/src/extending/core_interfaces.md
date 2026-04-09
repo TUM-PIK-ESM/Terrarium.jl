@@ -71,8 +71,7 @@ Terrarium defines a hierarchy of abstract model subtypes that correspond to the 
 
 ```
 AbstractModel
-└── AbstractGroundModel          # general ground (soil/rock) models
-    └── AbstractSoilModel        # soil column models
+└── AbstractSoilModel            # general soil models
 └── AbstractSurfaceEnergyModel   # standalone land-atmosphere energy exchange
 └── AbstractSnowModel            # standalone snow models
 └── AbstractVegetationModel      # standalone vegetation models
