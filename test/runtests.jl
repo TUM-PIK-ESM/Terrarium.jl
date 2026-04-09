@@ -50,6 +50,6 @@ if MAIN_TESTS
     end
 
     @testset "Coupled models" begin
-        include("coupled_models/vegetation_soil_model_tests.jl")
+        include("coupled_models/land_model_tests.jl")
     end
 end

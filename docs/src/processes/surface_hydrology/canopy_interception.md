@@ -112,7 +112,7 @@ saturation_canopy_water
 ```
 
 ```@docs; canonical = false
-ground_precipitation
+rainfall_ground
 ```
 
 ## Kernel functions

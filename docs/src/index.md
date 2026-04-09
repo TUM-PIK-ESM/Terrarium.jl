@@ -1,6 +1,6 @@
 # Terrarium.jl
 
-Terrarium is a new and upcoming framework for hybrid physics- and data-driven land and terrestrial ecosystem modeling across spatial and temporal scales. We envision Terrarium to be part of a new generation of Earth system component models that combine modularity, interactivity, GPU-compability and auto-differentiability (AD) for seamless integration of process-based and data-driven model components in both global and regional scale simulations.
+Terrarium is a framework for hybrid physics- and data-driven land and terrestrial ecosystem modeling across spatial and temporal scales. We envision Terrarium to be part of a new generation of Earth system component models that combine modularity, interactivity, GPU-compatibility and auto-differentiability (AD) for seamless integration of process-based and data-driven model components in both global and regional scale simulations.
 
 Terrarium is being developed alongside [SpeedyWeather.jl](https://github.com/SpeedyWeather/SpeedyWeather.jl) and [Oceananigans.jl](https://github.com/CliMA/Oceananigans.jl) as the land component of a new, user-friendly, and fully GPU/AD-compatible Earth System Model in the Julia programming language.
 
@@ -85,10 +85,22 @@ Pages = [
     "introduction/numerical_core.md",
     "introduction/mathematical_formulation.md",
     "extending/core_interfaces.md",
+    "extending/implementing_processes.md",
+    "extending/coupling_processes.md",
+    "running/configuring.md",
+    "running/initialization.md",
+    "running/input_sources.md",
+    "running/time_stepping.md",
+    "models/land_model.md",
     "models/soil_model.md",
-    "examples_overview.md",
+    "models/vegetation_model.md",
+    "processes/soil/soil.md",
+    "processes/surface_energy/surface_energy_balance.md",
+    "processes/surface_hydrology/surface_hydrology.md",
+    "processes/vegetation/vegetation.md",
     "contributing.md",
-    "api_reference.md",
+    "api_index.md",
+    "references.md",
 ]
 Depth = 2
 ```

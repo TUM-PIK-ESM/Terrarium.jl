@@ -51,5 +51,11 @@ f = interior(integrator.state.liquid_water_fraction)[1, 1, :]
 
 # Finally, we plot the temperature and liquid fraction profiles:
 zs = znodes(integrator.state.temperature)
-Makie.scatterlines(T, zs)
-Makie.scatterlines(f, zs)
+let fig = Makie.Figure()
+    ax1 = Makie.Axis(fig[1, 1], ylabel = "Depth / m", xlabel = "Temperature / °C")
+    ax2 = Makie.Axis(fig[1, 2], xlabel = "Liquid fraction")
+
+    Makie.scatterlines!(ax1, T, zs)
+    Makie.scatterlines!(ax2, f, zs)
+    fig
+end

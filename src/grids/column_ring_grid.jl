@@ -100,8 +100,8 @@ get_field_grid(grid::ColumnRingGrid) = grid.grid
 Converts the given Oceananigans `Field` to a `RingGrids.Field` with a ring grid matching that of the given `ColumnRingGrid`.
 """
 RingGrids.Field(field::Field{LX, LY, LZ}, grid::ColumnRingGrid; fill_value = NaN) where {LX, LY, LZ} = RingGrids.Field(architecture(field), dropdims(interior(field), dims = 2), grid; fill_value)
-RingGrids.Field(field::AbstractVecOrMat, grid::ColumnRingGrid; fill_value = NaN) = RingGrids.Field(architecture(grid), field, grid; fill_value)
-function RingGrids.Field(arch::AbstractArchitecture, field::AbstractVecOrMat, grid::ColumnRingGrid; fill_value = NaN)
+RingGrids.Field(field::AbstractArray, grid::ColumnRingGrid; fill_value = NaN) = RingGrids.Field(architecture(grid), field, grid; fill_value)
+function RingGrids.Field(arch::AbstractArchitecture, field::AbstractArray, grid::ColumnRingGrid; fill_value = NaN)
     # need to be on CPU to do the copying
     grid = on_architecture(arch, grid)
     field = on_architecture(arch, field)

@@ -39,6 +39,9 @@ end
 
 # Top-level interface methods
 
+# No-op when no soil is available; soil_moisture_limiting_factor defaults to 1
+compute_auxiliary!(state, grid, ::AbstractPlantAvailableWater, ::Nothing, args...) = nothing
+
 """ $TYPEDSIGNATURES """
 function compute_auxiliary!(
         state, grid,

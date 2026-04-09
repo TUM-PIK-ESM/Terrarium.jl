@@ -1,6 +1,33 @@
 """
     $TYPEDEF
 
+No-op canopy interception that routes all rainfall directly to the ground (open sky). This is necessary since downstream processes
+consume `rainfall_ground` rather than the rainfall directly; this no-op implementation allows for a unified interface.
+"""
+struct NoCanopyInterception{NF} <: AbstractCanopyInterception{NF} end
+
+NoCanopyInterception(::Type{NF}) where {NF} = NoCanopyInterception{NF}()
+
+variables(noop::NoCanopyInterception) = (
+    auxiliary(:rainfall_ground, XY(), passthrough_rainfall, noop; desc = "Rainfall rate reaching the ground", units = u"m/s"),
+)
+
+passthrough_rainfall(::NoCanopyInterception, grid, clock, fields) = fields.rainfall # assumes existence of rainfall field
+
+@inline compute_auxiliary!(state, grid, ::NoCanopyInterception, args...) = nothing
+
+@inline compute_tendencies!(state, grid, ::NoCanopyInterception, args...) = nothing
+
+@propagate_inbounds canopy_water(i, j, grid, fields, ::NoCanopyInterception) = zero(eltype(grid))
+
+@propagate_inbounds saturation_canopy_water(i, j, grid, fields, ::NoCanopyInterception) = zero(eltype(grid))
+
+# Default implementation of rainfall_ground for all canopy interception types
+@propagate_inbounds rainfall_ground(i, j, grid, fields, ::AbstractCanopyInterception) = fields.rainfall_ground[i, j]
+
+"""
+    $TYPEDEF
+
 Canopy interception and storage implementation following PALADYN (Willeit 2016) considering only liquid water (no snow).
 
 Properties:
@@ -28,7 +55,7 @@ variables(::PALADYNCanopyInterception) = (
     auxiliary(:canopy_water_interception, XY(); desc = "Canopy rain interception rate", units = u"m/s"),
     auxiliary(:canopy_water_removal, XY(); desc = "Canopy water removal rate", units = u"m/s"),
     auxiliary(:saturation_canopy_water, XY(); desc = "Fraction of the canopy saturated with water"),
-    auxiliary(:precip_ground, XY(); desc = "Rainfall rate reaching the ground", units = u"m/s"),
+    auxiliary(:rainfall_ground, XY(); desc = "Rainfall rate reaching the ground", units = u"m/s"),
     input(:leaf_area_index, XY(); desc = "Leaf Area Index", units = u"m^2/m^2"),
     input(:SAI, XY(); desc = "Stem Area Index", units = u"m^2/m^2"),
 )
@@ -36,8 +63,6 @@ variables(::PALADYNCanopyInterception) = (
 @propagate_inbounds canopy_water(i, j, grid, fields, ::PALADYNCanopyInterception) = fields.canopy_water[i, j]
 
 @propagate_inbounds saturation_canopy_water(i, j, grid, fields, ::PALADYNCanopyInterception) = fields.saturation_canopy_water[i, j]
-
-@propagate_inbounds ground_precipitation(i, j, grid, fields, ::PALADYNCanopyInterception) = fields.precip_ground[i, j]
 
 """
     $TYPEDSIGNATURES
@@ -91,7 +116,7 @@ end
 """
     $SIGNATURES
 
-Compute `precip_ground`, the rate of rain reaching the ground, following a modified version
+Compute `rainfall_ground`, the rate of rain reaching the ground, following a modified version
 of Eq. 44, PALADYN (Willeit 2016). Instead of subtracting the tendency, we just directly subtract
 interception and add the removal rate `R_can`.
 """
@@ -101,8 +126,8 @@ interception and add the removal rate `R_can`.
     ) where {NF}
     # Compute the precipitation reaching the ground:
     # precip - interception + removal
-    precip_ground = precip - I_can + R_can
-    return precip_ground
+    rainfall_ground = precip - I_can + R_can
+    return rainfall_ground
 end
 
 # Top-level interface methods
@@ -141,7 +166,7 @@ end
         args...
     ) where {NF}
     # Get inputs
-    precip = rainfall(i, j, grid, fields, atmos)
+    rain = rainfall(i, j, grid, fields, atmos)
     LAI = fields.leaf_area_index[i, j]
     SAI = fields.SAI[i, j]
     w_can = fields.canopy_water[i, j]
@@ -150,19 +175,19 @@ end
     f_can = compute_canopy_saturation_fraction(canopy_interception, w_can, LAI, SAI)
 
     # Compute canopy rain interception
-    I_can = compute_canopy_interception(canopy_interception, precip, LAI, SAI)
+    I_can = compute_canopy_interception(canopy_interception, rain, LAI, SAI)
 
     # Compute canopy water removal
     R_can = compute_canopy_water_removal(canopy_interception, w_can)
 
     # Compute precipitation reaching the ground
-    precip_ground = compute_precip_ground(canopy_interception, precip, I_can, R_can)
+    rainfall_ground = compute_precip_ground(canopy_interception, rain, I_can, R_can)
 
     # Store results
     out.canopy_water_interception[i, j, 1] = I_can
     out.canopy_water_removal[i, j, 1] = R_can
     out.saturation_canopy_water[i, j, 1] = f_can
-    out.precip_ground[i, j, 1] = precip_ground
+    out.rainfall_ground[i, j, 1] = rainfall_ground
     return out
 end
 

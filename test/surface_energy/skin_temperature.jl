@@ -36,7 +36,7 @@ end
     resid = nothing
     for i in 1:5
         # compute fluxes
-        Terrarium.compute_surface_energy_fluxes!(state, grid, seb, model.atmosphere, model.constants)
+        Terrarium.compute_surface_energy_fluxes!(state, grid, seb, model.constants, model.atmosphere)
         # diagnose skin temperature
         Terrarium.update_skin_temperature!(state, grid, seb.skin_temperature)
         resid = maximum(abs.(state.skin_temperature - Tskin_old))

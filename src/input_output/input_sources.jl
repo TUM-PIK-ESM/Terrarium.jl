@@ -89,7 +89,7 @@ struct FieldInputSource{NF, name, VD <: VarDims, FS <: AnyField{NF}, UT} <: Inpu
     field::FS
 end
 
-function initialize!(fields, source::FieldInputSource{NF, name}, clock = nothing) where {NF, name}
+function initialize!(fields, source::FieldInputSource{NF, name}, args...) where {NF, name}
     if hasproperty(fields, name)
         field = getproperty(fields, name)
         set!(field, source.field)

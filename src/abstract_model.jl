@@ -108,6 +108,10 @@ as properties/fields on the given `obj`.
 """
 variables(obj::Union{AbstractCoupledProcesses, AbstractModel}) = mapreduce(variables, tuplejoin, processes(obj))
 
+# Allow dispatch on nothing for process types
+@inline compute_auxiliary!(state, grid, ::Nothing, args...) = nothing
+@inline compute_tendencies!(state, grid, ::Nothing, args...) = nothing
+
 """
     processes(obj::Union{AbstractCoupledProcesses, AbstractModel})
 
@@ -223,5 +227,35 @@ function Base.show(io::IO, model::AbstractModel{NF}) where {NF}
     for name in propertynames(model)
         print(io, "├── $name:  $(summary(getproperty(model, name)))\n")
     end
-    return
+    return nothing
+end
+
+function Base.show(io::IO, processes::AbstractCoupledProcesses{NF}) where {NF}
+    println(io, "$(nameof(typeof(processes))){$NF}")
+    props = getproperties(processes)
+    println(io, "├── Processes:")
+    for name in keys(props)
+        obj = getproperty(props, name)
+        if isa(obj, AbstractProcess)
+            print(io, "├──── $name:  $(summary(getproperty(props, name)))\n")
+        end
+    end
+    if any(obj -> !isa(obj, AbstractProcess), values(props))
+        println(io, "├── Properties:")
+        for name in keys(props)
+            obj = getproperty(props, name)
+            if !isa(obj, AbstractProcess)
+                print(io, "├──── $name:  $(summary(getproperty(props, name)))\n")
+            end
+        end
+    end
+    return nothing
+end
+
+function Base.show(io::IO, process::AbstractProcess{NF}) where {NF}
+    println(io, "$(nameof(typeof(process))){$NF}")
+    for name in propertynames(process)
+        print(io, "├── $name:  $(summary(getproperty(process, name)))\n")
+    end
+    return nothing
 end

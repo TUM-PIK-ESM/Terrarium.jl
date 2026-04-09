@@ -17,7 +17,7 @@ s = ArgParseSettings()
     "--draft", "-d"
     action = :store_true
     help = "Whether to build docs in draft mode, i.e. skipping execution of examples and doctests"
-    "--no-exec", "-e"
+    "--skip-examples", "-e"
     action = :store_true
     help = "Like --draft but applies only to example scripts"
     "--check-links", "-c"
@@ -31,9 +31,9 @@ parsed_args = parse_args(ARGS, s)
 
 IS_LOCAL = parsed_args["local"] || parse(Bool, get(ENV, "LOCALDOCS", "false"))
 IS_DRAFT = parsed_args["draft"] || parse(Bool, get(ENV, "DRAFTDOCS", "false"))
-NO_EXEC = parsed_args["no-exec"] || parse(Bool, get(ENV, "NOEXEC", "false"))
+SKIP_EXAMPLES = parsed_args["skip-examples"] || parse(Bool, get(ENV, "SKIP_EXAMPLES", "false"))
 CHECK_LINKS = parsed_args["check-links"] || parse(Bool, get(ENV, "CHECK_LINKS", "false"))
-BUILD_EXAMPLE_DOCS = !IS_DRAFT && !NO_EXEC
+BUILD_EXAMPLE_DOCS = !IS_DRAFT && !SKIP_EXAMPLES
 if haskey(ENV, "GITHUB_ACTIONS") || parsed_args["debug"]
     ENV["JULIA_DEBUG"] = "Documenter"
 end
@@ -84,21 +84,18 @@ running_example_docpages = Pair{String, String}[]
 extending_example_docpages = Pair{String, String}[]
 
 # Temporary solution: copy input files to src
-@info "Copying input files"
-running_examples_outdir = joinpath(EXAMPLES_OUTDIR, "simulations")
-extending_examples_outdir = joinpath(EXAMPLES_OUTDIR, "extending")
-mkpath(running_examples_outdir)
-mkpath(extending_examples_outdir)
-cp("inputs", joinpath(running_examples_outdir, "inputs"))
+@info "Copying input files to $(EXAMPLES_OUTDIR)"
+mkpath(EXAMPLES_OUTDIR)
+cp("inputs", joinpath(EXAMPLES_OUTDIR, "inputs"), force = true)
 
 # Build example pages with Literate.jl
 build_literate_pages!(
-    running_examples_outdir,
+    EXAMPLES_OUTDIR,
     joinpath(EXAMPLES_DIR, "simulations"),
     running_scripts
 )
 build_literate_pages!(
-    extending_examples_outdir,
+    EXAMPLES_OUTDIR,
     joinpath(EXAMPLES_DIR, "extending"),
     extending_scripts
 )
@@ -106,11 +103,11 @@ build_literate_pages!(
 # Add example pages to lists
 for (title, filename) in running_scripts
     mdfile = replace(filename, ".jl" => ".md")
-    push!(running_example_docpages, "Example: $title" => joinpath(EXAMPLES_OUTDIR_RELATIVE, "simulations", mdfile))
+    push!(running_example_docpages, "Example: $title" => joinpath(EXAMPLES_OUTDIR_RELATIVE, mdfile))
 end
 for (title, filename) in extending_scripts
     mdfile = replace(filename, ".jl" => ".md")
-    push!(extending_example_docpages, "Example: $title" => joinpath(EXAMPLES_OUTDIR_RELATIVE, "extending", mdfile))
+    push!(extending_example_docpages, "Example: $title" => joinpath(EXAMPLES_OUTDIR_RELATIVE, mdfile))
 end
 
 # Create bibliography
@@ -127,7 +124,8 @@ makedocs(
         repolink = "https://github.com/NumericalEarth/Terrarium.jl",
         canonical = "https://numericalearth.github.io/Terrarium.jl",
         assets = ["assets/citations.css"],
-        size_threshold = 600_000,
+        size_threshold_warn = 500 * 1024, # 500 KiB
+        size_threshold = 3 * 1024^2, # 3 MiB
         mathengine = Documenter.MathJax3(),
     ),
     sitename = "Terrarium.jl",
@@ -142,6 +140,7 @@ makedocs(
             "Mathematical formulation" => "introduction/mathematical_formulation.md",
         ],
         "Running Terrarium" => [
+            "Configuring models" => "running/configuring.md",
             "Initialization" => "running/initialization.md",
             "Time stepping" => "running/time_stepping.md",
             "Input sources" => "running/input_sources.md",
@@ -155,15 +154,20 @@ makedocs(
             extending_example_docpages...,
         ],
         "Models" => [
+            "Land model" => "models/land_model.md",
             "Soil model" => "models/soil_model.md",
+            "Vegetation model" => "models/vegetation_model.md",
         ],
         "Processes" => [
             "Soil" => [
-                "Soil hydrology" => "processes/soil/soil_hydrology.md",
-                "Soil energy" => "processes/soil/soil_energy.md",
-                "Soil stratigraphy" => "processes/soil/soil_stratigraphy.md",
+                "Overview" => "processes/soil/soil.md",
+                "Hydrology" => "processes/soil/soil_hydrology.md",
+                "Energy balance" => "processes/soil/soil_energy.md",
+                "Biogeochemistry" => "processes/soil/soil_biogeochemistry.md",
+                "Stratigraphy" => "processes/soil/soil_stratigraphy.md",
             ],
             "Vegetation" => [
+                "Overview" => "processes/vegetation/vegetation.md",
                 "Photosynthesis" => "processes/vegetation/photosynthesis.md",
                 "Stomatal conductance" => "processes/vegetation/stomatal_conductance.md",
                 "Plant available water" => "processes/vegetation/plant_available_water.md",
@@ -174,13 +178,13 @@ makedocs(
                 "Root distribution" => "processes/vegetation/root_distribution.md",
             ],
             "Surface hydrology" => [
-                "Surface hydrology" => "processes/surface_hydrology/surface_hydrology.md",
+                "Overview" => "processes/surface_hydrology/surface_hydrology.md",
                 "Canopy interception" => "processes/surface_hydrology/canopy_interception.md",
                 "Evapotranspiration" => "processes/surface_hydrology/evapotranspiration.md",
                 "Surface runoff" => "processes/surface_hydrology/surface_runoff.md",
             ],
-            "Surface energy fluxes" => [
-                "Surface energy balance" => "processes/surface_energy/surface_energy_balance.md",
+            "Surface energy balance" => [
+                "Overview" => "processes/surface_energy/surface_energy_balance.md",
                 "Radiative fluxes" => "processes/surface_energy/radiative_fluxes.md",
                 "Turbulent fluxes" => "processes/surface_energy/turbulent_fluxes.md",
                 "Skin temperature" => "processes/surface_energy/skin_temperature.md",
@@ -205,9 +209,6 @@ makedocs(
 )
 
 deployconfig = Documenter.auto_detect_deploy_system()
-
-# remove gitignore from build files
-# rm(joinpath(@__DIR__, "build", ".gitignore"))
 
 deploydocs(
     repo = "github.com/NumericalEarth/Terrarium.jl.git",
