@@ -88,17 +88,23 @@ variables(SoilHydrology(Float32, NoFlow()))
 
 The vertical flow of water in porous media, such as soils, can be formulated as following the conservation law
 ```math
-    \phi\frac{\partial\vartheta(\psi)}{\partial t} - \boldsymbol{\nabla} \cdot \textbf{j}_{\text{w}} - F_{\text{w}}(z,t) = 0,
+    \phi\frac{\partial \xi(\psi)}{\partial t} - \boldsymbol{\nabla} \cdot \textbf{j}_{\text{w}} - F_{\text{w}}(z,t) = 0,
 ```
-where $\phi$ is the natural porosity (or saturated water content) of the soil volume and $F_{\text{w}}(z,t)$ is an inhomogeneous source/sink (forcing) term (m/s).
+where (as defined in [Soil stratigraphy](@ref)) $\phi$ is the natural porosity (or saturated water content) of the soil volume and $\xi \in [0,1]$ the saturation of pore water/ice. $F_{\text{w}}(z,t)$ is an inhomogeneous source/sink (forcing) term (1/s) and $\textbf{j}_{\text{w}}$ the water flux vector (m/s). 
 
-Vertical fluxes in the soil column be represented by combining gravity-driven advection with Darcy's law
+Vertical fluxes in the soil column can be represented by combining gravity-driven advection with Darcy's law
 ```math
 \begin{equation}
-\textbf{j}_{\text{w}} \cdot \mathbf{n} = -\kappa_{\text{w}}\frac{\partial \left(\psi + z\right)}{\partial z},
+\textbf{j}_{\text{w}}^{\mathrm{v}} =\textbf{j}_{\text{w}} \cdot \mathbf{n} = -\kappa_{\text{w}}\frac{\partial \left(\psi + z\right)}{\partial z},
 \end{equation}
 ```
-where $\psi$ is the matric potential (m). Substituting this equation into the aforementioned conservation law yields the widely known Richardson-Richards equation for variably saturated flow in porous media [richardsCapillaryConductionLiquids1931](@cite).
+where $\psi$ is the matric potential (m), $\mathbf{n}$ the normal vector perpendicular to the surface and $\kappa_{\text{w}}$ the hydraulic conductivity (m/s). Given the positive upwards convention (see [Numerical core](@ref)), the $z-$axis is thus defined positive away from the surface. Substituting this equation into the aforementioned conservation law yields the widely known Richardson-Richards equation for variably saturated flow in porous media [richardsCapillaryConductionLiquids1931](@cite). When the divergence of the water flux vector ($\boldsymbol{\nabla} \cdot \textbf{j}_{\text{w}}$) is simplified to only consider vertical water fluxes, this gives:
+```math
+\begin{equation}
+\phi\frac{\partial \xi(\psi)}{\partial t} - \frac{\partial}{\partial z}\left[\kappa_w \frac{\partial \left(\psi + z\right)}{\partial z}\right] - F_{\text{w}}(z,t) = 0
+\end{equation}
+```
+which is called the mixed-form equation, as the rate of change on the left-hand side is in $\xi$ but the vertical gradient on the right-hand side is in $\psi$ [bonanClimateChangeTEMSoilMoisture2019](@cite). 
 
 ```@docs; canonical = false
 RichardsEq
