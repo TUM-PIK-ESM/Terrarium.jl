@@ -7,8 +7,8 @@
 </a>
 <a href="https://github.com/NumericalEarth/Terrarium.jl/actions/workflows/CI.yml"><img src="https://github.com/NumericalEarth/Terrarium.jl/actions/workflows/CI.yml/badge.svg" alt="Build status: CI" /></a>
 <a href="https://eupl.eu/1.2/en">
-<a href="https://www.repostatus.org/#wip"><img src="https://www.repostatus.org/badges/latest/wip.svg" alt="Project Status: WIP – Initial development is in progress, but there has not yet been a stable, usable release suitable for the public." /></a>
-    <img alt="EUPLv1.2 license" src="https://img.shields.io/badge/License-EUPLv1.2-blue.svg?style=flat-square">
+<a href="https://www.repostatus.org/#active"><img src="https://www.repostatus.org/#active" alt="Project Status: Active – The project has reached a stable, usable state and is being actively developed." /></a>
+<img alt="EUPLv1.2 license" src="https://img.shields.io/badge/License-EUPLv1.2-blue.svg?style=flat-square">
 </a>
 <a href="https://github.com/fredrikekre/Runic.jl">
     <img alt="code style: runic" src="https://img.shields.io/badge/code_style-%E1%9A%B1%E1%9A%A2%E1%9A%BE%E1%9B%81%E1%9A%B2-black.svg?style=flat-square">
