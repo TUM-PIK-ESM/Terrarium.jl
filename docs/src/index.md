@@ -6,28 +6,36 @@ Terrarium is being developed alongside [SpeedyWeather.jl](https://github.com/Spe
 
 ## Installation
 
-Terrarium is still in a prototype stage and is not yet registered as a package in the Julia General registry.
+You can install and use Terrarium as a Julia package by typing `]` in your REPL and running:
+```
+pkg> add Terrarium
+```
+or alternatively running
+```julia
+import Pkg
+Pkg.add("Terrarium")
+```
+followed by
+```julia
+using Terrarium
+```
 
-However, you can still install the package from the repository via the package manager (type `]` in your REPL):
+If you would like to not only use Terrarium but also actively develop it (or fix bugs 🐛), you can also install it as a [development package](https://pkgdocs.julialang.org/v1/toml-files/#Developed-package):
+```
+pkg> dev Terrarium
+```
+though it is worth noting that this will clone the repository into your Julia home directory by default. You can also fork/clone the repository yourself and start hacking!
+```
+git clone git@github.com:NumericalEarth/Terrarium.jl
+```
+
+You can then initialize the project environment by setting the repository as your working directory and running
 
 ```
-pkg> add https://github.com/TUM-PIK-ESM/Terrarium.jl
-```
-
-If you would like to start hacking on the code directly, we recommend first cloning the repository:
-
-```
-git clone https://github.com/TUM-PIK-ESM/Terrarium.jl
-```
-
-and then initializing the project environment with
-
-```
-cd Terrarium.jl/
 julia --project=. -e "import Pkg; Pkg.instantiate()"
 ```
 
-To run the example scripts, make sure to set the project directory to the `examples/` directory,
+To run the example scripts, you will need to set the project directory to the `examples/` directory,
 
 ```
 julia --project=examples examples/simulations/soil_heat_global.jl
