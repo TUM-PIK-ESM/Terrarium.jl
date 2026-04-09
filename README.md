@@ -48,6 +48,10 @@ or alternatively running
 import Pkg
 Pkg.add("Terrarium")
 ```
+followed by
+```julia
+using Terrarium
+```
 
 If you would like to not only use Terrarium but also actively develop it (or fix bugs 🐛), you can also install it as a [development package](https://pkgdocs.julialang.org/v1/toml-files/#Developed-package):
 ```
@@ -57,6 +61,20 @@ though it is worth noting that this will clone the repository into your Julia ho
 ```
 git clone git@github.com:NumericalEarth/Terrarium.jl
 ```
+
+You can then initialize the project environment by setting the repository as your working directory and running
+
+```
+julia --project=. -e "import Pkg; Pkg.instantiate()"
+```
+
+To run the example scripts, you will need to set the project directory to the `examples/` directory,
+
+```
+julia --project=examples examples/simulations/soil_heat_global.jl
+```
+
+You can also directly `activate` the example project environment from your REPL by first entering the package manager with `]` and then running the command `activate examples` followed by `instantiate`.
 
 ## Quick start
 
