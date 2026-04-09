@@ -4,17 +4,10 @@
 
 """
     $TYPEDEF
-    
-Base type for ground (e.g. soil and rock) models.
-"""
-abstract type AbstractGroundModel{NF, GR} <: AbstractModel{NF, GR} end
 
+Base type for soil models.
 """
-    $TYPEDEF
-
-Base type for soil ground models.
-"""
-abstract type AbstractSoilModel{NF, GR} <: AbstractGroundModel{NF, GR} end
+abstract type AbstractSoilModel{NF, GR} <: AbstractModel{NF, GR} end
 
 """
     $TYPEDEF

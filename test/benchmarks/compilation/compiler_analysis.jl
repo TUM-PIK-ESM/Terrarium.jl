@@ -25,8 +25,8 @@ function build_model(arch = CPU())
     soil = SoilEnergyWaterCarbon(eltype(grid); hydrology)
     vegetation = VegetationCarbon(eltype(grid))
     # Construct coupled model
-    vegsoil = VegetationSoilModel(grid; soil, vegetation, initializer)
-    return vegsoil
+    land = LandModel(grid; soil, vegetation, initializer)
+    return land
 end
 
 vegsoil = build_model()

@@ -85,12 +85,12 @@ Invoke `fill_halo_regions!` for all prognostic `Field`s in `state`.
 function Oceananigans.BoundaryConditions.fill_halo_regions!(state::StateVariables)
     # fill_halo_regions! for all prognostic variables
     fastiterate(prognostic_names(state)) do progname
-        fill_halo_regions!(getproperty(state.prognostic, progname), state.clock, state.prognostic)
+        fill_halo_regions!(getproperty(state.prognostic, progname), state.clock, state)
     end
 
     # fill_halo_regions! for all closure variables (stored in state.auxiliary)
     fastiterate(closure_names(state)) do closurename
-        fill_halo_regions!(getproperty(state.auxiliary, closurename), state.clock, state.prognostic)
+        fill_halo_regions!(getproperty(state.auxiliary, closurename), state.clock, state)
     end
 
     # recurse over namespaces

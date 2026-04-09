@@ -13,14 +13,14 @@
     <img alt="code style: runic" src="https://img.shields.io/badge/code_style-%E1%9A%B1%E1%9A%A2%E1%9A%BE%E1%9B%81%E1%9A%B2-black.svg?style=flat-square">
 </a>
 
-[Terrarium.jl](https://numericalearth.github.io/Terrarium.jl/dev) is a new and upcoming framework for hybrid physics- and data-driven land modeling across spatial and temporal scales. We envision Terrarium to be part of a new generation of Earth system component models that combine modularity, interactivity, GPU-compability and auto-differentiability (AD) for seamless integration of process-based and data-driven model components in both global and regional scale simulations.
+[Terrarium.jl](https://numericalearth.github.io/Terrarium.jl/dev) is a framework for hybrid physics- and data-driven land modeling across spatial and temporal scales. We envision Terrarium to be part of a new generation of Earth system component models that combine modularity, interactivity, GPU-compability and auto-differentiability (AD) for seamless integration of process-based and data-driven model components in both global and regional scale simulations.
 
 Terrarium is being developed alongside [SpeedyWeather.jl](https://github.com/SpeedyWeather/SpeedyWeather.jl) and [Oceananigans.jl](https://github.com/CliMA/Oceananigans.jl) as the land component of a new, user-friendly, and fully GPU/AD-compatible Earth System Model in the Julia programming language.
 
 > [!WARNING]
 > 🚧🚧 Under Construction! 🚧🚧
 >
-> Terrarium.jl is still in a prototype stage and is not production-ready. Expect things to change rapidly and break often. If, however, you share our vision for a new paradigm of Earth system modeling and would like to get involved in the project, please don’t hesitate to reach out by creating an issue on GitHub issues or sending us an email. We are always happy to welcome new collaborators!
+> Terrarium.jl is still in an early stage of development and is not production-ready. Expect things to change rapidly and break often. If, however, you share our vision for a new paradigm of Earth system modeling and would like to get involved in the project, please don’t hesitate to reach out by creating an issue on GitHub issues or sending us an email. We are always happy to welcome new collaborators!
 
 ## Our goals
 We want a land surface (and subsurface) model that is

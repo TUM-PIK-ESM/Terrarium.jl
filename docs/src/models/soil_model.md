@@ -1,4 +1,4 @@
-# Soil model
+# Soil models
 
 ```@meta
 CurrentModule = Terrarium
@@ -13,9 +13,7 @@ using Terrarium
 
 ## Overview
 
-[`SoilModel`](@ref) is a model of soil physics that couples the relevant processes governing
-energy, water, and carbon in natural soils. It is the primary model type for simulating heat conduction,
-freeze-thaw processes (e.g. permafrost), and variably saturated water flow in the subsurface.
+[`SoilModel`](@ref) is a model of soil physics that couples the relevant processes governing energy, water, and carbon in natural soils. It is the primary model type for simulating heat conduction, freeze-thaw processes (e.g. permafrost), and variably saturated water flow in the subsurface.
 
 ```@example soilmodel
 arch = CPU()
@@ -28,61 +26,40 @@ integrator = initialize(model, ForwardEuler(eltype(grid)))
 SoilModel
 ```
 
-### Components
-
-The default representation of coupled soil physics is [`SoilEnergyWaterCarbon`](@ref), which
-consists of four sub-components: All four can be replaced independently when constructing a `SoilModel`; see
-each linked process page for available implementations and parameterizations.
-
-```@docs; canonical = false
-SoilEnergyWaterCarbon
+```@example soilmodel
+variables(model)
 ```
 
-| Field | Type | Process page |
-|-------|------|--------------|
-| `strat` | [`AbstractStratigraphy`](@ref) | [Soil stratigraphy](@ref) |
-| `energy` | [`AbstractSoilEnergyBalance`](@ref) | [Soil energy balance](@ref) |
-| `hydrology` | [`AbstractSoilHydrology`](@ref) | [Soil hydrology](@ref) |
-| `biogeochem` | [`AbstractSoilBiogeochemistry`](@ref) | — |
+## Components
 
-Each component is summarized briefly below. Follow the linked process pages for full
-theoretical background, available concrete types, state variables, and method signatures.
+| Field | Type | Scope | Process page |
+|-------|------|-------|---------------|
+| `strat` | [`AbstractStratigraphy`](@ref) | Vertical structure of soil | [Soil stratigraphy](@ref) |
+| `energy` | [`AbstractSoilEnergyBalance`](@ref) | Heat conduction and freeze-thaw of soil water | [Soil energy balance](@ref) |
+| `hydrology` | [`AbstractSoilHydrology`](@ref) | Vertical flow of water between soil layers | [Soil hydrology](@ref) |
+| `biogeochem` | [`AbstractSoilBiogeochemistry`](@ref) | Soil organic carbon and biogeochemical fluxes | Not yet added |
 
-#### Stratigraphy
+Each component is summarized briefly below. Follow the linked process pages for full theoretical background, available concrete types, state variables, and method signatures.
 
-The `strat` component parameterizes the vertical distribution of soil material properties (texture,
-porosity, organic content). It provides kernel functions used by the energy and hydrology
-sub-processes to look up spatially varying material properties at each grid cell. By default
-[`HomogeneousStratigraphy`](@ref) is used, which assumes a single uniform material throughout
-the profile. See [Soil stratigraphy](@ref) for details.
+### Stratigraphy
 
-#### Energy balance
+The `strat` component parameterizes the vertical distribution of soil material properties (texture, porosity, organic content). It provides kernel functions used by the energy and hydrology sub-processes to look up spatially varying material properties at each grid cell. By default [`HomogeneousStratigraphy`](@ref) is used, which assumes a single uniform material throughout the profile. See [Soil stratigraphy](@ref) for details.
 
-The `energy` component represents heat conduction in the soil column, including the latent heat of
-freeze-thaw phase change. The default implementation is [`SoilEnergyBalance`](@ref), which
-evolves the volumetric internal energy $U$ (J m⁻³) as the prognostic variable and derives
-temperature via the [`SoilEnergyTemperatureClosure`](@ref). See [Soil energy balance](@ref) for
-details.
+### Energy balance
 
-#### Hydrology
+The `energy` component represents heat conduction in the soil column, including the latent heat of freeze-thaw phase change. The default implementation is [`SoilEnergyBalance`](@ref), which evolves the volumetric internal energy $U$ (J m⁻³) as the prognostic variable and derives temperature via the [`SoilEnergyTemperatureClosure`](@ref). See [Soil energy balance](@ref) for details.
 
-The `hydrology` component governs the vertical movement of water in the soil column. The default
-implementation is [`SoilHydrology`](@ref), which evolves total saturation (liquid + ice) as
-the prognostic variable. Vertical flow is disabled by default ([`NoFlow`](@ref)); enabling
-the Richards equation requires selecting [`RichardsEq`](@ref) as the `vertflow` operator. See
-[Soil hydrology](@ref) for details.
+### Hydrology
 
-#### Biogeochemistry
+The `hydrology` component governs the vertical movement of water in the soil column. The default implementation is [`SoilHydrology`](@ref), which evolves total saturation (liquid + ice) as the prognostic variable. Vertical flow is disabled by default ([`NoFlow`](@ref)); enabling the Richards equation requires selecting [`RichardsEq`](@ref) as the `vertical_flow` operator. See [Soil hydrology](@ref) for details.
 
-The `biogeochem` component simulates the spatial distribution of soil organic carbon and associated
-biogeochemical fluxes. The default implementation [`ConstantSoilCarbonDensity`](@ref) which prescribes
-a spatially homogeneous organic carbon density and does not define any prognostic variables.
+### Biogeochemistry
+
+The `biogeochem` component simulates the spatial distribution of soil organic carbon and associated biogeochemical fluxes. The default implementation is [`ConstantSoilCarbonDensity`](@ref), which prescribes a spatially homogeneous organic carbon density and does not define any prognostic variables.
 
 ## [Initializers](@id soil.init)
 
-Terrarium provides a hierarchy of initializers for `SoilModel`. The top-level initializer is
-[`SoilInitializer`](@ref), which composes separate sub-initializers for energy, hydrology, and
-biogeochemistry. It is the recommended initializer for most use cases:
+Terrarium provides a hierarchy of initializers for `SoilModel`. The top-level initializer is [`SoilInitializer`](@ref), which composes separate sub-initializers for energy, hydrology, and biogeochemistry. It is the recommended initializer for most use cases:
 
 ```@docs; canonical = false
 SoilInitializer
