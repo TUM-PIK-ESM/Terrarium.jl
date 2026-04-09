@@ -6,7 +6,6 @@ CurrentModule = Terrarium
 
 ```@setup variables
 using Terrarium
-using Terrarium: auxiliary, input
 using Oceananigans
 ```
 
@@ -31,11 +30,13 @@ variables(obj::Union{AbstractCoupledProcesses, AbstractModel})
 
 Most state variables will thus be defined by implementation of `AbstractProcess`. As an example, suppose we are implementing a new process `MyProcess` and we want to define the necessary state variables. We do this by defining a new dispatch of the `variables` method:
 ```julia
-variables(::MyProcess) = (
-    prognostic(:progvar, XYZ()),
-    auxiliary(:auxvar, XYZ()),
-    auxiliary(:bc, XY()),
-    input(:input, XY())
+struct MyProcess{NF} <: Terrarium.AbstractProcess{NF} end
+
+Terrarium.variables(::MyProcess) = (
+    Terrarium.prognostic(:progvar, XYZ()),
+    Terrarium.auxiliary(:auxvar, XYZ()),
+    Terrarium.auxiliary(:bc, XY()),
+    Terrarium.input(:input, XY())
 )
 ```
 This will result in a total of five state variables being allocated upon initialization: one input variable, two auxiliary variables named `auxvar` and `bc` and one prognostic variable named `progvar` along with its corresponding tendency variable which is created automatically. The second argument to the variable metadata constructors `prognostic` and `auxiliary` is a subtype of `VarDims` which specifies on which spatial dimensions the state variable should be defined. [`XYZ()`](@ref) corresponds to a 3D `Field` which varies both laterally and with depth. [`XY()`](@ref) corresponds to a 2D field which is discretized along the lateral X and Y dimensions only.
@@ -73,9 +74,9 @@ As a simple example, suppose we want to define an auxiliary variable `C` for the
 struct Pythagoras{NF} <: Terrarium.AbstractProcess{NF} end
 
 Terrarium.variables(pythag::Pythagoras) = (
-    auxiliary(:hypotenuse, XY(), hypotenuse, pythag),
-    input(:length, XY()),
-    input(:width, XY())
+    Terrarium.auxiliary(:hypotenuse, XY(), hypotenuse, pythag),
+    Terrarium.input(:length, XY()),
+    Terrarium.input(:width, XY())
 )
 
 function hypotenuse(::Pythagoras, grid, clock, fields)
