@@ -1,6 +1,6 @@
 # # [Soil heat conduction in a 1D vertical column](@id "soil_heat_column")
 # This example shows how to set up a simple model of nonlinear heat conduction
-# in a single vertical soil column (similar to the example shown in the README.
+# in a single vertical soil column (similar to the example shown in the README).
 # The [`SoilEnergyBalance`](@ref) process in Terrarium solves the nonlinear form
 # of the heat equation with phase change. This allows for the simulation of
 # freeze/thaw dynamics in both seasonally and perennially frozen soils.
@@ -43,13 +43,15 @@ timestep!(integrator)
 @time run!(integrator, period = Day(3))
 
 # Now let's extract the relevant state variables for inspection. The function
-# `interior` comes from Oceananigans and is used to extract the interior values
-# of the spatial field on grid cell centers, excluding the halo regions used for
-# representing boundary conditions.
+# [`interior`](@extref Oceananigans.Fields.interior) comes from Oceananigans
+# and is used to extract the interior values of the spatial field on grid cell centers,
+# excluding the halo regions used for representing boundary conditions.
 T = interior(integrator.state.temperature)[1, 1, :]
 f = interior(integrator.state.liquid_water_fraction)[1, 1, :]
 
-# Finally, we plot the temperature and liquid fraction profiles:
+# Finally, we plot the temperature and liquid fraction profiles. With
+# [`znodes`](@extref Oceananigans.Grids.znodes), the positions of the interior
+# nodes in the $z$-direction can be extracted.
 zs = znodes(integrator.state.temperature)
 let fig = Makie.Figure()
     ax1 = Makie.Axis(fig[1, 1], ylabel = "Depth / m", xlabel = "Temperature / °C")
