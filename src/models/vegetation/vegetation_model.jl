@@ -36,7 +36,7 @@ function compute_auxiliary!(state, model::VegetationModel)
     # Unpack vegetation model
     (; grid, atmosphere, vegetation, constants) = model
     # Compute auxiliary variables for coupled vegetation processes
-    compute_auxiliary!(state, grid, vegetation, atmosphere, constants)
+    compute_auxiliary!(state, grid, vegetation, constants, atmosphere)
     return nothing
 end
 

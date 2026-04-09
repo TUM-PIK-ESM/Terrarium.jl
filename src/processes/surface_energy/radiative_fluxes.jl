@@ -112,8 +112,8 @@ function compute_auxiliary!(
         state, grid,
         rad::DiagnosedRadiativeFluxes,
         seb::AbstractSurfaceEnergyBalance,
-        atmos::AbstractAtmosphere,
         consts::PhysicalConstants,
+        atmos::AbstractAtmosphere,
         args...
     )
     (; skin_temperature, albedo) = seb
@@ -121,7 +121,7 @@ function compute_auxiliary!(
     fields = get_fields(state, rad, skin_temperature, albedo, atmos; except = out)
     launch!(
         grid, XY, compute_auxiliary_kernel!,
-        out, fields, rad, skin_temperature, albedo, atmos, consts
+        out, fields, rad, skin_temperature, albedo, consts, atmos
     )
     return nothing
 end
@@ -133,8 +133,8 @@ end
         rad::DiagnosedRadiativeFluxes,
         skinT::AbstractSkinTemperature,
         abd::AbstractAlbedo,
-        atmos::AbstractAtmosphere,
-        consts::PhysicalConstants
+        consts::PhysicalConstants,
+        atmos::AbstractAtmosphere
     )
     # Get inputs
     SW_down = shortwave_down(i, j, grid, fields, atmos)
@@ -156,14 +156,14 @@ end
         rad::DiagnosedRadiativeFluxes,
         skinT::AbstractSkinTemperature,
         abd::AbstractAlbedo,
-        atmos::AbstractAtmosphere,
-        consts::PhysicalConstants
+        consts::PhysicalConstants,
+        atmos::AbstractAtmosphere
     )
     # Unpack outputs
     (; surface_shortwave_up, surface_longwave_up) = out
 
     # Compute and store outgoing fluxes
-    outgoing_fluxes = compute_surface_upwelling_radiation(i, j, grid, fields, rad, skinT, abd, atmos, consts)
+    outgoing_fluxes = compute_surface_upwelling_radiation(i, j, grid, fields, rad, skinT, abd, consts, atmos)
     surface_shortwave_up[i, j, 1] = outgoing_fluxes.surface_shortwave_up
     surface_longwave_up[i, j, 1] = outgoing_fluxes.surface_longwave_up
 

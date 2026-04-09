@@ -59,5 +59,5 @@ psychrometric_constant
 ```
 
 ```@docs; canonical = false
-compute_vpd
+compute_vpd(c::PhysicalConstants, pres, q_air, T)
 ```

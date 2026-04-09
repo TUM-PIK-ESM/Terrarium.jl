@@ -1,6 +1,6 @@
 # Terrarium.jl
 
-Terrarium is a new and upcoming framework for hybrid physics- and data-driven land and terrestrial ecosystem modeling across spatial and temporal scales. We envision Terrarium to be part of a new generation of Earth system component models that combine modularity, interactivity, GPU-compatibility and auto-differentiability (AD) for seamless integration of process-based and data-driven model components in both global and regional scale simulations.
+Terrarium is a framework for hybrid physics- and data-driven land and terrestrial ecosystem modeling across spatial and temporal scales. We envision Terrarium to be part of a new generation of Earth system component models that combine modularity, interactivity, GPU-compatibility and auto-differentiability (AD) for seamless integration of process-based and data-driven model components in both global and regional scale simulations.
 
 Terrarium is being developed alongside [SpeedyWeather.jl](https://github.com/SpeedyWeather/SpeedyWeather.jl) and [Oceananigans.jl](https://github.com/CliMA/Oceananigans.jl) as the land component of a new, user-friendly, and fully GPU/AD-compatible Earth System Model in the Julia programming language.
 
@@ -96,6 +96,7 @@ Depth = 2
 ### Running Terrarium
 ```@contents
 Pages = [
+    "running/configuring.md",
     "running/initialization.md",
     "running/time_stepping.md",
     "running/input_sources.md",
@@ -120,7 +121,9 @@ Depth = 2
 ### Models
 ```@contents
 Pages = [
+    "models/land_model.md",
     "models/soil_model.md",
+    "models/vegetation_model.md",
 ]
 Depth = 2
 ```

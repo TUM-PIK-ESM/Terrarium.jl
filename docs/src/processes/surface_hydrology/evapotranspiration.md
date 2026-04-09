@@ -31,11 +31,11 @@ subtypes(Terrarium.AbstractEvapotranspiration)
 ## Bare ground evaporation
 
 ```@docs; canonical = false
-GroundEvaporation
+BareGroundEvaporation
 ```
 
 ```@example ET
-variables(GroundEvaporation(Float32))
+variables(BareGroundEvaporation(Float32))
 ```
 
 ## Canopy evapotranspiration
@@ -92,16 +92,16 @@ The PALADYN approach combines all three pathways,
 \text{ET} = E_{\text{can}} + E_{\text{ground}} + T_{\text{canopy}}\,,
 \end{equation}
 ```
-to obtain a total ET flux that can be converted into the [latent heat flux][@ref "Latent heat flux"] for use in the [surface energy balance](@ref "Surface energy balance").
+to obtain a total surface humidity flux that can be converted into the [latent heat flux][@ref "Latent heat flux"] for use in the [surface energy balance](@ref "Surface energy balance").
 
 ## Process interface
 
 ```@docs; canonical = false
-compute_auxiliary!(state, grid, evap::GroundEvaporation, atmos::AbstractAtmosphere, constants::PhysicalConstants, soil::Optional{AbstractSoil})
+compute_auxiliary!(state, grid, ::BareGroundEvaporation, ::NoCanopyInterception, ::PhysicalConstants, ::AbstractAtmosphere, ::Optional{AbstractSoil}, args...)
 ```
 
 ```@docs; canonical = false
-compute_auxiliary!(state, grid, evap::PALADYNCanopyEvapotranspiration, canopy_interception::AbstractCanopyInterception, atmos::AbstractAtmosphere, constants::PhysicalConstants, soil::Optional{AbstractSoil})
+compute_auxiliary!(state, grid, ::PALADYNCanopyEvapotranspiration, ::AbstractCanopyInterception, ::PhysicalConstants, ::AbstractAtmosphere, ::AbstractSoil, ::AbstractVegetation, args...)
 ```
 
 ## Ground resistance parameterizations

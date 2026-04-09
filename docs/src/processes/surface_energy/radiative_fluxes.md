@@ -9,14 +9,12 @@ CurrentModule = Terrarium
 
 ## Overview
 
-The radiative budget is characterized by the incidental downwelling (incoming) and upwelling (outgoing) radiative fluxes, each of which is defined in Terrarium as strictly nonnegative in their respective directions. The net radiative flux can then be computed as the sum of the directional fluxes for both the shortwave (solar) and longwave (thermal) components:
-
+The radiative budget is characterized by the incidental downwelling (incoming) and upwelling (outgoing) radiative fluxes, each of which is defined in Terrarium as strictly nonnegative in their respective directions. The net radiation flux (positive upwards) can then be computed as the sum of the directional fluxes for both the shortwave (solar) and longwave (thermal) components,
 ```math
 \begin{equation}
 R_{\text{net}}(T_s) = \text{SW}_{\uparrow} - \text{SW}_{\downarrow} + \text{LW}_{\uparrow}(T_s) - \text{LW}_{\downarrow}
 \end{equation}
 ```
-
 where $\text{SW}_{\uparrow} = \alpha \text{SW}_{\downarrow}$ is upwelling (reflected) shortwave radiation (W/m²), $\text{SW}_{\downarrow}$ is downwelling (incident) shortwave radiation (W/m²), $\text{LW}_{\uparrow} = \epsilon \sigma T_0^4 + (1-\epsilon) L_{\downarrow}$ is upwelling longwave radiation from the surface and reflected downwelling longwave (W/m²), $\text{LW}_{\downarrow}$ is downwelling (incident) longwave radiation (W/m²), $\epsilon$ is the surface emissivity (see [Albedo and Emissivity](albedo.md)) (-), $\alpha$ is the surface albedo (see [Albedo and Emissivity](albedo.md)) (-), $\sigma$ is the Stefan-Boltzmann constant (W/m²/K⁴), and $T_s$ is the skin temperature (K).
 
 ### Shortwave radiation
@@ -54,7 +52,7 @@ compute_auxiliary!(state, grid, rad::PrescribedRadiativeFluxes, seb::AbstractSur
 ```
 
 ```@docs; canonical = false
-compute_auxiliary!(state, grid, rad::DiagnosedRadiativeFluxes, seb::AbstractSurfaceEnergyBalance, atmos::AbstractAtmosphere, consts::PhysicalConstants, args...)
+compute_auxiliary!(state, grid, rad::DiagnosedRadiativeFluxes, seb::AbstractSurfaceEnergyBalance, consts::PhysicalConstants, atmos::AbstractAtmosphere, args...)
 ```
 
 ## Methods

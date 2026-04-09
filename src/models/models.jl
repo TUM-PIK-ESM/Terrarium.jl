@@ -23,11 +23,5 @@ include("surface/surface_energy_model.jl")
 
 # Coupled models
 
-export CoupledSoilEnergyModel
-include("coupled/soil_energy_model.jl")
-
-export VegetationSoilModel
-include("coupled/vegetation_soil_model.jl")
-
 export LandModel
 include("coupled/land_model.jl")

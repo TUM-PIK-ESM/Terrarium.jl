@@ -2,6 +2,7 @@
 ArgParse = "c7e460c6-2fb9-53a9-8c5b-16f535851c63"
 CUDA = "052768ef-5323-5732-b1bb-66c8b64840ba"
 CairoMakie = "13f3f980-e62b-5c42-98c6-ff1f3baf88f0"
+DisplayAs = "0b91fe84-8a4c-11e9-3e1d-67c38462b6d6"
 Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
 DocumenterCitations = "daee34ce-89f3-4625-b898-19384cb65244"
 DocumenterInterLinks = "d12716ef-a0f6-4df4-a9f1-a5a34e75c656"

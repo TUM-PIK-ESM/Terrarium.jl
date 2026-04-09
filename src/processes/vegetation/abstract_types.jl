@@ -1,5 +1,10 @@
 # Vegetation component types
 
+"""
+    $TYPEDEF
+
+Base type for coupled vegetation (carbon) processes.
+"""
 abstract type AbstractVegetation{NF} <: AbstractCoupledProcesses{NF} end
 
 # Vegetation process types
@@ -7,7 +12,7 @@ abstract type AbstractVegetation{NF} <: AbstractCoupledProcesses{NF} end
 """
     $TYPEDEF
 
-Base type for photosyntheis schemes.
+Base type for photosynthesis schemes.
 """
 abstract type AbstractPhotosynthesis{NF} <: AbstractProcess{NF} end
 

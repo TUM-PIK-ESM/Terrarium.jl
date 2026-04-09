@@ -36,6 +36,12 @@ end
 
 # Process interface methods
 
+"""
+    $TYPEDEF
+
+Initialize the soil energy, water, and carbon state variables on `grid` given
+the parameter values in `constants`.
+"""
 function initialize!(
         state, grid,
         soil::SoilEnergyWaterCarbon,
@@ -47,6 +53,12 @@ function initialize!(
     return nothing
 end
 
+"""
+    $TYPEDEF
+
+Compute auxiliary variables for soil energy, water, and carbon state variables
+on `grid` based on the given values in `constants`.
+"""
 function compute_auxiliary!(
         state, grid,
         soil::SoilEnergyWaterCarbon,
@@ -59,6 +71,12 @@ function compute_auxiliary!(
     return nothing
 end
 
+"""
+    $TYPEDEF
+
+Compute tendencies for soil energy, water, and carbon state variables on `grid`
+based on the given values in `constants`.
+"""
 function compute_tendencies!(
         state, grid,
         soil::SoilEnergyWaterCarbon,
@@ -73,6 +91,11 @@ end
 
 # Closures
 
+"""
+    $TYPEDEF
+
+Compute the forward closure mapping for soil hydrology and energy, in that order.
+"""
 function closure!(
         state, grid,
         soil::SoilEnergyWaterCarbon,
@@ -83,6 +106,11 @@ function closure!(
     return nothing
 end
 
+"""
+    $TYPEDEF
+
+Compute the inverse closure mapping for soil hydrology and energy, in that order.
+"""
 function invclosure!(
         state, grid,
         soil::SoilEnergyWaterCarbon,
