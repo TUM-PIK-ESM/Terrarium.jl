@@ -7,9 +7,7 @@ CurrentModule = Terrarium
 !!! warning
     This page is a work in progress. If you have any questions or notice any errors, please [raise an issue](https://github.com/NumericalEarth/Terrarium.jl/issues).
 
-## Overview
-
-The [SurfaceHydrology](@ref) process manages water exchange between the atmosphere and land, including three tightly coupled processes:
+[SurfaceHydrology](@ref) is a coupled process type that manages water exchange between the atmosphere and land, including three tightly coupled processes:
 
 1. [Canopy interception](@ref): Temporary storage and removal of intercepted rainfall
 2. [Evapotranspiration](@ref): Water vapor fluxes from ground, canopy, and plant stomata

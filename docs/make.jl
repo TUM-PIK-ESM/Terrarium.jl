@@ -161,10 +161,10 @@ makedocs(
         "Processes" => [
             "Soil" => [
                 "Overview" => "processes/soil/soil.md",
-                "Soil hydrology" => "processes/soil/soil_hydrology.md",
-                "Soil energy" => "processes/soil/soil_energy.md",
-                "Soil biogeochemistry" => "processes/soil/soil_biogeochemistry.md",
-                "Soil stratigraphy" => "processes/soil/soil_stratigraphy.md",
+                "Hydrology" => "processes/soil/soil_hydrology.md",
+                "Energy balance" => "processes/soil/soil_energy.md",
+                "Biogeochemistry" => "processes/soil/soil_biogeochemistry.md",
+                "Stratigraphy" => "processes/soil/soil_stratigraphy.md",
             ],
             "Vegetation" => [
                 "Overview" => "processes/vegetation/vegetation.md",
@@ -178,13 +178,13 @@ makedocs(
                 "Root distribution" => "processes/vegetation/root_distribution.md",
             ],
             "Surface hydrology" => [
-                "Surface hydrology" => "processes/surface_hydrology/surface_hydrology.md",
+                "Overview" => "processes/surface_hydrology/surface_hydrology.md",
                 "Canopy interception" => "processes/surface_hydrology/canopy_interception.md",
                 "Evapotranspiration" => "processes/surface_hydrology/evapotranspiration.md",
                 "Surface runoff" => "processes/surface_hydrology/surface_runoff.md",
             ],
-            "Surface energy fluxes" => [
-                "Surface energy balance" => "processes/surface_energy/surface_energy_balance.md",
+            "Surface energy balance" => [
+                "Overview" => "processes/surface_energy/surface_energy_balance.md",
                 "Radiative fluxes" => "processes/surface_energy/radiative_fluxes.md",
                 "Turbulent fluxes" => "processes/surface_energy/turbulent_fluxes.md",
                 "Skin temperature" => "processes/surface_energy/skin_temperature.md",

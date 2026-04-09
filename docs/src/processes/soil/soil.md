@@ -11,8 +11,6 @@ using Terrarium
 !!! warning
     This page is a work in progress. If you have any questions or notice any errors, please [raise an issue](https://github.com/NumericalEarth/Terrarium.jl/issues).
 
-## Overview
-
 Subtypes of [`AbstractSoil`](@ref) represent a set of coupled processes affecting natural soils. The three main soil processes currently considered in Terrarium are:
 
 - **Energy** — heat conduction with phase change of water/ice in soil pores
@@ -27,7 +25,7 @@ SoilEnergyWaterCarbon
 variables(SoilEnergyWaterCarbon(Float32))
 ```
 
-### Process Interface
+## Process Interface
 
 ```@docs; canonical = false
 initialize!(state, grid, ::SoilEnergyWaterCarbon, constants::PhysicalConstants)

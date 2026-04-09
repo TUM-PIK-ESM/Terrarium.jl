@@ -12,8 +12,6 @@ using InteractiveUtils
 !!! warning
     This page is a work in progress. If you have any questions or notice any errors, please [raise an issue](https://github.com/NumericalEarth/Terrarium.jl/issues).
 
-## Overview
-
 The surface energy balance (SEB) describes how solar radiation, thermal radiation, and heat fluxes interact at the interface between the land and the atmosphere. The SEB broadly consists of four key components: the net radiation budget $R_\text{net}$ (W/m²), sensible heat flux $H_s$ (W/m²), latent heat flux $H_l$ (W/m²), and ground heat flux $G$ (W/m²). The energy balance can be expressed as a simple sum of each flux term:
 
 ```math

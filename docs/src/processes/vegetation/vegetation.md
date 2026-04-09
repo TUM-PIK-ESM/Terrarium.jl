@@ -12,8 +12,6 @@ using InteractiveUtils
 !!! warning
     This page is a work in progress. If you have any questions or notice any errors, please [raise an issue](https://github.com/NumericalEarth/Terrarium.jl/issues).
 
-## Overview
-
 Vegetation processes simulate the biological and biogeochemical dynamics of terrestrial plants, including photosynthesis, phenology, respiration, and carbon cycling. The vegetation module in Terrarium currently consists of the following processes:
 
 - **Photosynthesis** — light-dependent gross primary production (CO₂ uptake)
