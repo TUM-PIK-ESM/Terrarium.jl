@@ -168,9 +168,9 @@ makedocs(
         ],
         "Processes" => [
             "Soil" => [
+                "Soil stratigraphy" => "processes/soil/soil_stratigraphy.md",
                 "Soil hydrology" => "processes/soil/soil_hydrology.md",
                 "Soil energy" => "processes/soil/soil_energy.md",
-                "Soil stratigraphy" => "processes/soil/soil_stratigraphy.md",
             ],
             "Vegetation" => [
                 "Photosynthesis" => "processes/vegetation/photosynthesis.md",
