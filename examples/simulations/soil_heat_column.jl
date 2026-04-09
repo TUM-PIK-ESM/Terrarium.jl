@@ -1,4 +1,4 @@
-# # [Soil heat conduction in a 1D vertical column](@id "soil_heat_column")
+# # [Soil heat conduction in a 1D vertical column](@id soil_heat_column)
 # This example shows how to set up a simple model of nonlinear heat conduction
 # in a single vertical soil column (similar to the example shown in the README).
 # The [`SoilEnergyBalance`](@ref) process in Terrarium solves the nonlinear form

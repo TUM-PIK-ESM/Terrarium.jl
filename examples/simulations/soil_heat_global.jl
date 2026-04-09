@@ -1,5 +1,5 @@
-# # [Soil heat conduction at global scale](@id "soil_heat_global")
-# Here we extend the single column soil heat conduction [example](@ref "soil_heat_column")
+# # [Soil heat conduction at global scale](@id soil_heat_global)
+# Here we extend the single column soil heat conduction [example](@ref soil_heat_column)
 # to do global scale simulations, accelerated by GPU (if available).
 
 using Terrarium

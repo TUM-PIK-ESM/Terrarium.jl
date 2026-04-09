@@ -34,7 +34,7 @@ compute_auxiliary!
 compute_tendencies!
 ```
 
-Further details on these interfaces and their practical implementations are given in the following sections. Remember from [Intialization](@ref) that `state` is a [StateVariables](@ref) structure formed during initialization of a model or process. 
+Further details on these interfaces and their practical implementations are given in the following sections. Remember from [Initialization](@ref) that `state` is a [StateVariables](@ref) structure formed during initialization of a model or process. 
 
 ## The `AbstractProcess` interface
 
@@ -136,7 +136,7 @@ The typical pattern is to forward each of these model-level calls to the corresp
 
 ### The `AbstractInitializer` interface
 
-Standardized model initialization routines can be defined using the [`AbstractInitializer`](@ref) interface (see also [Initialization](@ref)). Each implementation of `AbstractModel` must allow for a user-defined `initializer` (the type can be constrained where appropriate). The simplest initializer is `DefaultInitializer`, which is a no-op that leaves all `Field`s at their default (zero) values. More complex models define their own composite initializers; for example, `SoilInitializer` composes separate initializers for the energy, hydrology, and biogeochemistry state variables. See [Soil model](@ref) for the full list of available initializer types.
+Standardized model initialization routines can be defined using the [`AbstractInitializer`](@ref) interface (see also [Initialization](@ref)). Each implementation of `AbstractModel` must allow for a user-defined `initializer` (the type can be constrained where appropriate). The simplest initializer is `DefaultInitializer`, which is a no-op that leaves all `Field`s at their default (zero) values. More complex models define their own composite initializers; for example, `SoilInitializer` composes separate initializers for the energy, hydrology, and biogeochemistry state variables. See [Soil models](@ref) for the full list of available initializer types.
 
 ```@docs; canonical = false
 AbstractInitializer

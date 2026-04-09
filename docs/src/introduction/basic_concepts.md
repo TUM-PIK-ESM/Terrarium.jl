@@ -12,7 +12,7 @@ A “model” in Terrarium represents a collection of components that fully char
 
 All models must be defined as `struct`s that subtype [`AbstractModel`](@ref) and typically consist of the following components:
 - A `grid` that defines both a vertical and lateral discretization of the spatial domain,
-- One or more [Processes](@ref) that define the state variables, parameters, and dynamics of the model,
+- One or more [Processes](@ref basic_concepts_processes) that define the state variables, parameters, and dynamics of the model,
 - An `initializer` that defines a sequence of initialization routines (as well as any associated parameters) for the state variables declared by all of its components.
 
 To see this in action, let's look again at a simple example of setting up a soil model for a single vertical column:
@@ -36,7 +36,7 @@ model = SoilModel(grid; soil)
 
 `SoilEnergyWaterCarbon` is a *coupled* process of which `SoilHydrology` is one component. Note that the keyword argument syntax `; hydrology` is a Julia shorthand for `hydrology = hydrology`.
 
-## Processes
+## [Processes](@id basic_concepts_processes)
 
 Procceses are the building blocks of all Terrarium models. Implementations of `AbstractProcess` represent physical processes characterized by:
 - Zero or more state `variable`s that vary spatially across any given `grid`,

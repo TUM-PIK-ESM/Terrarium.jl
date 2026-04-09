@@ -23,7 +23,7 @@ grid = ColumnGrid(ExponentialSpacing(N = 10), num_columns)
 ```
 
 !!! tip "Modular grids"
-    Terrarium models are processes and designed to be largely invariant to the specific choice of grid. You can, for example, easily increase `num_columns` to add more (independent) columns or replace the above `grid` with a GPU-based grid with more soil layers `ColumnGrid(GPU(), ExponentialSpacing(N = 30))`. Alternatively, we could use a global [`ColumnRingGrid`](@ref) as shown in [this example](@ref "soil_heat_global").
+    Terrarium models are processes and designed to be largely invariant to the specific choice of grid. You can, for example, easily increase `num_columns` to add more (independent) columns or replace the above `grid` with a GPU-based grid with more soil layers `ColumnGrid(GPU(), ExponentialSpacing(N = 30))`. Alternatively, we could use a global [`ColumnRingGrid`](@ref) as shown in [this example](@ref soil_heat_global).
 
 We will start here by constructing a simple [`SoilModel`](@ref) using its defaults:
 

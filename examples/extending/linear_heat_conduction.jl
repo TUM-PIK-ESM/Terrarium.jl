@@ -1,4 +1,4 @@
-# # Implementing a process: 1D linear heat diffusion
+# # [Implementing a process: 1D linear heat diffusion](@id linear_heat_conduction_example)
 #
 # In this example, we walk through implementing a new process in Terrarium following the
 # workflow described on the [Implementing processes](@ref) page. We use a simple 1D linear
