@@ -3,14 +3,13 @@
 ---
 
 <a href="https://numericalearth.github.io/Terrarium.jl/dev">
-<img alt="Development documentation" src="https://img.shields.io/badge/documentation-in%20development-orange?style=flat-square">
+<img alt="Development documentation" src="https://img.shields.io/badge/documentation-latest_release-blue.svg">
 </a>
-<a href="https://www.repostatus.org/#wip"><img src="https://www.repostatus.org/badges/latest/wip.svg" alt="Project Status: WIP – Initial development is in progress, but there has not yet been a stable, usable release suitable for the public." /></a>
-<a href="https://eupl.eu/1.2/en">
-    <img alt="EUPLv1.2 license" src="https://img.shields.io/badge/License-EUPLv1.2-blue.svg?style=flat-square">
-</a>
+<a href="https://github.com/NumericalEarth/Terrarium.jl/actions/workflows/CI.yml"><img src="https://github.com/NumericalEarth/Terrarium.jl/actions/workflows/CI.yml/badge.svg" alt="Build status: CI" /></a>
+<a href="https://www.repostatus.org/#active"><img src="https://www.repostatus.org/badges/latest/active.svg" alt="Project Status: Active – The project has reached a stable, usable state and is being actively developed." /></a>
+<a href="https://eupl.eu/1.2/en"> <img alt="EUPLv1.2 license" src="https://img.shields.io/badge/License-EUPLv1.2-blue.svg?style=flat-square"> </a>
 <a href="https://github.com/fredrikekre/Runic.jl">
-    <img alt="code style: runic" src="https://img.shields.io/badge/code_style-%E1%9A%B1%E1%9A%A2%E1%9A%BE%E1%9B%81%E1%9A%B2-black.svg?style=flat-square">
+<img alt="code style: runic" src="https://img.shields.io/badge/code_style-%E1%9A%B1%E1%9A%A2%E1%9A%BE%E1%9B%81%E1%9A%B2-black.svg?style=flat-square">
 </a>
 
 [Terrarium.jl](https://numericalearth.github.io/Terrarium.jl/dev) is a framework for hybrid physics- and data-driven land modeling across spatial and temporal scales. We envision Terrarium to be part of a new generation of Earth system component models that combine modularity, interactivity, GPU-compability and auto-differentiability (AD) for seamless integration of process-based and data-driven model components in both global and regional scale simulations.
@@ -39,15 +38,42 @@ It is important to emphasize, however, what Terrarium is not:
 
 ## Installation
 
-Terrarium is still in a prototype stage and is not yet registered as a package in the Julia General registry.
+You can install and use Terrarium as a Julia package by typing `]` in your REPL and running:
+```
+pkg> add Terrarium
+```
+or alternatively running
+```julia
+import Pkg
+Pkg.add("Terrarium")
+```
+followed by
+```julia
+using Terrarium
+```
 
-However, you can still install the package from the repository via the package manager (type `]` in your REPL):
+If you would like to not only use Terrarium but also actively develop it (or fix bugs 🐛), you can also install it as a [development package](https://pkgdocs.julialang.org/v1/toml-files/#Developed-package):
+```
+pkg> dev Terrarium
+```
+though it is worth noting that this will clone the repository into your Julia home directory by default. You can also fork/clone the repository yourself and start hacking!
+```
+git clone git@github.com:NumericalEarth/Terrarium.jl
+```
+
+You can then initialize the project environment by setting the repository as your working directory and running
 
 ```
-pkg> add https://github.com/NumericalEarth/Terrarium.jl
+julia --project=. -e "import Pkg; Pkg.instantiate()"
 ```
 
-or clone the repository and start hacking directly!
+To run the example scripts, you will need to set the project directory to the `examples/` directory,
+
+```
+julia --project=examples examples/simulations/soil_heat_global.jl
+```
+
+You can also directly `activate` the example project environment from your REPL by first entering the package manager with `]` and then running the command `activate examples` followed by `instantiate`.
 
 ## Quick start
 
