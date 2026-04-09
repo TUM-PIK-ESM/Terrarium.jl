@@ -39,15 +39,24 @@ It is important to emphasize, however, what Terrarium is not:
 
 ## Installation
 
-Terrarium is still in a prototype stage and is not yet registered as a package in the Julia General registry.
-
-However, you can still install the package from the repository via the package manager (type `]` in your REPL):
-
+You can install and use Terrarium as a Julia package by typing `]` in your REPL and running:
 ```
-pkg> add https://github.com/NumericalEarth/Terrarium.jl
+pkg> add Terrarium
+```
+or alternatively running
+```julia
+import Pkg
+Pkg.add("Terrarium")
 ```
 
-or clone the repository and start hacking directly!
+If you would like to not only use Terrarium but also actively develop it (or fix bugs 🐛), you can also install it as a [development package](https://pkgdocs.julialang.org/v1/toml-files/#Developed-package):
+```
+pkg> dev Terrarium
+```
+though it is worth noting that this will clone the repository into your Julia home directory by default. You can also fork/clone the repository yourself and start hacking!
+```
+git clone git@github.com:NumericalEarth/Terrarium.jl
+```
 
 ## Quick start
 
