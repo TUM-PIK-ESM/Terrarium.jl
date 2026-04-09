@@ -15,6 +15,21 @@ Regardless of how you choose to contribute, we thank you for your participation,
 
 Terrarium.jl adheres to software development standards for automated testing via continuous integration. We write unit tests for every function of our model. In some cases this might appear trivial, but we still want to achieve a near complete coverage of our code in the tests. The majority of the tests should cover the smallest possible units over different input arguments and types (if applicable). Unit tests should typically call the tested functions in a way that is representative for their use in the model, but try to reduce the computational complexity (e.g. by choosing very low dimensional inputs) to keep the overall CI time manageable. Additionally, we have some tests that ensure top-level functionality and stability of the model as well. Every additional proposed feature in a Pull Request has to come with unit tests. Tests verifying differentiability and GPU compatibility will also be required.
 
+To run the test suite locally, start Julia from the project root folder in the project environment:
+```
+julia --project=.
+```
+Next, you can run the test suite from Julia with:
+```julia
+using Pkg
+Pkg.test()
+```
+The Enzyme specific tests are invoked by:
+```julia
+using Pkg
+Pkg.test(test_args=["enzyme"])
+```
+
 ### Automatic Differentiation with Enzyme 
 
 For AD, we rely primarily on reverse mode differentiation via [Enzyme.jl](https://enzyme.mit.edu/julia/stable/). In contrast to many other AD systems, Enzyme doesn’t put particularly strong restrictions on coding style. For example, Array mutations are not only allowed, they are even encouraged!
