@@ -37,7 +37,7 @@ Calling `variables(model)` will give us a more detailed look at the state variab
 variables(model)
 ```
 
-By default `SoilModel` uses a `NoFlow` soil hydrology scheme that treats soil water/ice as constant in time. Let's try changing that. The (hopefully) easiest way to learn how to do this would be to go look at the documentation page for [soil hydrology](@ref "Soil hydrology"). But let's be lazy and try to figure it ourselves.
+By default `SoilModel` uses a [`NoFlow`](@ref) soil hydrology scheme that treats soil water/ice as constant in time. Let's try changing that. The (hopefully) easiest way to learn how to do this would be to go look at the documentation page for [soil hydrology](@ref "Soil hydrology"). But let's be lazy and try to figure it ourselves.
 
 We can see above that `model` has a property `soil` (see also the page for [`SoilModel`](@ref "Soil models")). Let's inspect that:
 
@@ -45,7 +45,7 @@ We can see above that `model` has a property `soil` (see also the page for [`Soi
 model.soil
 ```
 
-We can see that `soil` is a coupled process type `SoilEnergyWaterCarbon` with processes `energy`, `hydrology`, and `biogeochem`. Looking at `model.soil.hydrology`:
+We can see that `soil` is a coupled process type [`SoilEnergyWaterCarbon`](@ref) with processes `energy`, `hydrology`, and `biogeochem`. Looking at `model.soil.hydrology`:
 
 ```@example configuring
 model.soil.hydrology
@@ -62,7 +62,7 @@ suptype = supertype(vftype)
 subtypes(suptype)
 ```
 
-Aha! We see here a second implementation `RichardsEq`. This happens to correspond to the configuration option for `SoilHydrology` that enables vertical water flow governed by the Richardson-Richards equation. We can enable this by changing `vertical_flow` when constructing the process and then building back up the `SoilModel` from there.
+Aha! We see here a second implementation [`RichardsEq`](@ref). This happens to correspond to the configuration option for [`SoilHydrology`](@ref) that enables vertical water flow governed by the Richardson-Richards equation. We can enable this by changing `vertical_flow` when constructing the process and then building back up the `SoilModel` from there.
 
 ```@example configuring
 hydrology = SoilHydrology(eltype(grid), vertical_flow = RichardsEq())
