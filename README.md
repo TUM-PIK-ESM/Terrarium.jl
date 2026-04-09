@@ -6,12 +6,10 @@
 <img alt="Development documentation" src="https://img.shields.io/badge/documentation-latest_release-blue.svg">
 </a>
 <a href="https://github.com/NumericalEarth/Terrarium.jl/actions/workflows/CI.yml"><img src="https://github.com/NumericalEarth/Terrarium.jl/actions/workflows/CI.yml/badge.svg" alt="Build status: CI" /></a>
-<a href="https://eupl.eu/1.2/en">
-<a href="https://www.repostatus.org/#active"><img src="https://www.repostatus.org/#active" alt="Project Status: Active – The project has reached a stable, usable state and is being actively developed." /></a>
-<img alt="EUPLv1.2 license" src="https://img.shields.io/badge/License-EUPLv1.2-blue.svg?style=flat-square">
-</a>
+<a href="https://www.repostatus.org/#active"><img src="https://www.repostatus.org/badges/latest/active.svg" alt="Project Status: Active – The project has reached a stable, usable state and is being actively developed." /></a>
+<a href="https://eupl.eu/1.2/en"> <img alt="EUPLv1.2 license" src="https://img.shields.io/badge/License-EUPLv1.2-blue.svg?style=flat-square"> </a>
 <a href="https://github.com/fredrikekre/Runic.jl">
-    <img alt="code style: runic" src="https://img.shields.io/badge/code_style-%E1%9A%B1%E1%9A%A2%E1%9A%BE%E1%9B%81%E1%9A%B2-black.svg?style=flat-square">
+<img alt="code style: runic" src="https://img.shields.io/badge/code_style-%E1%9A%B1%E1%9A%A2%E1%9A%BE%E1%9B%81%E1%9A%B2-black.svg?style=flat-square">
 </a>
 
 [Terrarium.jl](https://numericalearth.github.io/Terrarium.jl/dev) is a framework for hybrid physics- and data-driven land modeling across spatial and temporal scales. We envision Terrarium to be part of a new generation of Earth system component models that combine modularity, interactivity, GPU-compability and auto-differentiability (AD) for seamless integration of process-based and data-driven model components in both global and regional scale simulations.
