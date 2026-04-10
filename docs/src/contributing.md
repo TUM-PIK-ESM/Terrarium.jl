@@ -53,13 +53,13 @@ All pull requests that implement new features or modify existing functionality m
 The docs can be built locally by first installing the needed dependencies with
 
 ```
-julia --project=docs/. -e 'using Pkg; Pkg.develop(PackageSpec(path=pwd())); Pkg.instantiate()'
+julia --project=docs -e 'using Pkg; Pkg.develop(PackageSpec(path=pwd())); Pkg.instantiate()'
 ```
 
 and then running
 
 ```
-julia --project=docs/. docs/make.jl --local
+julia --project=docs docs/make.jl --local
 ```
 
 To skip running doctests and example scripts, you can also add `--draft` or `-d` for short. To skip only the example scripts, use `--skip-examples`. You can also add `--debug` when running locally to get detailed output from Documenter during execution of doctests and in-page `@example` blocks.
