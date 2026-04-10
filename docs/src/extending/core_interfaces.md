@@ -34,11 +34,11 @@ compute_auxiliary!
 compute_tendencies!
 ```
 
-Further details on these interfaces and their practical implementations are given in the following sections.
+Further details on these interfaces and their practical implementations are given in the following sections. Remember from [Initialization](@ref) that `state` is a [StateVariables](@ref) structure formed during initialization of a model or process. 
 
 ## The `AbstractProcess` interface
 
-In the example above, both `AbstractAtmosphere` and `PALADYNCanopyEvapotranspiration` are examples of *processes* that subtype the `AbstractProcess` type.
+In the example above, both `AbstractAtmosphere` and `PALADYNCanopyEvapotranspiration` are examples of *processes* that subtype the [`AbstractProcess`](@ref) type.
 
 Implementations of `AbstractProcess` represent physical processes characterized by:
 - Zero or more state `variable`s that vary spatially across any given `grid`,
@@ -57,7 +57,7 @@ For more details on the `state` structure and definition of `variables`, see the
 
 The main difference between a "model" and a "process" in Terrarium lies in the specification of the `grid` and `initializer`. Processes should be generally be defined independently from any particular choice of initialization, boundary conditions, and `grid`. However, it is worth noting that processes can dispatch on specific types of `grid`, if necessary.
 
-`AbstractModel` is parameterized by two type arguments:
+[`AbstractModel`](@ref) is parameterized by two type arguments:
 
 ```julia
 abstract type AbstractModel{NF, Grid <: AbstractLandGrid{NF}} end
@@ -71,8 +71,7 @@ Terrarium defines a hierarchy of abstract model subtypes that correspond to the 
 
 ```
 AbstractModel
-└── AbstractGroundModel          # general ground (soil/rock) models
-    └── AbstractSoilModel        # soil column models
+└── AbstractSoilModel            # general soil models
 └── AbstractSurfaceEnergyModel   # standalone land-atmosphere energy exchange
 └── AbstractSnowModel            # standalone snow models
 └── AbstractVegetationModel      # standalone vegetation models
@@ -136,7 +135,7 @@ The typical pattern is to forward each of these model-level calls to the corresp
 
 ### The `AbstractInitializer` interface
 
-Standardized model initialization routines can be defined using the [`AbstractInitializer`](@ref) interface (see also [Initialization](@ref)). Each implementation of `AbstractModel` must allow for a user-defined `initializer` (the type can be constrained where appropriate). The simplest initializer is `DefaultInitializer`, which is a no-op that leaves all `Field`s at their default (zero) values. More complex models define their own composite initializers; for example, `SoilInitializer` composes separate initializers for the energy, hydrology, and biogeochemistry state variables. See [Soil model](@ref) for the full list of available initializer types.
+Standardized model initialization routines can be defined using the [`AbstractInitializer`](@ref) interface (see also [Initialization](@ref)). Each implementation of `AbstractModel` must allow for a user-defined `initializer` (the type can be constrained where appropriate). The simplest initializer is `DefaultInitializer`, which is a no-op that leaves all `Field`s at their default (zero) values. More complex models define their own composite initializers; for example, `SoilInitializer` composes separate initializers for the energy, hydrology, and biogeochemistry state variables. See [Soil models](@ref) for the full list of available initializer types.
 
 ```@docs; canonical = false
 AbstractInitializer
@@ -148,16 +147,9 @@ Some physical processes in Terrarium are described by conservation laws that tak
 
 $$\frac{\partial g(u)}{\partial t} = F(u, \ldots)$$
 
-where $u$ is the *conserved* (prognostic) state variable and $g(u)$ is a constitutive relation
-mapping $u$ to the physical units matching the tendency $F$. A canonical example is
-the soil thermal energy balance, where the prognostic variable is the volumetric internal
-energy $U$ (J m⁻³), but the tendency $F$ — the divergence of the heat flux — is most
-naturally evaluated in terms of temperature $T$ (°C). The mapping $U \leftrightarrow T$ is
-therefore a *closure relation*.
+where $u$ is the *conserved* (prognostic) state variable and $g(u)$ is a constitutive relation mapping $u$ to the physical units matching the tendency $F$. A canonical example is the soil thermal energy balance, where the prognostic variable is the volumetric internal energy $U$ (J m⁻³), but the tendency $F$ — the divergence of the heat flux — is most naturally evaluated in terms of temperature $T$ (°C). The mapping $U \leftrightarrow T$ is therefore a *closure relation*.
 
-`AbstractClosureRelation` is the base type for all such relations in Terrarium. A process
-that requires a closure stores its closure as a field and reports it via the `closures`
-method (which is auto-generated from the field types). The two primary interface methods are:
+[`AbstractClosureRelation`](@ref) is the base type for all such relations in Terrarium. A process that requires a closure stores its closure as a field and reports it via the `closures` method (which is auto-generated from the field types). The two primary interface methods are:
 
 ```@docs; canonical=false
 closure!(state, grid, closure::AbstractClosureRelation, process::AbstractProcess, args...)
@@ -173,8 +165,7 @@ The semantics of the forward vs. inverse closure can be summarized as:
 
 Default implementations of both methods are no-ops (do nothing), so processes that do not require a closure relation do need to implement them.
 
-Implementations of `AbstractModel` should define dispatches of `closure!` and `invclosure!` that automatically apply all closure relations defined by their
-processes:
+Implementations of `AbstractModel` should define dispatches of `closure!` and `invclosure!` that automatically apply all closure relations defined by their processes:
 ```@docs; canonical = false
 closure!(state, model::AbstractModel)
 invclosure!(state, model::AbstractModel)
@@ -183,13 +174,11 @@ These methods provide a unified interface that can be used by timesteppers, call
 
 ### Soil energy: temperature–enthalpy closure
 
-The [`SoilEnergyBalance`](@ref) process uses the [`SoilEnergyTemperatureClosure`](@ref) to
-relate volumetric internal energy $U$ to temperature $T$ and the liquid water fraction $F_l$:
+The [`SoilEnergyBalance`](@ref) process uses the [`SoilEnergyTemperatureClosure`](@ref) to relate volumetric internal energy $U$ to temperature $T$ and the liquid water fraction $l$:
 
-$$U(T) = T \cdot C(T) - L_f \, \theta_{wi} \, (1 - F_l(T))$$
+$$U(T) = T \cdot C(T) - L_f \, \theta_{wi} \, (1 - l(T))$$
 
-where $C(T)$ is the temperature-dependent volumetric heat capacity, $L_f$ is the volumetric
-latent heat of fusion, and $\theta_{wi}$ is the total water-ice content.
+where $C(T)$ is the temperature-dependent volumetric heat capacity, $L_f$ is the volumetric latent heat of fusion, and $\theta_{wi}$ is the total water-ice content.
 
 - `closure!(state, grid, ::SoilEnergyTemperatureClosure, energy, ground, constants)` — evaluates
   the forward mapping $U \mapsto T$, updating `state.temperature` and
@@ -199,27 +188,22 @@ latent heat of fusion, and $\theta_{wi}$ is the total water-ice content.
   and `state.liquid_water_fraction`. This direction is used during initialization when a
   temperature profile is given and must be converted to internal energy.
 
-See the [Soil energy balance](@ref) doc page for further details and the full list of
-dispatch signatures.
+See the [Soil energy balance](@ref) doc page for further details and the full list of dispatch signatures.
 
 ### Soil hydrology: saturation–pressure closure
 
-The [`SoilHydrology`](@ref) process (Richards equation variant) uses the
-[`SoilSaturationPressureClosure`](@ref) to relate total water–ice saturation $S$ to
-hydraulic head $\Psi$ via the soil-water retention curve (SWRC):
+The [`SoilHydrology`](@ref) process (Richards equation variant) uses the [`SoilSaturationPressureClosure`](@ref) to relate total water–ice saturation $S$ to hydraulic head $\Psi$ via the soil-water retention curve (SWRC):
 
 $$\Psi = \Psi_m(S) + \Psi_z + \Psi_h$$
 
-where $\Psi_m$ is the matric potential given by the SWRC, $\Psi_z$ is the elevation head,
-and $\Psi_h$ is the hydrostatic head contributed by free water above the water table.
+where $\Psi_m$ is the matric potential given by the SWRC, $\Psi_z$ is the elevation head, and $\Psi_h$ is the hydrostatic head contributed by free water above the water table.
 
 - `closure!(state, grid, ::SoilSaturationPressureClosure, hydrology, soil)` — evaluates the
   forward mapping $S \mapsto \Psi$, updating the auxiliary `state.pressure_head`.
 - `invclosure!(state, grid, ::SoilSaturationPressureClosure, hydrology, soil)` — evaluates the
   inverse mapping $\Psi \mapsto S$, updating the prognostic `state.saturation_water_ice`.
 
-See the [Soil hydrology](@ref) doc page for further details and the full list of dispatch
-signatures.
+See the [Soil hydrology](@ref) doc page for further details and the full list of dispatch signatures.
 
 ### Implementing a new closure
 

@@ -33,7 +33,7 @@ function ground_temperature(energy::SoilEnergyBalance, grid, clock, fields)
 end
 ```
 
-This `ground_temperature` is then consumed by several other processes such as the [Surface Energy Balance](@ref), [canopy evapotranspiration](@ref "Canopy evapotranspiration"), and the vegetation stress factors computed for [autotrophic respiration](@ref "Autotrophic respiration"). These processes can simply declare `ground_temperature` as an input variable:
+This `ground_temperature` is then consumed by several other processes such as the [surface energy balance](@ref surface_energy_balance_docs), [canopy evapotranspiration](@ref "Canopy evapotranspiration"), and the vegetation stress factors computed for [autotrophic respiration](@ref "Autotrophic respiration"). These processes can simply declare `ground_temperature` as an input variable:
 
 ```julia
 input(:ground_temperature, XY(), default = 10.0, units = u"°C")
@@ -74,7 +74,7 @@ Note the use of `AbstractProcessB` instead of a concrete type. This should gener
 Inside a kernel function, `procB` can be used both for dispatch (selecting the right method specialization) and for accessing its parameters. Suppose we have a function `compute_flux!` which is called by the `compute_auxiliary_kernel!` kernel method for `ProcessA`:
 
 ```julia
-A@propagate_inbounds function compute_flux!(out, i, j, grid, fields, procA::ProcessA, procB::AbstractProcessB, args...)
+@propagate_inbounds function compute_flux!(out, i, j, grid, fields, procA::ProcessA, procB::AbstractProcessB, args...)
     # Access a parameter in procB
     κ = procB.κ
 
@@ -98,8 +98,6 @@ function compute_auxiliary!(state, model::ABModel)
     compute_auxiliary!(state, model.grid, model.procA, model.procB)
 end
 ```
-
-Note that this pattern does have an important drawback: 
 
 ### Conventions for direct coupling
 

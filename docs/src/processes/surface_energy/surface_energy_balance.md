@@ -1,4 +1,4 @@
-# Surface Energy Balance
+# [Surface energy balance](@id surface_energy_balance_docs)
 
 ```@meta
 CurrentModule = Terrarium

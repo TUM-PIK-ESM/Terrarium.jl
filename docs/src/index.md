@@ -20,6 +20,10 @@ followed by
 using Terrarium
 ```
 
+!!! compat "Julia 1.10 or 1.11 is required"
+    Currently, Terrarium.jl is only tested on Julia 1.10 (LTS) and 1.11.
+
+
 If you would like to not only use Terrarium but also actively develop it (or fix bugs 🐛), you can also install it as a [development package](https://pkgdocs.julialang.org/v1/toml-files/#Developed-package):
 ```
 pkg> dev Terrarium
@@ -38,6 +42,7 @@ julia --project=. -e "import Pkg; Pkg.instantiate()"
 To run the example scripts, you will need to set the project directory to the `examples/` directory,
 
 ```
+julia --project=examples -e "import Pkg; Pkg.instantiate()"
 julia --project=examples examples/simulations/soil_heat_global.jl
 ```
 
@@ -87,25 +92,68 @@ and voila! We have just run a GPU-accelerated, global-scale simulation of soil t
 
 ## Table of contents
 
+### Introduction
 ```@contents
 Pages = [
     "introduction/basic_concepts.md",
     "introduction/numerical_core.md",
     "introduction/mathematical_formulation.md",
-    "extending/core_interfaces.md",
-    "extending/implementing_processes.md",
-    "extending/coupling_processes.md",
+]
+Depth = 2
+```
+
+### Running Terrarium
+```@contents
+Pages = [
     "running/configuring.md",
     "running/initialization.md",
-    "running/input_sources.md",
     "running/time_stepping.md",
+    "running/input_sources.md",
+]
+Depth = 2
+```
+
+### Extending Terrarium
+```@contents
+Pages = [
+    "extending/core_interfaces.md",
+    "extending/state_variables.md",
+    "extending/implementing_processes.md",
+    "extending/coupling_processes.md",
+    "examples/extending/linear_ode_exp_growth.md",
+    "examples/extending/simple_snow_ddm.md",
+    "examples/extending/linear_heat_conduction.md",
+]
+Depth = 2
+```
+
+### Models
+```@contents
+Pages = [
     "models/land_model.md",
     "models/soil_model.md",
     "models/vegetation_model.md",
+]
+Depth = 2
+```
+
+### Processes
+
+```@contents
+Pages = [
+    "processes/atmosphere/atmosphere.md",
     "processes/soil/soil.md",
     "processes/surface_energy/surface_energy_balance.md",
     "processes/surface_hydrology/surface_hydrology.md",
     "processes/vegetation/vegetation.md",
+    "processes/utils/physical_constants.md",
+    "processes/utils/physics_utils.md",
+]
+```
+
+### Other
+```@contents
+Pages = [
     "contributing.md",
     "api_index.md",
     "references.md",

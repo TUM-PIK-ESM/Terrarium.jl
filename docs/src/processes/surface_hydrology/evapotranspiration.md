@@ -92,7 +92,7 @@ The PALADYN approach combines all three pathways,
 \text{ET} = E_{\text{can}} + E_{\text{ground}} + T_{\text{canopy}}\,,
 \end{equation}
 ```
-to obtain a total surface humidity flux that can be converted into the [latent heat flux][@ref "Latent heat flux"] for use in the [surface energy balance](@ref "Surface energy balance").
+to obtain a total surface humidity flux that can be converted into the [latent heat flux][@ref "Latent heat flux"] for use in the [surface energy balance](@ref surface_energy_balance_docs).
 
 ## Process interface
 

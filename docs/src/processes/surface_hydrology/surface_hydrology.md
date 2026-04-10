@@ -1,4 +1,4 @@
-# Surface hydrology
+# [Surface hydrology](@id surface_hydrology_docs)
 
 ```@meta
 CurrentModule = Terrarium

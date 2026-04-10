@@ -1,4 +1,4 @@
-# Vegetation
+# [Vegetation](@id vegetation_docs)
 
 ```@meta
 CurrentModule = Terrarium
