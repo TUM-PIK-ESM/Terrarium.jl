@@ -22,9 +22,10 @@ input_dir = "inputs" #hide
 arch = CUDA.functional() ? GPU() : CPU()
 @info "Setting up simulation on $arch" #hide
 
-# Next, we load a land-sea mask at ~1° resolution:
+# Next, we load a land-sea mask at ~1° resolution. The mask is a full Gaussian grid, as defined by the
+# [FullGaussianGrid](@extref RingGrids.FullGaussianGrid) from RingGrids.jl:
 land_sea_frac = convert.(Float32, dropdims(Raster(joinpath(input_dir, "era5-land_land_sea_mask_N72.nc")), dims = Ti))
-land_sea_frac_field = RingGrids.FullGaussianField(Matrix(land_sea_frac), input_as = Matrix)
+land_sea_frac_field = RingGrids.FullGaussianGrid(Matrix(land_sea_frac), input_as = Matrix)
 fig = heatmap(land_sea_frac_field)
 DisplayAs.PNG(fig) #hide
 
@@ -33,6 +34,10 @@ DisplayAs.PNG(fig) #hide
 land_mask = land_sea_frac_field .> 0.5
 grid = ColumnRingGrid(arch, Float64, ExponentialSpacing(N = 30), land_mask.grid, land_mask)
 grid_lon, grid_lat = RingGrids.get_lonlats(grid.rings)
+
+# Remember from [Grids](@ref) that the `x`-axis of the Oceananigans [`RectilinearGrid`](@ref) corresponds to
+# the a single index following the ring order (for more details, see the [corresponding section in the
+# RingGrids.jl documentation](https://speedyweather.github.io/SpeedyWeatherDocumentation/stable/ringgrids/#Indexing-Fields)).
 
 # Now we create our [`SoilModel`](@ref), this time without a model initializer:
 model = SoilModel(grid)
@@ -59,7 +64,8 @@ end
 # We can specify it directly as a continuous function thanks to the power of `Oceananigans` `Field`s.
 # However, we will need to use an enclosing function here to i) copy the vector of latitudes onto the
 # device specified by `arch`, and ii) ensure that the compiler is able to infer the correct type of the
-# coordinate values in the boundary condition function.
+# coordinate values in the boundary condition function `periodic_bc`, which returns a temperature value
+# based on the coordinate `x` of the `RectiLinearGrid` and the time `t` (s).
 function get_temperature_bc(lon::AbstractVector, lat::AbstractVector, amplitude = 10.0)
     ## make sure coordinate arrays are on the same device
     lon_device = on_architecture(arch, Float32.(lon))
