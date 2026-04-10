@@ -99,8 +99,6 @@ function compute_auxiliary!(state, model::ABModel)
 end
 ```
 
-Note that this pattern does have an important drawback: it imposes an evaluation order in the calculations of the interface methods. 
-
 ### Conventions for direct coupling
 
 Direct coupling introduces ordering constraints that do not exist with indirect coupling. To keep these constraints manageable and consistent, Terrarium adopts some conventions regarding the design of coupling interfaces.
