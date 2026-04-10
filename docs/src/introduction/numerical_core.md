@@ -65,7 +65,7 @@ As a general rule, we try to combine or *fuse* kernel functions as much as possi
 
 To see how this looks in action in Terrarium.jl, you can take a look at the code for [SoilEnergyBalance](https://github.com/NumericalEarth/Terrarium.jl/blob/main/src/processes/soil/energy/soil_energy.jl): There [`compute_tendencies!`](@ref) is the mandatory function for the model component, it launches exactly one kernel [`compute_tendencies_kernel!`], which includes several `@propagate_inbounds` functions to compute individual contributions to the energy balance such as [`compute_energy_tendency`](@ref), [`compute_thermal_conductivity`](@ref) and the `diffusive_heat_flux`.
 
-It's also worth checking out the [Simulation tips](https://clima.github.io/OceananigansDocumentation/stable/simulation@_tips) provided in the documentation for Oceananigans.
+It's also worth checking out the [Simulation tips](https://clima.github.io/OceananigansDocumentation/stable/simulation_tips) provided in the documentation for Oceananigans.
 
 ## Numeric types
 
