@@ -36,7 +36,7 @@ land_mask = land_sea_frac_field .> 0.5
 grid = ColumnRingGrid(arch, NF, ExponentialSpacing(N = 30), land_mask.grid, land_mask)
 grid_lon, grid_lat = RingGrids.get_lonlats(grid.rings) # in radians
 
-# Remember from [Grids](@ref) that the `x`-axis of the Oceananigans [`RectilinearGrid`](@ref) corresponds to
+# Remember from [Grids](@ref) that the `x`-axis of the Oceananigans [`RectilinearGrid`](@extref Oceananigans.Grids.RectilinearGrid) corresponds to
 # the a single index following the ring order (for more details, see the [corresponding section in the
 # RingGrids.jl documentation](https://speedyweather.github.io/SpeedyWeatherDocumentation/stable/ringgrids/#Indexing-Fields)).
 
