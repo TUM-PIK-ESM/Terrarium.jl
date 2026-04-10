@@ -123,7 +123,7 @@ end
 #
 # First, we will define our initial conditions.
 #
-# User-specified `Field` initializers passed to `initialize` can be provided in any form supported by `Oceananigans.set!` (see [the correspondingOceananigans documentation](https://clima.github.io/OceananigansDocumentation/stable/fields#Setting-Fields)), including constants, arrays, and functions of the form `(x,z) -> val`:
+# User-specified `Field` initializers passed to `initialize` can be provided in any form supported by `Oceananigans.set!` (see [the corresponding Oceananigans documentation](https://clima.github.io/OceananigansDocumentation/stable/fields#Setting-Fields)), including constants, arrays, and functions of the form `(x,z) -> val`:
 
 initializers = (u = 1.0,)
 
