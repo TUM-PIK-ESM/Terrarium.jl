@@ -41,7 +41,7 @@ using Terrarium
 #
 # For our current example, we are defining a simple linear ODE without any spatial dynamics, so we can get away with just a single column with one vertical layer. We can define it like so:
 
-grid = ColumnGrid(Terrarium.CPU(), Float64, UniformSpacing(N = 1))
+grid = ColumnGrid(CPU(), Float64, UniformSpacing(N = 1))
 
 # ## Defining the model
 #
@@ -74,9 +74,9 @@ end
 # So, let's define those:
 
 Terrarium.variables(::ExpModel) = (
-    Terrarium.prognostic(:u, Terrarium.XY(), desc = "Exponential growth variable"),
-    Terrarium.auxiliary(:c, Terrarium.XY(), desc = "Constant offset for growth"),
-    Terrarium.input(:F, Terrarium.XY(), default = 0.0, desc = "External forcing"),
+    Terrarium.prognostic(:u, XY(), desc = "Exponential growth variable"),
+    Terrarium.auxiliary(:c, XY(), desc = "Constant offset for growth"),
+    Terrarium.input(:F, XY(), default = 0.0, desc = "External forcing"),
 )
 
 # Here, we defined our three variables with their names as a `Symbol` and whether they are 2D variables ([`XY`](@ref)) on the spatial grid or 3D variables ([`XYZ`](@ref)) that also vary along the vertical z-axis. Here we are considering only a simple scalar model so we choose 2D (`XY`), bearing in mind that all points in the X and Y dimensions of `ColumnGrid` are independent of each other.
