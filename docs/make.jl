@@ -194,10 +194,9 @@ makedocs(
             "Soil" => [
                 "Overview" => "processes/soil/soil.md",
                 "Stratigraphy" => "processes/soil/soil_stratigraphy.md",
-                "Soil hydrology" => "processes/soil/soil_hydrology.md",
+                "Hydrology" => "processes/soil/soil_hydrology.md",
                 "Energy balance" => "processes/soil/soil_energy.md",
                 "Biogeochemistry" => "processes/soil/soil_biogeochemistry.md",
-                "Soil stratigraphy" => "processes/soil/soil_stratigraphy.md",
             ],
             "Vegetation" => [
                 "Overview" => "processes/vegetation/vegetation.md",
