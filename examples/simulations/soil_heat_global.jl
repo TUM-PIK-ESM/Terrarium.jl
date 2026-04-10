@@ -24,7 +24,8 @@ arch = CUDA.functional() ? GPU() : CPU()
 
 # Next, we load a land-sea mask at ~1° resolution. The mask is a full Gaussian grid, as defined by the
 # [FullGaussianGrid](@extref RingGrids.FullGaussianGrid) from RingGrids.jl:
-land_sea_frac = convert.(Float32, dropdims(Raster(joinpath(input_dir, "era5-land_land_sea_mask_N72.nc")), dims = Ti))
+NF = Float32
+land_sea_frac = convert.(NF, dropdims(Raster(joinpath(input_dir, "era5-land_land_sea_mask_N72.nc")), dims = Ti))
 land_sea_frac_field = RingGrids.FullGaussianGrid(Matrix(land_sea_frac), input_as = Matrix)
 fig = heatmap(land_sea_frac_field)
 DisplayAs.PNG(fig) #hide
@@ -32,7 +33,7 @@ DisplayAs.PNG(fig) #hide
 # Then we set up a masked [`ColumnRingGrid`](@ref), selecting only grid points
 # with >50% land cover:
 land_mask = land_sea_frac_field .> 0.5
-grid = ColumnRingGrid(arch, Float64, ExponentialSpacing(N = 30), land_mask.grid, land_mask)
+grid = ColumnRingGrid(arch, NF, ExponentialSpacing(N = 30), land_mask.grid, land_mask)
 grid_lon, grid_lat = RingGrids.get_lonlats(grid.rings)
 
 # Remember from [Grids](@ref) that the `x`-axis of the Oceananigans [`RectilinearGrid`](@ref) corresponds to
@@ -68,8 +69,8 @@ end
 # based on the coordinate `x` of the `RectiLinearGrid` and the time `t` (s).
 function get_temperature_bc(lon::AbstractVector, lat::AbstractVector, amplitude = 10.0)
     ## make sure coordinate arrays are on the same device
-    lon_device = on_architecture(arch, Float32.(lon))
-    lat_device = on_architecture(arch, Float32.(lat))
+    lon_device = on_architecture(arch, NF.(lon))
+    lat_device = on_architecture(arch, NF.(lat))
     ## function matching the expected signature for boundary conditions on a column-based grid
     function periodic_bc(x::NF, t::NF) where {NF}
         ## x coordinate is just the grid cell index
@@ -92,7 +93,7 @@ bc = PrescribedSurfaceTemperature(:T_ub, get_temperature_bc(lon_masked, lat_mask
 inits = (temperature = initial_soil_temperature,)
 
 # We are finally ready to initialize our model with the above initial and boundary conditions:
-integrator = initialize(model, ForwardEuler(), boundary_conditions = bc, initializers = inits)
+integrator = initialize(model, ForwardEuler(NF), boundary_conditions = bc, initializers = inits)
 
 # Let's already plot the initial surface temperature state to see what it looks like:
 T_surface_initial = RingGrids.Field(CPU(), interior(integrator.state.ground_temperature), grid)
