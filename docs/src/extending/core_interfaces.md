@@ -174,9 +174,9 @@ These methods provide a unified interface that can be used by timesteppers, call
 
 ### Soil energy: temperature–enthalpy closure
 
-The [`SoilEnergyBalance`](@ref) process uses the [`SoilEnergyTemperatureClosure`](@ref) to relate volumetric internal energy $U$ to temperature $T$ and the liquid water fraction $F_l$:
+The [`SoilEnergyBalance`](@ref) process uses the [`SoilEnergyTemperatureClosure`](@ref) to relate volumetric internal energy $U$ to temperature $T$ and the liquid water fraction $l$:
 
-$$U(T) = T \cdot C(T) - L_f \, \theta_{wi} \, (1 - F_l(T))$$
+$$U(T) = T \cdot C(T) - L_f \, \theta_{wi} \, (1 - l(T))$$
 
 where $C(T)$ is the temperature-dependent volumetric heat capacity, $L_f$ is the volumetric latent heat of fusion, and $\theta_{wi}$ is the total water-ice content.
 
