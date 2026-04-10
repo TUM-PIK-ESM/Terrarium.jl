@@ -13,7 +13,7 @@ using Terrarium
 #
 # We begin by defining our model `struct` that subtypes `Terrarium.AbstractModel`:
 #
-# A "model" in Terrarium is a subtype of `Terrarium.AbstractModel` and is a `struct` type constisting of
+# A "model" in Terrarium is a subtype of `Terrarium.AbstractModel` and is a `struct` type consisting of
 #  * `grid` which defines the discretization of the spatial domain
 #  * `initializer` which is responsible for initializing state variables
 #  * further fields that define processes, dynamics and submodels
