@@ -33,7 +33,7 @@ function ground_temperature(energy::SoilEnergyBalance, grid, clock, fields)
 end
 ```
 
-This `ground_temperature` is then consumed by several other processes such as the [Surface energy balance](@ref surface_energy_balance_docs), [canopy evapotranspiration](@ref "Canopy evapotranspiration"), and the vegetation stress factors computed for [autotrophic respiration](@ref "Autotrophic respiration"). These processes can simply declare `ground_temperature` as an input variable:
+This `ground_temperature` is then consumed by several other processes such as the [surface energy balance](@ref surface_energy_balance_docs), [canopy evapotranspiration](@ref "Canopy evapotranspiration"), and the vegetation stress factors computed for [autotrophic respiration](@ref "Autotrophic respiration"). These processes can simply declare `ground_temperature` as an input variable:
 
 ```julia
 input(:ground_temperature, XY(), default = 10.0, units = u"°C")
