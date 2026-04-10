@@ -23,7 +23,9 @@ arch = CUDA.functional() ? GPU() : CPU()
 @info "Setting up simulation on $arch" #hide
 
 # Next, we load a land-sea mask at ~1° resolution. The mask is a full Gaussian grid, as defined by the
-# [FullGaussianGrid](@extref RingGrids.FullGaussianGrid) from RingGrids.jl:
+# [FullGaussianGrid](@extref RingGrids.FullGaussianGrid) from RingGrids.jl. Irrespective of the architecture
+# used for simulation, the land-sea mask is kept on the CPU for easy scalar indexing, which is by default not
+# allowed for GPU arrays (see [here](https://cuda.juliagpu.org/stable/usage/workflow/#UsageWorkflowScalar)).
 NF = Float32
 land_sea_frac = convert.(NF, dropdims(Raster(joinpath(input_dir, "era5-land_land_sea_mask_N72.nc")), dims = Ti))
 land_sea_frac_field = RingGrids.FullGaussianGrid(Matrix(land_sea_frac), input_as = Matrix)
@@ -96,7 +98,7 @@ inits = (temperature = initial_soil_temperature,)
 integrator = initialize(model, ForwardEuler(NF), boundary_conditions = bc, initializers = inits)
 
 # Let's already plot the initial surface temperature state to see what it looks like:
-T_surface_initial = RingGrids.Field(CPU(), interior(integrator.state.ground_temperature), grid)
+T_surface_initial = RingGrids.Field(arch, interior(integrator.state.ground_temperature), grid)
 fig = heatmap(T_surface_initial[:, 1, 1], title = "Temperature of uppermost soil layer", colorrange = (-20, 20))
 DisplayAs.PNG(fig) #hide
 
@@ -108,7 +110,7 @@ timestep!(integrator)
 @time run!(integrator, period = Hour(12), Δt = 600.0)
 
 # Now we can plot the resulting soil (surface) temperature map using RingGrids + GeoMakie:
-T_surface = RingGrids.Field(CPU(), interior(integrator.state.ground_temperature), grid)
+T_surface = RingGrids.Field(arch, interior(integrator.state.ground_temperature), grid)
 fig = heatmap(T_surface[:, 1, 1], title = "Temperature of uppermost soil layer", colorrange = (-20, 20))
 DisplayAs.PNG(fig) #hide
 
