@@ -115,7 +115,7 @@ function Terrarium.compute_tendencies!(state, grid, dynamics::LinearDynamics)
     end
 end
 
-# These example compute functions are really the simplest possible, for more complex operations, we would need to define them via `KernelAbstractions` kernels. We will not go into further details on that in this notebook.
+# These example compute functions are really the simplest possible, for more complex operations, we would need to define them via `KernelAbstractions` kernels. We will not go into further details on that in this notebook, as it is treated in [another example](@ref snow_ddm_example).
 #
 # However, now we have everything our model needs and we can finally use it!
 #

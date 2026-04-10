@@ -1,4 +1,4 @@
-# # Implementing a degree-day snow melt model
+# # [Implementing a degree-day snow melt model](@id snow_ddm_example)
 #
 # We have seen already a simple example of how to define and run an exponential growth model with external forcing following the Terrarium `AbstractModel` interface.
 #
