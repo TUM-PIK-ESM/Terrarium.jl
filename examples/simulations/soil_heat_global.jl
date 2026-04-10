@@ -34,7 +34,7 @@ DisplayAs.PNG(fig) #hide
 # with >50% land cover:
 land_mask = land_sea_frac_field .> 0.5
 grid = ColumnRingGrid(arch, NF, ExponentialSpacing(N = 30), land_mask.grid, land_mask)
-grid_lon, grid_lat = RingGrids.get_lonlats(grid.rings)
+grid_lon, grid_lat = RingGrids.get_lonlats(grid.rings) # in radians
 
 # Remember from [Grids](@ref) that the `x`-axis of the Oceananigans [`RectilinearGrid`](@ref) corresponds to
 # the a single index following the ring order (for more details, see the [corresponding section in the
@@ -79,7 +79,7 @@ function get_temperature_bc(lon::AbstractVector, lat::AbstractVector, amplitude 
         ## use climatology at latₓ as the mean of BC
         T₀ = mean_annual_temperature(latₓ)
         seconds_per_day = NF(24 * 3600)
-        ## shift BC by longitude to (roughly) mimic the global daily cycle
+        ## shift BC by longitude in radians to (roughly) mimic the global daily cycle
         T = T₀ + NF(amplitude) * sin(2π * t / seconds_per_day - lonₓ)
         return T
     end
