@@ -49,9 +49,9 @@ using CairoMakie, GeoMakie
 
 @kwdef struct DegreeDaySnow{NF} <: Terrarium.AbstractProcess{NF}
     "Degree-day factor [m/(Ks)]"
-    k::NF = 0.005f0 / (24 * 60 * 60)
+    k::NF = 0.005 / (24 * 60 * 60)
     "Melting point of snow on the ground [°C]"
-    T_melt::NF = 0.0f0
+    T_melt::NF = 0.0
 end
 #
 Terrarium.variables(model::DegreeDaySnow{NF}) where {NF} = (
