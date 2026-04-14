@@ -4,7 +4,7 @@
 CurrentModule = Terrarium
 ```
 
-This page is a step-by-step guide for implementing a new concrete process type in Terrarium. We assume familiarity with the [Basic concepts](@ref) and [Core interfaces](@ref) pages, both of which cover the `AbstractProcess` interface and variable system. For a concrete, self-contained worked example that follows the workflow below step by step, see the [Implementing a process: 1D linear heat diffusion](@ref) example.
+This page is a step-by-step guide for implementing a new concrete process type in Terrarium. We assume familiarity with the [Basic concepts](@ref) and [Core interfaces](@ref) pages, both of which cover the `AbstractProcess` interface and variable system. For a concrete, self-contained worked example that follows the workflow below step by step, see the [Implementing a process: 1D linear heat diffusion](@ref linear_heat_conduction_example) example.
 
 ## Control flow
 
@@ -26,4 +26,4 @@ We recommend to start implementing new processes using the following workflow:
 4. Implement the `compute_*(i, j[, k], grid, fields, ...)` kernel functions with the corresponding `@kernel` entry points `compute_auxiliary_kernel!` and `compute_tendencies_kernel!` (**level II**). Functions which might be independently useful outside of the process interface (e.g. [`adjust_saturation_profile!`](@ref) in `SoilHydrology`) can also define their own `@kernel` entry points.
 5. Finally, write implement the top-level process methods for `initialize!`, `compute_auxiliary!` and `compute_tendencies!` that `launch!` their respective `@kernel`s (**level I**).
 
-As mentioned above, see the example [Implementing a process: 1D linear heat diffusion](@ref) for a detailed walkthrough of this workflow.
+As mentioned above, see the example [Implementing a process: 1D linear heat diffusion](@ref linear_heat_conduction_example) for a detailed walkthrough of this workflow.
