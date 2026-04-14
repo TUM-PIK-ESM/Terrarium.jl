@@ -61,7 +61,7 @@ Terrarium.variables(::LinearHeatConduction) = (
 
 # ## Primitive methods
 #
-# Primitive methods are pure scalar functions accepting and returning scalar values with no
+# Primitive methods are pure scalar functions accepting and returning scalar values
 # completely independently of the spatial grid. They should generally be used to implement
 # elementary physical equations such as Fourier's law in the case of heat conduction. Primitive
 # methods should always be marked with `@inline` so the compiler can inline them directly into the
@@ -77,7 +77,7 @@ end
 #
 
 proc = LinearHeatConduction(Float64)
-compute_diffusive_flux(proc, 10.0)  # => -10.0 W/m²
+compute_diffusive_flux(proc, 10.0)  # => -20.0 W/m²
 
 # ## Kernel functions
 #
