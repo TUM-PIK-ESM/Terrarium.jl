@@ -6,7 +6,7 @@
 #
 # ## Writing kernelized-code in Terrarium
 #
-# Terrarium.jl is a device-agnostic modelling framework that runs across different architectures like x86 CPUs, ARM CPUs, but also most importantly, GPUs. To achieve this wide compatibility, we rely on KernelAbstractions to turn our heavy computations into parallelizable kernels. But don't panic! We provide a lot of utilities and functions that help make this easy and ensure that the resulting models are fast and efficient as well.
+# Terrarium.jl is a device-agnostic modelling framework that runs across different architectures like x86 CPUs, ARM CPUs, but also most importantly, GPUs. To achieve this wide compatibility, we rely on [KernelAbstractions.jl](https://juliagpu.github.io/KernelAbstractions.jl/stable/) to turn our heavy computations into parallelizable kernels. But don't panic! We provide a lot of utilities and functions that help make this easy and ensure that the resulting models are fast and efficient as well.
 #
 # In simple terms, kernels can be thought of as the inner body of a for-loop. The kernel function implements one iteration of that loop; in Terrarium, the kernel function implements the computation for a single column / grid point. To execute the computation the kernel is "launched" on the device we set up when constructing the model (per default your CPU). When configuring the kernel launch, we also set the range this kernel should iterate over (usually all points on the grid), and hand over all arguments required by the kernel function.
 #
@@ -14,7 +14,7 @@
 #
 # ## Degree Day Model
 #
-# A degree day model models snow melt by assuming that snow storage or snow water equivalent decreases linearly  over time with the temperature when it is above its melting point. Following [Kavetski and Kuczera's formulation](https://doi.org/10.1029/2006WR005195) we denote the snow mass balance as
+# A degree day model models snow melt by assuming that snow storage or snow water equivalent decreases linearly  over time with the temperature when it is above its melting point. Following the formulation of [kavetskiModelSmoothingStrategies2007](@cite) we denote the snow mass balance as
 #
 # ```math
 # \frac{dS}{dt} = P - M
@@ -29,7 +29,7 @@
 #
 # where ``k`` is the degree-day factor/parameter and ``T_k`` is a parameter for the melting point of snow on the ground.
 #
-# For our experiment we will use the degree day model with a prescribed surface temperature ``T``, and initialize a global model with snow everywhere to watch the snow melt.
+# For our experiment we will use the degree day model with a prescribed surface air temperature ``T``, and initialize a global model with snow everywhere to watch the snow melt.
 
 using Terrarium
 using KernelAbstractions
@@ -77,8 +77,8 @@ Terrarium.variables(model::SnowModel) = (
 #
 # * Kernels are typically named `compute_*_kernel!`, and follow a signature `compute_*_kernel!(output_fields, grid, fields, processes..., args...)`.
 # We always hand over only the minimum set of `fields` that the process (and its dependencies) actually need. You can either assemble these fields manually, or use the convenience function `get_fields(state, processes...)` that returns all the fields that are defined in the `variables` of the respective processes or the model. Only the minimum set of `fields` is used, as handing over the full `state` to the kernels would come with high computational overhead due to the need to copy type information from the host device to the GPU.
-# * Kernels are launched with the `launch!` function that defines whether the kernel is launched over all columns/grid points `XY` (2D) or also over all vertical layers `XYZ` (3D) of the model `grid`.
-# * The functions that define the kernels with `@kernel` are supposed to be very minimal functions that forward the actual computation to pointwise compute functions that compute the needed quantity for the grid points `i,j`. This increases the reusability and composability of our model code. These compute functions are really the core of the implementation of our model and similar to functions you might find in more traditional land model, called from within a loop.They compute the action of a process for a single grid point given inputs and parameters.
+# * Kernels are launched with the [`launch!`](@extref Oceananigans.Utils.launch!) that defines whether the kernel is launched over all columns/grid points `XY` (2D) or also over all vertical layers `XYZ` (3D) of the model `grid`. See [Kernel programming](@ref) for more details.
+# * The functions that define the kernels with [`@kernel`](@extref KernelAbstractions.@kernel) are supposed to be very minimal functions that forward the actual computation to pointwise compute functions that compute the needed quantity for the grid points `i,j`. This increases the reusability and composability of our model code. These compute functions are really the core of the implementation of our model and similar to functions you might find in more traditional land model, called from within a loop.They compute the action of a process for a single grid point given inputs and parameters.
 # * The compute functions follow either a mutating pattern `compute_*!(out, i, j, grid, fields, processes..., args...)` or a non-mutating pattern `compute_*(i, j, grid, fields, processes..., args...)`. As a general rule, the mutating functions should defer all actual computations to non-mutating functions and then store the results in the `Field`s given in the first argument.
 #
 # Let's put all of this in practice now for our example.
@@ -109,7 +109,7 @@ Terrarium.compute_auxiliary!(state, grid, model::DegreeDaySnow) = nothing
 
 # The `@index(Global, NTuple)` is a function from KernelAbstractions that gets us the current index of our iteration, so the column we compute.
 #
-# With that, we can also define our `compute_foo_tendency` function that does the actual computation:
+# With that, we can also define our `compute_snow_flux_tendency` function that does the actual computation:
 
 function compute_snow_flux_tendency(i, j, grid, fields, snow_melt)
     ## get the variables we need
@@ -123,7 +123,7 @@ end
 
 # For a simple process like this, this is of course quite a lot of overhead, but this structure allows us to very efficiently build up complex land models from relatively simple components.
 #
-# There's one additional thing we need to take care of: the snow storage is strictly non-negative, but our model as currently implemented would quickly reach negative values for ``S``. While the aforementioned [Kavetski and Kuczera paper](https://doi.org/10.1029/2006WR005195) mitigates this issue by smoothing the model equation, we will in this example do the simplest possible strategy: we simply clip non-negative values during the time stepping of our model. To implement such a clipping we have to extend `timestep!(state::StateVaribales, model::ExpModel, timestepper, Δt)`. This method is applied after each explicit step the time stepper takes (but before any closure relations are applied if they exist). Let's implement the clipping:
+# There's one additional thing we need to take care of: the snow storage is strictly non-negative, but our model as currently implemented would quickly reach negative values for ``S``. While the aforementioned paper of [kavetskiModelSmoothingStrategies2007](@citet) mitigates this issue by smoothing the model equation, we will in this example do the simplest possible strategy: we simply clip non-negative values during the time stepping of our model. To implement such a clipping we have to extend `timestep!(state::StateVaribales, model::ExpModel, timestepper, Δt)`. This method is applied after each explicit step the time stepper takes (but before any closure relations are applied if they exist). Let's implement the clipping:
 
 function Terrarium.timestep!(state::StateVariables, model::SnowModel, timestepper::Terrarium.AbstractTimeStepper, Δt)
     interior(state.snow_storage) .= max.(interior(state.snow_storage), 0)
@@ -132,10 +132,10 @@ end
 
 # But, now we really have implemented everything we need for our dynamics and we can finally run the model again. For this we set up our initializers again in a very similar manner as above for the previous example, just this time with inputs from netCDF files and a global grid:
 
-global_grid = FullGaussianGrid(22) # we define the global grid we model on as a HealPIX grid
+global_grid = FullGaussianGrid(22) # we define the global grid we model on as a FullGaussian grid from RingGrids.jl
 
 # ## Input data
-# Now, we get all the input data. We can use the input data provided by `RingGrids` / `SpeedyWeather` in this case:
+# Now, we get all the input data. We can use the input data provided by `RingGrids` / `SpeedyWeather` in this case using `get_asset`:
 
 snow_climatology = RingGrids.get_asset("data/boundary_conditions/snow.nc", from_assets = true, name = "snow", ArrayType = FullGaussianField, FileFormat = NCDataset, output_grid = global_grid) ./ 3.8e10; # ~ conversion from kg/(month * m^2) to m/(s * m^2)
 lst_climatology = RingGrids.get_asset("data/boundary_conditions/land_surface_temperature.nc", from_assets = true, name = "lst", ArrayType = FullGaussianField, FileFormat = NCDataset, output_grid = global_grid) .- 273.15; # data is in K, we want C
@@ -160,7 +160,7 @@ heatmap(snow_climatology[:, 1], title = "Snowfall")
 # * We defined our model `SnowModel` and dynamics `DegreeDaySnow`
 # * We loaded climatological input data and a land sea mask for our grid
 #
-# Now, we just need to define initialize everything correctly. As we are working with globally gridded data, we will define `ColumnRingGrid` based on the `global_grid` we already initialized. Then, we will load our inputs. For this, we will choose the January (so the first element) of our climatology files. When using them in `InputSource` be sure to choose the same name and units as used in the definitions of the dynamics before.
+# Now, we just need to define initialize everything correctly. As we are working with globally gridded data, we will define [`ColumnRingGrid`](@ref) based on the `global_grid` we already initialized. Then, we will load our inputs. For this, we will choose the January (so the first element) of our climatology files. When using them in [`InputSource`](@ref) be sure to choose the same name and units as used in the definitions of the dynamics before.
 
 snow_grid = ColumnRingGrid(UniformSpacing(N = 1), global_grid, land_sea_mask);
 snow_input = InputSource(snow_grid, snow_climatology[:, 1], name = :snow_fall, units = u"m/s");
@@ -227,4 +227,4 @@ end
 
 # ![Snow storage animation](snow_storage.mp4)
 
-# And just like that we have implemented our snow simulation. In this version the forcing / input is completely static, so we converge to a static point that corresponds to the January climatology. That's why still see a faily big snow cover in the northern hemisphere. An obvious next step for this model would be now to actually use the full seasonal climatology.
+# And just like that we have implemented our snow simulation. In this version the forcing / input is completely static, so we converge to a static point that corresponds to the January climatology. That's why still see a fairly big snow cover in the northern hemisphere. An obvious next step for this model would be now to actually use the full seasonal climatology.
