@@ -20,8 +20,8 @@ followed by
 using Terrarium
 ```
 
-!!! compat "Julia 1.10 or 1.11 is required"
-    Currently, Terrarium.jl is only tested on Julia 1.10 (LTS) and 1.11.
+!!! compat "Julia 1.10 or later is required"
+    Currently, Terrarium.jl is tested from Julia 1.10 (LTS) onwards.
 
 
 If you would like to not only use Terrarium but also actively develop it (or fix bugs 🐛), you can also install it as a [development package](https://pkgdocs.julialang.org/v1/toml-files/#Developed-package):
