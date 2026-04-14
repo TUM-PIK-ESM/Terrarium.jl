@@ -36,8 +36,8 @@ using KernelAbstractions
 using RingGrids, NCDatasets
 
 ## output writers
-using Oceananigans: JLD2Writer, TimeInterval
-using Oceananigans.Units: seconds
+using Oceananigans: JLD2Writer, TimeInterval, prettytime
+using Oceananigans.Units: seconds, days
 using JLD2
 
 ## plotting
@@ -150,11 +150,11 @@ heatmap(land_sea_mask, title = "Land Sea Mask")
 
 # Then, the land surface temperature:
 
-heatmap(lst_climatology[:, 1], title = "Land Surface Temperature")
+heatmap(lst_climatology[:, 1], title = "Land Surface Temperature [°C]")
 
 # And finally, the snowfall:
 
-heatmap(snow_climatology[:, 1], title = "Snowfall")
+heatmap(snow_climatology[:, 1], title = "Snowfall [m/s]")
 
 # ## Running a simulation
 # Ok, so now let's put everything together!
@@ -178,7 +178,7 @@ snow_model = SnowModel(snow_grid);
 snow_integrator = initialize(snow_model, Heun(Δt = Float32(1.0)), snow_input, lst_input; initializers = snow_initializers)
 
 # ... and we can finally run the model. As before, by wrapping it in an `Oceananigans.Simulation` to output our results
-snow_sim = Simulation(snow_integrator; stop_time = 7.0e6, Δt = 3600.0)
+snow_sim = Simulation(snow_integrator; stop_time = 80days, Δt = 3600.0)
 Terrarium.initialize!(snow_integrator)
 output_dir_snow = mkpath(tempname())
 output_file_snow = joinpath(output_dir_snow, "ddsnow-simulation.jld2")
@@ -204,10 +204,13 @@ heatmap(ring_field)
 
 # Now we just wrap that into a Makie animation in the following to create a movie of our results
 fig = Figure(size = (1200, 660))
+n_t = Observable(1)
+times = fts_result.times
+title = @lift string("Snow water equivalent [m] at t = ", prettytime(fts_result.times[$n_t]))
 ax = Axis(
     fig[1, 1],
     aspect = 2,
-    title = "Snow water equivalent [m]",
+    title = title,
     titlesize = 20,
     xticks = 0:60:360,
     yticks = -60:30:60,
@@ -218,7 +221,6 @@ ax = Axis(
 )
 lond = RingGrids.get_lond(ring_field)
 latd = RingGrids.get_latd(ring_field)
-n_t = Observable(1)
 data = @lift Matrix(RingGrids.Field(fts_result[$n_t], snow_grid)[:, 1])
 hm = heatmap!(ax, lond, latd, data, colorrange = (0, 1))
 Colorbar(fig[:, end + 1], hm)
