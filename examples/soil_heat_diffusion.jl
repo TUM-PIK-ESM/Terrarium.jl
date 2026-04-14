@@ -7,6 +7,9 @@
 # of the heat equation with sinusoidal surface forcing:
 #
 #     ∂T/∂t = α ∂²T/∂z²
+# with sinusoidal surface boundary condition:
+#
+#     T(0,t) = T₀ + A sin(2πt/P)
 #
 # where the analytical solution is
 #
@@ -21,7 +24,8 @@
 using Terrarium
 using CairoMakie
 
-# Physical parameters
+# ## Physical parameters
+# We define the thermal properties of a pure mineral soil and the parameters of the sinusoidal surface forcing.
 
 T₀ = 2.0;               # mean surface temperature
 A = 1.0 ;               # forcing amplitude
@@ -32,7 +36,11 @@ c = 1.0e6  ;            # volumetric heat capacity
 w = 2*pi/P   ;           # angular frequency of surface forcing
 d = sqrt(2*α/w)  ;       # thermal damping depth
 
-# Known Analytical solution
+# ## Analytical solution
+
+# The closed-form solution for sinusoidal surface forcing decays 
+# exponentially with depth and develops a phase lag proportional to z/d, 
+# where d is the thermal damping depth.
 
 function heat_conduction_solution(T₀, A, P, α)
     w = 2*pi/P              # angular frequency of surface forcing
@@ -47,6 +55,11 @@ end
 T_sol = heat_conduction_solution(T₀, A, P, α);
 
 # Model setup
+
+# We build a 1D column grid with exponential vertical spacing, refining
+# near the surface where temperature gradients are steepest. To isolate
+# pure heat conduction, we zero out soil carbon and porosity so only the
+# mineral thermal properties are active.
 
 grid = ColumnGrid(CPU(), Float64, ExponentialSpacing(Δz_min = 0.05, Δz_max = 100.0, N = 100,));
 
@@ -65,8 +78,10 @@ thermal_properties = SoilThermalProperties(
 energy = SoilEnergyBalance(eltype(grid); thermal_properties);
 soil = SoilEnergyWaterCarbon(eltype(grid); energy, strat, biogeochem);
 model = SoilModel(grid; soil);
+# ## Boundary and initial conditions
 
-# Apply periodic surface temperature forcing
+# The upper boundary follows the prescribed sinusoidal forcing. The initial
+# condition is set to the analytical solution at t=0 to minimize spinup time.
 
 upper_bc(z, t) = T₀ + A * sin(2π * t / P);
 bcs = PrescribedSurfaceTemperature(:Tsurf, upper_bc);
@@ -76,6 +91,9 @@ initializers = (temperature = (x, z) -> T_sol(-z, 0.0),);
 integrator = initialize(model, ForwardEuler(); initializers, boundary_conditions=bcs);
 
 # Run simulation
+
+# We integrate forward for two full forcing periods, saving the temperature
+# profile at every time step to compare against the analytical solution.
 
 Δt = 60.0;
 Ts_buffer = [deepcopy(integrator.state.temperature)];
@@ -89,13 +107,14 @@ while current_time(integrator) < 2P
 end
 
 # Extract numerical solution
+
+# We reshape both the numerical and analytical solutions onto the same
+# (time × depth) grid and compute the pointwise relative error.
+
 z = znodes(integrator.state.temperature);
 T_numeric = reduce(hcat, Ts_buffer)[1, :, :];  # shape: (timesteps, depth) = (2881, 100)
-# Compute analytical solution on same grid
 
 T_target = T_sol.(reshape(-z, 1, :), reshape(times, :, 1));
-
-# Compute error
 
 relative_error = abs.((T_numeric .- T_target) ./ T_target);
 
@@ -103,13 +122,12 @@ max_error = maximum(relative_error);
 
 println("Maximum relative error = ", max_error)
 
-
-# Verify solver accuracy
-
 @warn max_error < 0.1
 
+# ## Plot comparison at final timestep
 
-# Plot comparison at final timestep
+# The numerical and analytical profiles should be visually indistinguishable
+# within the top few damping depths.
 
 fig = Figure()
 ax = Axis(fig[1, 1], xlabel = "Temperature", ylabel = "Depth",);
