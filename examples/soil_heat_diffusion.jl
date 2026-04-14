@@ -3,15 +3,15 @@
 # This example demonstrates how to simulate 1D soil heat conduction
 # in a single vertical column using Terrarium.jl.
 #
-# We verify the numerical solution against the analytical solution
-# of the heat equation with sinusoidal surface forcing:
+# We verify the numerical solution against the analytical solution of the heat equation:
 #
 #     ∂T/∂t = α ∂²T/∂z²
-# with sinusoidal surface boundary condition:
+#
+# with the following sinusoidal surface boundary condition:
 #
 #     T(0,t) = T₀ + A sin(2πt/P)
 #
-# where the analytical solution is
+# where the analytical solution is:
 #
 #     T(z,t) = T₀ + A exp(-z√(π/(αP))) sin(2πt/P − z√(π/(αP)))
 #
@@ -38,7 +38,7 @@ d = sqrt(2*α/w)  ;       # thermal damping depth
 
 # ## Analytical solution
 
-# The closed-form solution for sinusoidal surface forcing decays 
+# The exact solution for sinusoidal surface forcing decays 
 # exponentially with depth and develops a phase lag proportional to z/d, 
 # where d is the thermal damping depth.
 
@@ -54,7 +54,7 @@ end
 
 T_sol = heat_conduction_solution(T₀, A, P, α);
 
-# Model setup
+# ## Model setup
 
 # We build a 1D column grid with exponential vertical spacing, refining
 # near the surface where temperature gradients are steepest. To isolate
@@ -63,25 +63,32 @@ T_sol = heat_conduction_solution(T₀, A, P, α);
 
 grid = ColumnGrid(CPU(), Float64, ExponentialSpacing(Δz_min = 0.05, Δz_max = 100.0, N = 100,));
 
-# Configure soil properties for pure heat diffusion
-# set carbon content to zero so the soil has only a mineral constituent
+# Configure soil properties for pure heat diffusion:
+
+# set carbon content to zero
+
 biogeochem = ConstantSoilCarbonDensity(ρ_soc = 0.0);
-# set porosity to zero to remove influence of pore space;
+
+# set porosity to zero
+
 soil_porosity = ConstantSoilPorosity(mineral_porosity = 0.0);
 strat = HomogeneousStratigraphy(Float64; porosity = soil_porosity);
+
 # set thermal properties
+
 thermal_properties = SoilThermalProperties(
     eltype(grid);
     conductivities = SoilThermalConductivities(mineral = k),
-    heat_capacities = SoilHeatCapacities(mineral = c),
-)
+    heat_capacities = SoilHeatCapacities(mineral = c),)
+
 energy = SoilEnergyBalance(eltype(grid); thermal_properties);
 soil = SoilEnergyWaterCarbon(eltype(grid); energy, strat, biogeochem);
 model = SoilModel(grid; soil);
+
 # ## Boundary and initial conditions
 
 # The upper boundary follows the prescribed sinusoidal forcing. The initial
-# condition is set to the analytical solution at t=0 to minimize spinup time.
+# condition is set to the analytical solution at t=0.
 
 upper_bc(z, t) = T₀ + A * sin(2π * t / P);
 bcs = PrescribedSurfaceTemperature(:Tsurf, upper_bc);
@@ -90,7 +97,7 @@ bcs = PrescribedSurfaceTemperature(:Tsurf, upper_bc);
 initializers = (temperature = (x, z) -> T_sol(-z, 0.0),);
 integrator = initialize(model, ForwardEuler(); initializers, boundary_conditions=bcs);
 
-# Run simulation
+# ## Run simulation
 
 # We integrate forward for two full forcing periods, saving the temperature
 # profile at every time step to compare against the analytical solution.
@@ -99,14 +106,13 @@ integrator = initialize(model, ForwardEuler(); initializers, boundary_conditions
 Ts_buffer = [deepcopy(integrator.state.temperature)];
 times = [0.0];
 
-# run for 2 periods, saving every time step
 while current_time(integrator) < 2P
     timestep!(integrator, Δt)
     push!( Ts_buffer, deepcopy(integrator.state.temperature))
     push!(times,current_time(integrator))
 end
 
-# Extract numerical solution
+# ## Extract numerical solution
 
 # We reshape both the numerical and analytical solutions onto the same
 # (time × depth) grid and compute the pointwise relative error.
@@ -126,7 +132,7 @@ println("Maximum relative error = ", max_error)
 
 # ## Plot comparison at final timestep
 
-# The numerical and analytical profiles should be visually indistinguishable
+# The numerical and analytical profiles should overlay eachother
 # within the top few damping depths.
 
 fig = Figure()
