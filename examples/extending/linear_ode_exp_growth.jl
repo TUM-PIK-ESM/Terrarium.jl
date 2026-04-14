@@ -155,8 +155,6 @@ timestep!(integrator)
 
 integrator.state.u
 
-# As you can see, in just 1 hour of simulated time, our state variable already grew from `1` to `4e16`! If that's not exponential growth, we don't know what is ;)
-
 # But wait there's more! What if we want to actually save the results?
 #
 # The `integrator` data structure implements the Oceananigans model interface, so we can also use it to set up a [`Simulation`](@extref Oceananigans.Simulations.Simulation) (for more details, see [here](@ref "Setting up a `Simulation`")):
