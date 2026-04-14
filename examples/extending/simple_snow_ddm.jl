@@ -150,11 +150,11 @@ heatmap(land_sea_mask, title = "Land Sea Mask")
 
 # Then, the land surface temperature:
 
-heatmap(lst_climatology[:, 1], title = "Land Surface Temperature [°C]")
+heatmap(lst_climatology[:, 1], title = "Land Surface Temperature (°C)")
 
 # And finally, the snowfall:
 
-heatmap(snow_climatology[:, 1], title = "Snowfall [m/s]")
+heatmap(snow_climatology[:, 1], title = "Snowfall (m/s)")
 
 # ## Running a simulation
 # Ok, so now let's put everything together!
@@ -206,7 +206,7 @@ heatmap(ring_field)
 fig = Figure(size = (1200, 660))
 n_t = Observable(1)
 times = fts_result.times
-title = @lift string("Snow water equivalent [m] at t = ", prettytime(fts_result.times[$n_t]))
+title = @lift string("Snow water equivalent (m) at t = ", prettytime(fts_result.times[$n_t]))
 ax = Axis(
     fig[1, 1],
     aspect = 2,
