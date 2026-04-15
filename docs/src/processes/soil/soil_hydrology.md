@@ -116,6 +116,30 @@ variables(SoilHydrology(Float32, RichardsEq()))
 
 ## Hydraulic properties
 
+Besides the static soil characteristics mentioned in [Soil stratigraphy](@ref) such as porosity ($\phi$), a key time-varying hydraulic property is the (non-saturated) hydraulic conductivity $\kappa_{\text{w}}$. Different ways of modelling $\kappa_{\text{w}}$ are defined as subyptes of [`AbstractUnsatK`](@ref). The simplest formulation, called [`UnsatKLinear`](@ref), models $\kappa_{\text{w}}$ as:
+```math
+\begin{equation}
+\kappa_{\text{w}} = \frac{\theta_{\text{liq}}}{\theta + \theta_{\text{air}}} \kappa_{\text{w,sat}}\,
+\end{equation}
+```
+with $\kappa_{\text{w,sat}}$ the saturated hydraulic conductivity (m/s).  A more complex formulation taking ice into account, called [`UnsatKVanGenuchten`](@ref),follows [vangenuchtenHydraulicConductivity1980](@cite), here presented in the form of [westermannCryoGridCommunityModel2023; Eq. (26)](@cite):
+```math
+\begin{equation}
+\kappa_{\text{w}} = I_\text{ice}\left(\frac{\theta_{\text{liq}}}{\phi}\right)^{0.5} \left[1 - \left(1 - \left(\frac{\theta_{\text{liq}}}{\phi}\right)^{n/(n+1)}\right)^{(n-1)/n}\right]^2 \kappa_{\text{w,sat}}\,,
+\end{equation}
+```
+which adds an ice impedance factor $I_\text{ice} = 10^{\Omega\theta_{\text{ice}}/\theta}$ to the classic van Genuchten formulation to account for the blocking of water-filled pores by ice. 
+
+```@docs; canonical = false
+UnsatKLinear
+```
+
+```@docs; canonical = false
+UnsatKVanGenuchten
+```
+
+Values for $\kappa_{\text{w,sat}}$, wilting point ($\theta_{liq,wp}$), and field capacity   ($\theta_{liq,fc}$) can be set as constants (see [`ConstantSoilHydraulics`](@ref)) or can be calculated from soil texture using pedotransfer functions (PTFs). Currently, PTFs based on [noilhanISBA1996](@cite) for $\theta_{liq,wp}$ and $\theta_{liq,fc}$ are available in [`SoilHydraulicsSURFEX`](@cite).
+
 ```@docs; canonical = false
 ConstantSoilHydraulics
 ```
