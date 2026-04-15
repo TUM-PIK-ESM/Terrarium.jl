@@ -98,17 +98,13 @@ bcs = PrescribedSurfaceTemperature(:Tsurf, upper_bc);
 initializers = (temperature = (x, z) -> T_sol(-z, 0.0),);
 integrator = initialize(model, ForwardEuler(); initializers, boundary_conditions=bcs);
 
-# ## Run simulation
 
-# We integrate forward for two full forcing periods, saving the temperature
-# profile at every time step to compare against the analytical solution.
-
-Δt = 60.0;
 
 # ## Run simulation
 #
 # We integrate forward for two full forcing periods using an Oceananigans
 # Simulation, saving the temperature profile to a JLD2 file at every time step.
+Δt = 60.0;
 
 simulation = Simulation(integrator; Δt = Δt, stop_time = 2P)
 
