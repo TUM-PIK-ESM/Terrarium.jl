@@ -101,7 +101,7 @@ Vertical fluxes in the soil column can be represented by combining gravity-drive
 where $\psi$ is the matric potential (m), $\mathbf{n}$ the normal vector perpendicular to the surface and $\kappa_{\text{w}}$ the hydraulic conductivity (m/s). Given the positive upwards convention (see [Numerical core](@ref)), the $z-$axis is thus defined positive away from the surface. Substituting this equation into the aforementioned conservation law yields the widely known Richardson-Richards equation for variably saturated flow in porous media [richardsCapillaryConductionLiquids1931](@cite). When the divergence of the water flux vector ($\boldsymbol{\nabla} \cdot \textbf{j}_{\text{w}}$) is simplified to only consider vertical water fluxes, this gives:
 ```math
 \begin{equation}
-\phi\frac{\partial \xi(\psi)}{\partial t} - \frac{\partial}{\partial z}\left[\kappa_w \frac{\partial \left(\psi + z\right)}{\partial z}\right] - F_{\text{w}}(z,t) = 0
+\phi\frac{\partial \xi(\psi)}{\partial t} = \frac{\partial}{\partial z}\left[\kappa_w \frac{\partial \left(\psi + z\right)}{\partial z}\right] + F_{\text{w}}(z,t)
 \end{equation}
 ```
 which is called the mixed-form equation, as the rate of change on the left-hand side is in $\xi$ but the vertical gradient on the right-hand side is in $\psi$ [bonanClimateChangeTEMSoilMoisture2019](@cite). 
