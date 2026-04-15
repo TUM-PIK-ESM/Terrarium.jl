@@ -88,7 +88,7 @@ variables(SoilHydrology(Float32, NoFlow()))
 
 The vertical flow of water in porous media, such as soils, can be formulated as following the conservation law
 ```math
-    \phi\frac{\partial \xi(\psi)}{\partial t} - \boldsymbol{\nabla} \cdot \textbf{j}_{\text{w}} - F_{\text{w}}(z,t) = 0,
+    \phi\frac{\partial \xi(\psi)}{\partial t} = - \boldsymbol{\nabla} \cdot \textbf{j}_{\text{w}} + F_{\text{w}}(z,t),
 ```
 where (as defined in [Soil stratigraphy](@ref)) $\phi$ is the natural porosity (or saturated water content) of the soil volume and $\xi \in [0,1]$ the saturation of pore water/ice. $F_{\text{w}}(z,t)$ is an inhomogeneous source/sink (forcing) term (1/s) and $\textbf{j}_{\text{w}}$ the water flux vector (m/s). 
 
