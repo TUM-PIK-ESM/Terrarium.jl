@@ -99,11 +99,15 @@ end
 """
     $TYPEDEF
 
-Soil hydraulics parameterization that includes the SURFEX (Masson et al. 2013) formulation of field capacity
+Soil hydraulics parameterization that includes the SURFEX [noilhanISBA1996; Eq. (28-29)](@cite) formulation of field capacity
 and wilting point as a function of soil texture.
 
 Properties:
 $TYPEDFIELDS
+
+# References
+
+* [noilhanISBA1996](@cite) Noilhan & Mahfouf, Global and Planetary Change (1996)
 """
 @kwdef struct SoilHydraulicsSURFEX{NF, RC, UnsatK <: AbstractUnsatK{NF}} <: AbstractSoilHydraulics{NF, RC, UnsatK}
     "Soil water retention curve"
