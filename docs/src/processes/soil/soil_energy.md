@@ -33,7 +33,8 @@ where $\mathbf{j}_\text{h}$ is the diffusive heat flux vector (W/m²) and $\math
 Since ground materials are often porous, i.e., there exists void space between the solid particles, it is necessary to consider the potential presence of water and/or ice in this void space, which is hereafter referred to as pore space, or simply, soil pores. The thermal effects of water and ice can be accounted for by considering not only the temperature of the material but rather the total internal energy of the elementary volume. Combining the diffusive flux with a potential advective heat flux $\mathbf{j}_{\text{h}}^{\text{w}}$ due to water flow yields the energy conservation law,
 ```math
 \begin{equation}
-\frac{\partial U(T,\theta)}{\partial t} - \boldsymbol{\nabla} \cdot \left(\mathbf{j}_\text{h} + \mathbf{j}_h^{\text{w}}\right) - F_h(z,t) = 0\,,
+    \label{eq:energyconservation}
+\frac{\partial U(T,\theta)}{\partial t} = - \boldsymbol{\nabla} \cdot \left(\mathbf{j}_\text{h} + \mathbf{j}_h^{\text{w}}\right) + F_h(z,t),
 \end{equation}
 ```
 where $U(T,\theta)$ (J/m³) is the volumetric internal energy as a function of temperature and total water/ice content $\theta$ (m³/m³), and $F_h(z,t)$ is an inhomogeneous heat source/sink (forcing) term.
