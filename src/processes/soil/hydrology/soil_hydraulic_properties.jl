@@ -186,7 +186,11 @@ end
 Formulation of hydraulic conductivity as a function of saturated hydraulic conductivity `K_sat` and
 volumetric fractions, assumed to include those of water, ice, and air.
 
-See van Genuchten (1980) and Westermann et al. (2023).
+# References
+
+* [Van Genuchten, Soil Science Society of America Journal (1980)](@cite vangenuchtenHydraulicConductivity1980)
+* [Westermann et al., Geoscientific Model Development (2023)](@cite westermannCryoGridCommunityModel2023)
+
 """
 struct UnsatKVanGenuchten{NF} <: AbstractUnsatK{NF}
     "Exponential scaling factor for ice impedance"
