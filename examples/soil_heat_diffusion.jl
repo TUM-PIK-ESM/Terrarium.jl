@@ -23,6 +23,7 @@
 
 using Terrarium
 using CairoMakie
+using JLD2
 
 # ## Physical parameters
 # We define the thermal properties of a pure mineral soil and the parameters of the sinusoidal surface forcing.
@@ -103,24 +104,42 @@ integrator = initialize(model, ForwardEuler(); initializers, boundary_conditions
 # profile at every time step to compare against the analytical solution.
 
 Δt = 60.0;
-Ts_buffer = [deepcopy(integrator.state.temperature)];
-times = [0.0];
 
-while current_time(integrator) < 2P
-    timestep!(integrator, Δt)
-    push!( Ts_buffer, deepcopy(integrator.state.temperature))
-    push!(times,current_time(integrator))
+# ## Run simulation
+#
+# We integrate forward for two full forcing periods using an Oceananigans
+# Simulation, saving the temperature profile to a JLD2 file at every time step.
+
+simulation = Simulation(integrator; Δt = Δt, stop_time = 2P)
+
+simulation.output_writers[:temperature] = Oceananigans.OutputWriters.JLD2Writer(
+    integrator,
+    (; temperature = integrator.state.temperature);
+    filename = "soil_heat_output.jld2",
+    schedule = TimeInterval(Δt),
+    overwrite_existing = true
+)
+
+run!(simulation)
+
+# ## Read output back from file
+
+times, Ts_buffer = jldopen("soil_heat_output.jld2") do file
+    iters = string.(0:2880)
+    t = [file["timeseries/t/$i"] for i in iters]
+    T = [file["timeseries/temperature/$i"] for i in iters]
+    return t, T
 end
-
 # ## Extract numerical solution
 
 # We reshape both the numerical and analytical solutions onto the same
 # (time × depth) grid and compute the pointwise relative error.
 
 z = znodes(integrator.state.temperature);
-T_numeric = reduce(hcat, Ts_buffer)[1, :, :];  # shape: (timesteps, depth) = (2881, 100)
 
-T_target = T_sol.(reshape(-z, 1, :), reshape(times, :, 1));
+T_numeric = reduce(hcat, Ts_buffer)[1, 1, 4:103, :];  # shape: (100, 2881)
+
+T_target = T_sol.(reshape(-z, :, 1), reshape(times, 1, :));  # shape: (100, 2881)
 
 relative_error = abs.((T_numeric .- T_target) ./ T_target);
 
@@ -140,7 +159,7 @@ ax = Axis(fig[1, 1], xlabel = "Temperature", ylabel = "Depth",);
 
 empty!(ax);
 ylims!(ax, -5d, 0.0);
-lines!(ax, T_numeric[end, :], z, label = "Numerical");
-lines!(ax, T_target[end, :], z, linestyle = :dash, label = "Analytical");
+lines!(ax, T_numeric[:, end], z, label = "Numerical");
+lines!(ax, T_target[:, end], z, linestyle = :dash, label = "Analytical");
 axislegend(ax);
 fig
