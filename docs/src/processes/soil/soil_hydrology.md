@@ -138,7 +138,7 @@ UnsatKLinear
 UnsatKVanGenuchten
 ```
 
-Values for $\kappa_{\text{w,sat}}$, wilting point ($\theta_{liq,wp}$), and field capacity   ($\theta_{liq,fc}$) can be set as constants (see [`ConstantSoilHydraulics`](@ref)) or can be calculated from soil texture using pedotransfer functions (PTFs). Currently, PTFs based on [noilhanISBA1996](@cite) for $\theta_{liq,wp}$ and $\theta_{liq,fc}$ are available in [`SoilHydraulicsSURFEX`](@ref).
+Values for $\kappa_{\text{w,sat}}$, wilting point ($\theta_{wp}$), and field capacity   ($\theta_{fc}$) can be set as constants (see [`ConstantSoilHydraulics`](@ref)) or can be calculated from soil texture using pedotransfer functions (PTFs). Currently, PTFs based on [noilhanISBA1996](@cite) for $\theta_{wp}$ and $\theta_{fc}$ are available in [`SoilHydraulicsSURFEX`](@ref).
 
 ```@docs; canonical = false
 ConstantSoilHydraulics
