@@ -144,7 +144,8 @@ bib = CitationBibliography(
 links = InterLinks(
     "Oceananigans" => "https://clima.github.io/OceananigansDocumentation/stable/",
     "KernelAbstractions" => "https://juliagpu.github.io/KernelAbstractions.jl/stable/",
-    "SpeedyWeather" => "https://speedyweather.github.io/SpeedyWeatherDocumentation/stable/"
+    "SpeedyWeather" => "https://speedyweather.github.io/SpeedyWeatherDocumentation/stable/",
+    "FreezeCurves" => "https://cryogrid.github.io/FreezeCurves.jl/stable/",
 )
 
 

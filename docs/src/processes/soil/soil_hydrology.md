@@ -138,7 +138,7 @@ UnsatKLinear
 UnsatKVanGenuchten
 ```
 
-Values for $\kappa_{\text{w,sat}}$, wilting point ($\theta_{liq,wp}$), and field capacity   ($\theta_{liq,fc}$) can be set as constants (see [`ConstantSoilHydraulics`](@ref)) or can be calculated from soil texture using pedotransfer functions (PTFs). Currently, PTFs based on [noilhanISBA1996](@cite) for $\theta_{liq,wp}$ and $\theta_{liq,fc}$ are available in [`SoilHydraulicsSURFEX`](@cite).
+Values for $\kappa_{\text{w,sat}}$, wilting point ($\theta_{liq,wp}$), and field capacity   ($\theta_{liq,fc}$) can be set as constants (see [`ConstantSoilHydraulics`](@ref)) or can be calculated from soil texture using pedotransfer functions (PTFs). Currently, PTFs based on [noilhanISBA1996](@cite) for $\theta_{liq,wp}$ and $\theta_{liq,fc}$ are available in [`SoilHydraulicsSURFEX`](@ref).
 
 ```@docs; canonical = false
 ConstantSoilHydraulics
@@ -149,6 +149,14 @@ SoilHydraulicsSURFEX
 ```
 
 ## Closures
+
+Critical to the modelling of water transport in the soil, is the relationship between soil water/ice saturation ($\xi$) and the matric potential ($\Psi_m$), which is called the soil-water retention curve (SWRC). Recall from [the documentation on the core interfaces](@ref core_interfaces_hydrology_closure) that the total hydraulic head $\Psi$  is defined as:
+```math
+\begin{equation}
+\Psi = \Psi_m(\xi) + \Psi_z + \Psi_h
+\end{equation}
+```
+with $\Psi_z$ the elevation head and $\Psi_h$ the hydrostatic head contributed by free water above the water table. Currently, two implementations of the SWRC are available in Terrarium via [FreezeCurves.jl](https://github.com/CryoGrid/FreezeCurves.jl): the Brooks-Corey ([`BrooksCorey`](@extref FreezeCurves.BrooksCorey)) and van Genuchten ([`VanGenuchten`](@extref FreezeCurves.VanGenuchten)) formulations. 
 
 ```@docs; canonical = false
 SoilSaturationPressureClosure

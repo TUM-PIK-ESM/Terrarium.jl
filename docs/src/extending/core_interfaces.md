@@ -190,7 +190,7 @@ where $C(T)$ is the temperature-dependent volumetric heat capacity (J / (K m³))
 
 See the [Soil energy balance](@ref) doc page for further details and the full list of dispatch signatures.
 
-### Soil hydrology: saturation–pressure closure
+### [Soil hydrology: saturation–pressure closure](@id core_interfaces_hydrology_closure)
 
 The [`SoilHydrology`](@ref) process (Richards equation variant) uses the [`SoilSaturationPressureClosure`](@ref) to relate total water–ice saturation $\xi$ (-) to hydraulic head $\Psi$ (m) via the soil-water retention curve (SWRC):
 
