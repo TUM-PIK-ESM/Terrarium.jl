@@ -220,7 +220,7 @@ initializers = (
 integrator = initialize(model, ForwardEuler(eltype(grid)); initializers)
 T_init = copy(vec(interior(integrator.state.temperature)))
 
-# Run for 10 days to let the step front diffuse:
+# Run for 2 days to let the step front diffuse:
 
 using Oceananigans.Units: days
 
