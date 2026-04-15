@@ -45,7 +45,10 @@ The advective heat flux $\mathbf{j}_{\text{h}}^{\text{w}}$ can be represented as
 \mathbf{j}_{\text{h}}^{\text{w}} = \left( c_{\text{w}} T + L_{\text{sl}} \right) \mathbf{j}_{\text{w}} \rho_{\text{w}}
 \end{equation}
 ```
-where $L_{\text{sl}}$ and $c_{\text{w}}$ (J/kg) represent the specific latent heat of fusion and heat capacity of liquid water respectively. This flux term accounts for the energy transferred by the movement of water within the soil matrix. In model configurations that neglect subsurface water flow, this flux term is implicitly assumed to be zero.
+where $L_{\text{sl}}$ and $c_{\text{w}}$ (J/kg) represent the specific latent heat of fusion (solid → liquid) and heat capacity of liquid water respectively. Note that $\mathbf{j}_{\mathrm{w}}$ is the water flux vector as defined in [Soil hydrology](@ref). This flux term accounts for the energy transferred by the movement of water within the soil matrix. In model configurations that neglect subsurface water flow, this flux term is implicitly assumed to be zero.
+
+!!! todo "Advective heat flux"
+    The current implementation does not yet consider the advective heat flux, but this is work in progress! 
 
 ```@docs; canonical = false
 SoilEnergyBalance
