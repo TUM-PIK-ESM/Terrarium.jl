@@ -45,7 +45,7 @@ The advective heat flux $\mathbf{j}_{\text{h}}^{\text{w}}$ can be represented as
 \mathbf{j}_{\text{h}}^{\text{w}} = \left( c_{\text{w}} T + L_{\text{sl}} \right) \mathbf{j}_{\text{w}} \rho_{\text{w}}
 \end{equation}
 ```
-where $L_{\text{sl}}$ and $c_{\text{w}}$ (J/kg) represent the specific latent heat of fusion (solid → liquid) and heat capacity of liquid water respectively. Note that $\mathbf{j}_{\mathrm{w}}$ is the water flux vector as defined in [Soil hydrology](@ref). This flux term accounts for the energy transferred by the movement of water within the soil matrix. In model configurations that neglect subsurface water flow, this flux term is implicitly assumed to be zero.
+where $L_{\text{sl}}$ (J/kg) and $c_{\text{w}}$ (J/(kg K)) represent the specific latent heat of fusion (solid → liquid) and heat capacity of liquid water respectively. Note that $\mathbf{j}_{\mathrm{w}}$ is the water flux vector as defined in [Soil hydrology](@ref). This flux term accounts for the energy transferred by the movement of water within the soil matrix. In model configurations that neglect subsurface water flow, this flux term is implicitly assumed to be zero.
 
 !!! todo "Advective heat flux"
     The current implementation does not yet consider the advective heat flux, but this is work in progress! 
@@ -76,11 +76,16 @@ compute_tendencies!(state, grid, energy::SoilEnergyBalance, soil::AbstractSoil, 
 The constitutive relationship between energy and temperature plays a critical role in simulating the thermal state of porous media. This relation can be defined in integral form as
 ```math
 \begin{equation}
-    U(T,\theta) = \int_{T_{\text{ref}}}^T \tilde{C}(x,\theta) \, \mathrm{d}x\,,
-    %= \overbrace{\HC(\thetaw,\thetai)\left[T-T_{\text{ref}}\right]}^{\text{Sensible}} + \overbrace{\densityw \LHF\thetaw(T,\thetawi)}^{\text{Latent}},
+    U(T,\theta) = \int_{T_{\text{ref}}}^T \tilde{C}(x,\theta) \, \mathrm{d}x 
 \end{equation}
 ```
-where $\tilde{C}$ is referred to as the *effective* or *apparent* heat capacity and $T_{\text{ref}}$ is a reference temperature. The apparent heat capacity is then defined as the derivative of the energy-temperature relation,
+where $\tilde{C}$ is referred to as the *effective* or *apparent* heat capacity and $T_{\text{ref}}$ is a reference temperature. Alternatively, the internal energy is defined following [dallamicoEnergyConservingFreezingSoil2011; Eq. (4)](@cite) as:
+```math
+\begin{equation}
+U(T,\theta) = C(\theta_{\text{w}},\theta) (T - T_{\text{ref}}) + \rho_{\text{w}} L_{\text{sl}} \theta_{\text{w}}(\theta, T),
+\end{equation}
+```
+where $\theta_{\text{w}}(T,\theta)$ is the volumetric unfrozen water content as a function of temperature $T$ and total water/ice content $\theta$; $C(\theta_{\text{w}},\theta)$  (J/(K m³)) is the bulk volumetric material heat capacity of the volume as a function of the unfrozen and total water contents;  $\rho_{\text{w}}$ corresponds to the density (kg/m³) of water. The apparent heat capacity is then defined as the derivative of the energy-temperature relation,
 ```math
 \begin{equation}
 \tilde{C}(T,\theta) := \frac{\partial U}{\partial T} =
@@ -88,7 +93,7 @@ where $\tilde{C}$ is referred to as the *effective* or *apparent* heat capacity 
 \overbrace{\rho_{\text{w}} L_{\text{sl}} \frac{\partial\theta_{\text{w}}}{\partial T}}^{\text{Latent}}\,,
 \end{equation}
 ```
-where $\theta_{\text{w}}(T,\theta)$ is the volumetric unfrozen water content as a function of temperature and total water/ice content is the bulk volumetric material heat capacity of the volume as a function of the unfrozen and total water contents;  $\rho_{\text{w}}$ and $L_{\text{sl}}$ correspond to the density (kg/m³) and specific latent heat of fusion (J/kg) of water, respectively. The grouping of terms on the right-hand side show the partitioning of energy change into **sensible** and **latent** heat. The sensible component represents the energy necessary to heat a volume of the material to a particular temperature, whereas the latent component corresponds to the energy required for the phase change of water in the volume from solid (frozen) to liquid (thawed).
+where the chain-rule is applied on $C(\theta_{\text{w}},\theta) (T - T_{\text{ref}})$ as both $C$ and $\theta_{\text{w}}$ are functions of $T$. The grouping of terms on the right-hand side show the partitioning of energy change into **sensible** and **latent** heat. The sensible component represents the energy necessary to heat a volume of the material to a particular temperature, whereas the latent component corresponds to the energy required for the phase change of water in the volume from solid (frozen) to liquid (thawed).
 
 In the simplest case where we neglect the effect of capillary action in the soil, the energy-temperature relation can be derived according to that of "free" water (i.e. unbound by the soil matrix),
 ```math
@@ -104,15 +109,16 @@ In the simplest case where we neglect the effect of capillary action in the soil
 with temperature then determined by
 ```math
 \begin{equation}
-    U^{-1}(U(T,\theta)) =
+    T = U^{-1}(U(T,\theta)) =
     \begin{cases}
     \frac{U(T,\theta) - \rho_{\text{w}}L_{\text{sl}}\theta}{C} & U(T,\theta) < -\rho_{\text{w}}L_{\text{sl}}\theta \\
     0 & 0 \leq U(T,\theta) \leq \rho_{\text{w}}L_{\text{sl}}\theta \\
     \frac{U(T,\theta)}{C} &   U(T,\theta) \geq 0\,,
-    \end{cases}
+    \end{cases}.
 \end{equation}
 ```
-where $C = C(\theta_{\text{w}},\theta)$ is the volumetric heat capacity (J/K/m³) as a function of the unfrozen and total water content.
+
+For more information on more complex formulations of these so-called soil freezing characteristic curves, see [FreezeCurves.jl](https://github.com/CryoGrid/FreezeCurves.jl/tree/main?tab=readme-ov-file). 
 
 ```@docs; canonical = false
 SoilEnergyTemperatureClosure
