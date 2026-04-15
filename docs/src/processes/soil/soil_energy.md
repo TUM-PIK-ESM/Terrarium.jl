@@ -22,7 +22,7 @@ where $T(z,t)$ is the temperature field (K) over depth $z$ (m) and time $t$ (s),
 Diffusive heat flow in a solid medium is governed by Fourier's law,
 ```math
 \begin{equation}
-    \mathbf{j}_\text{h} \cdot \mathbf{n}_z = -\kappa_{\text{h}}\frac{\partial T}{\partial z}\,,
+     \mathbf{j}_\text{h}^{\mathrm{v}} = \mathbf{j}_\text{h} \cdot \mathbf{n}_z = -\kappa_{\text{h}}\frac{\partial T}{\partial z}\,,
 \end{equation}
 ```
 where $\mathbf{j}_\text{h}$ is the diffusive heat flux vector (W/m²) and $\mathbf{n}_z$ is the upward facing normal vector along the vertical $z$ axis.
@@ -30,15 +30,15 @@ where $\mathbf{j}_\text{h}$ is the diffusive heat flux vector (W/m²) and $\math
 
 ### Phase change of pore water/ice
 
-Since ground materials are often porous, i.e., there exists void space between the solid particles, it is necessary to consider the potential presence of water and/or ice in this void space, which is hereafter referred to as pore space, or simply, soil pores. The thermal effects of water and ice can be accounted for by considering not only the temperature of the material but rather the total internal energy of the elementary volume. Combining the diffusive flux with a potential advective heat flux $j_z^{\text{w}}$ due to water flow yields the energy conservation law,
+Since ground materials are often porous, i.e., there exists void space between the solid particles, it is necessary to consider the potential presence of water and/or ice in this void space, which is hereafter referred to as pore space, or simply, soil pores. The thermal effects of water and ice can be accounted for by considering not only the temperature of the material but rather the total internal energy of the elementary volume. Combining the diffusive flux with a potential advective heat flux $\mathbf{j}_{\text{h}}^{\text{w}}$ due to water flow yields the energy conservation law,
 ```math
 \begin{equation}
 \frac{\partial U(T,\theta)}{\partial t} - \boldsymbol{\nabla} \cdot \left(\mathbf{j}_\text{h} + \mathbf{j}_h^{\text{w}}\right) - F_h(z,t) = 0\,,
 \end{equation}
 ```
-where $U(T,\theta)$ is the volumetric internal energy as a function of temperature and total water/ice content $\theta$ (m³/m³) (J/m³), and $F_h(z,t)$ is an inhomogeneous heat source/sink (forcing) term.
+where $U(T,\theta)$ (J/m³) is the volumetric internal energy as a function of temperature and total water/ice content $\theta$ (m³/m³), and $F_h(z,t)$ is an inhomogeneous heat source/sink (forcing) term.
 
-The advective heat flux $j_{\text{h}}^{\text{w}}$ can be represented as,
+The advective heat flux $\mathbf{j}_{\text{h}}^{\text{w}}$ can be represented as,
 ```math
 \begin{equation}
 \mathbf{j}_{\text{h}}^{\text{w}} = \left( c_{\text{w}} T + L_{\text{sl}} \right) \mathbf{j}_{\text{w}} \rho_{\text{w}}
