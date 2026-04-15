@@ -41,6 +41,8 @@ The total volumetric fractions of each component can then be trivially derived f
 \end{align*}.
 ```
 
+The total water/ice content is defined is $\theta = \theta_{\text{liq}} + \theta_{\text{ice}}$ 
+
 ## Stratigraphy types
 
 ### Homogeneous stratigraphy
