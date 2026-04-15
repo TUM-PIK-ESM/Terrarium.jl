@@ -54,6 +54,13 @@ where $L_{\text{sl}}$ and $c_{\text{w}}$ (J/kg) represent the specific latent he
 SoilEnergyBalance
 ```
 
+As for [Soil hydrology](@ref), only the vertical fluxes are currently considered. This simplifies the notation of ``\eqref{eq:energyconservation}`` to
+```math
+\begin{equation}
+\frac{\partial U(T,\theta)}{\partial t} = \frac{\partial}{\partial z}\left[\kappa_{\text{h}} \frac{\partial T}{\partial z}\right] + F_h(z,t)\,.
+\end{equation}
+```
+
 ## [Process interface](@id soilenergy.dispatches)
 
 ```@docs; canonical = false
