@@ -174,11 +174,11 @@ These methods provide a unified interface that can be used by timesteppers, call
 
 ### Soil energy: temperature–enthalpy closure
 
-The [`SoilEnergyBalance`](@ref) process uses the [`SoilEnergyTemperatureClosure`](@ref) to relate volumetric internal energy $U$ to temperature $T$ and the liquid water fraction $l$:
+The [`SoilEnergyBalance`](@ref) process uses the [`SoilEnergyTemperatureClosure`](@ref) to relate volumetric internal energy $U$ (J/m³) to temperature $T$ (°C) and the liquid water fraction $l$ (-):
 
-$$U(T) = T \cdot C(T) - L_f \, \theta_{wi} \, (1 - l(T))$$
+$$U(T) = T \cdot C(T) - L_{\text{sl}} \, \theta \, (1 - l(T))$$
 
-where $C(T)$ is the temperature-dependent volumetric heat capacity, $L_f$ is the volumetric latent heat of fusion, and $\theta_{wi}$ is the total water-ice content.
+where $C(T)$ is the temperature-dependent volumetric heat capacity (J / (K m³)), $L_{\text{sl}}$ is the volumetric latent heat of fusion (J / kg), and $\theta$ is the total water-ice content.
 
 - `closure!(state, grid, ::SoilEnergyTemperatureClosure, energy, ground, constants)` — evaluates
   the forward mapping $U \mapsto T$, updating `state.temperature` and
@@ -192,16 +192,16 @@ See the [Soil energy balance](@ref) doc page for further details and the full li
 
 ### Soil hydrology: saturation–pressure closure
 
-The [`SoilHydrology`](@ref) process (Richards equation variant) uses the [`SoilSaturationPressureClosure`](@ref) to relate total water–ice saturation $S$ to hydraulic head $\Psi$ via the soil-water retention curve (SWRC):
+The [`SoilHydrology`](@ref) process (Richards equation variant) uses the [`SoilSaturationPressureClosure`](@ref) to relate total water–ice saturation $\xi$ (-) to hydraulic head $\Psi$ (m) via the soil-water retention curve (SWRC):
 
-$$\Psi = \Psi_m(S) + \Psi_z + \Psi_h$$
+$$\Psi = \Psi_m(\xi) + \Psi_z + \Psi_h$$
 
 where $\Psi_m$ is the matric potential given by the SWRC, $\Psi_z$ is the elevation head, and $\Psi_h$ is the hydrostatic head contributed by free water above the water table.
 
 - `closure!(state, grid, ::SoilSaturationPressureClosure, hydrology, soil)` — evaluates the
-  forward mapping $S \mapsto \Psi$, updating the auxiliary `state.pressure_head`.
+  forward mapping $\xi \mapsto \Psi$, updating the auxiliary `state.pressure_head`.
 - `invclosure!(state, grid, ::SoilSaturationPressureClosure, hydrology, soil)` — evaluates the
-  inverse mapping $\Psi \mapsto S$, updating the prognostic `state.saturation_water_ice`.
+  inverse mapping $\Psi \mapsto \xi$, updating the prognostic `state.saturation_water_ice`.
 
 See the [Soil hydrology](@ref) doc page for further details and the full list of dispatch signatures.
 
