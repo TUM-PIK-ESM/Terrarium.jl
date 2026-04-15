@@ -97,8 +97,8 @@ compute_diffusive_flux(proc, 10.0)  # => -20.0 W/m²
 # where the superscript `aaf` indicates that the operator is location-agnostic (`a`) in the `x` and `y` directions
 # and evaluates at the cell faces (`f`) in the `z` direction. The  divergence of the flux is for the one dimensional case
 # equal to the spatial derivative of the flux at the cell centers, which is written as `∂zᵃᵃᶜ`.
-# For more background info on these operators, see the [Spatial operators documentation of Oceananigans](
-# https://clima.github.io/OceananigansDocumentation/stable/numerical_implementation/spatial_operators).
+# For more background info on these operators, see the [Spatial operators documentation of
+# Oceananigans](https://clima.github.io/OceananigansDocumentation/stable/numerical_implementation/spatial_operators).
 
 # When passed as a higher-order argument to `∂zᵃᵃᶜ`, the flux function receives the underlying
 # Oceananigans field grid as its `grid` argument (not the Terrarium grid wrapper).
