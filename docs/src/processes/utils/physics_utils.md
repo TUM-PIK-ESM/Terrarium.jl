@@ -14,14 +14,11 @@ using InteractiveUtils
 
 ## Overview
 
-This module provides small, self-contained thermodynamic and atmospheric utility
-functions that are shared across multiple process implementations. All functions are
-`@inline`d and scalar-valued; they are intended to be called from within kernel functions.
+This module provides small, self-contained thermodynamic and atmospheric utility functions that are shared across multiple process implementations. All functions are `@inline`d and scalar-valued; they are intended to be called from within kernel functions.
 
 ### Saturation vapor pressure
 
-The saturation vapor pressure $e_{\text{sat}}$ is computed using the
-August-Roche-Magnus empirical formula (Alduchov and Eskridge, 1997):
+The saturation vapor pressure $e_{\text{sat}}$ is computed using the August-Roche-Magnus empirical formula [alduchovImprovedMagnusForm1996](@cite):
 
 ```math
 \begin{equation}
@@ -29,8 +26,7 @@ e_{\text{sat}}(T) = a_1 \exp\!\left(\frac{a_2 T}{T + a_3}\right)
 \end{equation}
 ```
 
-where $T$ is temperature in °C and the coefficients differ for liquid water ($T \geq 0$°C)
-and ice ($T < 0$°C):
+where $T$ is temperature in °C and the coefficients differ for liquid water ($T \geq 0$°C) and ice ($T < 0$°C):
 
 | Phase | $a_1$ (Pa) | $a_2$ | $a_3$ (°C) |
 |---|---|---|---|
@@ -39,9 +35,7 @@ and ice ($T < 0$°C):
 
 ### Vapor pressure and humidity conversions
 
-Specific humidity $q$ and vapor pressure $e$ are related through the molecular
-weight ratio $\varepsilon = M_v / M_d \approx 0.622$ and the total atmospheric
-pressure $p$:
+Specific humidity $q$ and vapor pressure $e$ are related through the molecular weight ratio $\varepsilon = M_v / M_d \approx 0.622$ and the total atmospheric pressure $p$:
 
 ```math
 \begin{equation}
@@ -49,8 +43,7 @@ q = \frac{\varepsilon \, e}{p}
 \end{equation}
 ```
 
-The inverse conversion (vapor pressure from specific humidity) accounts for the
-partial pressure of dry air:
+The inverse conversion (vapor pressure from specific humidity) accounts for the partial pressure of dry air:
 
 ```math
 \begin{equation}
@@ -60,8 +53,7 @@ e = \frac{q \, p}{\varepsilon + (1 - \varepsilon) q}
 
 ### Partial pressures of trace gases
 
-The partial pressures of O₂ and CO₂ are computed from total surface pressure and,
-for CO₂, the volumetric concentration in ppm:
+The partial pressures of O₂ and CO₂ are computed from total surface pressure and, for CO₂, the volumetric concentration in ppm:
 
 ```math
 \begin{align}
@@ -98,4 +90,11 @@ partial_pressure_O2
 
 ```@docs; canonical = false
 partial_pressure_CO2
+```
+
+## [References]
+
+```@bibliography
+Pages = ["physics_utils.md"]
+Canonical = false
 ```
