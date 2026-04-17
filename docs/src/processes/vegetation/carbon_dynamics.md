@@ -14,7 +14,7 @@ using InteractiveUtils
 
 ## Overview
 
-Gross primary productivity (GPP) is the total carbon uptake by plants through photosynthesis. A fraction of this carbon is lost to the atmosphere through autotrophic respiration. The remainder is net primary productivity (NPP), which is then partitioned through carbon allocation among the different plant compartments, such as leaves, stems, and roots (often referred to as carbon pools). At the same time, carbon is removed from these pools through turnover processes such as litterfall, mortality, and disturbances.
+Gross primary productivity ($\text{GPP}$) is the total carbon uptake by plants through photosynthesis. A fraction of this carbon is lost to the atmosphere through autotrophic respiration. The remainder is net primary productivity ($\text{NPP}$), which is then partitioned through carbon allocation among the different plant compartments, such as leaves, stems, and roots (often referred to as carbon pools). At the same time, carbon is removed from these pools through turnover processes such as litterfall, mortality, and disturbances.
 
 ```@docs; canonical = false
 AbstractVegetationCarbonDynamics
