@@ -61,7 +61,7 @@ LUEPhotosynthesis
 variables(LUEPhotosynthesis(Float32))
 ```
 
-This implementation uses the light-use efficiency model of Haxeltine and Prentice (1996), adapted from PALADYN [willeitPALADYNV10Comprehensive2016](@cite), where the original equations were derived assuming a daily time step. Unlike PALADYN, however, all photosynthetic rates here are computed as instantaneous rates (e.g. mol/m²/s or gC/m²/s) to ensure compatibility with generic timestepping schemes.
+This implementation uses the light-use efficiency model of [haxeltineGeneralModelLightUse1996](@citet), adapted from PALADYN [willeitPALADYNV10Comprehensive2016](@cite), where the original equations were derived assuming a daily time step. Unlike PALADYN, however, all photosynthetic rates here are computed as instantaneous rates (e.g. mol/m²/s or gC/m²/s) to ensure compatibility with generic timestepping schemes.
 
 ### Light and RuBisCO-limited photosynthesis rates
 
@@ -80,7 +80,7 @@ c_1 = \alpha_{C3} \cdot f_{\text{temp}} \cdot C_{\text{mass}} \cdot \frac{p_i - 
 \end{equation}
 ```
 
-where $\alpha_{C3}$ is the intrinsic quantum efficiency of CO2 uptake in C3 plants, $C_{mass}$ is the carbon atomic mass, $p_i$ is intercellular CO₂ partial pressure and $\Gamma^*$ is the CO2 compensation point. 
+where $\alpha_{C3}$ is the intrinsic quantum efficiency of CO₂ uptake in C3 plants, $C_{mass}$ is the carbon atomic mass, $p_i$ is intercellular CO₂ partial pressure and $\Gamma^*$ is the CO₂ compensation point. 
 
 The temperature stress factor $f_{\text{temp}}$ is defined as
 
@@ -94,17 +94,17 @@ f_{\text{temp}}(T) =
 \end{equation}
 ```
 
-Assuming that half of the downwelling shortwave radiation is in the photosynthetically active wavelength range, photosynthetically active radiation (PAR) can be computed as
+Assuming that half of the downwelling shortwave radiation ($\text{SW}_{\downarrow}$) is in the photosynthetically active wavelength range, photosynthetically active radiation ($\text{PAR}$) can be computed as
 
 ```math
 \begin{equation}
-\text{PAR} = 0.5 \cdot \text{SW} \cdot (1 - \alpha_\text{leaf}) \cdot c_q\,,
+\text{PAR} = 0.5 \cdot  $\text{SW}_{\downarrow}$ \cdot (1 - \alpha_\text{leaf}) \cdot c_q\,,
 \end{equation}
 ```
 
 where $\alpha_\text{leaf}$ is the leaf albedo in the PAR range and $c_q$ is the conversion factor from W/m² to mol/m²/s. 
 
-Absorbed PAR (APAR) can then be computed as,
+Absorbed PAR ($\text{APAR}$) can then be computed as,
 
 ```math
 \begin{equation}
@@ -112,7 +112,7 @@ Absorbed PAR (APAR) can then be computed as,
 \end{equation}
 ```
 
-where $\alpha_a$ accounts for reductions in PAR utilization in natural ecosystems, $k_{\text{ext}}$ is the light extinction coefficient, and LAI is the leaf area index.
+where $\alpha_a$ accounts for reductions in PAR utilization in natural ecosystems, $k_{\text{ext}}$ is the light extinction coefficient, and $\text{LAI}$ is the leaf area index.
 
 
 
