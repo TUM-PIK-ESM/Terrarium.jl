@@ -1,28 +1,35 @@
 """
     $TYPEDEF
 
-Vegetation carbon dynamics implementation following PALADYN (Willeit 2016) but considering only the sum of the vegetation
+Vegetation carbon dynamics implementation following [willeitPALADYNV10Comprehensive2016](@cite) but considering only the sum of the vegetation
 carbon pools. The subsequent splitting into C_leaf, C_stem, C_root is not implemented for now.
 
 Authors: Maha Badri
 
 Properties:
 $TYPEDFIELDS
+
+# References
+
+* [willeitPALADYNV10Comprehensive2016](@cite) Willeit & Ganopolski, Geoscientific Model Development (2016)
+* [coxDescriptionTRIFFIDDynamic2001](@cite) Cox, Hadley Centre Technical Note (2001)
+* [clarkJointUKLand2011](@cite) Clark et al., Geoscientific Model Development (2011)
+* [kattgeTRYGlobalDatabase2011](@cite) Kattge et al., Global Change Biology (2011)
 """
 @kwdef struct PALADYNCarbonDynamics{NF} <: AbstractVegetationCarbonDynamics{NF}
-    "Specific leaf area (Kattge et al. 2011) [m²/kgC], PFT specific"
+    "Specific leaf area ([kattgeTRYGlobalDatabase2011](@cite)) [m²/kgC], PFT specific"
     SLA::NF = 10.0 # Value for Needleleaf tree PFT
 
-    "Allometric coefficient, modified from Cox 2001 to account for bwl=1 [kgC/m²], PFT specific"
+    "Allometric coefficient, modified from [coxDescriptionTRIFFIDDynamic2001](@cite) to account for bwl=1 [kgC/m²], PFT specific"
     awl::NF = 2.0 # Value for Needleleaf tree PFT
 
-    "Minimum Leaf Area Index modified from Clark et al. 2011 [m²/m²], PFT specific"
+    "Minimum Leaf Area Index modified from [clarkJointUKLand2011](@cite) [m²/m²], PFT specific"
     LAI_min::NF = 1.0 # Value for Needleleaf tree PFT
 
-    "Maximum Leaf Area Index modified from Clark et al. 2011 [m²/m²], PFT specific"
+    "Maximum Leaf Area Index modified from [clarkJointUKLand2011](@cite) [m²/m²], PFT specific"
     LAI_max::NF = 6.0 # Value for Needleleaf tree PFT
 
-    "Leaf turnover rate (Kattge et al. 2011) [1/year], PFT specific"
+    "Leaf turnover rate ([kattgeTRYGlobalDatabase2011](@cite)) [1/year], PFT specific"
     # TODO this parameter is yearly, should be changed to daily for now
     γL::NF = 0.3 # Value for Needleleaf tree PFT
 
@@ -30,7 +37,7 @@ $TYPEDFIELDS
     # TODO this parameter is yearly, should be changed to daily for now
     γR::NF = 0.3 # Value for Needleleaf tree PFT
 
-    "Stem turnover rate modified from Clark et al. 2011 [1/year], PFT specific"
+    "Stem turnover rate modified from [clarkJointUKLand2011](@cite) [1/year], PFT specific"
     # TODO this parameter is yearly, should be changed to daily for now
     γS::NF = 0.05 # Value for Needleleaf tree PFT
 end
@@ -48,7 +55,11 @@ variables(::PALADYNCarbonDynamics) = (
 
 Computes `λ_NPP`,a factor determining the partitioning of NPP between increase of vegetation carbon of the existing 
 vegetated area and spreading of the given PFT based on the balanced Leaf Area Index `LAI_b`,
-Eq. 74, PALADYN (Willeit 2016).
+[willeitPALADYNV10Comprehensive2016; Eq. (74)](@cite).
+
+# References
+
+* [willeitPALADYNV10Comprehensive2016](@cite) Willeit & Ganopolski, Geoscientific Model Development (2016)
 """
 @inline function compute_λ_NPP(vegcarbon_dynamics::PALADYNCarbonDynamics{NF}, LAI_b) where {NF}
     if LAI_b < vegcarbon_dynamics.LAI_min
@@ -66,7 +77,11 @@ end
     $SIGNATURES
 
 Computes `LAI_b`, the balanced Leaf Area Index based on the vegetation carbon pool `C_veg` (assuming with bwl = 1),
-Eqs. 76-79, PALADYN (Willeit 2016).
+[willeitPALADYNV10Comprehensive2016; Eqs. (76-79)](@cite).
+
+# References
+
+* [willeitPALADYNV10Comprehensive2016](@cite) Willeit & Ganopolski, Geoscientific Model Development (2016)
 """
 @inline function compute_LAI_b(vegcarbon_dynamics::PALADYNCarbonDynamics{NF}, C_veg) where {NF}
     LAI_b = C_veg / ((NF(2.0) / vegcarbon_dynamics.SLA) + vegcarbon_dynamics.awl)
@@ -76,7 +91,11 @@ end
 """
     $SIGNATURES
 Computes the local litterfall rate `Λ_loc` based on the balanced Leaf Area Index `LAI_b` (assuming evergreen PFTs),
-Eq. 75, PALADYN (Willeit 2016).
+[willeitPALADYNV10Comprehensive2016; Eq. (75)](@cite).
+
+# References
+
+* [willeitPALADYNV10Comprehensive2016](@cite) Willeit & Ganopolski, Geoscientific Model Development (2016)
 """
 @inline function compute_Λ_loc(vegcarbon_dynamics::PALADYNCarbonDynamics{NF}, LAI_b) where {NF}
     Λ_loc = (
@@ -90,7 +109,11 @@ end
 """
     $SIGNATURES
 Computes the `C_veg` tendency based on `NPP` and the balanced Leaf Area Index `LAI_b`,
-Eq. 72, PALADYN (Willeit 2016) 
+[willeitPALADYNV10Comprehensive2016; Eq. (72)](@cite)
+
+# References
+
+* [willeitPALADYNV10Comprehensive2016](@cite) Willeit & Ganopolski, Geoscientific Model Development (2016) 
 """
 @inline function compute_C_veg_tend(vegcarbon_dynamics::PALADYNCarbonDynamics{NF}, LAI_b::NF, NPP::NF) where {NF}
     # Compute λ_NPP

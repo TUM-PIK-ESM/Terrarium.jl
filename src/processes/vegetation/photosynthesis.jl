@@ -1,13 +1,19 @@
 """
     $TYPEDEF
-Photosynthesis implementation from PALADYN (Willeit 2016) for C3 PFTs following the mechanistic
-approach of Haxeltine and Prentice (1996). Computes instantaneous photosynthetic rates as differential
+Photosynthesis implementation from PALADYN [willeitPALADYNV10Comprehensive2016](@cite) for C3 PFTs following the mechanistic
+approach of [haxeltineBIOME3EquilibriumTerrestrial1996](@cite). Computes instantaneous photosynthetic rates as differential
 equations that are integrated over arbitrary timesteps by the timestepper.
 
 Authors: Maha Badri and Matteo Willeit
 
 Properties:
 $TYPEDFIELDS
+
+# References
+
+* [haxeltineBIOME3EquilibriumTerrestrial1996](@cite) Haxeltine & Prentice, Global Biogeochemical Cycles (1996)
+* [willeitPALADYNV10Comprehensive2016](@cite) Willeit & Ganopolski, Geoscientific Model Development (2016)
+
 """
 @kwdef struct LUEPhotosynthesis{NF} <: AbstractPhotosynthesis{NF}
     "Rubisco specificity factor at 25°C [dimensionless]. Ratio of carboxylation to oxygenation rates."
@@ -72,10 +78,15 @@ variables(::LUEPhotosynthesis{NF}) where {NF} = (
 """
     $TYPEDSIGNATURES
 Computes kinetic parameters `τ`, `Kc`, `Ko` based on temperature using Q10 temperature response.
-Follows enzyme kinetics from Haxeltine & Prentice (1996), Appendix C.
+Follows enzyme kinetics from [haxeltineBIOME3EquilibriumTerrestrial1996](@cite), Appendix C.
+
 - τ: Rubisco specificity factor (CO₂ to O₂ carboxylation ratio), dimensionless
 - Kc: Michaelis-Menten constant for CO₂ [Pa]
 - Ko: Michaelis-Menten constant for O₂ [Pa]
+
+# References
+
+* [haxeltineBIOME3EquilibriumTerrestrial1996](@cite) Haxeltine & Prentice, Global Biogeochemical Cycles (1996)
 """
 @inline function compute_kinetic_parameters(photo::LUEPhotosynthesis{NF}, T_air::NF) where {NF}
     τ = photo.τ25 * photo.q10_τ^((T_air - NF(25.0)) * NF(0.1))
@@ -89,7 +100,11 @@ end
     $TYPEDSIGNATURES
 Computes the CO₂ compensation point `Γ_star` [Pa].
 The intercellular CO₂ partial pressure at which gross photosynthesis equals respiration.
-Follows Eq. C6, PALADYN (Willeit 2016).
+Follows [willeitPALADYNV10Comprehensive2016; Eq. (C6)](@cite).
+
+# References
+
+* [willeitPALADYNV10Comprehensive2016](@cite) Willeit & Ganopolski, Geoscientific Model Development (2016)
 """
 @inline function compute_Γ_star(photo::LUEPhotosynthesis{NF}, τ::NF, pres_O2::NF) where {NF}
     Γ_star = pres_O2 / (NF(2.0) * τ)
@@ -108,7 +123,11 @@ end
 """
     $TYPEDSIGNATURES
 Computes absorbed PAR limited by the fraction of PAR assimilated at ecosystem level `APAR` [mol/m²/s],
-Eq. 62, PALADYN (Willeit 2016).
+[willeitPALADYNV10Comprehensive2016; Eq. (62)](@cite).
+
+# References
+
+* [willeitPALADYNV10Comprehensive2016](@cite) Willeit & Ganopolski, Geoscientific Model Development (2016)
 """
 @inline function compute_APAR(photo::LUEPhotosynthesis{NF}, swdown::NF, LAI::NF) where {NF}
     PAR = compute_PAR(photo, swdown)
@@ -119,7 +138,11 @@ end
 """
     $TYPEDSIGNATURES
 Computes intercellular CO2 partial pressure [Pa],
-Eq. 67, PALADYN (Willeit 2016).
+[willeitPALADYNV10Comprehensive2016; Eq. (67)](@cite).
+
+# References
+
+* [willeitPALADYNV10Comprehensive2016](@cite) Willeit & Ganopolski, Geoscientific Model Development (2016)
 """
 @inline function compute_pres_i(photo::LUEPhotosynthesis, λc, pres_a)
     pres_i = λc * pres_a
@@ -164,9 +187,15 @@ end
     $TYPEDSIGNATURES
 
 Computes factors for light-limited `c_1` [gC/mol] and RuBisCO-limited `c_2` [dimensionless] assimilation.
-Follows Eq. C4-C5 from PALADYN (Willeit 2016) and Haxeltine & Prentice (1996).
+Follows [willeitPALADYNV10Comprehensive2016; Eqs. (C4-C5)](@cite) and [haxeltineBIOME3EquilibriumTerrestrial1996](@cite).
+
 - c_1: quantum efficiency × temperature factor × carbon mass / denominator, used in JE = c_1 × APAR
 - c_2: dimensionless coefficient relating enzyme capacity to assimilation, used in JC = c_2 × Vc_max
+
+# References
+
+* [haxeltineBIOME3EquilibriumTerrestrial1996](@cite) Haxeltine & Prentice, Global Biogeochemical Cycles (1996)
+* [willeitPALADYNV10Comprehensive2016](@cite) Willeit & Ganopolski, Geoscientific Model Development (2016)H
 """
 @inline function compute_assimilation_factors(
         photo::LUEPhotosynthesis{NF},
@@ -183,8 +212,13 @@ end
     $TYPEDSIGNATURES
     
 Computes the maximum rate of net photosynthesis `Vc_max` [gC/m²/s],
-following the coordination hypothesis (acclimation), see Harrison 2021 Box 2.
-Note: this is not the same formula in PALADYN paper, this implementaion is taken from the code
+following the coordination hypothesis (acclimation), see [harrisonEcoEvolutionaryOptimalityMeans2021](@cite) Box 2.
+Note: this is not the same formula as in the [willeitPALADYNV10Comprehensive2016](@cite) paper, this implementaion is taken from the code
+
+# References
+
+* [harrisonEcoEvolutionaryOptimalityMeans2021](@cite) Harrison et al., New Phytologist (2021)
+* [willeitPALADYNV10Comprehensive2016](@cite) Willeit & Ganopolski, Geoscientific Model Development (2016)
 """
 @inline function compute_Vc_max(photo::LUEPhotosynthesis{NF}, c_1::NF, PAR::NF, Kc::NF, Ko::NF, Γ_star::NF, pres_i::NF, pres_O2::NF) where {NF}
     Vc_max = c_1 * PAR * (pres_i + Kc * (NF(1.0) + pres_O2 / Ko)) / (pres_i - Γ_star)
@@ -195,7 +229,11 @@ end
     $TYPEDSIGNATURES
 
 Computes the PAR-limited and the rubisco-activity-limited photosynthesis rates `JE` and `JC` [gC/m²/s],
-Eqn 3+5, Haxeltine & Prentice 1996.
+[haxeltineBIOME3EquilibriumTerrestrial1996; Eqs. (3, 5)](@cite).
+
+# References
+
+* [haxeltineBIOME3EquilibriumTerrestrial1996](@cite) Haxeltine & Prentice, Global Biogeochemical Cycles (1996)
 """
 @inline function compute_JE_JC(photo::LUEPhotosynthesis{NF}, c_1::NF, c_2::NF, APAR::NF, Vc_max::NF) where {NF}
     JE = c_1 * APAR
@@ -207,7 +245,12 @@ end
     $TYPEDSIGNATURES
 
 Computes the leaf respiration rate `Rd` [gC/m²/s],
-Eqn 10, Haxeltine & Prentice 1996 and Eq. 10 PALADYN (Willeit 2016).
+[haxeltineBIOME3EquilibriumTerrestrial1996; Eq. (10)](@cite) and [willeitPALADYNV10Comprehensive2016; Eq. (10)](@cite).
+
+# References
+
+* [haxeltineBIOME3EquilibriumTerrestrial1996](@cite) Haxeltine & Prentice, Global Biogeochemical Cycles (1996)
+* [willeitPALADYNV10Comprehensive2016](@cite) Willeit & Ganopolski, Geoscientific Model Development (2016)
 """
 @inline function compute_Rd(photo::LUEPhotosynthesis, Vc_max::NF, β::NF) where {NF}
     Rd = photo.α_C3 * Vc_max * β
@@ -218,7 +261,11 @@ end
     $TYPEDSIGNATURES
 
 Computes the gross photosynthesis rate `Ag` [gC/m²/s],
-Eqn 2, Haxeltine & Prentice 1996
+[haxeltineBIOME3EquilibriumTerrestrial1996; Eq. (2)](@cite).
+
+# References
+
+* [haxeltineBIOME3EquilibriumTerrestrial1996](@cite) Haxeltine & Prentice, Global Biogeochemical Cycles (1996)
 """
 @inline function compute_Ag(photo::LUEPhotosynthesis{NF}, c_1::NF, c_2::NF, APAR::NF, Vc_max::NF, β::NF) where {NF}
     # Compute JE and Jc, PAR-limited and rubisco-activity-limited photosynthesis rates

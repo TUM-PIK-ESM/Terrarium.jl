@@ -2,12 +2,16 @@
 """
     $TYPEDEF
 
-Vegetation phenology implementation from PALADYN (Willeit 2016).
+Vegetation phenology implementation from [willeitPALADYNV10Comprehensive2016](@cite).
 
 Authors: Maha Badri and Matteo Willeit
 
 Properties:
 $TYPEDFIELDS
+
+# References
+
+* [willeitPALADYNV10Comprehensive2016](@cite) Willeit & Ganopolski, Geoscientific Model Development (2016)
 """
 @kwdef struct PALADYNPhenology{NF} <: AbstractPhenology{NF}
     # TODO add phenology parameters

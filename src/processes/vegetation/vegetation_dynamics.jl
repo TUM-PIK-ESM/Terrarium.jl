@@ -1,13 +1,17 @@
 """
     $TYPEDEF
 
-Vegetation dynamics implementation following PALADYN (Willeit 2016) for a single PFT
+Vegetation dynamics implementation following [willeitPALADYNV10Comprehensive2016](@cite) for a single PFT
 based on the Lotka–Volterra approach.
 
 Authors: Maha Badri 
 
 Properties:
 $TYPEDFIELDS
+
+# References
+
+* [willeitPALADYNV10Comprehensive2016](@cite) Willeit & Ganopolski, Geoscientific Model Development (2016)
 """
 @kwdef struct PALADYNVegetationDynamics{NF} <: AbstractVegetationDynamics{NF}
     "Vegetation seed fraction [-]"
@@ -31,7 +35,11 @@ variables(::PALADYNVegetationDynamics) = (
     $SIGNATURES
 
 Computes the disturbance rate`γv`,
-Eq. 80, PALADYN (Willeit 2016).
+[willeitPALADYNV10Comprehensive2016; Eq. (80)](@cite).
+
+# References
+
+* [willeitPALADYNV10Comprehensive2016](@cite) Willeit & Ganopolski, Geoscientific Model Development (2016)
 """
 @inline function compute_γv(veg_dynamics::PALADYNVegetationDynamics)
     # TODO add PALADYN implemetation for the disturbance rate (depends on soil moisture)
@@ -53,7 +61,11 @@ end
     $SIGNATURES
 
 Computes the vegetation fraction tendency for a single PFT,
-Eq. 73, PALADYN (Willeit 2016).
+[willeitPALADYNV10Comprehensive2016; Eq. (73)](@cite).
+
+# References
+
+* [willeitPALADYNV10Comprehensive2016](@cite) Willeit & Ganopolski, Geoscientific Model Development (2016)
 """
 @inline function compute_ν_tendency(
         veg_dynamics::PALADYNVegetationDynamics,
