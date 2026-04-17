@@ -59,7 +59,10 @@ coefficients a₁, a₂, and a₃.
 Saturation vapor pressure at the given temperature `T`, accounting for both frozen (`T < 0°C`)
 and unfrozen conditions.
 
-Coefficients taken from Alduchov and Eskridge (1997).
+Coefficients taken from [alduchovImprovedMagnusForm1996](@cite).
+
+# References
+* [alduchovImprovedMagnusForm1996](@cite) Alduchov and Eskridge, Journal of Applied Meteorology and Climatology (1996)
 """
 @inline function saturation_vapor_pressure(T::NF) where {NF}
     return if T <= zero(T)
