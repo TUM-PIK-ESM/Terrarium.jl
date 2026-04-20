@@ -44,20 +44,28 @@ subtypes(Terrarium.AbstractAtmosphere)
 
 ### Vapor pressure deficit
 
-The vapor pressure deficit (VPD) quantifies how far the atmosphere is from
-saturation. It is used to drive evapotranspiration and is computed from the
-air temperature, specific humidity, and atmospheric pressure:
+The vapor pressure deficit ($\text{VPD}$) quantifies how far the atmosphere is from saturation. It is computed from the air temperature, specific humidity, and atmospheric pressure of a specific air parcel. At the atmospheric reference height at which the `PrescribedAtmosphere` is defined, the VPD is computed as:
 
 ```math
 \begin{equation}
-\Delta e = e_{\text{sat}}(T_s) - e_a(q_a, p)
+VPD = e_{\text{sat}}(T_a) - e_a(q_a, p)
 \end{equation}
 ```
 
-where $e_{\text{sat}}(T_s)$ is the saturation vapor pressure at surface temperature $T_s$,
-and $e_a = q_a p / \varepsilon$ is the actual vapor pressure, with $\varepsilon \approx 0.622$
-the ratio of molecular weights of water vapor to dry air. The corresponding specific humidity
-deficit is
+where $e_{\text{sat}}(T_a)$ is the saturation vapor pressure at surface temperature $T_a$, and $e_a = q_a p / \varepsilon$ is the actual vapor pressure, with $\varepsilon \approx 0.622$ the ratio of molecular weights of water vapor to dry air. 
+
+
+### Vapor pressure difference 
+
+The vapor pressure difference $\Delta e$ is the difference in vapor pressure between two air parcels at different heights, typically between the atmospheric reference height and the land surface. Under the typical assumption that the land surface is saturated (see e.g. [zhouPhysicalBasisEp2024](@cite)), the vapor pressure difference is computed as:
+
+```math
+\begin{equation}
+\Delta e = e_s - e_a = e_{\text{sat}}(T_s) - e_a(q_a, p)
+\end{equation}
+```
+
+with $T_s$ the land surface temperature. The corresponding specific humidity difference is
 
 ```math
 \begin{equation}
@@ -183,4 +191,11 @@ compute_vpd(i, j, grid, fields, atmos::AbstractAtmosphere, c::PhysicalConstants)
 
 ```@docs; canonical = false
 compute_humidity_vpd(i, j, grid, fields, atmos::AbstractAtmosphere, c::PhysicalConstants)
+```
+
+## References
+
+```@bibliography
+Pages = ["atmosphere.md"]
+Canonical = false
 ```
