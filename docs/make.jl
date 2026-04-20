@@ -1,6 +1,7 @@
 using ArgParse
 using Documenter
 using DocumenterCitations
+using DocumenterInterLinks
 using Literate
 
 using Terrarium
@@ -55,12 +56,12 @@ Convert Literate.jl scripts in `indir` to markdown pages in `outdir`.
 The differentiation example is never executed during docs builds (Enzyme compile is
 too slow); the model interface example is executed unless IS_DRAFT is set.
 """
-function build_literate_pages!(outdir, indir, scripts)
+function build_literate_pages!(outdir, indir, scripts; kwargs...)
     mkpath(outdir)
     for (_, filename) in scripts
         ## the differentiation notebook is never auto-executed (Enzyme compile time)
         should_execute = BUILD_EXAMPLE_DOCS && filename != "differentiating_terrarium.jl"
-        kwargs = Dict{Symbol, Any}(
+        literate_kwargs = Dict{Symbol, Any}(
             :execute => should_execute,
             :documenter => true,
             :flavor => Literate.DocumenterFlavor(),
@@ -68,16 +69,36 @@ function build_literate_pages!(outdir, indir, scripts)
         ## For non-executed scripts, use plain julia code fences so Documenter
         ## does not attempt to run them as @example blocks.
         if !should_execute
-            kwargs[:codefence] = "```julia" => "```"
+            literate_kwargs[:codefence] = "```julia" => "```"
         end
+        merge!(literate_kwargs, Dict(kwargs))
         Literate.markdown(
             joinpath(indir, filename),
             outdir;
-            kwargs...,
+            literate_kwargs...,
         )
     end
     return nothing
 end
+
+# We'll append the following postamble to the literate examples, to include
+# information about the computing environment used to run them.
+example_postamble = """
+
+# ---
+
+# ### Julia version and environment information
+#
+# This example was executed with the following version of Julia:
+
+using InteractiveUtils: versioninfo
+versioninfo()
+
+# These were the top-level packages installed in the environment:
+
+import Pkg
+Pkg.status()
+"""
 
 # Pages vector for makedocs
 running_example_docpages = Pair{String, String}[]
@@ -92,12 +113,15 @@ cp("inputs", joinpath(EXAMPLES_OUTDIR, "inputs"), force = true)
 build_literate_pages!(
     EXAMPLES_OUTDIR,
     joinpath(EXAMPLES_DIR, "simulations"),
-    running_scripts
+    running_scripts;
+    preprocess = content -> content * example_postamble,
 )
 build_literate_pages!(
     EXAMPLES_OUTDIR,
     joinpath(EXAMPLES_DIR, "extending"),
-    extending_scripts
+    extending_scripts;
+    preprocess = content -> content * example_postamble,
+
 )
 
 # Add example pages to lists
@@ -116,6 +140,15 @@ bib = CitationBibliography(
     style = :numeric
 )
 
+# Add documentation interlinking
+links = InterLinks(
+    "Oceananigans" => "https://clima.github.io/OceananigansDocumentation/stable/",
+    "KernelAbstractions" => "https://juliagpu.github.io/KernelAbstractions.jl/stable/",
+    "SpeedyWeather" => "https://speedyweather.github.io/SpeedyWeatherDocumentation/stable/",
+    "FreezeCurves" => "https://cryogrid.github.io/FreezeCurves.jl/stable/",
+)
+
+
 makedocs(
     format = Documenter.HTML(
         prettyurls = get(ENV, "CI", nothing) == "true",
@@ -131,7 +164,7 @@ makedocs(
     sitename = "Terrarium.jl",
     authors = "Brian Groenke, Maximilian Gelbrecht, Maha Badri, and Contributors",
     modules = [Terrarium],
-    plugins = [bib],
+    plugins = [bib, links],
     pages = [
         "Home" => "index.md",
         "Introduction" => [
@@ -161,10 +194,10 @@ makedocs(
         "Processes" => [
             "Soil" => [
                 "Overview" => "processes/soil/soil.md",
+                "Stratigraphy" => "processes/soil/soil_stratigraphy.md",
                 "Hydrology" => "processes/soil/soil_hydrology.md",
                 "Energy balance" => "processes/soil/soil_energy.md",
                 "Biogeochemistry" => "processes/soil/soil_biogeochemistry.md",
-                "Stratigraphy" => "processes/soil/soil_stratigraphy.md",
             ],
             "Vegetation" => [
                 "Overview" => "processes/vegetation/vegetation.md",

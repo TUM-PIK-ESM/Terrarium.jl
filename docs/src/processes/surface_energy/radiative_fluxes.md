@@ -23,7 +23,7 @@ Shortwave radiation is determined by the solar angle, atmospheric transmittance,
 
 ### Longwave radiation
 
-The surface emits longwave radiation according to the Stefan-Boltzmann law, with the emission temperature determined by the skin temperature $T_0$. The amount of downwelling longwave radiation is controlled by atmospheric water vapor, cloud cover, air temperature, and greenhouse gases.
+The surface emits longwave radiation according to the Stefan-Boltzmann law, with the emission temperature determined by the skin temperature $T_s$. The amount of downwelling longwave radiation is controlled by atmospheric water vapor, cloud cover, air temperature, and greenhouse gases.
 
 ## Diagnosed radiative fluxes
 

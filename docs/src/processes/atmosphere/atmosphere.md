@@ -7,14 +7,14 @@ using Terrarium
 using InteractiveUtils
 ```
 
-# Atmospheric inputs
+# [Atmospheric inputs](@id atmosphere_docs)
 
 !!! warning
     This page is a work in progress. If you have any questions or notice any errors, please [raise an issue](https://github.com/NumericalEarth/Terrarium.jl/issues).
 
 ## Overview
 
-The atmosphere module in Terrarium provides the meteorological boundary conditions for all surface energy, hydrological, and biogeochemical processes. A `PrescribedAtmosphere` reads all forcing variables directly from input data — typically reanalysis products (e.g. ERA5-Land) or observational records — rather than computing them interactively with a coupled atmospheric model.
+The atmosphere module in Terrarium provides the meteorological boundary conditions for all surface energy, hydrological, and biogeochemical processes. A [`PrescribedAtmosphere`](@ref) reads all forcing variables directly from input data — typically reanalysis products (e.g. ERA5-Land) or observational records — rather than computing them interactively with a coupled atmospheric model.
 
 The primary state variables are:
 

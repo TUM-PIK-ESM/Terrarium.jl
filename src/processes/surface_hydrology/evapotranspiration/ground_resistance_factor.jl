@@ -17,13 +17,17 @@ ConstantEvaporationResistanceFactor(::Type{NF}; kwargs...) where {NF} = Constant
 """
     $TYPEDEF
 
-Implements the soil moisture limiting resistance factor of Lee and Pielke (1992),
+Implements the soil moisture limiting resistance factor of [leeEstimatingSoilSurface1992](@cite),
 
 ```math
 \\beta =
 \\frac{1}{4} \\left[1 - \\cos\\left(π \\theta_1/\\theta_{\\text{fc}} \\right)\\right] \\quad \\text{for } \\theta_1 < \\theta_{\\text{fc}}
 ```
 otherwise ``\\beta=1``.
+
+# References
+
+* [leeEstimatingSoilSurface1992](@cite) Lee and Pielke, Journal of Applied Meteorology (1992)
 """
 struct SoilMoistureResistanceFactor{NF} <: AbstractGroundEvaporationResistanceFactor end
 

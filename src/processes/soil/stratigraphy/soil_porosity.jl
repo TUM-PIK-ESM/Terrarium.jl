@@ -21,7 +21,11 @@ ConstantSoilPorosity(::Type{NF}; kwargs...) where {NF} = ConstantSoilPorosity{NF
 """
     $TYPEDEF
 
-SURFEX parameterization of mineral soil porosity (Masson et al. 2013).
+SURFEX parameterization of mineral soil porosity [noilhanISBA1996; Eq. (27)](@cite).
+
+# References
+
+* [noilhanISBA1996](@cite) Noilhan & Mahfouf, Global and Planetary Change (1996)
 """
 @kwdef struct SoilPorositySURFEX{NF} <: AbstractSoilPorosity{NF}
     "Assumed default porosity of the soil without sand [-]"

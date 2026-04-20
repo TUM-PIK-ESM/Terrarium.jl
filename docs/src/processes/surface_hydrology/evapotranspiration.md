@@ -14,11 +14,11 @@ using InteractiveUtils
 
 ## Overview
 
-Evapotranspiration (ET) is the combined process of water evaporation from soil and open water surfaces, evaporation of water intercepted by the canopy, and transpiration through leaf stomata. These processes remove water from the surface, driving latent heat flux and competing with sensible heat and ground heat fluxes in the surface energy balance.
+Evapotranspiration ($\text{ET}$) (m/s) is the combined process of water evaporation from soil and open water surfaces, evaporation of water intercepted by the canopy, and transpiration through leaf stomata. These processes remove water from the surface, driving latent heat flux and competing with sensible heat and ground heat fluxes in the surface energy balance.
 
-All evapotranspiration pathways are primarily driven by the **vapor pressure deficit** or **specific humidity deficit** $\Delta q = q_{\text{sat}}(T_s) - q_a$, where $q_{\text{sat}}(T_s)$ is the saturation specific humidity at surface temperature $T_s$ (kg/kg) and $q_a$ is the atmospheric specific humidity at reference height (kg/kg).
+All evapotranspiration pathways are primarily driven by the **vapor pressure gradient** or **specific humidity gradient** at the surface $\Delta q = q_{\text{sat}}(T_s) - q_a$, where $q_{\text{sat}}(T_s)$ is the saturation specific humidity at surface temperature $T_s$ (kg/kg) and $q_a$ is the atmospheric specific humidity (kg/kg) at a particular reference height.
 
-Each pathway is also modulated by **aerodynamic resistance** $r_a$ (s/m) (between surface and atmosphere) and/or **stomatal resistance** $r_s$ (s/m) (in transpiration).
+Each pathway is also modulated by **aerodynamic resistance**(s) $r_a$ (s/m) (between surface and atmosphere) and possibly **stomatal resistance** $r_s$ (s/m) (in the case of transpiration).
 
 ```@docs; canonical = false
 AbstractEvapotranspiration
@@ -30,6 +30,8 @@ subtypes(Terrarium.AbstractEvapotranspiration)
 
 ## Bare ground evaporation
 
+The simplest case where no vegetation is considered. 
+
 ```@docs; canonical = false
 BareGroundEvaporation
 ```
@@ -38,7 +40,9 @@ BareGroundEvaporation
 variables(BareGroundEvaporation(Float32))
 ```
 
-## Canopy evapotranspiration
+## Vegetated land evapotranspiration
+
+A big-leaf approach that combines canopy evaporation, transpiration and ground evaporation in parallel.  
 
 ```@docs; canonical = false
 PALADYNCanopyEvapotranspiration
@@ -50,19 +54,19 @@ variables(PALADYNCanopyEvapotranspiration(Float32))
 
 ### Evaporation from the canopy
 
-Evaporation of water intercepted by the canopy depends on the saturation state of the canopy (fraction of leaves wet),
+Evaporation of water intercepted by the canopy $E_{\text{can}}$ (m/s) depends on the saturation state of the canopy (fraction of leaves wet),
 ```math
 \begin{equation}
 E_{\text{can}} = f_{\text{can}} \frac{\Delta q}{r_a}\,,
 \end{equation}
 ```
-where $f_{\text{can}}$ is the canopy saturation fraction (0 = dry, 1 = saturated) (-) and $\Delta q$ is the vapor pressure deficit (kg/kg).
+where $f_{\text{can}}$ is the canopy saturation fraction (0 = dry, 1 = saturated) (-) and $\Delta q$ is the vapor pressure gradient (kg/kg).
 
 When $f_{\text{can}} = 0$ (completely dry canopy), $E_{\text{can}} = 0$. When $f_{\text{can}} = 1$ (wet canopy), evaporation proceeds at the potential rate.
 
 ### Ground evaporation
 
-Evaporation from exposed soil or under-canopy surfaces is limited by soil water availability,
+Evaporation from exposed soil or under-canopy surfaces $E_{\text{ground}}$ (m/s) is limited by soil water availability,
 ```math
 \begin{equation}
 E_{\text{ground}} = \beta \frac{\Delta q}{r_a + r_e}\,,
@@ -77,22 +81,22 @@ The resistance factor $\beta$ is computed from soil moisture in the upper layer:
 Plant transpiration occurs through stomata and is controlled by stomatal conductance,
 ```math
 \begin{equation}
-T_{\text{canopy}} = \frac{\Delta q}{r_a + r_s}\,,
+T_{\text{can}} = \frac{\Delta q}{r_a + r_s}\,,
 \end{equation}
 ```
-where $r_s = 1 / g_w$ is the stomatal resistance (s/m) and $g_w$ is the stomatal conductance (m/s) (computed from photosynthesis; see ...).
+where $r_s = 1 / g_w$ is the stomatal resistance (s/m) and $g_w$ is the stomatal conductance (m/s) (computed from photosynthesis; see [Stomatal conductance](@ref)).
 
 High stomatal conductance (when photosynthetically active) leads to low stomatal resistance and high transpiration. This creates a strong coupling between carbon uptake (photosynthesis) and water loss (transpiration).
 
 ### Total evapotranspiration
 
-The PALADYN approach combines all three pathways,
+The PALADYN approach combines all three pathways in parallel,
 ```math
 \begin{equation}
-\text{ET} = E_{\text{can}} + E_{\text{ground}} + T_{\text{canopy}}\,,
+\text{ET} = E_{\text{can}} + E_{\text{ground}} + T_{\text{can}}\,,
 \end{equation}
 ```
-to obtain a total surface humidity flux that can be converted into the [latent heat flux][@ref "Latent heat flux"] for use in the [surface energy balance](@ref "Surface energy balance").
+to obtain a total surface humidity flux $\text{ET}$ (m/s) that can be converted into the [latent heat flux][@ref "Turbulent fluxes"] expressed in W/m² for use in the [surface energy balance](@ref surface_energy_balance_docs).
 
 ## Process interface
 

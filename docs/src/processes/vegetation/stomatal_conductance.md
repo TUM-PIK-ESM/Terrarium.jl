@@ -43,10 +43,9 @@ g_w = g_0 + 1.6 \frac{A_n}{c_a}  \left(1 + \frac{g_1}{\sqrt{\text{VPD}}}\right)
 \end{equation}
 ```
 
-where $g_0$ is the minimum stomatal conductance,  $g_1$ is a PFT-specific slope parameter, VPD is the vapor pressure deficit, $A_n$ is the net photosynthesis and $c_a$ is the atmospheric CO₂ concentration.
+where $g_0$ is the minimum stomatal conductance,  $g_1$ is a PFT-specific slope parameter, $\text{VPD}$ is the vapor pressure deficit, $A_n$ is the net photosynthesis and $c_a$ is the atmospheric CO₂ concentration.
 
-$g_w$ and $A_n$ are also
-related by the diffusion equation
+The variables $g_w$ and $A_n$ are also related by the diffusion equation
 
 ```math
 \begin{equation}

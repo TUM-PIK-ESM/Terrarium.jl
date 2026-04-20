@@ -6,7 +6,7 @@ Evaporation scheme for bare ground that calculates the humidity flux as
 ```math
 E = \\beta \\frac{\\Delta q}{r_a}
 ```
-where `Δq` is the vapor pressure deficit in terms of specific humidity, `rₐ` is aerodynamic resistance,
+where `Δq` is the vapor pressure gradient in terms of specific humidity, `rₐ` is aerodynamic resistance,
 and `β` is an evaporation limiting factor.
 """
 struct BareGroundEvaporation{NF, GR <: AbstractGroundEvaporationResistanceFactor} <: AbstractEvapotranspiration{NF}

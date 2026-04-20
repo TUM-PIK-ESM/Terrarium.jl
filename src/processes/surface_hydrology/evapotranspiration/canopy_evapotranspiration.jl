@@ -1,21 +1,28 @@
 """
     $TYPEDEF
 
-Canopy evapotranspiration scheme from PALADYN (Willeit 2016) that includes a canopy
-evaporation term based on the saturation fraction of canopy water defined by the
+Canopy evapotranspiration scheme from PALADYN ([willeitPALADYNV10Comprehensive2016; Eq. (5)](@cite)) 
+that includes a canopy evaporation term based on the saturation fraction of canopy water defined by the
 canopy hydrology scheme.
 
 ```math
-E_g &= \\beta \\frac{\\Delta q}{r_a} \\
-E_c &= f_{\\text{can}} \\frac{\\Delta q}{r_a} \\
-T_c &= \\frac{\\Delta q}{r_a + r_s} \\
+E_{\\text{ground}} = \\beta \\frac{\\Delta q}{r_a + r_e}
+```
+```math
+E_{\\text{can}} = f_{\\text{can}} \\frac{\\Delta q}{r_a}
+```
+```math
+T_{\\text{can}} = \\frac{\\Delta q}{r_a + r_s}
 ```
 
 Properties:
 $FIELDS
+
+# References
+* [willeitPALADYNV10Comprehensive2016](@cite) Willeit and Ganopolski, Geoscientific Model Development (2016)
 """
 struct PALADYNCanopyEvapotranspiration{NF, GR <: AbstractGroundEvaporationResistanceFactor} <: AbstractEvapotranspiration{NF}
-    "Drag coefficient for the traansfer of heat and water between the ground and canopy"
+    "Drag coefficient for the transfer of heat and water between the ground and canopy"
     C_can::NF
 
     "Parameterization for ground resistance to evaporation/sublimation"
@@ -39,7 +46,7 @@ end
 """
     $TYPEDSIGNATURES
 
-Compute potential transpiration from the given humidity gradient, aerodynamic resistance `rₐ` and stomatal conductance `gw_can`.
+Compute transpiration from the given humidity gradient, aerodynamic resistance `rₐ` and stomatal conductance `gw_can`.
 """
 @inline function compute_transpiration(::PALADYNCanopyEvapotranspiration{NF}, Δq, rₐ, gw_can) where {NF}
     let rₛ = 1 / max(gw_can, sqrt(eps(NF)))  # stomatal resistance as reciprocal of conductance
@@ -52,9 +59,12 @@ end
 """
     $TYPEDSIGNATURES
 
-Compute potential evaporation from the ground below the canopy, following Eq. 5, PALADYN (Willeit 2016);
+Compute evaporation from the ground below the canopy, following [willeitPALADYNV10Comprehensive2016; Eq. (5)](@cite);
 `Δq` is the humidity gradient, `β` is the ground evaporation resistance factor, `rₐ` is aerodynamic resistance,
 and `rₑ` is aerodynamic resistance between the ground and canopy.
+
+# References
+* [willeitPALADYNV10Comprehensive2016](@cite) Willeit and Ganopolski, Geoscientific Model Development (2016)
 """
 @inline function compute_evaporation_ground(::PALADYNCanopyEvapotranspiration, Δq, β, rₐ, rₑ)
     # Calculate ground evaporation flux in m/s (positive upwards)

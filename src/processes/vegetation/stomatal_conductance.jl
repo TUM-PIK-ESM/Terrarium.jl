@@ -1,16 +1,22 @@
 """
     $TYPEDEF
-Stomatal conductance implementation from PALADYN (Willeit 2016) following the optimal stomatal conductance model
-(Medlyn et al. 2011).
+Stomatal conductance implementation from [willeitPALADYNV10Comprehensive2016](@cite) following the optimal stomatal conductance model
+of [medlynReconcilingOptimalEmpirical2011](@cite).
 
 Authors: Maha Badri and Matteo Willeit
 
 Properties:
 $TYPEDFIELDS
+
+# References
+
+* [linOptimalStomatalBehaviour2015](@cite) Lin et al., Nature Climate Change (2015)
+* [medlynReconcilingOptimalEmpirical2011](@cite) Medlyn et al., Global Change Biology (2011)
+* [willeitPALADYNV10Comprehensive2016](@cite) Willeit & Ganopolski, Geoscientific Model Development (2016)
 """
 @kwdef struct MedlynStomatalConductance{NF} <: AbstractStomatalConductance{NF}
     "Parameter in optimal stomatal conductance formulation representing the quasi-linear
-    relationship between conductance and net assimilation, Lin et al. 2015 [-], PFT specific"
+    relationship between conductance and net assimilation, [linOptimalStomatalBehaviour2015](@cite) [-], PFT specific"
     g₁::NF = 2.3 # TODO: value for Needleleaf tree PFT
 
     "Minimum stomatal condutance parameter [mm s⁻¹]"
@@ -29,8 +35,12 @@ variables(::MedlynStomatalConductance) = (
 """
     $TYPEDSIGNATURES
 
-Compute canopy-level water conductance [m/s] from the Medlyn et al. (2011) optimal stomatal conductance model.
+Compute canopy-level water conductance [m/s] from the [medlynReconcilingOptimalEmpirical2011](@cite) optimal stomatal conductance model.
 Includes minimum conductance and light extinction effects based on LAI, scaled by soil moisture factor β.
+
+# References
+
+* [medlynReconcilingOptimalEmpirical2011](@cite) Medlyn et al., Global Change Biology (2011)
 """
 @inline function compute_gw_can(
         stomcond::MedlynStomatalConductance{NF},
@@ -58,8 +68,13 @@ end
     $SIGNATURES
 
 Computes the ratio of leaf-internal and air CO2 concentration `λc`, 
-derived from the optimal stomatal conductance model (Medlyn et al. 2011),
-Eq. 71, PALADYN (Willeit 2016).
+derived from the optimal stomatal conductance model ([medlynReconcilingOptimalEmpirical2011](@cite)),
+[willeitPALADYNV10Comprehensive2016; Eq. (71)](@cite).
+
+# References
+
+* [medlynReconcilingOptimalEmpirical2011](@cite) Medlyn et al., Global Change Biology (2011)
+* [willeitPALADYNV10Comprehensive2016](@cite) Willeit & Ganopolski, Geoscientific Model Development (2016)
 """
 @inline function compute_λc(stomcond::MedlynStomatalConductance{NF}, vpd) where {NF}
     λc = NF(1.0) - NF(1.0) / (NF(1.0) + stomcond.g₁ / sqrt(vpd * NF(1.0e-3)))

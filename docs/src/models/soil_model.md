@@ -103,9 +103,7 @@ DefaultInitializer
 
 ## Boundary conditions
 
-Terrarium provides a set of named boundary condition aliases for the most common `SoilModel`
-configurations. These return `NamedTuple`s in the format expected by the `boundary_conditions`
-keyword argument of [`initialize`](@ref).
+Terrarium provides a set of named boundary condition aliases for the most common `SoilModel` configurations. These return `NamedTuple`s in the format expected by the `boundary_conditions` keyword argument of [`initialize`](@ref).
 
 ### Energy boundary conditions
 

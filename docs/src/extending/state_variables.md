@@ -6,7 +6,6 @@ CurrentModule = Terrarium
 
 ```@setup variables
 using Terrarium
-using Terrarium: auxiliary, input
 using Oceananigans
 ```
 
@@ -23,7 +22,7 @@ Variables are typically constructed using one of the convenience functions [`pro
 
 These variable definitions are purely symbolic; they do not hold any data and cannot be used for computation. Calling [`initialize`](@ref) on a model, process, or [`Variables`](@ref) container (see following sections) results in corresponding [Fields](@ref) being allocated for each variable. 
 
-A default implementation of `variables` is provided for all `AbstractModel` and `AbstractCoupledProcesses` types that automatically collects variables from all `AbstractProcess` types defined therein:
+A default implementation of `variables` is provided for all [`AbstractModel`](@ref) and `AbstractCoupledProcesses` types that automatically collects variables from all [`AbstractProcess`](@ref) types defined therein:
 
 ```@docs; canonical = false
 variables(obj::Union{AbstractCoupledProcesses, AbstractModel})
@@ -31,14 +30,16 @@ variables(obj::Union{AbstractCoupledProcesses, AbstractModel})
 
 Most state variables will thus be defined by implementation of `AbstractProcess`. As an example, suppose we are implementing a new process `MyProcess` and we want to define the necessary state variables. We do this by defining a new dispatch of the `variables` method:
 ```julia
-variables(::MyProcess) = (
-    prognostic(:progvar, XYZ()),
-    auxiliary(:auxvar, XYZ()),
-    auxiliary(:bc, XY()),
-    input(:input, XY())
+struct MyProcess{NF} <: Terrarium.AbstractProcess{NF} end
+
+Terrarium.variables(::MyProcess) = (
+    Terrarium.prognostic(:progvar, XYZ()),
+    Terrarium.auxiliary(:auxvar, XYZ()),
+    Terrarium.auxiliary(:bc, XY()),
+    Terrarium.input(:input, XY())
 )
 ```
-This will result in a total of five state variables being allocated upon initialization: two auxiliary variables named `auxvar` and `bc` as well as one prognostic variable named `progvar` along with its corresponding tendency variable which is created automatically. The second argument to the variable metadata constructors `prognostic` and `auxiliary` is a subtype of `VarDims` which specifies on which spatial dimensions the state variable should be defined. `XYZ()` corresponds to a 3D `Field` which varies both laterally and with depth. `XY()` corresponds to a 2D field which is discretized along the lateral X and Y dimensions only.
+This will result in a total of five state variables being allocated upon initialization: one input variable, two auxiliary variables named `auxvar` and `bc` and one prognostic variable named `progvar` along with its corresponding tendency variable which is created automatically. The second argument to the variable metadata constructors `prognostic` and `auxiliary` is a subtype of `VarDims` which specifies on which spatial dimensions the state variable should be defined. [`XYZ()`](@ref) corresponds to a 3D `Field` which varies both laterally and with depth. [`XY()`](@ref) corresponds to a 2D field which is discretized along the lateral X and Y dimensions only.
 
 ## Merging and promotion rules
 
@@ -73,9 +74,9 @@ As a simple example, suppose we want to define an auxiliary variable `C` for the
 struct Pythagoras{NF} <: Terrarium.AbstractProcess{NF} end
 
 Terrarium.variables(pythag::Pythagoras) = (
-    auxiliary(:hypotenuse, XY(), hypotenuse, pythag),
-    input(:length, XY()),
-    input(:width, XY())
+    Terrarium.auxiliary(:hypotenuse, XY(), hypotenuse, pythag),
+    Terrarium.input(:length, XY()),
+    Terrarium.input(:width, XY())
 )
 
 function hypotenuse(::Pythagoras, grid, clock, fields)
@@ -97,7 +98,7 @@ state.hypotenuse[1,1,1]
 ```
 
 !!! warning "Operators vs. Fields"
-    Note that `hypotenuse` is of type `UnaryOperation` not `Field`. While operations typically behave like `Field`s and can be indexed normally in kernel functions, they are not identical and this can lead to errors if some downstream code assumes `hypotenuse` to be an actual `Field` rather than simply an array-like type. In such cases, one should instead return `Field(state.hypotenuse)` in the above constructor and then call `compute!(state.hypotenuse)` in each time step. See also the following example.
+    Note that `hypotenuse` is of type [`UnaryOperation`](@extref Oceananigans.AbstractOperations.UnaryOperation) not [`Field`](@extref Oceananigans.Fields.Field). While operations typically behave like `Field`s and can be indexed normally in kernel functions, they are not identical and this can lead to errors if some downstream code assumes `hypotenuse` to be an actual `Field` rather than simply an array-like type. In such cases, one should instead return `Field(state.hypotenuse)` in the above constructor and then call `compute!(state.hypotenuse)` in each time step. See also the following example.
 
 As another more concrete example, consider the [`soil_moisture_limiting_factor`](@ref) `Field` constructor for [`FieldCapacityLimitedPAW`](@ref):
 
@@ -108,7 +109,7 @@ function soil_moisture_limiting_factor(::FieldCapacityLimitedPAW, grid, clock, f
     return Field(β)
 end
 ```
-The resulting factor `β` is an integral over the enclosed function of `plant_available_water` and `root_fraction`. Since `Integral` is a so-called "reduction" operator, it cannot be lazily computed and instead `compute!` must be called on the `Field` in each time step, e.g:
+The resulting factor `β` is an integral over the enclosed function of `plant_available_water` and `root_fraction`. Since [`Integral`](@extref Oceananigans.AbstractOperations.Integral) is a so-called "reduction" operator, it cannot be lazily computed and instead [`compute!`](@extref Oceananigans.Fields.compute!) must be called on the `Field` in each time step, e.g:
 
 ```julia
 compute!(state.soil_moisture_limiting_factor)

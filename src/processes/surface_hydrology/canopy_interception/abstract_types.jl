@@ -6,7 +6,7 @@ abstract type AbstractCanopyInterception{NF} <: AbstractProcess{NF} end
 """
     canopy_water(i, j, grid, fields, ::AbstractCanopyInterception)
 
-Compute or retrieve the current canopy water storage [kg/m^2].
+Compute or retrieve the current canopy water storage [m].
 """
 function canopy_water end
 
