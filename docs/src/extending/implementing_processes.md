@@ -4,7 +4,7 @@
 CurrentModule = Terrarium
 ```
 
-This page is a step-by-step guide for implementing a new concrete process type in Terrarium. We assume familiarity with the [Basic concepts](@ref) and [Core interfaces](@ref) pages, both of which cover the `AbstractProcess` interface and variable system. For a concrete, self-contained worked example that follows the workflow below step by step, see the [Implementing a process: 1D linear heat diffusion](@ref linear_heat_conduction_example) example.
+This page is a step-by-step guide for implementing a new concrete process type in Terrarium. We assume familiarity with the [Basic concepts](@ref) and [Core interfaces](@ref) pages, both of which cover the `AbstractProcess` interface and variable system. For a concrete, self-contained example that follows the workflow below step by step, see the [Implementing a process: 1D linear heat diffusion](@ref linear_heat_conduction_example) example.
 
 ## Control flow
 
