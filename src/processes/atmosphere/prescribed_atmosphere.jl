@@ -158,10 +158,10 @@ Retrieve or compute the specific_humidity at the current time step.
 """
     $TYPEDSIGNATURES
 
-Computes the specific humidity (vapor pressure) deficit over a surface at temperature `Ts` from the current atmospheric fields.
+Computes the specific humidity difference between the surface at temperature `Ts` and the current atmospheric fields.
 """
-@propagate_inbounds function compute_humidity_vpd(i, j, grid, fields, atmos::AbstractAtmosphere, c::PhysicalConstants, Ts = nothing)
-    let Δe = compute_vpd(i, j, grid, fields, atmos, c, Ts),
+@propagate_inbounds function compute_specific_humidity_difference(i, j, grid, fields, atmos::AbstractAtmosphere, c::PhysicalConstants, Ts = nothing)
+    let Δe = compute_vapor_pressure_difference(i, j, grid, fields, atmos, c, Ts),
             p = air_pressure(i, j, grid, fields, atmos)
         Δq = vapor_pressure_to_specific_humidity(Δe, p, c.ε)
         return Δq
@@ -171,14 +171,15 @@ end
 """
     $TYPEDSIGNATURES
 
-Computes the vapor pressure deficit over a surface at temperature `Ts` from the current atmospheric fields.
+Computes the vapor pressure difference between a surface at temperature `Ts` and the current atmospheric fields.
 """
-@propagate_inbounds function compute_vpd(i, j, grid, fields, atmos::AbstractAtmosphere, c::PhysicalConstants, Ts = nothing)
+@propagate_inbounds function compute_vapor_pressure_difference(i, j, grid, fields, atmos::AbstractAtmosphere, c::PhysicalConstants, Ts = nothing)
     Tair = air_temperature(i, j, grid, fields, atmos)
     q_air = specific_humidity(i, j, grid, fields, atmos)
     pres = air_pressure(i, j, grid, fields, atmos)
     Ts = isnothing(Ts) ? Tair : Ts
-    return compute_vpd(c, pres, q_air, Ts)
+    es = saturation_vapor_pressure(Ts)
+    return compute_vapor_pressure_deficit(c, pres, q_air, Ts)
 end
 
 """
