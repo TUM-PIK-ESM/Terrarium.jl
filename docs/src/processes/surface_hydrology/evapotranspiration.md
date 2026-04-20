@@ -16,7 +16,7 @@ using InteractiveUtils
 
 Evapotranspiration ($\text{ET}$) (m/s) is the combined process of water evaporation from soil and open water surfaces, evaporation of water intercepted by the canopy, and transpiration through leaf stomata. These processes remove water from the surface, driving latent heat flux and competing with sensible heat and ground heat fluxes in the surface energy balance.
 
-All evapotranspiration pathways are primarily driven by the **vapor pressure gradient** or **specific humidity gradient** $\Delta q = q_{\text{sat}}(T_s) - q_a$, where $q_{\text{sat}}(T_s)$ is the saturation specific humidity at surface temperature $T_s$ (kg/kg) and $q_a$ is the atmospheric specific humidity at the atmospheric reference height (kg/kg).
+All evapotranspiration pathways are primarily driven by the **vapor pressure gradient** or **specific humidity gradient** at the surface $\Delta q = q_{\text{sat}}(T_s) - q_a$, where $q_{\text{sat}}(T_s)$ is the saturation specific humidity at surface temperature $T_s$ (kg/kg) and $q_a$ is the atmospheric specific humidity (kg/kg) at a particular reference height.
 
 Each pathway is also modulated by **aerodynamic resistance**(s) $r_a$ (s/m) (between surface and atmosphere) and possibly **stomatal resistance** $r_s$ (s/m) (in the case of transpiration).
 
