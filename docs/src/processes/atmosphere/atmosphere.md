@@ -186,11 +186,15 @@ aerodynamic_resistance
 ```
 
 ```@docs; canonical = false
-compute_vpd(i, j, grid, fields, atmos::AbstractAtmosphere, c::PhysicalConstants)
+compute_vapor_pressure_deficit(i, j, grid, fields, atmos::AbstractAtmosphere, c::PhysicalConstants)
 ```
 
 ```@docs; canonical = false
-compute_humidity_vpd(i, j, grid, fields, atmos::AbstractAtmosphere, c::PhysicalConstants)
+compute_vapor_pressure_difference(i, j, grid, fields, atmos::AbstractAtmosphere, c::PhysicalConstants, Ts)
+```
+
+```@docs; canonical = false
+compute_specific_humidity_difference(i, j, grid, fields, atmos::AbstractAtmosphere, c::PhysicalConstants, Ts)
 ```
 
 ## References
