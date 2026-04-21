@@ -73,23 +73,3 @@ and ϵ is the emissivity.
 Calcualte the psychrometric constant at the given atmospheric pressure `p`.
 """
 @inline psychrometric_constant(c::PhysicalConstants, p) = c.cₐ * p / (c.Llg * c.ε)
-
-"""
-    $SIGNATURES
-
-Computes the vapor pressure deficit for an air parcel at temperature `T` with surface pressure `pres`
-and specific humidity of air `q_air`. Assumes that air parcel is over water when `T > 0°C` and over 
-ice when `T < 0°C`.
-"""
-@inline function compute_vapor_pressure_deficit(c::PhysicalConstants{NF}, pres, q_air, T) where {NF}
-    # Compute saturation vapor pressure over a surface at temperature Ts
-    e_sat = saturation_vapor_pressure(T)
-
-    # Convert air specific humidity to vapor pressure [Pa]
-    e_air = q_air * pres / (c.ε + (1 - c.ε) * q_air)
-
-    # Compute vapor pressure deficit [Pa]
-    vpd = max(e_sat - e_air, NF(0.1))
-
-    return vpd
-end
