@@ -92,7 +92,7 @@ partial_pressure_O2
 partial_pressure_CO2
 ```
 
-## [References]
+## References
 
 ```@bibliography
 Pages = ["physics_utils.md"]
