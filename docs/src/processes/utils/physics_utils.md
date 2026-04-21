@@ -77,6 +77,10 @@ saturation_vapor_pressure
 ```
 
 ```@docs; canonical = false
+vapor_pressure_deficit
+```
+
+```@docs; canonical = false
 vapor_pressure_to_specific_humidity
 ```
 

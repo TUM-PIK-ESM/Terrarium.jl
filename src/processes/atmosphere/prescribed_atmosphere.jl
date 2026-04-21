@@ -164,7 +164,7 @@ Computes the vapor pressure deficit (VPD) at atmospheric reference level given t
     T_air = air_temperature(i, j, grid, fields, atmos)
     q_air = specific_humidity(i, j, grid, fields, atmos)
     p = air_pressure(i, j, grid, fields, atmos)
-    vpd = compute_vapor_pressure_deficit(c, p, q_air, T_air)
+    vpd = vapor_pressure_deficit(c, p, q_air, T_air)
     return vpd
 end
 """

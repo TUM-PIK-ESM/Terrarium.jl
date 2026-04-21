@@ -89,7 +89,7 @@ Computes the vapor pressure deficit for an air parcel at temperature `T` with su
 and specific humidity of air `q_air`. Assumes that air parcel is over water when `T > 0°C` and over 
 ice when `T < 0°C`.
 """
-@inline function compute_vapor_pressure_deficit(c::PhysicalConstants{NF}, pres, q_air, T) where {NF}
+@inline function vapor_pressure_deficit(c::PhysicalConstants{NF}, pres, q_air, T) where {NF}
     # Compute saturation vapor pressure of air parcel at temperature T
     e_sat = saturation_vapor_pressure(T)
 
