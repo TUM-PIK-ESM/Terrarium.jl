@@ -172,7 +172,7 @@ end
 
 Computes the specific humidity difference between the surface at temperature `Ts` and the current atmospheric fields.
 """
-@propagate_inbounds function compute_specific_humidity_difference(i, j, grid, fields, atmos::AbstractAtmosphere, c::PhysicalConstants, Ts = nothing)
+@propagate_inbounds function compute_specific_humidity_difference(i, j, grid, fields, atmos::AbstractAtmosphere, c::PhysicalConstants, Ts)
     let Δe = compute_vapor_pressure_difference(i, j, grid, fields, atmos, c, Ts),
             p = air_pressure(i, j, grid, fields, atmos)
         Δq = vapor_pressure_to_specific_humidity(Δe, p, c.ε)
@@ -185,13 +185,13 @@ end
 
 Computes the vapor pressure difference between a surface at temperature `Ts` and the current atmospheric fields.
 """
-@propagate_inbounds function compute_vapor_pressure_difference(i, j, grid, fields, atmos::AbstractAtmosphere, c::PhysicalConstants, Ts = nothing)
+@propagate_inbounds function compute_vapor_pressure_difference(i, j, grid, fields, atmos::AbstractAtmosphere, c::PhysicalConstants, Ts)
     Tair = air_temperature(i, j, grid, fields, atmos)
     q_air = specific_humidity(i, j, grid, fields, atmos)
     pres = air_pressure(i, j, grid, fields, atmos)
-    Ts = isnothing(Ts) ? Tair : Ts
-    es = saturation_vapor_pressure(Ts)
-    return compute_vapor_pressure_deficit(c, pres, q_air, Ts)
+    e_air = specific_humidity_to_vapor_pressure(q_air, pres, c.ε)
+    e_sat_s = saturation_vapor_pressure(Ts)
+    return e_sat_s
 end
 
 """
