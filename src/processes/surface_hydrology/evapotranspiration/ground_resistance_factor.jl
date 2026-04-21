@@ -46,7 +46,8 @@ ground_evaporation_resistance_factor(i, j, grid, fields, ::SoilMoistureResistanc
     hydrology = get_hydrology(soil)
     bgc = get_biogeochemistry(soil)
     soil = soil_volume(i, j, fgrid.Nz, grid, fields, strat, hydrology, bgc)
-    fc = field_capacity(get_hydraulic_properties(hydrology), soil)
+    texture = mineral_texture(soil)
+    fc = field_capacity(get_hydraulic_properties(hydrology), texture)
     fracs = volumetric_fractions(soil)
     if fracs.water < fc
         β = (1 - cos(π * fracs.water / fc))^2 / 4

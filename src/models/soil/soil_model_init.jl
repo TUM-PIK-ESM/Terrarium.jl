@@ -140,7 +140,7 @@ Properties:
 $TYPEDFIELDS
 """
 @kwdef struct SaturationWaterTable{NF} <: AbstractInitializer{NF}
-    vadose_zone_saturation::NF = 0.5
+    vadose_zone_saturation::NF = 0.75
     water_table_depth::NF = 5.0
 end
 

@@ -92,6 +92,8 @@ Alias for `SoilVolume{T, MineralOrganic{T}}`
 """
 const MineralOrganicSoil{NF} = SoilVolume{NF, MineralOrganic{NF}}
 
+@inline mineral_texture(solid::MineralOrganic) = solid.texture
+
 @inline organic_fraction(solid::MineralOrganic) = solid.organic
 
 """

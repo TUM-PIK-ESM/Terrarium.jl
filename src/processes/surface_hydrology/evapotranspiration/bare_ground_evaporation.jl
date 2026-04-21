@@ -16,7 +16,7 @@ end
 
 BareGroundEvaporation(
     ::Type{NF};
-    ground_resistance::GR = ConstantEvaporationResistanceFactor(one(NF))
+    ground_resistance::GR = SoilMoistureResistanceFactor(NF)
 ) where {NF, GR} = BareGroundEvaporation{NF, GR}(ground_resistance)
 
 @propagate_inbounds surface_humidity_flux(i, j, grid, fields, evaporation::BareGroundEvaporation, args...) = fields.evaporation_ground[i, j]
