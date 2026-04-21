@@ -10,17 +10,14 @@ using CairoMakie, GeoMakie
 import RingGrids
 import SpeedyWeather as Speedy
 
-# Temporary workaround for SpeedyWeather.jl#919
-Speedy.SpeedyTransforms.FFTW.set_num_threads(1)
-
 """
-Naive implementation of a SpeedyWeather "dry" land model based on Terrarium.
+Naive implementation of a SpeedyWeather "wet" land model based on Terrarium.
 """
-struct TerrariumDryLand{
+struct TerrariumWetLand{
         NF,
         LG <: Speedy.LandGeometry,
         TM <: Terrarium.ModelIntegrator{NF},
-    } <: Speedy.AbstractDryLand
+    } <: Speedy.AbstractWetLand
     "Speedy spectral grid"
     spectral_grid::Speedy.SpectralGrid
 
@@ -30,7 +27,7 @@ struct TerrariumDryLand{
     "Initialized Terrarium model integrator"
     integrator::TM
 
-    function TerrariumDryLand(integrator::Terrarium.ModelIntegrator{NF, Arch, Grid}; spectral_grid_kwargs...) where {NF, Arch, Grid <: ColumnRingGrid}
+    function TerrariumWetLand(integrator::Terrarium.ModelIntegrator{NF, Arch, Grid}; spectral_grid_kwargs...) where {NF, Arch, Grid <: ColumnRingGrid}
         spectral_grid = Speedy.SpectralGrid(integrator.model.grid.rings; NF, spectral_grid_kwargs...)
         land_grid = integrator.grid
         Δz = on_architecture(CPU(), land_grid.z.Δᵃᵃᶜ)
@@ -39,7 +36,7 @@ struct TerrariumDryLand{
     end
 end
 
-Speedy.variables(land::TerrariumDryLand) = (
+Speedy.variables(land::TerrariumWetLand) = (
     Speedy.PrognosticVariable(name = :soil_temperature, dims = Speedy.Grid3D(), namespace = :land),
 )
 
@@ -47,66 +44,110 @@ function Speedy.initialize!(
         ::Any,
         progn::Speedy.PrognosticVariables,
         diagn::Speedy.DiagnosticVariables,
-        land::TerrariumDryLand{NF},
+        land::TerrariumWetLand{NF},
         model::Speedy.PrimitiveEquation,
     ) where {NF}
+    Terrarium.initialize!(land.integrator)
     Tsoil = interior(land.integrator.state.temperature)[:, 1, end] .+ 273.15
     progn.land.soil_temperature .= Tsoil
-    Terrarium.initialize!(land.integrator)
     return nothing
 end
 
 function Speedy.timestep!(
         progn::Speedy.PrognosticVariables,
         diagn::Speedy.DiagnosticVariables,
-        land::TerrariumDryLand{NF},
+        land::TerrariumWetLand{NF},
         model::Speedy.PrimitiveEquation,
     ) where {NF}
-    # get speedy state variables
-    Tair = @view diagn.grid.temp_grid[:, end]
-    # terrarium state
-    state = land.integrator.state
-    set!(state.inputs.air_temperature, Tair) # first set directly to avoid allocating new fields
-    set!(state.inputs.air_temperature, state.inputs.air_temperature - 273.15) # then convert to celsius
-    # run land forward over speedy timestep interval;
-    # we use a smaller actual timestep to ensure stability
-    Terrarium.run!(land.integrator, period = progn.clock.Δt, Δt = 300.0)
-    # Get soil temperatures
-    Tsoil = state.temperature
-    # Get surface temperature (last z-layer in Oceananigans grids)
-    Nx, Nz = Tsoil.grid.Nx, Tsoil.grid.Nz
-    Tsurf = @view Tsoil[1:Nx, 1, Nz:Nz]
-    # Update speedy soil/skin temperature
-    progn.land.soil_temperature .= Tsurf .+ NF(273.15)
+    speedy_timestep!(progn, diagn, land)
     return nothing
 end
 
+function speedy_timestep!(
+        progn::Speedy.PrognosticVariables,
+        diagn::Speedy.DiagnosticVariables,
+        land::TerrariumWetLand{NF},
+    ) where {NF}
+    # land constants
+    consts = land.integrator.model.constants
+    # get speedy state variables
+    Tair = @view diagn.grid.temp_grid[:, end]
+    humid = @view diagn.grid.humid_grid[:, end]
+    pres = diagn.grid.pres_grid
+    wind = diagn.physics.surface_wind_speed
+    rain = diagn.physics.rain_rate
+    snow = diagn.physics.snow_rate
+    SwIn = diagn.physics.surface_shortwave_down
+    LwIn = diagn.physics.surface_longwave_down
+    # update Terrarium input fields
+    state = land.integrator.state
+    set!(state.inputs.air_temperature, Tair) # first set directly to avoid allocating new fields
+    set!(state.inputs.air_temperature, state.inputs.air_temperature - 273.15) # then convert to celsius
+    set!(state.inputs.air_pressure, pres) # similar with pressure
+    set!(state.inputs.air_pressure, exp(state.inputs.air_pressure)) # take exp to get pressure in Pa
+    set!(state.inputs.specific_humidity, humid)
+    set!(state.inputs.rainfall, rain)
+    set!(state.inputs.snowfall, snow)
+    set!(state.inputs.windspeed, wind)
+    set!(state.inputs.surface_shortwave_down, SwIn)
+    set!(state.inputs.surface_longwave_down, LwIn)
+    # run land forward over speedy timestep interval;
+    # we use a smaller actual timestep to ensure stability
+    Terrarium.run!(land.integrator, period = progn.clock.Δt, Δt = 60.0)
+    # Update speedy variables
+    progn.land.soil_temperature .= state.skin_temperature .+ NF(273.15)
+    progn.land.sensible_heat_flux .= state.sensible_heat_flux
+    progn.land.surface_humidity_flux .= state.latent_heat_flux ./ (consts.Lsl * consts.ρₐ)
+    diagn.physics.surface_longwave_up .= state.surface_longwave_up
+    diagn.physics.surface_shortwave_up .= state.surface_shortwave_up
+    return nothing
+end
+
+# quick test of default Speedy PrimitiveWetModel
 ring_grid = RingGrids.FullGaussianGrid(24)
+spectral_grid = Speedy.SpectralGrid(ring_grid)
+primitive_wet = Speedy.PrimitiveWetModel(spectral_grid)
+sim = Speedy.initialize!(primitive_wet)
+Speedy.run!(sim, period = Day(1))
+
 Nz = 30
 Δz_min = 0.05 # currently the coupling is only stable with a large surface layer
 grid = ColumnRingGrid(CPU(), Float32, ExponentialSpacing(; N = Nz, Δz_min), ring_grid)
 # Initial conditions
 soil_initializer = SoilInitializer(eltype(grid))
-# Soil model with prescribed surface temperature BC
-model = SoilModel(grid, initializer = soil_initializer)
-air_temperature = Field(grid, XY())
-Tair_input = InputSource(grid, air_temperature; name = :air_temperature)
-bcs = PrescribedSurfaceTemperature(:air_temperature)
-integrator = initialize(model, ForwardEuler(eltype(grid)), Tair_input, boundary_conditions = bcs)
+# Land model with "prescribed" atmosphere (from the perspective of the land model at least...)
+# vegetation = PrescribedVegetationCarbon(eltype(grid))
+model = LandModel(grid; initializer = soil_initializer, vegetation = nothing)
+initializers = (;)
+integrator = initialize(model, ForwardEuler(eltype(grid)); initializers)
+# check if land model works standalone (with default atmospheric state)
+timestep!(integrator, 60.0) # one step
+run!(integrator, period = Hour(1)) # one hour
+Terrarium.initialize!(integrator)
 
 # Initialize Terrarium-Speedy land model
-land = TerrariumDryLand(integrator)
+land = TerrariumWetLand(integrator)
 # Set up coupled model
 land_sea_mask = Speedy.RockyPlanetMask(land.spectral_grid)
+surface_heat_flux = Speedy.SurfaceHeatFlux(land.spectral_grid, land = Speedy.PrescribedLandHeatFlux())
+surface_humidity_flux = Speedy.SurfaceHumidityFlux(land.spectral_grid, land = Speedy.PrescribedLandHumidityFlux())
 output = Speedy.NetCDFOutput(land.spectral_grid, Speedy.PrimitiveDryModel, land.geometry, path = "outputs/")
 time_stepping = Speedy.Leapfrog(land.spectral_grid, Δt_at_T31 = Minute(15))
-primitive_dry_coupled = Speedy.PrimitiveDryModel(land.spectral_grid; land, land_sea_mask, time_stepping, output)
+primitive_wet_coupled = Speedy.PrimitiveWetModel(
+    land.spectral_grid;
+    land,
+    surface_heat_flux,
+    surface_humidity_flux,
+    land_sea_mask,
+    time_stepping,
+    output
+)
 # add soil temperature as output variable for Speedy simulation
-Speedy.add!(primitive_dry_coupled.output, Speedy.SoilTemperatureOutput())
+Speedy.add!(primitive_wet_coupled.output, Speedy.SoilTemperatureOutput())
 # initialize coupled simulation
-sim_coupled = Speedy.initialize!(primitive_dry_coupled)
+sim_coupled = Speedy.initialize!(primitive_wet_coupled)
 # run it
-Speedy.run!(sim_coupled, period = Day(2), output = true)
+@run Speedy.run!(sim_coupled, steps = 1, output = true)
 
 # Soil temperature in the 5th layer (~0.54 m)
 Tsoil_fig = heatmap(RingGrids.Field(interior(integrator.state.temperature)[:, 1, end - 4], grid), title = "", size = (800, 400))
