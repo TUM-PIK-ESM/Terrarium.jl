@@ -56,7 +56,7 @@ end
     Ts = fields.skin_temperature[i, j]
     rₐ = aerodynamic_resistance(i, j, grid, fields, atmos) # aerodynamic resistance
     β = ground_evaporation_resistance_factor(i, j, grid, fields, evaporation.ground_resistance, soil)
-    Δq = compute_humidity_vpd(i, j, grid, fields, atmos, constants, Ts)
+    Δq = compute_specific_humidity_difference(i, j, grid, fields, atmos, constants, Ts)
     # Calculate water evaporation flux in m/s (positive upwards)
     return out.evaporation_ground[i, j, 1] = β * Δq / rₐ
 end

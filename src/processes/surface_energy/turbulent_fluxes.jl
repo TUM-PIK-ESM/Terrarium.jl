@@ -119,7 +119,7 @@ to the latent heat flux.
             ρₐ = constants.ρₐ, # density of air
             Tₛ = skin_temperature(i, j, grid, fields, skinT),
             rₐ = aerodynamic_resistance(i, j, grid, fields, atmos), # aerodynamic resistance
-            Δq = compute_humidity_vpd(i, j, grid, fields, atmos, constants, Tₛ),
+            Δq = compute_specific_humidity_difference(i, j, grid, fields, atmos, constants, Tₛ),
             Q_h = Δq / rₐ  # humidity flux
         # Calculate latent heat flux (positive upwards)
         Hₗ = compute_latent_heat_flux(tur, Q_h, ρₐ, L)
