@@ -38,11 +38,11 @@ molecular weight ratio ε.
 @inline vapor_pressure_to_specific_humidity(e, p, ε) = ε * e / p
 
 """
-    relative_to_specific_humidity(r_h, pr, Tair)
+    relative_to_specific_humidity(r_h, pr, T, ε)
 
-Derives specific humidity from measured relative humidity, air pressure, and air temperature.
+Derives specific humidity from measured relative humidity, air pressure, air temperature, and molecular weight ratio.
 """
-@inline relative_to_specific_humidity(r_h, pr, T) = 0.622 * (r_h / 100) * saturation_vapor_pressure(Tair) / pr
+@inline relative_to_specific_humidity(r_h, pr, T, ε) = ε * (r_h / 100) * saturation_vapor_pressure(T) / pr
 
 # saturation vapor pressure
 """
