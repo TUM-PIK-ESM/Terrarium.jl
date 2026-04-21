@@ -156,7 +156,7 @@ Retrieve or compute the specific_humidity at the current time step.
 @propagate_inbounds specific_humidity(i, j, grid, fields, ::AbstractAtmosphere{NF, PR, IR, <:SpecificHumidity}) where {NF, PR, IR} = fields.specific_humidity[i, j]
 
 """
-    $TYPESIGNATURES
+    $TYPEDSIGNATURES
 
 Computes the vapor pressure deficit (VPD) at atmospheric reference level given the current atmospheric fields
 """
