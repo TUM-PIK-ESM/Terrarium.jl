@@ -156,6 +156,18 @@ Retrieve or compute the specific_humidity at the current time step.
 @propagate_inbounds specific_humidity(i, j, grid, fields, ::AbstractAtmosphere{NF, PR, IR, <:SpecificHumidity}) where {NF, PR, IR} = fields.specific_humidity[i, j]
 
 """
+    $TYPESIGNATURES
+
+Computes the vapor pressure deficit (VPD) at atmospheric reference level given the current atmospheric fields
+"""
+@propagate_inbounds function compute_vapor_pressure_deficit(i, j, grid, fields, atmos::PrescribedAtmosphere, c::PhysicalConstants, Ts = nothing)
+    T_air = air_temperature(i, j, grid, fields, atmos)
+    q_air = specific_humidity(i, j, grid, fields, atmos)
+    p = air_pressure(i, j, grid, fields, atmos)
+    vpd = compute_vapor_pressure_deficit(c, p, q_air, T_air)
+    return vpd
+end
+"""
     $TYPEDSIGNATURES
 
 Computes the specific humidity difference between the surface at temperature `Ts` and the current atmospheric fields.
