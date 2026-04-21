@@ -38,6 +38,17 @@ molecular weight ratio ε.
 @inline vapor_pressure_to_specific_humidity(e, p, ε) = ε * e / p
 
 """
+    specific_humidity_to_vapor_pressure(q, p, ε)
+
+Convert the specific humidity `q` to vapor pressure at the given pressure `p` based on the
+molecular weight ratio ε.
+"""
+@inline function specific_humidity_to_vapor_pressure(q, p, ε)
+    e = q * p / (ε + (1 - ε) * q)
+    return e
+end
+
+"""
     relative_to_specific_humidity(r_h, pr, T, ε)
 
 Derives specific humidity from measured relative humidity, air pressure, air temperature, and molecular weight ratio.
