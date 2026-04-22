@@ -97,7 +97,7 @@ function speedy_timestep!(
     # Update speedy variables
     progn.land.soil_temperature .= state.skin_temperature .+ NF(273.15)
     progn.land.sensible_heat_flux .= state.sensible_heat_flux
-    progn.land.surface_humidity_flux .= state.latent_heat_flux ./ consts.Lsl
+    progn.land.surface_humidity_flux .= state.latent_heat_flux ./ consts.Llg
     diagn.physics.surface_longwave_up .= state.surface_longwave_up
     diagn.physics.surface_shortwave_up .= state.surface_shortwave_up
     return nothing
@@ -148,7 +148,7 @@ Speedy.add!(primitive_wet_coupled.output, Speedy.SoilTemperatureOutput())
 # initialize coupled simulation
 sim_coupled = Speedy.initialize!(primitive_wet_coupled)
 # run it
-Speedy.run!(sim_coupled, period = Hour(1))
+Speedy.run!(sim_coupled, period = Hour(4))
 
 # Soil temperature in the 3rd layer
 Tsoil_fig = heatmap(RingGrids.Field(interior(integrator.state.temperature)[:, 1, end - 2], grid), title = "", size = (800, 400))
