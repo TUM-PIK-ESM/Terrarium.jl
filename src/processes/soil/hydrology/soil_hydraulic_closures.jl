@@ -94,7 +94,9 @@ end
     ψm = ψ - ψh - ψz
     swrc = get_swrc(hydrology)
     por = porosity(i, j, k, grid, fields, strat, bgc)
-    vol_water_ice_content = swrc(ψm; θsat = por)
+    sat_res = residual_saturation(get_hydraulic_properties(hydrology))
+    θres = sat_res * por
+    vol_water_ice_content = swrc(ψm; θsat = por, θres)
     saturation_water_ice[i, j, k] = vol_water_ice_content / por
     return nothing
 end
@@ -114,8 +116,10 @@ end
     # get inverse of SWRC
     inv_swrc = inv(get_swrc(hydrology))
     por = porosity(i, j, k, grid, fields, strat, bgc)
+    sat_res = residual_saturation(get_hydraulic_properties(hydrology))
+    θres = sat_res * por
     # compute matric pressure head
-    ψm = inv_swrc(sat * por; θsat = por)
+    ψm = inv_swrc(sat * por; θsat = por, θres)
     # compute elevation pressure head
     ψz = z - z_ref
     # compute hydrostatic pressure head assuming impermeable lower boundary
