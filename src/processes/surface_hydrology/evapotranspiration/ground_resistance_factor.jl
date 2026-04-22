@@ -38,7 +38,7 @@ ground_evaporation_resistance_factor(i, j, grid, fields, ::SoilMoistureResistanc
 
 @inline function ground_evaporation_resistance_factor(
         i, j, grid, fields,
-        ::SoilMoistureResistanceFactor{NF},
+        res::SoilMoistureResistanceFactor{NF},
         soil::AbstractSoil
     ) where {NF}
     fgrid = get_field_grid(grid)
@@ -50,7 +50,11 @@ ground_evaporation_resistance_factor(i, j, grid, fields, ::SoilMoistureResistanc
     fracs = volumetric_fractions(soil)
     θfc = field_capacity(get_hydraulic_properties(hydrology), texture)
     θw = fracs.water
-    if fracs.water < θfc
+    return ground_evaporation_resistance_factor(res, θw, θfc)
+end
+
+@inline function ground_evaporation_resistance_factor(::SoilMoistureResistanceFactor{NF}, θw, θfc) where {NF}
+    if θw < θfc
         β = (1 - cos(π * θw / θfc))^2 / 4
     else
         β = NF(1)

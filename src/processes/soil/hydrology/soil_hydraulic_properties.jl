@@ -87,7 +87,7 @@ $TYPEDFIELDS
     wilting_point::NF = 0.05
 
     "Residual (minimum) saturation level [-]"
-    residual::NF = 1.0e-3
+    residual::NF = 0.01
 end
 
 function ConstantSoilHydraulics(
@@ -141,7 +141,7 @@ $TYPEDFIELDS
     field_capacity_exp::NF = 0.35
 
     "Residual (minimum) saturation level [-]"
-    residual::NF = 1.0e-3
+    residual::NF = 0.01
 end
 
 function SoilHydraulicsSURFEX(
