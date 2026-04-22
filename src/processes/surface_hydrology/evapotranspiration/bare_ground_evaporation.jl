@@ -58,5 +58,6 @@ end
     β = ground_evaporation_resistance_factor(i, j, grid, fields, evaporation.ground_resistance, soil)
     Δq = compute_humidity_vpd(i, j, grid, fields, atmos, constants, Ts)
     # Calculate water evaporation flux in m/s (positive upwards)
-    return out.evaporation_ground[i, j, 1] = β * Δq / rₐ
+    E_g = β * Δq / rₐ
+    return out.evaporation_ground[i, j, 1] = E_g
 end
