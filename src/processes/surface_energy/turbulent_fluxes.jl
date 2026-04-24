@@ -42,10 +42,10 @@ end
     $TYPEDSIGNATURES
 
 Compute the latent heat flux as a function of the humidity flux `Q_h` [m/s], the density `ρₐ` [kg/m³] of air,
-and the specific latent heat of fusion `Lsl` [J/kg].
+and the specific latent heat of vaporization or sublimation `L` [J/kg].
 """
-function compute_latent_heat_flux(::DiagnosedTurbulentFluxes, Q_h, ρₐ, Lsl)
-    Hₗ = Lsl * ρₐ * Q_h
+function compute_latent_heat_flux(::DiagnosedTurbulentFluxes, Q_h, ρₐ, L)
+    Hₗ = L * ρₐ * Q_h
     return Hₗ
 end
 
@@ -140,9 +140,9 @@ defined by `evtr` which is assumed to be already computed.
         evtr::AbstractEvapotranspiration,
         constants::PhysicalConstants
     )
-    let L = constants.Llg, # specific latent heat of vaporization of water
-            ρₐ = constants.ρₐ, # density of air
-            Q_h = surface_humidity_flux(i, j, grid, fields, evtr)   # humidity flux
+    let L = constants.Llg # specific latent heat of vaporization of water
+        ρₐ = constants.ρₐ # density of air
+        Q_h = surface_humidity_flux(i, j, grid, fields, evtr)   # humidity flux
         # Calculate latent heat flux (positive upwards)
         Hₗ = compute_latent_heat_flux(tur, Q_h, ρₐ, L)
         return Hₗ
