@@ -93,7 +93,7 @@ function speedy_timestep!(
     set!(state.inputs.surface_longwave_down, LwIn)
     # run land forward over speedy timestep interval;
     # we use a smaller actual timestep to ensure stability
-    Terrarium.run!(land.integrator, period = progn.clock.Δt, Δt = 60.0)
+    Terrarium.run!(land.integrator, period = progn.clock.Δt, Δt = 300.0)
     # Update speedy variables
     progn.land.soil_temperature .= state.skin_temperature .+ NF(273.15)
     progn.land.sensible_heat_flux .= state.sensible_heat_flux
@@ -111,11 +111,11 @@ sim = Speedy.initialize!(primitive_wet)
 Speedy.run!(sim, period = Day(1))
 
 Nz = 30
-Δz_min = 0.05 # currently the coupling is only stable with a large surface layer
+Δz_min = 0.05
 grid = ColumnRingGrid(CPU(), Float32, ExponentialSpacing(; N = Nz, Δz_min), ring_grid)
 # Initial conditions
 soil_initializer = SoilInitializer(eltype(grid))
-soil = SoilEnergyWaterCarbon(eltype(grid), hydrology = SoilHydrology(eltype(grid), RichardsEq()))
+soil = SoilEnergyWaterCarbon(eltype(grid), hydrology = SoilHydrology(eltype(grid)))
 # Land model with "prescribed" atmosphere (from the perspective of the land model at least...)
 # vegetation = PrescribedVegetationCarbon(eltype(grid))
 model = LandModel(grid; initializer = soil_initializer, vegetation = nothing, soil)
@@ -123,7 +123,7 @@ initializers = (;)
 integrator = initialize(model, ForwardEuler(eltype(grid)); initializers)
 # check if land model works standalone (with default atmospheric state)
 timestep!(integrator, 60.0) # one step
-run!(integrator, period = Hour(1), Δt = 120.0) # one hour
+run!(integrator, period = Hour(1), Δt = 300.0) # one hour
 Terrarium.initialize!(integrator) # reinitialize before setting up atmosphere
 
 # Initialize Terrarium-Speedy land model
@@ -148,28 +148,30 @@ Speedy.add!(primitive_wet_coupled.output, Speedy.SoilTemperatureOutput())
 # initialize coupled simulation
 sim_coupled = Speedy.initialize!(primitive_wet_coupled)
 # run it
-Speedy.run!(sim_coupled, period = Hour(4))
+period = Day(1)
+@info "Running simulation for $period"
+@time Speedy.run!(sim_coupled, period = period)
+Terrarium.checkfinite!(integrator.state)
 
-# Soil temperature in the 3rd layer
+# Land variables
 Tsoil_fig = heatmap(RingGrids.Field(interior(integrator.state.temperature)[:, 1, end - 2], grid), title = "", size = (800, 400))
 Tsurf_fig = heatmap(RingGrids.Field(interior(integrator.state.skin_temperature)[:, 1], grid), title = "", size = (800, 400))
-sat_fig = heatmap(RingGrids.Field(interior(integrator.state.saturation_water_ice)[:, 1, end], grid), title = "", size = (800, 400))
+Hs_fig = heatmap(RingGrids.Field(interior(integrator.state.sensible_heat_flux)[:, 1], grid), title = "", size = (800, 400))
+Hl_fig = heatmap(RingGrids.Field(interior(integrator.state.latent_heat_flux)[:, 1], grid), title = "", size = (800, 400))
 E_fig = heatmap(RingGrids.Field(interior(integrator.state.evaporation_ground)[:, 1], grid), title = "", size = (800, 400))
+sat_fig = heatmap(RingGrids.Field(interior(integrator.state.saturation_water_ice)[:, 1, end], grid), title = "", size = (800, 400))
 # Atmosphere variables
 Tair_fig = heatmap(sim_coupled.diagnostic_variables.grid.temp_grid[:, 8] .- 273.15, title = "Air temperature", size = (800, 400))
 pres_fig = heatmap(exp.(sim_coupled.diagnostic_variables.grid.pres_grid), title = "Surface pressure", size = (800, 400))
-srad_fig = heatmap(exp.(sim_coupled.diagnostic_variables.physics.surface_shortwave_down), title = "Surface shortwave down", size = (800, 400))
-
-# animate surface air and soil temperatures
-Speedy.animate(sim_coupled, variable = "temp", coastlines = false, level = spectral_grid.nlayers, output_file = "plots/speedy_terrarium_dry_air_temperature.mp4")
-# Speedy.animate(sim_coupled, variable = "st", coastlines = false, level = 1, output_file = "plots/speedy_terrarium_dry_soil_temperature.mp4") # TODO: this is broken now for some reason?
+srad_fig = heatmap(sim.diagnostic_variables.physics.surface_shortwave_down, title = "Surface shortwave down", size = (800, 400))
 
 # pick a point somewhere in the mid-lattitudes
 T = interior(integrator.state.temperature)[2000, 1, :]
 sat = interior(integrator.state.saturation_water_ice)[2000, 1, :]
 f = interior(integrator.state.liquid_water_fraction)[2000, 1, :]
 zs = znodes(integrator.state.temperature)
+
 # Plot temperature and liquid fraction profiles in upper 15 layers
-Makie.scatterlines(T[(end - 15):end], zs[(end - 15):end])
-Makie.scatterlines(sat[(end - 15):end], zs[(end - 15):end])
+Makie.scatterlines(T, zs)
+Makie.scatterlines(sat, zs)
 Makie.scatterlines(f, zs)
