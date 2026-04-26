@@ -161,8 +161,8 @@ Retrieve or compute the specific_humidity at the current time step.
 Computes the specific humidity (vapor pressure) deficit over a surface at temperature `Ts` from the current atmospheric fields.
 """
 @propagate_inbounds function compute_humidity_vpd(i, j, grid, fields, atmos::AbstractAtmosphere, c::PhysicalConstants, Ts = nothing)
-    let Δe = compute_vpd(i, j, grid, fields, atmos, c, Ts),
-            p = air_pressure(i, j, grid, fields, atmos)
+    let Δe = compute_vpd(i, j, grid, fields, atmos, c, Ts)
+        p = air_pressure(i, j, grid, fields, atmos)
         Δq = vapor_pressure_to_specific_humidity(Δe, p, c.ε)
         return Δq
     end
