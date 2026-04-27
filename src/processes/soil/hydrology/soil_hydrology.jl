@@ -252,10 +252,9 @@ the porosity and is thus not the same as the saturation tendency.
         evtr::Optional{AbstractEvapotranspiration}
     ) where {NF}
     # Compute divergence of water fluxes due to forcings only
-    ∂θ∂t = (
-        + forcing(i, j, k, grid, clock, fields, evtr, hydrology, constants) # ET forcing
-            + forcing(i, j, k, grid, clock, fields, hydrology.vwc_forcing, hydrology) # generic user-defined forcing
-    )
+    ET_loss = forcing(i, j, k, grid, clock, fields, evtr, hydrology, constants) # ET forcing
+    F = forcing(i, j, k, grid, clock, fields, hydrology.vwc_forcing, hydrology) # generic user-defined forcing
+    ∂θ∂t = ET_loss + F
     return ∂θ∂t
 end
 
