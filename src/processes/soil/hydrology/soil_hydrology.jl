@@ -182,13 +182,16 @@ arising due to numerical error. This implementation scans over the saturation pr
 grid cell and redistributes excess water upward layer-by-layer until reaching the topmost layer, where
 any remaining excess water is added to the `surface_excess_water` pool.
 """
-@propagate_inbounds function adjust_saturation_profile!(out, i, j, grid, ::SoilHydrology{NF}) where {NF}
-    sat = out.saturation_water_ice
-    surface_excess_water = out.surface_excess_water
+@propagate_inbounds function adjust_saturation_profile!(out, i, j, grid, hydrology::SoilHydrology{NF}) where {NF}
+    props = get_hydraulic_properties(hydrology)
+    sat_min = residual_saturation(props)
     field_grid = get_field_grid(grid)
     N = field_grid.Nz
+    sat = out.saturation_water_ice
+    surface_excess_water = out.surface_excess_water
 
-    # First iterate over soil layers from bottom to top
+    # First iterate over soil layers from bottom to top, transferring water from
+    # overfilled layers to the layer above
     for k in 1:(N - 1)
         # calculate excess saturation
         excess_sat = max(sat[i, j, k] - one(NF), zero(NF))
@@ -198,10 +201,10 @@ any remaining excess water is added to the `surface_excess_water` pool.
         sat[i, j, k + 1] += excess_sat * Δzᵃᵃᶜ(i, j, k, field_grid) / Δzᵃᵃᶜ(i, j, k + 1, field_grid)
     end
 
-    # then from top to bottom
+    # then from top to bottom, extracting water for underfilled cells from layers below
     for k in N:-1:2
-        # calculate saturation deficit
-        deficit_sat = max(-sat[i, j, k], zero(NF))
+        # calculate saturation deficit from residual saturation level
+        deficit_sat = max(-sat[i, j, k] + sat_min, zero(NF))
         # add back saturation deficit and subtract from layer below
         sat[i, j, k] += deficit_sat
         sat[i, j, k - 1] -= deficit_sat * Δzᵃᵃᶜ(i, j, k, field_grid) / Δzᵃᵃᶜ(i, j, k - 1, field_grid)
@@ -212,9 +215,9 @@ any remaining excess water is added to the `surface_excess_water` pool.
     sat[i, j, N] -= excess_sat
     surface_excess_water[i, j, 1] += excess_sat * Δzᵃᵃᶜ(i, j, N, field_grid)
 
-    # If the lowermost (bottom) layer has a deficit, just set to zero.
+    # If the lowermost (bottom) layer has a deficit, just set to the residual saturation level.
     # This constitutes a mass balance violation but should not happen under realistic conditions.
-    sat[i, j, 1] = max(sat[i, j, 1], zero(NF))
+    sat[i, j, 1] = max(sat[i, j, 1], sat_min)
     return nothing
 end
 
@@ -249,10 +252,9 @@ the porosity and is thus not the same as the saturation tendency.
         evtr::Optional{AbstractEvapotranspiration}
     ) where {NF}
     # Compute divergence of water fluxes due to forcings only
-    ∂θ∂t = (
-        + forcing(i, j, k, grid, clock, fields, evtr, hydrology, constants) # ET forcing
-            + forcing(i, j, k, grid, clock, fields, hydrology.vwc_forcing, hydrology) # generic user-defined forcing
-    )
+    ET_loss = forcing(i, j, k, grid, clock, fields, evtr, hydrology, constants) # ET forcing
+    F = forcing(i, j, k, grid, clock, fields, hydrology.vwc_forcing, hydrology) # generic user-defined forcing
+    ∂θ∂t = ET_loss + F
     return ∂θ∂t
 end
 
@@ -298,3 +300,8 @@ end
     i, j, k = @index(Global, NTuple)
     compute_hydraulics!(out, i, j, k, grid, fields, hydrology, args...)
 end
+
+# Default debug hooks
+@inline debughook!(::typeof(compute_water_table_kernel!), out, args...) = checkfinite!(out)
+@inline debughook!(::typeof(adjust_saturation_profile_kernel!), out, args...) = checkfinite!(out)
+@inline debughook!(::typeof(compute_hydraulics_kernel!), out, args...) = checkfinite!(out)
