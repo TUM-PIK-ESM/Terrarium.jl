@@ -59,24 +59,6 @@ vapor_pressure_deficit
 ```
 
 
-### Vapor pressure difference 
-
-The vapor pressure difference $\Delta e$ is the difference in vapor pressure between two air parcels at different heights, typically between the atmospheric reference height and the land surface. Under the typical assumption that the land surface is saturated (see e.g. [zhouPhysicalBasisEp2024](@cite)), the vapor pressure difference is computed as:
-
-```math
-\begin{equation}
-\Delta e = e_s - e_a = e_{\text{sat}}(T_s) - e_a(q_a, p)
-\end{equation}
-```
-
-with $T_s$ the land surface temperature. The corresponding specific humidity difference is
-
-```math
-\begin{equation}
-\Delta q = \frac{\varepsilon \Delta e}{p}.
-\end{equation}
-```
-
 ### Aerodynamic resistance
 
 The `PrescribedAtmosphere` delegates to an [`AbstractAerodynamics`](@ref) parameterization
@@ -191,19 +173,4 @@ aerodynamic_resistance
 
 ```@docs; canonical = false
 compute_vapor_pressure_deficit(i, j, grid, fields, atmos::AbstractAtmosphere, c::PhysicalConstants)
-```
-
-```@docs; canonical = false
-compute_vapor_pressure_difference(i, j, grid, fields, atmos::AbstractAtmosphere, c::PhysicalConstants, Ts)
-```
-
-```@docs; canonical = false
-compute_specific_humidity_difference(i, j, grid, fields, atmos::AbstractAtmosphere, c::PhysicalConstants, Ts)
-```
-
-## References
-
-```@bibliography
-Pages = ["atmosphere.md"]
-Canonical = false
 ```
