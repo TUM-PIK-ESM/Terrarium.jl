@@ -103,6 +103,26 @@ variables(atmos::PrescribedAtmosphere{NF}) where {NF} = (
 @inline compute_tendencies!(state, grid, atmos::PrescribedAtmosphere) = nothing
 
 """
+    $SIGNATURES
+
+Computes the vapor pressure deficit for an air parcel at temperature `T` with surface pressure `pres`
+and specific humidity of air `q_air`. Assumes that air parcel is over water when `T > 0°C` and over 
+ice when `T < 0°C`.
+"""
+@inline function vapor_pressure_deficit(c::PhysicalConstants{NF}, pres, q_air, T) where {NF}
+    # Compute saturation vapor pressure of air parcel at temperature T
+    e_sat = saturation_vapor_pressure(T)
+
+    # Convert air specific humidity to vapor pressure [Pa]
+    e_air = specific_humidity_to_vapor_pressure(q_air, pres, c.ε)
+
+    # Compute vapor pressure deficit [Pa]
+    vpd = max(e_sat - e_air, NF(0.1))
+
+    return vpd
+end
+
+"""
     aerodynamic_resistance(i, j, grid, fields, atmos::PrescribedAtmosphere)
 
 Compute the aerodynamic resistance (inverse conductance) at grid cell `i, j`.

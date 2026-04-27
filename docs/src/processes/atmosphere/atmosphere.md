@@ -54,6 +54,10 @@ VPD = e_{\text{sat}}(T_a) - e_a(q_a, p)
 
 where $e_{\text{sat}}(T_a)$ is the saturation vapor pressure at surface temperature $T_a$, and $e_a = q_a p / \varepsilon$ is the actual vapor pressure, with $\varepsilon \approx 0.622$ the ratio of molecular weights of water vapor to dry air. 
 
+```@docs; canonical = false
+vapor_pressure_deficit
+```
+
 
 ### Vapor pressure difference 
 
