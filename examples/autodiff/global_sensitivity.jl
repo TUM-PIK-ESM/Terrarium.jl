@@ -46,3 +46,41 @@ integrator = initialize(model, ForwardEuler(eltype(grid)), Tair_forcing; initial
 # plot heatmap of soil temperature at the surface
 heatmap(RingGrids.Field(integrator.state.temperature, grid)[:, end])
 heatmap(RingGrids.Field(integrator.state.liquid_water_fraction, grid)[:, end])
+
+using Enzyme
+using Statistics
+
+function mean_surface_temperature(clock, model, inputs, state, inits, timestepper)
+    integrator = Terrarium.ModelIntegrator(clock, model, inputs, state, inits, timestepper)
+    run!(integrator, steps = 1)
+    return mean(interior(integrator.state.temperature)[:, :, end])
+end
+
+dmodel = Ref(make_zero(model))
+dintegrator = make_zero(integrator)
+dstate = dintegrator.state
+dinputs = dintegrator.inputs
+
+autodiff(
+    set_runtime_activity(Enzyme.Reverse),
+    mean_surface_temperature,
+    Active,
+    Const(integrator.clock),
+    MixedDuplicated(model, dmodel),
+    Duplicated(integrator.inputs, dinputs),
+    Duplicated(integrator.state, dstate),
+    Const(integrator.initializers),
+    Duplicated(integrator.timestepper, make_zero(integrator.timestepper))
+)
+
+@show dmodel.x.soil.energy.thermal_properties.conductivities
+# compute sensitivity of T to the parameter of interest as:
+# ∂f∂p⁻¹⋅∂f∂T
+dTdp = dmodel.x.soil.energy.thermal_properties.conductivities.ice / dstate.temperature
+
+zs = znodes(integrator.state.temperature)
+Makie.with_theme(fontsize = 18) do
+    fig = heatmap(RingGrids.Field(Field(dstate.temperature), grid)[:, end], title = "Sensitivity of global mean soil surface temperature to initial condition", size = (800, 400))
+    Makie.save("plots/global_sensitivity_initialT_era5land.png", fig)
+    fig
+end
