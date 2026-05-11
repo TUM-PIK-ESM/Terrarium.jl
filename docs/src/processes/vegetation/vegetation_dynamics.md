@@ -42,7 +42,7 @@ This implementation follows the Lotka–Volterra approach of PALADYN [willeitPAL
 \end{equation}
 ```
 
-where $\lambda_{\text{NPP}}$ is the NPP partitioning factor computed by the vegetation carbon dynamics process (see [Vegetation carbon dynamics](@ref)), $\text{NPP}$ is the net primary production, $C_{\text{veg}}$ is the total vegetation carbon pool, $\nu^* = \max(\nu, \nu_{\text{seed}})$ where $\nu_{\text{seed}}$ is a small seeding fraction to ensure that a PFT is always seeded and $\gamma_v$ is the disturbance rate.
+where $\lambda_{\text{NPP}}$ is the $\text{NPP}$-partitioning factor computed by the vegetation carbon dynamics process (see [Vegetation carbon dynamics](@ref)), $\text{NPP}$ is the net primary production, $C_{\text{veg}}$ is the total vegetation carbon pool, $\nu^* = \max(\nu, \nu_{\text{seed}})$ where $\nu_{\text{seed}}$ is a small seeding fraction to ensure that a PFT is always seeded and $\gamma_v$ is the disturbance rate.
 
 The first term on the right-hand side represents the expansion of PFT $i$ driven by the fraction of NPP allocated to spreading. 
 

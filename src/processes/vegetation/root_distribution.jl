@@ -1,8 +1,8 @@
 """
     $TYPEDEF
 
-Static vegetation root distribution implementation in PALADYN (Willeit 2016)
-based on the scheme proposed by Zeng (2001). The continuous density of the
+Static vegetation root distribution implementation in [willeitPALADYNV10Comprehensive2016](@cite)
+based on the scheme proposed by [zengGlobalVegetationRoot2001](@cite). The continuous density of the
 root distribution is modeled as
 ```math
 \\frac{\\partial R}{\\partial z} = \\frac{1}{2} \\left[ a \\exp(a z) + b \\exp(b z) \\right]
@@ -13,6 +13,11 @@ with units m⁻¹. The resulting CDF of this distribution determines the root di
 
 Properties:
 $FIELDS
+
+# References
+
+* [willeitPALADYNV10Comprehensive2016](@cite) Willeit & Ganopolski, Geoscientific Model Development (2016)
+* [zengGlobalVegetationRoot2001](@cite) Zeng, Journal of Hydrometeorology (2001)
 """
 @kwdef struct StaticExponentialRootDistribution{NF} <: AbstractRootDistribution{NF}
     "First empirical rate parameter for root distribution"

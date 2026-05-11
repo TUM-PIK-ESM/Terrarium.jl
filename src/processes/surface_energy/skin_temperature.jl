@@ -113,7 +113,7 @@ end
 """
     $TYPEDSIGNATURES
 
-Compute `ground_heat_flux` as the residual `R_\\text{net} - H_s - H_l`.
+Compute `ground_heat_flux` as the residual ``R_\\text{net} - H_s - H_l``.
 """
 function compute_ground_heat_flux!(
         state, grid,

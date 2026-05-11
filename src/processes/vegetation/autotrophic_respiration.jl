@@ -2,12 +2,17 @@
 """
     $TYPEDEF
 
-Autotrophic respiration implementation from PALADYN (Willeit 2016).
+Autotrophic respiration implementation from [willeitPALADYNV10Comprehensive2016](@cite).
 
 Authors: Maha Badri and Matteo Willeit
 
 Properties:
 $TYPEDFIELDS
+
+# References
+
+* [willeitPALADYNV10Comprehensive2016](@cite) Willeit & Ganopolski, Geoscientific Model Development (2016)
+* [coxDescriptionTRIFFIDDynamic2001](@cite) Cox, Hadley Centre Technical Note (2001)
 """
 @kwdef struct PALADYNAutotrophicRespiration{NF} <: AbstractAutotrophicRespiration{NF}
     # TODO check physical meaning of this parameter + add unit
@@ -18,7 +23,7 @@ $TYPEDFIELDS
     "Root parameter"
     cn_root::NF = 29.0
 
-    "Ratio of total to respiring stem carbon, Cox 2001, PFT specific [-]"
+    "Ratio of total to respiring stem carbon, [coxDescriptionTRIFFIDDynamic2001](@cite), PFT specific [-]"
     aws::NF = 10.0 # Value for Needleleaf tree PFT
 end
 
@@ -168,7 +173,11 @@ end
 """
     $TYPEDSIGNATURES
 
-Compute autotrophic respiration following the scheme of PALADYN (Willeit 2016).
+Compute autotrophic respiration following the scheme of [willeitPALADYNV10Comprehensive2016](@cite).
+
+# References
+
+* [willeitPALADYNV10Comprehensive2016](@cite) Willeit & Ganopolski, Geoscientific Model Development (2016)
 """
 @propagate_inbounds function compute_autotrophic_respiration(
         i, j, grid, fields,

@@ -99,11 +99,15 @@ end
 """
     $TYPEDEF
 
-Soil hydraulics parameterization that includes the SURFEX (Masson et al. 2013) formulation of field capacity
+Soil hydraulics parameterization that includes the SURFEX [noilhanISBA1996; Eq. (28-29)](@cite) formulation of field capacity
 and wilting point as a function of soil texture.
 
 Properties:
 $TYPEDFIELDS
+
+# References
+
+* [noilhanISBA1996](@cite) Noilhan & Mahfouf, Global and Planetary Change (1996)
 """
 @kwdef struct SoilHydraulicsSURFEX{NF, RC, UnsatK <: AbstractUnsatK{NF}} <: AbstractSoilHydraulics{NF, RC, UnsatK}
     "Soil water retention curve"
@@ -180,9 +184,14 @@ end
     $TYPEDEF
 
 Formulation of hydraulic conductivity as a function of saturated hydraulic conductivity `K_sat` and
-volumetric fractions, assumed to include those of water, ice, and air.
+volumetric fractions, assumed to include those of water, ice, and air, following the van Genuchten 
+formulation [vangenuchtenHydraulicConductivity1980](@cite) extended with an ice impedance factor 
+[westermannCryoGridCommunityModel2023](@cite).
 
-See van Genuchten (1980) and Westermann et al. (2023).
+# References
+
+* [vangenuchtenHydraulicConductivity1980](@cite) Van Genuchten, Soil Science Society of America Journal (1980)
+* [westermannCryoGridCommunityModel2023](@cite) Westermann et al., Geoscientific Model Development (2023)
 """
 struct UnsatKVanGenuchten{NF} <: AbstractUnsatK{NF}
     "Exponential scaling factor for ice impedance"

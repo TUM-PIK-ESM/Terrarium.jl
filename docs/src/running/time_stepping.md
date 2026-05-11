@@ -86,7 +86,7 @@ sim = Simulation(integrator; stop_time = 24*3600.0, Δt = 300.0)
 run!(sim)
 ```
 
-Note that `stop_time` is by default expressed in the same units as the `clock`, which is here seconds. However, `Oceananigans.Units` provides convenient conversion factors for other time units (e.g. `days`, `hours`):
+Note that `stop_time` is by default expressed in the same units as the `clock`, which is here seconds. However, [`Oceananigans.Units`](https://clima.github.io/OceananigansDocumentation/stable/units) provides convenient conversion factors for other time units (e.g. `days`, `hours`):
 
 ```@example simulation
 using Oceananigans.Units: days
@@ -96,9 +96,9 @@ sim = Simulation(integrator; stop_time = 1days, Δt = 300.0)
 
 ### Output writers
 
-We can make use of `Oceananigans.OutputWriters` to flexibly save output to disk in a variety of formats.
+We can make use of [`Oceananigans.OutputWriters`](https://clima.github.io/OceananigansDocumentation/stable/simulations/output_writers) to flexibly save output to disk in a variety of formats.
 
-The simplest choice output writer is `JLD2Writer` which saves selected `Field`s to a `.jld2` file at a specified schedule:
+The simplest choice output writer is [`JLD2Writer`](@extref Oceananigans.OutputWriters.JLD2Writer) which saves selected [`Field`s](@extref Oceananigans.Fields.Field) to a `.jld2` file at a specified schedule:
 
 ```@example simulation
 using Oceananigans: JLD2Writer, TimeInterval
@@ -128,7 +128,7 @@ run!(sim)
     Always call `Terrarium.initialize!(integrator)` **before** calling `run!(sim)` when re-running a simulation; otherwise, the simulation will not run due to the stopping condition already being satisfied.
 
 
-The saved file can be read back as a `FieldTimeSeries` for post-processing:
+The saved file can be read back as a [`FieldTimeSeries`](@extref Oceananigans.OutputReaders.FieldTimeSeries-Tuple{JLD2.JLDFile, String}) for post-processing:
 
 ```@example simulation
 using Oceananigans: FieldTimeSeries
@@ -141,9 +141,9 @@ Output writers can also accept subtypes `AbstractSchedule` via the `schedule` ke
 
 | Schedule type | Description |
 |---------------|-------------|
-| `TimeInterval(Δt)` | Write every `Δt` seconds of simulation time |
-| `IterationInterval(n)` | Write every `n` timesteps |
-| `AveragedTimeInterval(Δt)` | Write time-averaged outputs over windows of `Δt` seconds |
+| [`TimeInterval(Δt)`](@extref Oceananigans.Utils.TimeInterval) | Write every `Δt` seconds of simulation time |
+| [`IterationInterval(n)`](@extref Oceananigans.Utils.IterationInterval) | Write every `n` timesteps |
+| [`AveragedTimeInterval(Δt)`](@extref Oceananigans.OutputWriters.AveragedTimeInterval) | Write time-averaged outputs over windows of `Δt` seconds |
 
 Multiple output writers can be added to the same simulation, e.g. to save different
 variables at different frequencies:
@@ -155,8 +155,8 @@ sim.output_writers[:daily]  = JLD2Writer(integrator, (pressure_head = ...,); sch
 
 ### Callbacks
 
-Terrarium simulations inherit the full Oceananigans `Callback` machinery.
-A callback is a function that is called by `Simulation` at a given schedule during `run!`:
+Terrarium simulations inherit the full Oceananigans [`Callback`](@extref Oceananigans.Simulations.Callback) machinery.
+A callback is a function that is called by [`Simulation`](@extref Oceananigans.Simulations.Simulation) at a given schedule during `run!`:
 
 ```@example simulation
 using Oceananigans: Callback, IterationInterval

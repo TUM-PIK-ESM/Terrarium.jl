@@ -1,4 +1,4 @@
-# # Implementing a process: 1D linear heat diffusion
+# # [Implementing a process: 1D linear heat diffusion](@id linear_heat_conduction_example)
 #
 # In this example, we walk through implementing a new process in Terrarium following the
 # workflow described on the [Implementing processes](@ref) page. We use a simple 1D linear
@@ -61,7 +61,7 @@ Terrarium.variables(::LinearHeatConduction) = (
 
 # ## Primitive methods
 #
-# Primitive methods are pure scalar functions accepting and returning scalar values with no
+# Primitive methods are pure scalar functions accepting and returning scalar values
 # completely independently of the spatial grid. They should generally be used to implement
 # elementary physical equations such as Fourier's law in the case of heat conduction. Primitive
 # methods should always be marked with `@inline` so the compiler can inline them directly into the
@@ -77,7 +77,7 @@ end
 #
 
 proc = LinearHeatConduction(Float64)
-compute_diffusive_flux(proc, 10.0)  # => -10.0 W/m²
+compute_diffusive_flux(proc, 10.0)  # => -20.0 W/m²
 
 # ## Kernel functions
 #
@@ -89,6 +89,17 @@ compute_diffusive_flux(proc, 10.0)  # => -10.0 W/m²
 # - a **flux function** evaluated at vertical cell faces (passed as a higher-order argument to `∂zᵃᵃᶜ`)
 # - a **tendency function** that evaluates the flux divergence at cell centers
 #
+# As mentioned in the documentation on [`Fields`](@ref), operators can be applied to a `Field` to construct
+# expression trees. One of these operators defined in Oceananigans is the spatial derivative.
+# For this example, we're only interested in the derivative along the vertical axis `z`.
+# As the spatial discretisation is done with the finite-volume method, the fluxes are evaluated at the cell faces.
+# Using Oceananigans' operators, this spatial derivative at the cell faces is written as `∂zᵃᵃᶠ`,
+# where the superscript `aaf` indicates that the operator is location-agnostic (`a`) in the `x` and `y` directions
+# and evaluates at the cell faces (`f`) in the `z` direction. The  divergence of the flux is for the one dimensional case
+# equal to the spatial derivative of the flux at the cell centers, which is written as `∂zᵃᵃᶜ`.
+# For more background info on these operators, see the [Spatial operators documentation of
+# Oceananigans](https://clima.github.io/OceananigansDocumentation/stable/numerical_implementation/spatial_operators).
+
 # When passed as a higher-order argument to `∂zᵃᵃᶜ`, the flux function receives the underlying
 # Oceananigans field grid as its `grid` argument (not the Terrarium grid wrapper).
 
@@ -209,7 +220,7 @@ initializers = (
 integrator = initialize(model, ForwardEuler(eltype(grid)); initializers)
 T_init = copy(vec(interior(integrator.state.temperature)))
 
-# Run for 10 days to let the step front diffuse:
+# Run for 2 days to let the step front diffuse:
 
 using Oceananigans.Units: days
 

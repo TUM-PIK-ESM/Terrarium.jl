@@ -36,17 +36,17 @@ variables(model)
 
 | Field | Type | Scope | Process page |
 |-------|------|-------|---------------|
-| `atmosphere` | [`AbstractAtmosphere`](@ref) | Meteorological input variables | [Atmosphere](@ref) |
+| `atmosphere` | [`AbstractAtmosphere`](@ref) | Meteorological input variables | [Atmosphere](@ref atmosphere_docs) |
 | `soil` | [`AbstractSoil`](@ref) | Energy, water, carbon in soil | [Soil processes](@ref) |
-| `surface_energy_balance` | [`AbstractSurfaceEnergyBalance`](@ref) | Radiative and turbulent energy fluxes | [Surface energy balance](@ref) |
-| `surface_hydrology` | [`AbstractSurfaceHydrology`](@ref) | Infiltration, evapotranspiration, interception | [Surface hydrology](@ref) |
-| `vegetation` | `Optional{`[`AbstractVegetation`](@ref)`}` | Coupled vegetation carbon processes | [Vegetation](@ref) |
+| `surface_energy_balance` | [`AbstractSurfaceEnergyBalance`](@ref) | Radiative and turbulent energy fluxes | [Surface energy balance](@ref surface_energy_balance_docs) |
+| `surface_hydrology` | [`AbstractSurfaceHydrology`](@ref) | Infiltration, evapotranspiration, interception | [Surface hydrology](@ref surface_hydrology_docs) |
+| `vegetation` | `Optional{`[`AbstractVegetation`](@ref)`}` | Coupled vegetation carbon processes | [Vegetation](@ref vegetation_docs) |
 
 Each component can be configured separately when constructing a `LandModel`. `vegetation` is optional and can be disabled by setting `vegetation = nothing` in the constructor; this corresponds to a bare ground land-atmosphere coupling. Each component of `LandModel` is summarized briefly below. See the linked pages for further details about each component process.
 
 ### Atmosphere
 
-The `atmosphere` component provides (possibly time-varying) meteorological inputs. The default implementation is [`PrescribedAtmosphere`](@ref), which reads air temperature, humidity, wind, radiation, and precipitation from [`InputVariable`](@ref)s and provides them as boundary conditions to the surface energy balance, hydrology, and vegetation components. See [Atmospheric inputs](@ref) for further details on the atmosphere interface.
+The `atmosphere` component provides (possibly time-varying) meteorological inputs. The default implementation is [`PrescribedAtmosphere`](@ref), which reads air temperature, humidity, wind, radiation, and precipitation from [`InputVariable`](@ref)s and provides them as boundary conditions to the surface energy balance, hydrology, and vegetation components. See [Atmospheric inputs](@ref atmosphere_docs) for further details on the atmosphere interface.
 
 ### Soil
 
@@ -54,15 +54,15 @@ The `soil` component represents the solid land surface extending from the topmos
 
 ### Surface energy balance
 
-The `surface_energy_balance` component computes the energy fluxes at the land-atmosphere interface, including solar radiation, thermal radiation, and turbulent heat fluxes. The default implementation is [`SurfaceEnergyBalance`](@ref). See [Surface energy balance](@ref) for details.
+The `surface_energy_balance` component computes the energy fluxes at the land-atmosphere interface, including solar radiation, thermal radiation, and turbulent heat fluxes. The default implementation is [`SurfaceEnergyBalance`](@ref). See [Surface energy balance](@ref surface_energy_balance_docs) for details.
 
 ### Surface hydrology
 
-The `surface_hydrology` component manages water exchange between the atmosphere and the land surface, including canopy interception, evapotranspiration, and surface runoff partitioning. The default implementation is [`SurfaceHydrology`](@ref). See [Surface hydrology](@ref) for details.
+The `surface_hydrology` component manages water exchange between the atmosphere and the land surface, including canopy interception, evapotranspiration, and surface runoff partitioning. The default implementation is [`SurfaceHydrology`](@ref). See [Surface hydrology](@ref surface_hydrology_docs) for details.
 
 ### Vegetation
 
-The `vegetation` component represents vegetation carbon cycling, including photosynthesis, stomatal conductance, respiration, phenology, and carbon dynamics. The default implementation is [`VegetationCarbon`](@ref). See [Vegetation](@ref) for details.
+The `vegetation` component represents vegetation carbon cycling, including photosynthesis, stomatal conductance, respiration, phenology, and carbon dynamics. The default implementation is [`VegetationCarbon`](@ref). See [Vegetation](@ref vegetation_docs) for details.
 
 ## Initializers
 

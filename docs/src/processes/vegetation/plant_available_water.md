@@ -33,7 +33,7 @@ The impact of soil water availability on photosynthesis is aggregated across the
 \end{equation}
 ```
 
-where $r(z)$ is the normalized root fraction at depth $z$, and $z_{\text{max}}$ is the rooting depth. This soil moisture limiting factor $\beta_s \in \[0, 1\]$ directly modulates the rate of [autotrophic respiration](@ref "Autotrophic respiration") and thus also the net primary plant productivity of vegetation.
+where $r(z)$ is the normalized root fraction at depth $z$, and $z_{\text{max}}$ is the rooting depth. This soil moisture limiting factor $\beta_s \in \left[0, 1\right]$ directly modulates the rate of [autotrophic respiration](@ref "Autotrophic respiration") and thus also the net primary plant productivity of vegetation.
 
 ## Implementations
 
@@ -42,10 +42,10 @@ where $r(z)$ is the normalized root fraction at depth $z$, and $z_{\text{max}}$ 
 A common assumption is to consider PAW to be the fraction of water between the wilting point (where plants can no longer extract water) and field capacity (approximately optimal water availability). The fraction of available water for a given soil layer is then defined as,
 ```math
 \begin{equation}
-W = \min\left(\frac{\theta_w - \theta_{wp}}{\theta_{fc} - \theta_{wp}}, 1\right)
+W = \min\left(\frac{\theta_{\text{liq}} - \theta_{\text{wp}}}{\theta_{\text{fc}} - \theta_{\text{wp}}}, 1\right)
 \end{equation}
 ```
-where $\theta_w$ is the current volumetric water content, $\theta_{wp}$ is the wilting point, and $\theta_{fc}$ is the field capacity matric potential. Both wilting point and field capacity are derived from soil texture properties and the water retention characteristics of the soil.
+where $\theta_{\text{liq}}$ is the current volumetric water content, $\theta_{\text{wp}}$ is the wilting point, and $\theta_{\text{fc}}$ is the field capacity matric potential. Both wilting point and field capacity are derived from soil texture properties and the water retention characteristics of the soil (see [the documentation on soil hydraulic properties](@ref "Hydraulic properties")).
 
 ```@docs; canonical = false
 FieldCapacityLimitedPAW

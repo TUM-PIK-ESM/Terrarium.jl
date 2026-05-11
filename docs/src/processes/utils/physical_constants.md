@@ -14,11 +14,7 @@ using InteractiveUtils
 
 ## Overview
 
-`PhysicalConstants` collects fundamental physical constants used throughout Terrarium's
-process implementations. All constants are stored as fields of a single struct so that
-they are passed explicitly through the call graph — avoiding global state and keeping
-the code fully differentiable with Enzyme.jl. The struct is parametrically typed so that
-constants are automatically promoted to the model's numeric precision `NF`.
+[`PhysicalConstants`](@ref) collects fundamental physical constants used throughout Terrarium's process implementations. All constants are stored as fields of a single struct so that they are passed explicitly through the call graph — avoiding global state and keeping the code fully differentiable with Enzyme.jl. The struct is parametrically typed so that constants are automatically promoted to the model's numeric precision `NF`.
 
 ```@docs; canonical = false
 PhysicalConstants
@@ -56,8 +52,4 @@ stefan_boltzmann
 
 ```@docs; canonical = false
 psychrometric_constant
-```
-
-```@docs; canonical = false
-compute_vpd(c::PhysicalConstants, pres, q_air, T)
 ```

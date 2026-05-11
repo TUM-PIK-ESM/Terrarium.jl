@@ -15,10 +15,7 @@ using InteractiveUtils
 
 ## Overview
 
-Gross primary production
-(GPP) provides the carbon input to the system. A fraction of this carbon is released back to the atmosphere through autotrophic
-respiration $R_a$, which is represented as the sum of two terms: maintenance respiration $R_m$ (the carbon cost of
-maintaining existing plant tissues) and growth respiration $R_g$ (the carbon cost of producing new plant tissues).
+Gross primary production ($\text{GPP}$) provides the carbon input to the system. A fraction of this carbon is released back to the atmosphere through autotrophic respiration $R_a$, which is represented as the sum of two terms: maintenance respiration $R_m$ (the carbon cost of maintaining existing plant tissues) and growth respiration $R_g$ (the carbon cost of producing new plant tissues).
 
 
 ```math
@@ -27,8 +24,7 @@ R_a = R_m + R_g
 \end{equation}
 ```
 
-The remaining
-carbon is the net primary production (NPP), which is then allocated to the different plant components.
+The remaining carbon is the net primary production ($\text{NPP}$), which is then allocated to the different plant components.
 
 ```math
 \begin{equation}

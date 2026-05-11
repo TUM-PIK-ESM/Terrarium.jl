@@ -39,12 +39,12 @@ variables(PALADYNCanopyInterception(Float32))
 Following PALADYN [willeitPALADYNV10Comprehensive2016](@cite), the fraction of precipitation intercepted is
 ```math
 \begin{equation}
-I_{\text{can}} = \alpha_{\text{int}} P (1 - e^{-k_{\text{ext}}(L + S)})\,,
+I_{\text{can}} = \alpha_{\text{int}} P (1 - e^{-k_{\text{ext}}(\text{LAI} + \text{SAI})})\,,
 \end{equation}
 ```
-where $\alpha_{\text{int}}$ is the interception factor (-), $P$ is incident precipitation (m/s), $k_{\text{ext}}$ is the radiation extinction coefficient (-), $L$ is the leaf area index (LAI) (m²/m²), and $S$ is the stem area index (SAI) (m²/m²).
+where $\alpha_{\text{int}}$ is the interception factor (-), $P$ is incident precipitation (m/s), $k_{\text{ext}}$ is the radiation extinction coefficient (-), $\text{LAI}$ is the leaf area index (m²/m²), and $\text{SAI}$ is the stem area index (m²/m²).
 
-The term $(1 - e^{-k_{\text{ext}}(L+S)})$ represents the vegetation cover fraction and increases from 0 (bare ground) toward 1 (dense forest).
+The term $(1 - e^{-k_{\text{ext}}(\text{LAI} + \text{SAI})})$ represents the vegetation cover fraction following the Beer-Lambert law (see e.g. [vandijkModellingInterception2001](@cite)) and increases from 0 (bare ground) toward 1 (dense forest).
 
 ### Canopy water storage
 
@@ -54,23 +54,23 @@ The canopy water balance is expressed as
 \frac{\partial w_{\text{can}}}{\partial t} = I_{\text{can}} - E_{\text{can}} - R_{\text{can}}\,,
 \end{equation}
 ```
-where $w_{\text{can}}$ is liquid water stored on the canopy (kg/m²), $I_{\text{can}}$ is the interception rate (m/s), $E_{\text{can}}$ is evaporation of intercepted water (m/s), and $R_{\text{can}}$ is the removal rate (m/s).
+where $w_{\text{can}}$ is liquid water stored on the canopy (m), $I_{\text{can}}$ is the interception rate (m/s), $E_{\text{can}}$ is evaporation of intercepted water (m/s), and $R_{\text{can}}$ is the removal rate (m/s).
 
-The canopy storage capacity is diagnosed from the sum of the leaf and stem area indices,
+The canopy storage capacity $w_{\text{can, max}}$ (m) is diagnosed from the sum of the leaf and stem area indices,
 ```math
 \begin{equation}
-w_{\text{can, max}} = w_0 (L + S)\,,
+w_{\text{can, max}} = w_0 (\text{LAI} + \text{SAI})\,,
 \end{equation}
 ```
-where $w_0$ is the specific water capacity per unit leaf/stem area.
+where $w_0$ (m) is the specific water capacity per unit leaf/stem area.
 
 The removal rate of water from the canopy (e.g. due to gravity-induced drip) is computed as
 ```math
 \begin{equation}
-R_{\text{can}} = \frac{w_{\text{can}}}{\rho_w \tau_w}\,,
+R_{\text{can}} = \frac{w_{\text{can}}}{\tau_w}\,,
 \end{equation}
 ```
-where $\rho_w$ is the density of water (kg/m³) and $\tau_w$ is the canopy water removal timescale (typically 1 day = 86400 s) (s).
+where $\tau_w$ is the canopy water removal timescale (typically 1 day = 86400 s) (s).
 
 The saturation fraction of the canopy is
 ```math

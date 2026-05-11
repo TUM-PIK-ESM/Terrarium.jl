@@ -11,6 +11,8 @@ Simple forward 2nd order Heun / improved Euler time stepping scheme.
     stage::Stage = nothing
 end
 
+Heun(::Type{NF}; kwargs...) where {NF} = Heun{NF, Nothing}(; kwargs...)
+
 default_dt(heun::Heun) = heun.Δt
 
 is_adaptive(heun::Heun) = false

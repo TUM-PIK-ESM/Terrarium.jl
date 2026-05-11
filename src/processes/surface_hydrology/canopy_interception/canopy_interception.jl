@@ -28,10 +28,14 @@ passthrough_rainfall(::NoCanopyInterception, grid, clock, fields) = fields.rainf
 """
     $TYPEDEF
 
-Canopy interception and storage implementation following PALADYN (Willeit 2016) considering only liquid water (no snow).
+Canopy interception and storage implementation following PALADYN ([willeitPALADYNV10Comprehensive2016](@cite)) considering only liquid water (no snow).
 
 Properties:
 $FIELDS
+
+# References
+* [verseghyCLASSCanadianLand1993](@cite) Verseghy et al., International Journal of Climatology (1993)
+* [willeitPALADYNV10Comprehensive2016](@cite) Willeit and Ganopolski, Geoscientific Model Development (2016)
 """
 @kwdef struct PALADYNCanopyInterception{NF} <: AbstractCanopyInterception{NF}
     "Canopy water interception factor for tree PFTs"
@@ -41,7 +45,7 @@ $FIELDS
     "Extinction coefficient for radiation through vegetation [-]"
     k_ext::NF = 0.5
 
-    "Canopy interception capacity parameter, Verseghy 1991 [m]"
+    "Canopy interception capacity parameter, [verseghyCLASSCanadianLand1993](@cite) [m]"
     w_can_max::NF = 2.0e-4
 
     "Canopy water removal timescale [s]"
@@ -67,7 +71,10 @@ variables(::PALADYNCanopyInterception) = (
 """
     $TYPEDSIGNATURES
 
-Compute `I_can`, the canopy rain interception, following Eq. 42, PALADYN (Willeit 2016).
+Compute `I_can`, the canopy rain interception, following [willeitPALADYNV10Comprehensive2016; Eq. (42)](@cite).
+
+# References
+* [willeitPALADYNV10Comprehensive2016](@cite) Willeit and Ganopolski, Geoscientific Model Development (2016)
 """
 @inline function compute_canopy_interception(canopy_interception::PALADYNCanopyInterception{NF}, precip, LAI, SAI) where {NF}
     I_can = canopy_interception.α_int * precip * (one(NF) - exp(-canopy_interception.k_ext * (LAI + SAI)))
@@ -102,7 +109,10 @@ end
 """
     $TYPEDSIGNATURES
 
-Compute the `w_can` tendency and removal rate following Eq. 41, PALADYN (Willeit 2016).
+Compute the `w_can` tendency and removal rate following [willeitPALADYNV10Comprehensive2016; Eq. (41)](@cite).
+
+# References
+* [willeitPALADYNV10Comprehensive2016](@cite) Willeit and Ganopolski, Geoscientific Model Development (2016)
 """
 @inline function compute_w_can_tendency(
         ::PALADYNCanopyInterception{NF},
@@ -117,8 +127,11 @@ end
     $SIGNATURES
 
 Compute `rainfall_ground`, the rate of rain reaching the ground, following a modified version
-of Eq. 44, PALADYN (Willeit 2016). Instead of subtracting the tendency, we just directly subtract
+of [willeitPALADYNV10Comprehensive2016; Eq. (44)](@cite). Instead of subtracting the tendency, we just directly subtract
 interception and add the removal rate `R_can`.
+
+# References
+* [willeitPALADYNV10Comprehensive2016](@cite) Willeit and Ganopolski, Geoscientific Model Development (2016)
 """
 @inline function compute_precip_ground(
         ::PALADYNCanopyInterception{NF},
