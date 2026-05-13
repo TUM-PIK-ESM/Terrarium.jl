@@ -69,11 +69,11 @@ pressure is computed over ice for `T <= 0°C` and over water for `T > 0°C`. Wra
 """
 @inline function saturation_vapor_pressure(c::PhysicalConstants, T::NF) where {NF}
     T_K = celsius_to_kelvin(c, T)
-    return if T <= zero(T)
-        saturation_vapor_pressure(c, T_K, Ice())
-    else
+    return ifelse(
+        T <= zero(T),
+        saturation_vapor_pressure(c, T_K, Ice()),
         saturation_vapor_pressure(c, T_K, Liquid())
-    end
+    )
 end
 
 """
@@ -85,9 +85,9 @@ over ice for `T <= 0°C` and over liquid water otherwise. Wrapper around
 """
 @inline function saturation_specific_humidity_vapor(c::PhysicalConstants, T, ρ)
     T_K = celsius_to_kelvin(c, T)
-    return if T <= zero(T)
-        q_vap_saturation(c, T_K, ρ, Ice())
-    else
+    return ifelse(
+        T <= zero(T),
+        q_vap_saturation(c, T_K, ρ, Ice()),
         q_vap_saturation(c, T_K, ρ, Liquid())
-    end
+    )
 end
