@@ -199,7 +199,7 @@ Follows [willeitPALADYNV10Comprehensive2016; Eqs. (C4-C5)](@cite) and [haxeltine
 """
 @inline function compute_assimilation_factors(
         photo::LUEPhotosynthesis{NF},
-        constants::PhysicalConstants{NF},
+        constants::MaterialConstants{NF},
         Γ_star::NF, T_stress::NF, Kc::NF, Ko::NF, pres_i::NF, pres_O2::NF
     ) where {NF}
     # The factor of 2 in the c_1 denominator relates to the partial pressure terms in the compensation point.
@@ -283,7 +283,7 @@ Compute and return leaf respiration [gC/m²/s] and net assimilation [gC/m²/s] r
 """
 function compute_respiration_assimilation(
         photo::LUEPhotosynthesis{NF},
-        constants::PhysicalConstants{NF},
+        constants::MaterialConstants{NF},
         T_air::NF, swdown::NF, pres::NF, co2::NF, LAI::NF, λc::NF, β::NF,
     ) where {NF}
     # Compute partial CO2 and O2 pressures in [Pa]
@@ -396,7 +396,7 @@ Returns instantaneous rates in [gC/m²/s] and [kgC/m²/s] for integration by the
 
     # Compute Rd, leaf respiration rate in [gC/m²/s],
     # An, net photosynthesis rate in [gC/m²/s]
-    Rd, An = compute_respiration_assimilation(photo, constants, T_air, swdown, pres, co2, LAI, λc, β)
+    Rd, An = compute_respiration_assimilation(photo, constants.material_constants, T_air, swdown, pres, co2, LAI, λc, β)
 
     # Compute GPP, Gross Primary Production in [kgC/m²/s]
     GPP = compute_GPP(photo, An)

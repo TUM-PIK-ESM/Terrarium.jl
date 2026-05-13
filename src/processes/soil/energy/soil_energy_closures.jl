@@ -72,7 +72,9 @@ end
         constants::PhysicalConstants
     ) where {NF, OP}
     T = fields.temperature[i, j, k] # assumed given
-    L = constants.water_density * constants.latent_heat_fusion_at_reference
+    ρw = constants.material_constants.water_density
+    Lsl = constants.thermodynamic_constants.latent_heat_fusion_at_reference
+    L = ρw * Lsl
     por = porosity(i, j, k, grid, fields, strat, bgc)
     sat = saturation_water_ice(i, j, k, grid, fields, hydrology)
     # calculate unfrozen water content from temperature
@@ -108,7 +110,9 @@ end
     )
 
     U = fields.internal_energy[i, j, k] # assumed given
-    L = constants.water_density * constants.latent_heat_fusion_at_reference
+    ρw = constants.material_constants.water_density
+    Lsl = constants.thermodynamic_constants.latent_heat_fusion_at_reference
+    L = ρw * Lsl
     por = porosity(i, j, k, grid, fields, strat, bgc)
     sat = saturation_water_ice(i, j, k, grid, fields, hydrology)
     Lθ = L * sat * por

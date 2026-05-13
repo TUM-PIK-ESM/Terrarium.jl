@@ -38,25 +38,25 @@ Compute partial pressure of CO2 from surface pressure and CO2 concentration in P
 end
 
 """
-    relative_to_specific_humidity(r_h, pr, T, c::PhysicalConstants)
+    relative_to_specific_humidity(r_h, pr, T, c::ThermodynamicConstants)
 
 Derives specific humidity from measured relative humidity `r_h` [%], air pressure `pr` [Pa],
 air temperature `T` [°C], and physical constants `c`. Assumes saturation over ice for
 `T <= 0°C` and over liquid water otherwise. Wrapper around
 [`q_vap_from_RH`](@extref Thermodynamics.q_vap_from_RH).
 """
-@inline function relative_to_specific_humidity(r_h, pr, T, c::PhysicalConstants)
+@inline function relative_to_specific_humidity(r_h, pr, T, c::ThermodynamicConstants)
     T_K = celsius_to_kelvin(c, T)
     phase = T <= zero(T) ? Ice() : Liquid()
     return q_vap_from_RH(c, pr, T_K, r_h / 100, phase)
 end
 
 """
-    vapor_pressure_to_specific_humidity(c::PhysicalConstants, e, pr)
+    vapor_pressure_to_specific_humidity(c::ThermodynamicConstants, e, pr)
 
 Derives specific humidity from measured vapor pressure `e` [Pa] and air pressure `pr` [Pa]. 
 """
-@inline function vapor_pressure_to_specific_humidity(c::PhysicalConstants, e, pr)
+@inline function vapor_pressure_to_specific_humidity(c::ThermodynamicConstants, e, pr)
     return ε(c) * e / (pr - e * (1 - ε(c)))
 end
 
@@ -67,7 +67,7 @@ Saturation vapor pressure of an air parcel at the given temperature `T` in °C. 
 pressure is computed over ice for `T <= 0°C` and over water for `T > 0°C`. Wrapper around
 [`saturation_vapor_pressure`](@extref Thermodynamics.saturation_vapor_pressure).
 """
-@inline function saturation_vapor_pressure(c::PhysicalConstants, T::NF) where {NF}
+@inline function saturation_vapor_pressure(c::ThermodynamicConstants, T::NF) where {NF}
     T_K = celsius_to_kelvin(c, T)
     return ifelse(
         T <= zero(T),
@@ -77,13 +77,13 @@ pressure is computed over ice for `T <= 0°C` and over water for `T > 0°C`. Wra
 end
 
 """
-    saturation_specific_humidity_vapor(c::PhysicalConstants, T, ρ)
+    saturation_specific_humidity_vapor(c::ThermodynamicConstants, T, ρ)
 
 Saturation specific humidity at temperature `T` [°C] and density `ρ` [kg/m³]. Dispatches
 over ice for `T <= 0°C` and over liquid water otherwise. Wrapper around
 [`q_vap_saturation`](@extref Thermodynamics.q_vap_saturation).
 """
-@inline function saturation_specific_humidity_vapor(c::PhysicalConstants, T, ρ)
+@inline function saturation_specific_humidity_vapor(c::ThermodynamicConstants, T, ρ)
     T_K = celsius_to_kelvin(c, T)
     return ifelse(
         T <= zero(T),

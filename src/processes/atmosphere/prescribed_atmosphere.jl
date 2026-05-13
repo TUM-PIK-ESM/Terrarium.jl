@@ -112,7 +112,7 @@ pressure `pres` [Pa] and specific humidity `q_air` [kg/kg].
 Assumes that air parcel is over water when `T > 0°C` and over ice when `T < 0°C`.
 Wrapper around [`vapor_pressure_deficit`](@extref Thermodynamics.vapor_pressure_deficit).
 """
-@inline function vapor_pressure_deficit(c::PhysicalConstants, T, pres, q_air)
+@inline function vapor_pressure_deficit(c::ThermodynamicConstants, T, pres, q_air)
     T_K = celsius_to_kelvin(c, T)
     vpd = Thermodynamics.vapor_pressure_deficit(c, T_K, pres, q_air)
     return vpd
@@ -179,7 +179,7 @@ Computes the vapor pressure deficit (VPD) [Pa] at atmospheric reference level gi
     T_air = air_temperature(i, j, grid, fields, atmos)
     q_air = specific_humidity(i, j, grid, fields, atmos)
     p = air_pressure(i, j, grid, fields, atmos)
-    vpd = vapor_pressure_deficit(c, T_air, p, q_air)
+    vpd = vapor_pressure_deficit(c.thermodynamic_constants, T_air, p, q_air)
     return vpd
 end
 
