@@ -203,7 +203,7 @@ Follows [willeitPALADYNV10Comprehensive2016; Eqs. (C4-C5)](@cite) and [haxeltine
         Γ_star::NF, T_stress::NF, Kc::NF, Ko::NF, pres_i::NF, pres_O2::NF
     ) where {NF}
     # The factor of 2 in the c_1 denominator relates to the partial pressure terms in the compensation point.
-    c_1 = photo.α_C3 * T_stress * constants.C_mass * (pres_i - Γ_star) / (pres_i + NF(2.0) * Γ_star)
+    c_1 = photo.α_C3 * T_stress * constants.atomic_weight_carbon * (pres_i - Γ_star) / (pres_i + NF(2.0) * Γ_star)
     c_2 = (pres_i - Γ_star) / (pres_i + Kc * (NF(1.0) + pres_O2 / Ko))
     return c_1, c_2
 end

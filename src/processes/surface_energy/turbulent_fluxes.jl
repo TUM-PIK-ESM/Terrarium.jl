@@ -173,7 +173,7 @@ to the latent heat flux.
         constants::PhysicalConstants,
         atmos::AbstractAtmosphere
     )
-    let L = constants.Llg, # specific latent heat of vaporization of water
+    let L = constants.latent_heat_vaporization_at_reference,
             Tₛ = skin_temperature(i, j, grid, fields, skinT),
             Tₐ = air_temperature(i, j, grid, fields, atmos), # air temperature
             pres = air_pressure(i, j, grid, fields, atmos),
@@ -203,7 +203,7 @@ defined by `evtr` which is assumed to be already computed.
         constants::PhysicalConstants,
         atmos::AbstractAtmosphere
     )
-    let L = constants.Llg, # specific latent heat of vaporization of water
+    let L = constants.latent_heat_vaporization_at_reference,
             Tₐ = air_temperature(i, j, grid, fields, atmos), # air temperature
             pres = air_pressure(i, j, grid, fields, atmos),
             q_air = specific_humidity(i, j, grid, fields, atmos),
