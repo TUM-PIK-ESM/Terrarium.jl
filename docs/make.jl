@@ -149,6 +149,9 @@ links = InterLinks(
     "Thermodynamics" => "https://clima.github.io/Thermodynamics.jl/stable/",
 )
 
+# Always have `using Terrarium` available in doctests
+DocMeta.setdocmeta!(Terrarium, :DocTestSetup, :(using Terrarium); recursive = true)
+
 
 makedocs(
     format = Documenter.HTML(
