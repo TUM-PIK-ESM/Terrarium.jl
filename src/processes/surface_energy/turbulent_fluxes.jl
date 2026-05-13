@@ -41,11 +41,11 @@ end
 """
     $TYPEDSIGNATURES
 
-Compute the latent heat flux [W/m²] as a function of the humidity flux `Q_h` [m/s], the density `ρₐ` [kg/m³] of air,
-and the specific latent heat of fusion `Lsl` [J/kg].
+Compute the latent heat flux as a function of the humidity flux `Q_h` [m/s], the density `ρₐ` [kg/m³] of air,
+and the specific latent heat of vaporization or sublimation `L` [J/kg].
 """
-function compute_latent_heat_flux(::DiagnosedTurbulentFluxes, Q_h, ρₐ, Lsl)
-    Hₗ = Lsl * ρₐ * Q_h
+function compute_latent_heat_flux(::DiagnosedTurbulentFluxes, Q_h, ρₐ, L)
+    Hₗ = L * ρₐ * Q_h
     return Hₗ
 end
 
@@ -218,32 +218,10 @@ end
 
 # Kernels
 
-@kernel function compute_auxiliary_kernel!(
-        out, grid, fields,
-        tur::DiagnosedTurbulentFluxes,
-        skinT::AbstractSkinTemperature,
-        constants::PhysicalConstants,
-        atmos::AbstractAtmosphere
-    )
+@kernel function compute_auxiliary_kernel!(out, grid, fields, tur::DiagnosedTurbulentFluxes, args...)
     i, j = @index(Global, NTuple)
     # compute sensible heat flux
-    out.sensible_heat_flux[i, j, 1] = compute_sensible_heat_flux(i, j, grid, fields, tur, skinT, constants, atmos)
+    out.sensible_heat_flux[i, j, 1] = compute_sensible_heat_flux(i, j, grid, fields, tur, args...)
     # compute latent heat flux
-    out.latent_heat_flux[i, j, 1] = compute_latent_heat_flux(i, j, grid, fields, tur, skinT, constants, atmos)
-end
-
-# TODO: Can these dispatches be standardized to reduce redundancy?
-@kernel function compute_auxiliary_kernel!(
-        out, grid, fields,
-        tur::DiagnosedTurbulentFluxes,
-        skinT::AbstractSkinTemperature,
-        constants::PhysicalConstants,
-        atmos::AbstractAtmosphere,
-        evtr::AbstractEvapotranspiration
-    )
-    i, j = @index(Global, NTuple)
-    # compute sensible heat flux
-    out.sensible_heat_flux[i, j, 1] = compute_sensible_heat_flux(i, j, grid, fields, tur, skinT, constants, atmos)
-    # compute latent heat flux
-    out.latent_heat_flux[i, j, 1] = compute_latent_heat_flux(i, j, grid, fields, tur, evtr, constants, atmos)
+    out.latent_heat_flux[i, j, 1] = compute_latent_heat_flux(i, j, grid, fields, tur, args...)
 end
