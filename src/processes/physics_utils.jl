@@ -1,11 +1,3 @@
-import Thermodynamics:
-    partial_pressure_vapor, # used as if for conversion from specific humidity to vapor pressure
-    saturation_vapor_pressure,
-    q_vap_from_RH,
-    q_vap_saturation,
-    Ice,
-    Liquid
-
 """
 Return the number of seconds per day in the given number format.
 """
@@ -47,8 +39,8 @@ air temperature `T` [°C], and physical constants `c`. Assumes saturation over i
 """
 @inline function relative_to_specific_humidity(r_h, pr, T, c::ThermodynamicConstants)
     T_K = celsius_to_kelvin(c, T)
-    phase = T <= zero(T) ? Ice() : Liquid()
-    return q_vap_from_RH(c, pr, T_K, r_h / 100, phase)
+    phase = T <= zero(T) ? Thermodynamics.Ice() : Thermodynamics.Liquid()
+    return Thermodynamics.q_vap_from_RH(c, pr, T_K, r_h / 100, phase)
 end
 
 """
@@ -71,8 +63,8 @@ pressure is computed over ice for `T <= 0°C` and over water for `T > 0°C`. Wra
     T_K = celsius_to_kelvin(c, T)
     return ifelse(
         T <= zero(T),
-        saturation_vapor_pressure(c, T_K, Ice()),
-        saturation_vapor_pressure(c, T_K, Liquid())
+        Thermodynamics.saturation_vapor_pressure(c, T_K, Thermodynamics.Ice()),
+        Thermodynamics.saturation_vapor_pressure(c, T_K, Thermodynamics.Liquid())
     )
 end
 
@@ -87,7 +79,7 @@ over ice for `T <= 0°C` and over liquid water otherwise. Wrapper around
     T_K = celsius_to_kelvin(c, T)
     return ifelse(
         T <= zero(T),
-        q_vap_saturation(c, T_K, ρ, Ice()),
-        q_vap_saturation(c, T_K, ρ, Liquid())
+        Thermodynamics.q_vap_saturation(c, T_K, ρ, Thermodynamics.Ice()),
+        Thermodynamics.q_vap_saturation(c, T_K, ρ, Thermodynamics.Liquid())
     )
 end

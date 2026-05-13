@@ -1,8 +1,3 @@
-import Thermodynamics
-import Thermodynamics.Parameters:
-    AbstractThermodynamicsParameters
-import Thermodynamics: air_density, cp_m
-
 """
     $TYPEDEF
 
@@ -18,7 +13,7 @@ ThermodynamicConstants{Float64}(1004.5, 2070.0, 4186.0, 1846.0, 334000.0, 2.257e
 Properties:
 $FIELDS
 """
-@kwdef struct ThermodynamicConstants{NF} <: AbstractThermodynamicsParameters{NF}
+@kwdef struct ThermodynamicConstants{NF} <: Thermodynamics.Parameters.AbstractThermodynamicsParameters{NF}
     "Isobaric specific heat capacity of dry air at standard pressure and 0°C in J/(m^3*K)"
     specific_heat_capacity_dry_air::NF = 1004.5
     "Isobaric specific heat capacity of ice at standard pressure and 0°C in J/(m^3*K)"
@@ -172,7 +167,7 @@ Compute the isobaric specific heat capacity [J/(kg*K)] of moist air as a functio
 of the total specific humidity `q` [kg/kg]. Wrapper around 
 [`cp_m`](@extref Thermodynamics.cp_m). 
 """
-@inline specific_heat_capacity_moist_air(c::ThermodynamicConstants, q) = cp_m(c, q)
+@inline specific_heat_capacity_moist_air(c::ThermodynamicConstants, q) = Thermodynamics.cp_m(c, q)
 """
     celsius_to_kelvin(c::ThermodynamicConstants, T)
 

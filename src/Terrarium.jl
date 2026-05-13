@@ -52,6 +52,7 @@ import Interpolations
 import Oceananigans
 import Oceananigans.Diagnostics
 import RingGrids
+import Thermodynamics
 
 """
 Alias for numeric `Quantity` with type `NF` and units `U`.

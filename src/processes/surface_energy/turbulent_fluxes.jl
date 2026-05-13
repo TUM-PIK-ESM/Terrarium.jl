@@ -59,7 +59,7 @@ Relies on [Thermodynamics.jl](https://github.com/CliMA/Thermodynamics.jl) via
 [`saturation_vapor_pressure`](@ref saturation_vapor_pressure).
 """
 function vapor_pressure_difference(c::ThermodynamicConstants, p, q_air, T)
-    e_air = partial_pressure_vapor(c, p, q_air)
+    e_air = Thermodynamics.partial_pressure_vapor(c, p, q_air)
     e_sat_s = saturation_vapor_pressure(c, T)
     Δe = e_sat_s - e_air
     return Δe
@@ -74,7 +74,7 @@ and the atmosphere, defined by its specific humidity `q_air` [kg/kg] and pressur
 function specific_humidity_difference(c::ThermodynamicConstants, p, q_air, T)
     T_K = celsius_to_kelvin(c, T)
     # TODO: should use surface air density for better accuracy
-    ρₐ = air_density(c, T_K, p, q_air)
+    ρₐ = Thermodynamics.air_density(c, T_K, p, q_air)
     q_sat = saturation_specific_humidity_vapor(c, T, ρₐ)
     Δq = q_sat - q_air
     return Δq
@@ -151,7 +151,7 @@ Compute the sensible heat flux at `i, j` based on the current skin temperature a
             q_air = specific_humidity(i, j, grid, fields, atmos),
             cₐ = specific_heat_capacity_moist_air(constants.thermodynamic_constants, q_air), # specific heat capacity of moist air
             # TODO: density should be evaluated at surface temperature for better accuracy
-            ρₐ = air_density(constants.thermodynamic_constants, celsius_to_kelvin(constants.thermodynamic_constants, Tₐ), pres, q_air),
+            ρₐ = Thermodynamics.air_density(constants.thermodynamic_constants, celsius_to_kelvin(constants.thermodynamic_constants, Tₐ), pres, q_air),
             Q_T = (Tₛ - Tₐ) / rₐ  # bulk aerodynamic temperature-gradient
         # Calculate sensible heat flux (positive upwards)
         Hₛ = compute_sensible_heat_flux(tur, Q_T, ρₐ, cₐ)
@@ -179,7 +179,7 @@ to the latent heat flux.
             pres = air_pressure(i, j, grid, fields, atmos),
             q_air = specific_humidity(i, j, grid, fields, atmos),
             # TODO: density should be evaluated at surface temperature for better accuracy
-            ρₐ = air_density(constants.thermodynamic_constants, celsius_to_kelvin(constants.thermodynamic_constants, Tₐ), pres, q_air),
+            ρₐ = Thermodynamics.air_density(constants.thermodynamic_constants, celsius_to_kelvin(constants.thermodynamic_constants, Tₐ), pres, q_air),
             rₐ = aerodynamic_resistance(i, j, grid, fields, atmos), # aerodynamic resistance
             Δq = compute_specific_humidity_difference(i, j, grid, fields, atmos, constants, Tₛ),
             Q_h = Δq / rₐ  # humidity flux
@@ -208,7 +208,7 @@ defined by `evtr` which is assumed to be already computed.
             pres = air_pressure(i, j, grid, fields, atmos),
             q_air = specific_humidity(i, j, grid, fields, atmos),
             # TODO: density should be evaluated at surface temperature for better accuracy
-            ρₐ = air_density(constants.thermodynamic_constants, celsius_to_kelvin(constants.thermodynamic_constants, Tₐ), pres, q_air),
+            ρₐ = Thermodynamics.air_density(constants.thermodynamic_constants, celsius_to_kelvin(constants.thermodynamic_constants, Tₐ), pres, q_air),
             Q_h = surface_humidity_flux(i, j, grid, fields, evtr)   # humidity flux
         # Calculate latent heat flux (positive upwards)
         Hₗ = compute_latent_heat_flux(tur, Q_h, ρₐ, L)
