@@ -1,19 +1,7 @@
 import Thermodynamics.Parameters:
-    AbstractThermodynamicsParameters,
-    R_d,
-    R_v,
-    Rv_over_Rd,
-    cp_d,
-    cp_i,
-    cp_l,
-    cp_v,
-    LH_v0,
-    LH_s0,
-    T_0,
-    T_freeze,
-    T_triple,
-    press_triple
+    AbstractThermodynamicsParameters
 import Thermodynamics: air_density, cp_m
+
 """
     $TYPEDEF
 
@@ -83,21 +71,21 @@ end
 
 PhysicalConstants(::Type{NF}; kwargs...) where {NF} = PhysicalConstants{NF}(; kwargs...)
 
-@inline R_d(c::PhysicalConstants) = c.R_d
-@inline R_v(c::PhysicalConstants) = c.R_v
-@inline cp_d(c::PhysicalConstants) = c.cp_d
-@inline cp_i(c::PhysicalConstants) = c.cp_i
-@inline cp_l(c::PhysicalConstants) = c.cp_l
-@inline cp_v(c::PhysicalConstants) = c.cp_v
-@inline LH_v0(c::PhysicalConstants) = c.Llg
-@inline LH_s0(c::PhysicalConstants) = c.Lsg
-@inline T_0(c::PhysicalConstants) = c.T_ref
-@inline T_freeze(c::PhysicalConstants) = c.T_freeze
-@inline T_triple(c::PhysicalConstants) = c.T_triple
-@inline press_triple(c::PhysicalConstants) = c.press_triple
+@inline Thermodynamics.Parameters.R_d(c::PhysicalConstants) = c.R_d
+@inline Thermodynamics.Parameters.R_v(c::PhysicalConstants) = c.R_v
+@inline Thermodynamics.Parameters.cp_d(c::PhysicalConstants) = c.cp_d
+@inline Thermodynamics.Parameters.cp_i(c::PhysicalConstants) = c.cp_i
+@inline Thermodynamics.Parameters.cp_l(c::PhysicalConstants) = c.cp_l
+@inline Thermodynamics.Parameters.cp_v(c::PhysicalConstants) = c.cp_v
+@inline Thermodynamics.Parameters.LH_v0(c::PhysicalConstants) = c.Llg
+@inline Thermodynamics.Parameters.LH_s0(c::PhysicalConstants) = c.Lsg
+@inline Thermodynamics.Parameters.T_0(c::PhysicalConstants) = c.T_ref
+@inline Thermodynamics.Parameters.T_freeze(c::PhysicalConstants) = c.T_freeze
+@inline Thermodynamics.Parameters.T_triple(c::PhysicalConstants) = c.T_triple
+@inline Thermodynamics.Parameters.press_triple(c::PhysicalConstants) = c.press_triple
 
 # Derived parameters
-@inline Rv_over_Rd(c::PhysicalConstants) = R_v(c) / R_d(c)
+@inline Thermodynamics.Parameters.Rv_over_Rd(c::PhysicalConstants) = Thermodynamics.Parameters.R_v(c) / Thermodynamics.Parameters.R_d(c)
 @inline ε(c::PhysicalConstants) = R_d(c) / R_v(c)
 
 """
