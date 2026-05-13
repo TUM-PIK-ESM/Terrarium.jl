@@ -3,6 +3,21 @@ import Thermodynamics.Parameters:
     AbstractThermodynamicsParameters
 import Thermodynamics: air_density, cp_m
 
+"""
+    $TYPEDEF
+
+Thermodynamic and atmospheric constants used in surface energy, turbulent flux,
+and vegetation process implementations. Subtypes `AbstractThermodynamicsParameters`
+so that it integrates directly with [Thermodynamics.jl](https://github.com/CliMA/Thermodynamics.jl).
+
+```jldoctest
+julia> show(ThermodynamicConstants(Float64))
+ThermodynamicConstants{Float64}(1004.5, 2070.0, 4186.0, 1846.0, 334000.0, 2.257e6, 2.834e6, 273.16, 273.16, 273.16, 611.657, 287.058, 461.5)
+```
+
+Properties:
+$FIELDS
+"""
 @kwdef struct ThermodynamicConstants{NF} <: AbstractThermodynamicsParameters{NF}
     "Isobaric specific heat capacity of dry air at standard pressure and 0°C in J/(m^3*K)"
     specific_heat_capacity_dry_air::NF = 1004.5
@@ -35,6 +50,20 @@ end
 ThermodynamicConstants(::Type{NF}; kwargs...) where {NF} = ThermodynamicConstants{NF}(; kwargs...)
 
 
+"""
+    $TYPEDEF
+
+Material constants for water, ice, and carbon used in soil energy, hydrology,
+and vegetation process implementations.
+
+```jldoctest
+julia> show(MaterialConstants(Float64))
+MaterialConstants{Float64}(1000.0, 916.7, 12.0)
+```
+
+Properties:
+$FIELDS
+"""
 @kwdef struct MaterialConstants{NF}
     "Density of water in kg/m^3"
     water_density::NF = 1000.0
@@ -46,6 +75,20 @@ end
 
 MaterialConstants(::Type{NF}; kwargs...) where {NF} = MaterialConstants{NF}(; kwargs...)
 
+"""
+    $TYPEDEF
+
+Universal physical constants used in surface energy and turbulent flux process
+implementations.
+
+```jldoctest
+julia> show(UniversalConstants(Float64))
+UniversalConstants{Float64}(9.80665, 5.6704e-8, 0.4)
+```
+
+Properties:
+$FIELDS
+"""
 @kwdef struct UniversalConstants{NF}
     "Gravitational constant in m/s^2"
     gravitational_acceleration::NF = 9.80665
@@ -60,7 +103,30 @@ UniversalConstants(::Type{NF}; kwargs...) where {NF} = UniversalConstants{NF}(; 
 """
     $TYPEDEF
 
-A collection of general physical constants that do not (usually) need to be varied in parameter calibration.
+Top-level container for all physical constants used in Terrarium. Groups three
+sub-structs by category:
+
+- [`ThermodynamicConstants`](@ref) — thermodynamic and atmospheric constants
+- [`MaterialConstants`](@ref) — material properties of water, ice, and carbon
+- [`UniversalConstants`](@ref) — universal constants (gravity, Stefan-Boltzmann, von Kármán)
+
+## Construction
+
+```jldoctest
+julia> show(PhysicalConstants())
+PhysicalConstants{Float64}(ThermodynamicConstants{Float64}(1004.5, 2070.0, 4186.0, 1846.0, 334000.0, 2.257e6, 2.834e6, 273.16, 273.16, 273.16, 611.657, 287.058, 461.5), MaterialConstants{Float64}(1000.0, 916.7, 12.0), UniversalConstants{Float64}(9.80665, 5.6704e-8, 0.4))
+```
+
+To override individual constants, pass a customised sub-struct:
+
+```jldoctest
+julia> tc = ThermodynamicConstants(Float64; temperature_reference = 273.15);
+
+julia> c = PhysicalConstants(Float64; thermodynamic_constants = tc);
+
+julia> c.thermodynamic_constants.temperature_reference
+273.15
+```
 
 Properties:
 $FIELDS

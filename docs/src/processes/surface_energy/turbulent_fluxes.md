@@ -103,6 +103,16 @@ compute_latent_heat_flux
 ```
 
 ```@docs; canonical = false
+vapor_pressure_difference
+```
+
+```@docs; canonical = false
+specific_humidity_difference
+```
+
+## Kernel functions
+
+```@docs; canonical = false
 compute_vapor_pressure_difference(i, j, grid, fields, atmos::AbstractAtmosphere, c::PhysicalConstants, Ts)
 ```
 
