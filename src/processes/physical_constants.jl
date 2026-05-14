@@ -61,9 +61,9 @@ $FIELDS
 """
 @kwdef struct MaterialConstants{NF}
     "Density of water in kg/m^3"
-    water_density::NF = 1000.0
+    density_water::NF = 1000.0
     "Density of ice in kg/m^3"
-    ice_density::NF = 916.7
+    density_ice::NF = 916.7
     "Atomic mass of carbon [gC/mol]"
     atomic_weight_carbon::NF = 12.0
 end

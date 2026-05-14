@@ -65,8 +65,8 @@ MaterialConstants
 
 | Field | Symbol | Default | Units | Description |
 |---|---|---|---|---|
-| `water_density` | $\rho_w$ | 1000.0 | kg/m³ | Density of liquid water |
-| `ice_density` | $\rho_i$ | 916.7 | kg/m³ | Density of ice |
+| `density_water` | $\rho_w$ | 1000.0 | kg/m³ | Density of liquid water |
+| `density_ice` | $\rho_i$ | 916.7 | kg/m³ | Density of ice |
 | `atomic_weight_carbon` | $M_C$ | 12.0 | gC/mol | Atomic mass of carbon |
 
 ## Universal constants
