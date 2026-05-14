@@ -396,7 +396,7 @@ Returns instantaneous rates in [gC/m²/s] and [kgC/m²/s] for integration by the
 
     # Compute Rd, leaf respiration rate in [gC/m²/s],
     # An, net photosynthesis rate in [gC/m²/s]
-    Rd, An = compute_respiration_assimilation(photo, constants.material_constants, T_air, swdown, pres, co2, LAI, λc, β)
+    Rd, An = compute_respiration_assimilation(photo, constants.material, T_air, swdown, pres, co2, LAI, λc, β)
 
     # Compute GPP, Gross Primary Production in [kgC/m²/s]
     GPP = compute_GPP(photo, An)

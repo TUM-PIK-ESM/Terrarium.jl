@@ -72,8 +72,8 @@ end
         constants::PhysicalConstants
     ) where {NF, OP}
     T = fields.temperature[i, j, k] # assumed given
-    ρw = constants.material_constants.water_density
-    Lsl = constants.thermodynamic_constants.latent_heat_fusion_at_reference
+    ρw = constants.material.water_density
+    Lsl = constants.thermodynamics.latent_heat_fusion_at_reference
     L = ρw * Lsl
     por = porosity(i, j, k, grid, fields, strat, bgc)
     sat = saturation_water_ice(i, j, k, grid, fields, hydrology)
@@ -110,8 +110,8 @@ end
     )
 
     U = fields.internal_energy[i, j, k] # assumed given
-    ρw = constants.material_constants.water_density
-    Lsl = constants.thermodynamic_constants.latent_heat_fusion_at_reference
+    ρw = constants.material.water_density
+    Lsl = constants.thermodynamics.latent_heat_fusion_at_reference
     L = ρw * Lsl
     por = porosity(i, j, k, grid, fields, strat, bgc)
     sat = saturation_water_ice(i, j, k, grid, fields, hydrology)

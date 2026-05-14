@@ -117,9 +117,9 @@ To override individual constants, pass a customised sub-struct:
 ```jldoctest
 julia> tc = ThermodynamicConstants(Float64; temperature_reference = 273.15);
 
-julia> c = PhysicalConstants(Float64; thermodynamic_constants = tc);
+julia> c = PhysicalConstants(Float64; thermodynamics = tc);
 
-julia> c.thermodynamic_constants.temperature_reference
+julia> c.thermodynamics.temperature_reference
 273.15
 ```
 
@@ -127,20 +127,20 @@ Properties:
 $FIELDS
 """
 struct PhysicalConstants{NF}
-    thermodynamic_constants::ThermodynamicConstants{NF}
-    material_constants::MaterialConstants{NF}
-    universal_constants::UniversalConstants{NF}
+    thermodynamics::ThermodynamicConstants{NF}
+    material::MaterialConstants{NF}
+    universal::UniversalConstants{NF}
 end
 
 PhysicalConstants() = PhysicalConstants(Float64)
 
 function PhysicalConstants(
         ::Type{NF};
-        thermodynamic_constants::ThermodynamicConstants{NF} = ThermodynamicConstants(NF),
-        material_constants::MaterialConstants{NF} = MaterialConstants(NF),
-        universal_constants::UniversalConstants{NF} = UniversalConstants(NF),
+        thermodynamics::ThermodynamicConstants{NF} = ThermodynamicConstants(NF),
+        material::MaterialConstants{NF} = MaterialConstants(NF),
+        universal::UniversalConstants{NF} = UniversalConstants(NF),
     ) where {NF}
-    return PhysicalConstants{NF}(thermodynamic_constants, material_constants, universal_constants)
+    return PhysicalConstants{NF}(thermodynamics, material, universal)
 end
 
 @inline Thermodynamics.Parameters.R_d(c::ThermodynamicConstants) = c.gas_constant_dry_air

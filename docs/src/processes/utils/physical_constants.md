@@ -102,7 +102,7 @@ pass it as a keyword argument:
 
 ```@example consts
 tc = ThermodynamicConstants(Float64; temperature_reference = 273.15)
-PhysicalConstants(Float64; thermodynamic_constants = tc)
+PhysicalConstants(Float64; thermodynamics = tc)
 ```
 
 Sub-structs can also be constructed and used independently, for example:
