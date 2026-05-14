@@ -23,11 +23,11 @@ $FIELDS
     "Isobaric specific heat capacity of water vapor at standard pressure and 0°C in J/(m^3*K)"
     specific_heat_capacity_water_vapor::NF = 1846.0
     "Specific latent heat of fusion of water in J/kg at 0°C"
-    latent_heat_fusion_at_reference::NF = 3.34e5
+    latent_heat_fusion::NF = 3.34e5
     "Specific latent heat of vaporization of water in J/kg at 0°C"
-    latent_heat_vaporization_at_reference::NF = 2.257e6
+    latent_heat_vaporization::NF = 2.257e6
     "Specific latent heat of sublimation of water in J/kg at 0°C"
-    latent_heat_sublimation_at_reference::NF = 2.834e6
+    latent_heat_sublimation::NF = 2.834e6
     "Reference temperature (0°C in Kelvin)"
     temperature_reference::NF = 273.16
     "Freezing temperature of water in Kelvin"
@@ -149,8 +149,8 @@ end
 @inline Thermodynamics.Parameters.cp_i(c::ThermodynamicConstants) = c.specific_heat_capacity_ice
 @inline Thermodynamics.Parameters.cp_l(c::ThermodynamicConstants) = c.specific_heat_capacity_liquid_water
 @inline Thermodynamics.Parameters.cp_v(c::ThermodynamicConstants) = c.specific_heat_capacity_water_vapor
-@inline Thermodynamics.Parameters.LH_v0(c::ThermodynamicConstants) = c.latent_heat_vaporization_at_reference
-@inline Thermodynamics.Parameters.LH_s0(c::ThermodynamicConstants) = c.latent_heat_sublimation_at_reference
+@inline Thermodynamics.Parameters.LH_v0(c::ThermodynamicConstants) = c.latent_heat_vaporization
+@inline Thermodynamics.Parameters.LH_s0(c::ThermodynamicConstants) = c.latent_heat_sublimation
 @inline Thermodynamics.Parameters.T_0(c::ThermodynamicConstants) = c.temperature_reference
 @inline Thermodynamics.Parameters.T_freeze(c::ThermodynamicConstants) = c.temperature_water_freeze
 @inline Thermodynamics.Parameters.T_triple(c::ThermodynamicConstants) = c.temperature_water_triple_point
@@ -188,4 +188,4 @@ and ϵ is the emissivity and σ is the Stefan-Boltzmann constant.
 
 Calcualte the psychrometric constant at the given atmospheric pressure `p`.
 """
-@inline psychrometric_constant(c::ThermodynamicConstants, p) = c.specific_heat_capacity_dry_air * p / (c.latent_heat_vaporization_at_reference * ε(c))
+@inline psychrometric_constant(c::ThermodynamicConstants, p) = c.specific_heat_capacity_dry_air * p / (c.latent_heat_vaporization * ε(c))

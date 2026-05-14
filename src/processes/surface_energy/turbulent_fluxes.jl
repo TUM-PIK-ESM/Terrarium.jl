@@ -172,7 +172,7 @@ to the latent heat flux.
         constants::PhysicalConstants,
         atmos::AbstractAtmosphere
     )
-    L = constants.thermodynamics.latent_heat_vaporization_at_reference
+    L = constants.thermodynamics.latent_heat_vaporization
     Tₛ = skin_temperature(i, j, grid, fields, skinT)
     Tₐ = air_temperature(i, j, grid, fields, atmos) # air temperature
     pres = air_pressure(i, j, grid, fields, atmos)
@@ -201,7 +201,7 @@ defined by `evtr` which is assumed to be already computed.
         constants::PhysicalConstants,
         atmos::AbstractAtmosphere
     )
-    L = constants.thermodynamics.latent_heat_vaporization_at_reference
+    L = constants.thermodynamics.latent_heat_vaporization
     Tₐ = air_temperature(i, j, grid, fields, atmos) # air temperature
     pres = air_pressure(i, j, grid, fields, atmos)
     q_air = specific_humidity(i, j, grid, fields, atmos)
