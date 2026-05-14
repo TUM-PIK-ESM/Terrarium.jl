@@ -158,7 +158,7 @@ end
 
 # Derived parameters
 @inline Thermodynamics.Parameters.Rv_over_Rd(c::ThermodynamicConstants) = Thermodynamics.Parameters.R_v(c) / Thermodynamics.Parameters.R_d(c)
-@inline ε(c::ThermodynamicConstants) = R_d(c) / R_v(c)
+@inline ratio_gas_constant_dry_air_to_water_vapor(c::ThermodynamicConstants) = R_d(c) / R_v(c)
 
 """
     specific_heat_capacity_moist_air(c::ThermodynamicConstants, q)

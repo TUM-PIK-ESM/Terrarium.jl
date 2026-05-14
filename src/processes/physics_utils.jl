@@ -49,7 +49,7 @@ end
 Derives specific humidity from measured vapor pressure `e` [Pa] and air pressure `pr` [Pa]. 
 """
 @inline function vapor_pressure_to_specific_humidity(c::ThermodynamicConstants, e, pr)
-    return ε(c) * e / (pr - e * (1 - ε(c)))
+    return ratio_gas_constant_dry_air_to_water_vapor(c) * e / (pr - e * (1 - ratio_gas_constant_dry_air_to_water_vapor(c)))
 end
 
 """
