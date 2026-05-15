@@ -1,4 +1,3 @@
-import Thermodynamics
 
 """
 Generic type representing the concentration of a particular tracer gas in the atmosphere.
