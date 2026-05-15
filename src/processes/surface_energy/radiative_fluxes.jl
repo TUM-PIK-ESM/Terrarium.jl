@@ -93,8 +93,8 @@ end
 Compute outgoing longwave radiation from incoming longwave radiation `L_down`, surface temperature `Ts`, and emissivity `ϵ`.
 """
 @inline function compute_longwave_up(::DiagnosedRadiativeFluxes, constants::PhysicalConstants, L_down, Ts, ϵ)
-    T = celsius_to_kelvin(constants, Ts)
-    L_emit = stefan_boltzmann(constants, T, ϵ)
+    T = celsius_to_kelvin(constants.thermodynamics, Ts)
+    L_emit = stefan_boltzmann(constants.universal, T, ϵ)
     # outgoing LW radiation is the sum of the radiant emittance and the residual incoming radiation
     surface_longwave_up = L_emit + (1 - ϵ) * L_down
     return surface_longwave_up
