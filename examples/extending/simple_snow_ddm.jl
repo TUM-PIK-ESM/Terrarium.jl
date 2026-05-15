@@ -138,8 +138,8 @@ global_grid = FullGaussianGrid(22) # we define the global grid we model on as a 
 # Now, we get all the input data. We can use the input data provided by `RingGrids` / `SpeedyWeather` in this case using `get_asset`:
 
 seconds_per_month = 30 * 24 * 60 * 60
-water_density = 1000 # kg/m^3
-snow_climatology = RingGrids.get_asset("data/boundary_conditions/snow.nc", from_assets = true, name = "snow", ArrayType = FullGaussianField, FileFormat = NCDataset, output_grid = global_grid) ./ (seconds_per_month * water_density); # ~ conversion from kg/(month * m^2) to m^3/(s * m^2)
+density_water = 1000 # kg/m^3
+snow_climatology = RingGrids.get_asset("data/boundary_conditions/snow.nc", from_assets = true, name = "snow", ArrayType = FullGaussianField, FileFormat = NCDataset, output_grid = global_grid) ./ (seconds_per_month * density_water); # ~ conversion from kg/(month * m^2) to m^3/(s * m^2)
 lst_climatology = RingGrids.get_asset("data/boundary_conditions/land_surface_temperature.nc", from_assets = true, name = "lst", ArrayType = FullGaussianField, FileFormat = NCDataset, output_grid = global_grid) .- 273.15; # data is in K, we want C
 land_sea_mask = isfinite.(snow_climatology[:, 1])
 @assert all(land_sea_mask .== isfinite.(lst_climatology[:, 1]))
