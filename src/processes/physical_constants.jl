@@ -188,4 +188,4 @@ and ϵ is the emissivity and σ is the Stefan-Boltzmann constant.
 
 Calcualte the psychrometric constant at the given atmospheric pressure `p`.
 """
-@inline psychrometric_constant(c::ThermodynamicConstants, p) = c.specific_heat_capacity_dry_air * p / (c.latent_heat_vaporization * ε(c))
+@inline psychrometric_constant(c::ThermodynamicConstants, p) = c.specific_heat_capacity_dry_air * p / (c.latent_heat_vaporization * ratio_gas_constant_dry_air_to_water_vapor(c))
