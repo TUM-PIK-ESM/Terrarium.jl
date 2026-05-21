@@ -104,7 +104,7 @@ function speedy_timestep!(
     progn.land.soil_temperature .= state.skin_temperature .+ NF(273.15)
     progn.land.soil_moisture .= interior(state.saturation_water_ice)[:, 1, end]
     progn.land.sensible_heat_flux .= state.sensible_heat_flux
-    progn.land.surface_humidity_flux .= state.latent_heat_flux ./ consts.Llg
+    progn.land.surface_humidity_flux .= state.latent_heat_flux ./ consts.thermodynamics.latent_heat_vaporization
     diagn.physics.surface_longwave_up .= state.surface_longwave_up
     diagn.physics.surface_shortwave_up .= state.surface_shortwave_up
     return nothing
