@@ -47,6 +47,9 @@ using Unitful: 𝐋, 𝐌, 𝐓
 using Unitful: Units, Quantity, AbstractQuantity, NoUnits
 using Unitful: @u_str, uconvert, ustrip, upreferred
 
+# Parameter handling (imported from SpeedyWeatherInternals for now)
+using SpeedyWeatherInternals.ParameterEditing
+
 # Explicit imports
 import Interpolations
 import Oceananigans

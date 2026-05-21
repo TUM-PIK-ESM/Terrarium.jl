@@ -70,24 +70,24 @@ measurements of hydraulic properites are available.
 Properties:
 $TYPEDFIELDS
 """
-@kwdef struct ConstantSoilHydraulics{NF, RC, UnsatK <: AbstractUnsatK{NF}} <: AbstractSoilHydraulics{NF, RC, UnsatK}
+@parameterized @kwdef struct ConstantSoilHydraulics{NF, RC, UnsatK <: AbstractUnsatK{NF}} <: AbstractSoilHydraulics{NF, RC, UnsatK}
     "Soil water retention curve"
     swrc::RC
 
     "Unsaturated hydraulic conductivity formulation; defaults to `sat_hydraulic_cond`"
     unsat_hydraulic_cond::UnsatK
 
-    "Hydraulic conductivity at saturation [m/s]"
-    sat_hydraulic_cond::NF = 1.0e-5
+    "Hydraulic conductivity at saturation"
+    @param sat_hydraulic_cond::NF = 1.0e-5 (units = u"m/s", bounds = Positive, scale = 1.0e-5)
 
-    "Constant field capacity [-]"
-    field_capacity::NF = 0.25
+    "Constant field capacity"
+    @param field_capacity::NF = 0.25 (bounds = UnitInterval(),)
 
-    "Constant wilting point [-]"
-    wilting_point::NF = 0.05
+    "Constant wilting point"
+    @param wilting_point::NF = 0.05 (bounds = UnitInterval())
 
-    "Residual (minimum) saturation level [-]"
-    residual::NF = 0.01
+    "Residual (minimum) saturation level"
+    @param residual::NF = 0.01 (bounds = UnitInterval())
 end
 
 function ConstantSoilHydraulics(
@@ -121,27 +121,27 @@ $TYPEDFIELDS
 
 * [noilhanISBA1996](@cite) Noilhan & Mahfouf, Global and Planetary Change (1996)
 """
-@kwdef struct SoilHydraulicsSURFEX{NF, RC, UnsatK <: AbstractUnsatK{NF}} <: AbstractSoilHydraulics{NF, RC, UnsatK}
+@parameterized @kwdef struct SoilHydraulicsSURFEX{NF, RC, UnsatK <: AbstractUnsatK{NF}} <: AbstractSoilHydraulics{NF, RC, UnsatK}
     "Soil water retention curve"
     swrc::RC
 
     "Unsaturated hydraulic conductivity formulation; defaults to `sat_hydraulic_cond`"
     unsat_hydraulic_cond::UnsatK
 
-    "Hydraulic conductivity at saturation [m/s]"
-    sat_hydraulic_cond::NF = 1.0e-5
+    "Hydraulic conductivity at saturation"
+    @param sat_hydraulic_cond::NF = 1.0e-5 (units = u"m/s", bounds = Positive, scale = 1.0e-5)
 
-    "Linear coeficient of wilting point adjustment due to clay content [-]"
-    wilting_point_coef::NF = 37.13e-3
+    "Linear coefficient of wilting point adjustment due to clay content"
+    @param wilting_point_coef::NF = 37.13e-3 (bounds = Positive,)
 
-    "Linear coeficient of field capacity adjustment due to clay content [-]"
-    field_capacity_coef::NF = 89.0e-3
+    "Linear coefficient of field capacity adjustment due to clay content"
+    @param field_capacity_coef::NF = 89.0e-3 (bounds = Positive,)
 
-    "Exponent of field capacity adjustment due to clay content [-]"
-    field_capacity_exp::NF = 0.35
+    "Exponent of field capacity adjustment due to clay content"
+    @param field_capacity_exp::NF = 0.35 (bounds = Positive,)
 
-    "Residual (minimum) saturation level [-]"
-    residual::NF = 0.01
+    "Residual (minimum) saturation level"
+    @param residual::NF = 0.01 (bounds = UnitInterval(),)
 end
 
 function SoilHydraulicsSURFEX(
@@ -210,9 +210,9 @@ formulation [vangenuchtenHydraulicConductivity1980](@cite) extended with an ice 
 * [vangenuchtenHydraulicConductivity1980](@cite) Van Genuchten, Soil Science Society of America Journal (1980)
 * [westermannCryoGridCommunityModel2023](@cite) Westermann et al., Geoscientific Model Development (2023)
 """
-struct UnsatKVanGenuchten{NF} <: AbstractUnsatK{NF}
+@parameterized @kwdef struct UnsatKVanGenuchten{NF} <: AbstractUnsatK{NF}
     "Exponential scaling factor for ice impedance"
-    impedance::NF
+    @param impedance::NF = 7 (bounds = Positive,)
 end
 
 UnsatKVanGenuchten(::Type{NF}; impedance::NF = NF(7)) where {NF} = UnsatKVanGenuchten(NF(impedance))

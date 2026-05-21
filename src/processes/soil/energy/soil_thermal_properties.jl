@@ -11,17 +11,21 @@ Default values from [hillelIntroductionSoilPhysics1982](@cite).
 
 * [hillelIntroductionSoilPhysics1982](@cite) Hillel, Academic Press (1982)
 """
-@kwdef struct SoilThermalConductivities{NF}
-    "thermal conductivity of water [W/m/K]"
-    water::NF = 0.57
-    "thermal conductivity of ice [W/m/K]"
-    ice::NF = 2.2
-    "thermal conductivity of air [W/m/K]"
-    air::NF = 0.025
-    "thermal conductivity of mineral soil constituents [W/m/K]"
-    mineral::NF = 3.8
-    "thermal conductivity of organic soil constituents [W/m/K]"
-    organic::NF = 0.25
+@parameterized @kwdef struct SoilThermalConductivities{NF}
+    "Thermal conductivity of water"
+    @param water::NF = 0.57 (units = u"W/m/K", bounds = Positive)
+
+    "Thermal conductivity of ice"
+    @param ice::NF = 2.2 (units = u"W/m/K", bounds = Positive)
+
+    "Thermal conductivity of air"
+    @param air::NF = 0.025 (units = u"W/m/K", bounds = Positive)
+
+    "Thermal conductivity of mineral soil constituents"
+    @param mineral::NF = 3.8 (units = u"W/m/K", bounds = Positive)
+
+    "Thermal conductivity of organic soil constituents"
+    @param organic::NF = 0.25 (units = u"W/m/K", bounds = Positive)
 end
 
 SoilThermalConductivities(::Type{NF}; kwargs...) where {NF} = SoilThermalConductivities{NF}(; kwargs...)
@@ -32,17 +36,21 @@ SoilThermalConductivities(::Type{NF}; kwargs...) where {NF} = SoilThermalConduct
 Properties:
 $TYPEDFIELDS
 """
-@kwdef struct SoilHeatCapacities{NF}
-    "volumetric heat capacity of water [J/m^3]"
-    water::NF = 4.2e6
-    "volumetric heat capacity of ice [J/m^3]"
-    ice::NF = 1.9e6
-    "volumetric heat capacity of air [J/m^3]"
-    air::NF = 0.00125e6
-    "volumetric heat capacity of mineral soil [J/m^3]"
-    mineral::NF = 2.0e6
-    "volumetric heat capacity of organic soil [J/m^3]"
-    organic::NF = 2.5e6
+@parameterized @kwdef struct SoilHeatCapacities{NF}
+    "Volumetric heat capacity of water"
+    @param water::NF = 4.2e6 (units = u"J/K/m^3", bounds = Positive, scale = 1.0e6)
+
+    "Volumetric heat capacity of ice"
+    @param ice::NF = 1.9e6 (units = u"J/K/m^3", bounds = Positive, scale = 1.0e6)
+
+    "Volumetric heat capacity of air"
+    @param air::NF = 0.00125e6 (units = u"J/K/m^3", bounds = Positive, scale = 1.0e6)
+
+    "Volumetric heat capacity of mineral soil"
+    @param mineral::NF = 2.0e6 (units = u"J/K/m^3", bounds = Positive, scale = 1.0e6)
+
+    "Volumetric heat capacity of organic soil"
+    @param organic::NF = 2.5e6 (units = u"J/K/m^3", bounds = Positive, scale = 1.0e6)
 end
 
 SoilHeatCapacities(::Type{NF}; kwargs...) where {NF} = SoilHeatCapacities{NF}(; kwargs...)

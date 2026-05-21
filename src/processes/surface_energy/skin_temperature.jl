@@ -8,9 +8,9 @@ Simple scheme for prescribed skin temperatures from input variables.
 Properties:
 $FIELDS
 """
-@kwdef struct PrescribedSkinTemperature{NF} <: AbstractSkinTemperature{NF}
-    "Assumed thermal conductivity at the surface [W m⁻¹ K⁻¹]"
-    κₛ::NF = 2.0
+@parameterized @kwdef struct PrescribedSkinTemperature{NF} <: AbstractSkinTemperature{NF}
+    "Assumed thermal conductivity at the surface"
+    @param κₛ::NF = 2.0 (units = u"W/m/K", bounds = Positive)
 end
 
 PrescribedSkinTemperature(::Type{NF}; kwargs...) where {NF} = PrescribedSkinTemperature{NF}(; kwargs...)
@@ -46,9 +46,9 @@ temperature, or temperature of the uppermost subsurface (soil or snow) layer.
 Properties:
 $FIELDS
 """
-@kwdef struct ImplicitSkinTemperature{NF} <: AbstractSkinTemperature{NF}
-    "Assumed thermal conductivity at the surface [W m⁻¹ K⁻¹]"
-    κₛ::NF = 2.0
+@parameterized @kwdef struct ImplicitSkinTemperature{NF} <: AbstractSkinTemperature{NF}
+    "Assumed thermal conductivity at the surface"
+    @param κₛ::NF = 2.0 (units = u"W/m/K", bounds = Positive)
 end
 
 ImplicitSkinTemperature(::Type{NF}; kwargs...) where {NF} = ImplicitSkinTemperature{NF}(; kwargs...)

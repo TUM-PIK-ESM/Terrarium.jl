@@ -13,13 +13,13 @@ $TYPEDFIELDS
 
 * [willeitPALADYNV10Comprehensive2016](@cite) Willeit & Ganopolski, Geoscientific Model Development (2016)
 """
-@kwdef struct PALADYNVegetationDynamics{NF} <: AbstractVegetationDynamics{NF}
-    "Vegetation seed fraction [-]"
-    ν_seed::NF = 0.001
+@parameterized @kwdef struct PALADYNVegetationDynamics{NF} <: AbstractVegetationDynamics{NF}
+    "Vegetation seed fraction"
+    @param ν_seed::NF = 0.001 (bounds = UnitInterval(),)
 
-    "Minimum vegetation disturbance rate [1/year]"
+    "Minimum vegetation disturbance rate"
     # TODO this parameter is yearly, should be changed to daily for now
-    γv_min::NF = 0.002
+    @param γv_min::NF = 0.002 (units = u"yr^-1", bounds = Positive)
 end
 
 PALADYNVegetationDynamics(::Type{NF}; kwargs...) where {NF} = PALADYNVegetationDynamics{NF}(; kwargs...)

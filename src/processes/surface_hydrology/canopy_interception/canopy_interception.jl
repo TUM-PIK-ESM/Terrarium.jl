@@ -37,19 +37,19 @@ $FIELDS
 * [verseghyCLASSCanadianLand1993](@cite) Verseghy et al., International Journal of Climatology (1993)
 * [willeitPALADYNV10Comprehensive2016](@cite) Willeit and Ganopolski, Geoscientific Model Development (2016)
 """
-@kwdef struct PALADYNCanopyInterception{NF} <: AbstractCanopyInterception{NF}
+@parameterized @kwdef struct PALADYNCanopyInterception{NF} <: AbstractCanopyInterception{NF}
     "Canopy water interception factor for tree PFTs"
-    α_int::NF = 0.2
+    @param α_int::NF = 0.2 (bounds = UnitInterval(),)
 
     # TODO: Duplicated
-    "Extinction coefficient for radiation through vegetation [-]"
-    k_ext::NF = 0.5
+    "Extinction coefficient for radiation through vegetation"
+    @param k_ext::NF = 0.5 (bounds = Positive,)
 
-    "Canopy interception capacity parameter, [verseghyCLASSCanadianLand1993](@cite) [m]"
-    w_can_max::NF = 2.0e-4
+    "Canopy interception capacity parameter, [verseghyCLASSCanadianLand1993](@cite)"
+    @param w_can_max::NF = 2.0e-4 (units = u"m", bounds = Positive, scale = 1.0e-4)
 
-    "Canopy water removal timescale [s]"
-    τ_w::NF = 86400.0
+    "Canopy water removal timescale"
+    @param τ_w::NF = 86400.0 (units = u"s", bounds = Positive)
 end
 
 PALADYNCanopyInterception(::Type{NF}; kwargs...) where {NF} = PALADYNCanopyInterception{NF}(; kwargs...)
