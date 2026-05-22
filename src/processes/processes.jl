@@ -1,6 +1,6 @@
 # Utilities
 
-export PhysicalConstants
+export PhysicalConstants, ThermodynamicConstants, MaterialConstants, UniversalConstants
 include("physical_constants.jl")
 include("physics_utils.jl")
 
