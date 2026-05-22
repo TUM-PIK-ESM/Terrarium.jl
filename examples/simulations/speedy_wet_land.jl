@@ -10,11 +10,6 @@ using CairoMakie, GeoMakie
 import RingGrids
 import SpeedyWeather as Speedy
 
-# When both packages are loaded the SpeedyWeatherTerrariumExt extension
-# activates and provides `TerrariumWetLand` / `TerrariumVars`.
-const SWTerrarium = Base.get_extension(Speedy, :SpeedyWeatherTerrariumExt)
-const TerrariumWetLand = SWTerrarium.TerrariumWetLand
-
 # Choose architecture based on available hardware
 arch = CUDA.functional() ? GPU() : CPU()
 
@@ -28,10 +23,10 @@ Nz = 30
 grid = ColumnRingGrid(CPU(), Float32, ExponentialSpacing(; N = Nz, Δz_min), ring_grid)
 soil_initializer = SoilInitializer(eltype(grid))
 soil = SoilEnergyWaterCarbon(eltype(grid), hydrology = SoilHydrology(eltype(grid)))
-terrarium_model = LandModel(grid; initializer = soil_initializer, vegetation = nothing, soil)
+terrarium_model = Terrarium.LandModel(grid; initializer = soil_initializer, vegetation = nothing, soil)
 
 # --- 3. Wrap the Terrarium model as a SpeedyWeather wet-land component ---
-land = TerrariumWetLand(
+land = Speedy.LandModel(
     spectral_grid, terrarium_model;
     timestepper = ForwardEuler(eltype(grid)),
     Δt = 300.0,

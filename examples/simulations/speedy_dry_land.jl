@@ -10,11 +10,6 @@ using CairoMakie, GeoMakie
 import RingGrids
 import SpeedyWeather as Speedy
 
-# When both packages are loaded the SpeedyWeatherTerrariumExt extension
-# activates and provides `TerrariumDryLand`.
-const SWTerrarium = Base.get_extension(Speedy, :SpeedyWeatherTerrariumExt)
-const TerrariumDryLand = SWTerrarium.TerrariumDryLand
-
 # Choose architecture based on available hardware
 arch = CUDA.functional() ? GPU() : CPU()
 
@@ -36,7 +31,7 @@ Tair_input = InputSource(grid, air_temperature_field; name = :air_temperature)
 bcs = PrescribedSurfaceTemperature(:air_temperature)
 
 # --- 3. Wrap the Terrarium model as a SpeedyWeather dry-land component ---
-land = TerrariumDryLand(
+land = SpeedyWeather.LandModel(
     spectral_grid, soil_model;
     timestepper = ForwardEuler(eltype(grid)),
     boundary_conditions = bcs,
