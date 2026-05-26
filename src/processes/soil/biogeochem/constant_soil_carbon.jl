@@ -7,7 +7,7 @@ organic content in all soil layers.
 Properties:
 $TYPEDFIELDS
 """
-@parameterized Base.@kwdef struct ConstantSoilCarbonDensity{NF} <: AbstractSoilBiogeochemistry{NF}
+@parameterized @kwdef struct ConstantSoilCarbonDensity{NF} <: AbstractSoilBiogeochemistry{NF}
     "Soil organic carbon density"
     @param ρ_soc::NF = 0.0 (units = u"kg/m^3", bounds = Nonnegative)
 

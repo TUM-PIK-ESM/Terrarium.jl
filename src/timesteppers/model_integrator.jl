@@ -133,9 +133,9 @@ end
 """
     $TYPEDSIGNATURES
 
-Creates and initializes a `ModelIntegrator` for the given `model` and `timestepper` with input variables populated by
-the given `inputs`. This method allocates all necessary `Field`s for the state variables and subsequently calls
-`initialize!(::ModelIntegrator)`.
+Creates and initializes a `ModelIntegrator` for the given `model`, `timestepper`, and optionally `params.
+`InputSource`s can be specified via the `inputs` keyword argument. This method allocates all necessary `Field`s
+for the state variables and subsequently calls `initialize!(::ModelIntegrator)`.
 
 Note that this method is **not type stable** and thus should not be called from Enzyme `autodiff`. To reinitialize
 the model for an existing `state`, use `initialize!(state, model)`.
@@ -145,17 +145,18 @@ See the docstring for [`initialize(::AbstractModel)`](@ref) for further details.
 function initialize(
         model::AbstractModel{NF},
         timestepper::AbstractTimeStepper,
-        inputs::InputSource...;
+        params::Union{Nothing, ComponentVector, ParameterTable} = nothing;
         clock::Clock = Clock(time = zero(NF)),
+        inputs::InputSource = InputSources(NF),
         boundary_conditions = (;),
         initializers = (;),
         fields = (;)
     ) where {NF}
-    inputs = InputSources(inputs...)
     input_vars = variables(inputs)
-    state = initialize(model; clock, boundary_conditions, fields, input_variables = input_vars)
-    initialized_timestepper = initialize(timestepper, model, state)
-    integrator = ModelIntegrator(clock, model, inputs, state, initializers, initialized_timestepper)
+    updated_model = isnothing(params) ? model : ParameterEditing.reconstruct(model, params)
+    state = initialize(updated_model; clock, boundary_conditions, fields, input_variables = input_vars)
+    initialized_timestepper = initialize(timestepper, updated_model, state)
+    integrator = ModelIntegrator(clock, updated_model, inputs, state, initializers, initialized_timestepper)
     initialize!(integrator)
     return integrator
 end

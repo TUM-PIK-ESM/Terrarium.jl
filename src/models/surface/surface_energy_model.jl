@@ -7,7 +7,7 @@ is mostly intended for testing but could also be used for simple energy
 balance calculations from prescribed meteorological and ground temperature
 conditions.
 """
-struct SurfaceEnergyModel{
+@parameterized @kwdef struct SurfaceEnergyModel{
         NF,
         GridType <: AbstractLandGrid{NF},
         SEB <: AbstractSurfaceEnergyBalance,
@@ -18,26 +18,16 @@ struct SurfaceEnergyModel{
     grid::GridType
 
     "Atmospheric inputs"
-    atmosphere::Atmosphere
+    @component atmosphere::Atmosphere = PrescribedAtmosphere(eltype(grid))
 
     "Surface energy balance scheme"
-    surface_energy_balance::SEB
+    @component surface_energy_balance::SEB = SurfaceEnergyBalance(eltype(grid))
 
     "Physical constants"
-    constants::PhysicalConstants
+    @component constants::PhysicalConstants{NF} = PhysicalConstants(eltype(grid))
 
     "State variable initializer"
-    initializer::Initializer
-end
-
-function SurfaceEnergyModel(
-        grid::AbstractLandGrid{NF},
-        surface_energy_balance::AbstractSurfaceEnergyBalance = SurfaceEnergyBalance(NF);
-        atmosphere::AbstractAtmosphere = PrescribedAtmosphere(NF),
-        constants::PhysicalConstants = PhysicalConstants(NF),
-        initializer::AbstractInitializer = DefaultInitializer(eltype(grid))
-    ) where {NF}
-    return SurfaceEnergyModel(grid, atmosphere, surface_energy_balance, constants, initializer)
+    @component initializer::Initializer = DefaultInitializer(eltype(grid))
 end
 
 function compute_auxiliary!(state, model::SurfaceEnergyModel)

@@ -222,6 +222,15 @@ as the first positional argument.
 """
 (::Type{Model})(grid::AbstractLandGrid, args...; kwargs...) where {Model <: AbstractModel} = Model(args...; grid, kwargs...)
 
+# Default parameters collection for processes
+function ParameterEditing.parameters(proc::AbstractProcess)
+    proc_params = map(fieldnames(typeof(proc))) do name
+        name => ParameterEditing.parameters(getproperty(proc, name))
+    end
+    nonempty_params = filter(p -> length(p[2]) > 0, proc_params)
+    return ParameterEditing.ParameterTable((; nonempty_params...))
+end
+
 function Base.show(io::IO, model::AbstractModel{NF}) where {NF}
     println(io, "$(nameof(typeof(model))){$NF} on $(architecture(get_grid(model)))")
     for name in propertynames(model)

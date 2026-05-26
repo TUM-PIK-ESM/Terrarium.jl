@@ -21,12 +21,12 @@ $FIELDS
 # References
 * [willeitPALADYNV10Comprehensive2016](@cite) Willeit and Ganopolski, Geoscientific Model Development (2016)
 """
-struct PALADYNCanopyEvapotranspiration{NF, GR <: AbstractGroundEvaporationResistanceFactor} <: AbstractEvapotranspiration{NF}
+@parameterized @kwdef struct PALADYNCanopyEvapotranspiration{NF, GR <: AbstractGroundEvaporationResistanceFactor} <: AbstractEvapotranspiration{NF}
     "Drag coefficient for the transfer of heat and water between the ground and canopy"
-    C_can::NF
+    @param C_can::NF (bounds = PositiveRealLine,)
 
     "Parameterization for ground resistance to evaporation/sublimation"
-    ground_resistance::GR
+    @component ground_resistance::GR
 end
 
 function PALADYNCanopyEvapotranspiration(

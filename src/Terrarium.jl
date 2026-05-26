@@ -48,10 +48,12 @@ using Unitful: Units, Quantity, AbstractQuantity, NoUnits
 using Unitful: @u_str, uconvert, ustrip, upreferred
 
 # Parameter handling (imported from SpeedyWeatherInternals for now)
-using SpeedyWeatherInternals.ParameterEditing
+using SpeedyWeatherInternals.ParameterEditing: ParameterEditing, ParameterTable, ComponentVector,
+    Positive, Nonnegative, UnitInterval, parameters, @parameterized
 
 # Explicit imports
 import Interpolations
+import ModelParameters
 import Oceananigans
 import Oceananigans.Diagnostics
 import RingGrids

@@ -106,20 +106,14 @@ source = InputSource(grid, raster; reftime = DateTime(2000, 1, 1))
 
 ## Multiple input sources
 
-Multiple `InputSource` objects are passed to `initialize` as positional arguments:
+One or more `InputSource`s can be collected in an `InputSources` container:
 
 ```julia
-integrator = initialize(model, Heun(Δt = 3600.0), source1, source2, source3)
+inputs = InputSources(source1, source2, source3)
+integrator = initialize(model, Heun(Δt = 3600.0); inputs)
 ```
 
-Internally they are collected into an `InputSources` container, which iterates over each source in order when calling `initialize!` and `update_inputs!`.
-
-A standalone `InputSources` can also be constructed manually for inspection:
-
-```julia
-sources = InputSources(source1, source2)
-variables(sources)   # union of all declared input variables
-```
+Internally, `InputSources` will iterate over each source in order when calling `initialize!` and `update_inputs!`.
 
 ## Using inputs inside process kernels
 

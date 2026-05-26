@@ -63,18 +63,18 @@ SoilHeatCapacities(::Type{NF}; kwargs...) where {NF} = SoilHeatCapacities{NF}(; 
 Properties:
 $TYPEDFIELDS
 """
-struct SoilThermalProperties{NF, FC, CondBulk}
+@parameterized @kwdef struct SoilThermalProperties{NF, FC, CondBulk}
     "Thermal conductivities for all constituents"
-    conductivities::SoilThermalConductivities{NF}
+    @component conductivities::SoilThermalConductivities{NF}
 
     "Method for computing bulk thermal conductivity from constituents"
-    bulk_conductivity::CondBulk
+    @component bulk_conductivity::CondBulk
 
     "Thermal conductivities for all constituents"
-    heat_capacities::SoilHeatCapacities{NF}
+    @component heat_capacities::SoilHeatCapacities{NF}
 
     "Freezing characteristic curve needed for energy-temperature closure"
-    freezecurve::FC
+    @component freezecurve::FC
 end
 
 SoilThermalProperties(

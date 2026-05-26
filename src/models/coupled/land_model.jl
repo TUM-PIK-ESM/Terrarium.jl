@@ -7,7 +7,7 @@ vegetation, and soil processes.
 Properties:
 $(TYPEDFIELDS)
 """
-@kwdef struct LandModel{
+@parameterized @kwdef struct LandModel{
         NF,
         GridType <: AbstractLandGrid{NF},
         Vegetation <: Optional{AbstractVegetation{NF}},
@@ -15,32 +15,31 @@ $(TYPEDFIELDS)
         SEB <: AbstractSurfaceEnergyBalance,
         Hydrology <: AbstractSurfaceHydrology,
         Atmosphere <: AbstractAtmosphere,
-        Constants <: PhysicalConstants{NF},
         Initializer <: AbstractInitializer,
     } <: AbstractLandModel{NF, GridType}
     "Spatial discretization"
     grid::GridType
 
     "Vegetation processes"
-    vegetation::Vegetation = VegetationCarbon(eltype(grid))
+    @component vegetation::Vegetation = VegetationCarbon(eltype(grid))
 
     "Soil processes"
-    soil::Soil = default_soil(grid, vegetation)
+    @component soil::Soil = default_soil(grid, vegetation)
 
     "Surface energy balance"
-    surface_energy_balance::SEB = default_surface_energy_balance(grid, vegetation, soil)
+    @component surface_energy_balance::SEB = default_surface_energy_balance(grid, vegetation, soil)
 
     "Surface hydrology scheme"
-    surface_hydrology::Hydrology = default_surface_hydrology(grid, vegetation, soil)
+    @component surface_hydrology::Hydrology = default_surface_hydrology(grid, vegetation, soil)
 
     "Near-surface atmospheric conditions"
-    atmosphere::Atmosphere = PrescribedAtmosphere(eltype(grid))
+    @component atmosphere::Atmosphere = PrescribedAtmosphere(eltype(grid))
 
     "Physical constants"
-    constants::Constants = PhysicalConstants(eltype(grid))
+    @component constants::PhysicalConstants{NF} = PhysicalConstants(eltype(grid))
 
     "State variable initializer"
-    initializer::Initializer = DefaultInitializer(eltype(grid))
+    @component initializer::Initializer = DefaultInitializer(eltype(grid))
 end
 
 function initialize(

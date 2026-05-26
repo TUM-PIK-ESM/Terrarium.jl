@@ -147,7 +147,7 @@ model = ExpModel(grid)
 # We now can initialize our model, i.e. we run all pre-computation, and initialize a numerical integrator for our model by passing it
 # to `initialize` along with a suitable timestepper and our input/forcing data, which we here choose to be the second-order [`Heun`](@ref) method with a timestep of 1 second.
 
-integrator = initialize(model, Heun(Δt = 1.0), input; initializers)
+integrator = initialize(model, Heun(Δt = 1.0); inputs = input, initializers)
 
 # We can advance our model by one step via the `timestep!` method:
 

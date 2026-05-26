@@ -92,7 +92,7 @@ model = SoilModel(grid, initializer = soil_initializer)
 air_temperature = Field(grid, XY())
 Tair_input = InputSource(grid, air_temperature; name = :air_temperature)
 bcs = PrescribedSurfaceTemperature(:air_temperature)
-integrator = initialize(model, ForwardEuler(eltype(grid)), Tair_input, boundary_conditions = bcs)
+integrator = initialize(model, ForwardEuler(eltype(grid)); inputs = Tair_input, boundary_conditions = bcs)
 
 # Initialize Terrarium-Speedy land model
 land = TerrariumDryLand(integrator)
