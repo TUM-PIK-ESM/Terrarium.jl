@@ -302,7 +302,7 @@ variables.
 """
 function initialize(
         model::AbstractModel{NF},
-        params::Union{Nothing, ComponentVector, ParameterTable} = nothing;
+        params = nothing;
         clock = Clock(time = zero(NF)),
         input_variables = (),
         boundary_conditions = (;),
@@ -325,7 +325,7 @@ be passed through to `initialize` for each variable.
 function initialize(
         process::AbstractProcess{NF},
         grid::AbstractLandGrid{NF},
-        params::Union{Nothing, ComponentVector, ParameterTable} = nothing;
+        params = nothing;
         clock = Clock(time = zero(NF)),
         input_variables = (),
         boundary_conditions = (;),

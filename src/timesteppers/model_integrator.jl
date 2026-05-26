@@ -14,11 +14,12 @@ struct ModelIntegrator{
         TimeStepper <: AbstractTimeStepper{NF},
         Model <: AbstractModel{NF, Grid},
         StateVars <: AbstractStateVariables,
+        ClockType <: Clock,
         Inits <: NamedTuple,
         Inputs <: InputSources,
     } <: Oceananigans.AbstractModel{TimeStepper, Arch}
     "The clock holding all information about the current timestep/iteration of a simulation"
-    clock::Clock
+    clock::ClockType
 
     "Underlying model evaluated by this integrator"
     model::Model
@@ -87,6 +88,8 @@ function Oceananigans.Simulations.run!(
     return integrator
 end
 
+# Terrarium method interfaces
+
 """
     $TYPEDEF
 
@@ -107,8 +110,6 @@ function initialize!(integrator::ModelIntegrator)
     initialize!(integrator.state, integrator.model)
     return integrator
 end
-
-# Terrarium method interfaces
 
 current_time(integrator::ModelIntegrator) = integrator.clock.time
 
@@ -145,7 +146,7 @@ See the docstring for [`initialize(::AbstractModel)`](@ref) for further details.
 function initialize(
         model::AbstractModel{NF},
         timestepper::AbstractTimeStepper,
-        params::Union{Nothing, ComponentVector, ParameterTable} = nothing;
+        params = nothing;
         clock::Clock = Clock(time = zero(NF)),
         inputs::InputSource = InputSources(NF),
         boundary_conditions = (;),
@@ -161,6 +162,24 @@ function initialize(
     return integrator
 end
 
+"""
+    $SIGNATURES
+
+Reconstruct the given `integrator` using the same underlying model populated with the given `params`.
+The `clock` and `inputs` can also optionally be updated via their respective keyword arguments.
+"""
+function initialize(
+        integrator::ModelIntegrator,
+        params;
+        clock = integrator.clock,
+        inputs = integrator.inputs
+    )
+    model = ParameterEditing.reconstruct(integrator.model, params)
+    integrator = ModelIntegrator(clock, model, inputs, integrator.state, integrator.initializers, integrator.timestepper)
+    initialize!(integrator)
+    return integrator
+end
+
 get_steps(steps::Nothing, period::Period, Δt::Real) = div(Second(period).value, Δt)
 get_steps(steps::Int, period::Nothing, Δt::Real) = steps
 get_steps(steps::Nothing, period::Nothing, Δt::Real) = throw(ArgumentError("either `steps` or `period` must be specified"))
@@ -172,6 +191,7 @@ function Base.show(io::IO, integrator::ModelIntegrator)
     tsstr = summary(integrator.timestepper)
     println(io, "Integrator of $modelstr with $tsstr")
     println(io, "├── Current time: $(current_time(integrator))")
-    return println(io, "├── $statestr")
+    println(io, "├── $statestr")
     # TODO: add more information?
+    return nothing
 end

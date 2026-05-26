@@ -13,7 +13,6 @@ vegetation = VegetationCarbon(eltype(grid))
 # Construct coupled model
 land = LandModel(grid; soil, vegetation)
 ps = Terrarium.parameters(land)
-state = initialize(land, ps)
 # Variably saturated with water table at roughly 5 m depth
 initializers = (
     temperature = 15.0,

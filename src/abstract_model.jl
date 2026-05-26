@@ -223,7 +223,7 @@ as the first positional argument.
 (::Type{Model})(grid::AbstractLandGrid, args...; kwargs...) where {Model <: AbstractModel} = Model(args...; grid, kwargs...)
 
 # Default parameters collection for processes
-function ParameterEditing.parameters(proc::AbstractProcess)
+function ParameterEditing.parameters(proc::AbstractProcess; kwargs...)
     proc_params = map(fieldnames(typeof(proc))) do name
         name => ParameterEditing.parameters(getproperty(proc, name))
     end

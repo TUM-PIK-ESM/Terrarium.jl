@@ -12,10 +12,10 @@ $(TYPEDFIELDS)
         GridType <: AbstractLandGrid{NF},
         Vegetation <: Optional{AbstractVegetation{NF}},
         Soil <: AbstractSoil{NF},
-        SEB <: AbstractSurfaceEnergyBalance,
-        Hydrology <: AbstractSurfaceHydrology,
-        Atmosphere <: AbstractAtmosphere,
-        Initializer <: AbstractInitializer,
+        SEB <: AbstractSurfaceEnergyBalance{NF},
+        Hydrology <: AbstractSurfaceHydrology{NF},
+        Atmosphere <: AbstractAtmosphere{NF},
+        Initializer <: AbstractInitializer{NF},
     } <: AbstractLandModel{NF, GridType}
     "Spatial discretization"
     grid::GridType
