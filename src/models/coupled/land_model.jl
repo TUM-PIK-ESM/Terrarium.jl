@@ -46,6 +46,7 @@ end
 function initialize(
         model::LandModel{NF};
         clock = Clock(time = zero(NF)),
+        timestepper = nothing,
         boundary_conditions = (;),
         fields = (;),
         input_variables = ()
@@ -62,7 +63,7 @@ function initialize(
     bcs = merge_boundary_conditions(boundary_conditions, ground_heat_flux_bc, infiltration_bc)
     # Merge user-defined fields with BC fields
     fields = merge((; ground_heat_flux, infiltration), fields)
-    return initialize(vars, grid; clock, boundary_conditions = bcs, fields)
+    return initialize(vars, grid; clock, timestepper, boundary_conditions = bcs, fields)
 end
 
 function initialize!(state, model::LandModel)

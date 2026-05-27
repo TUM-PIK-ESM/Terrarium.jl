@@ -14,8 +14,6 @@ default_dt(euler::ForwardEuler) = euler.Δt
 
 is_adaptive(euler::ForwardEuler) = false
 
-is_initialized(euler::ForwardEuler) = true
-
 function timestep!(integrator::ModelIntegrator, timestepper::ForwardEuler, Δt)
     # Compute auxiliaries and tendencies
     update_state!(integrator, compute_tendencies = true)
