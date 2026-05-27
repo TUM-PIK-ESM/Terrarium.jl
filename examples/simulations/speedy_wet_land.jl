@@ -36,7 +36,7 @@ land = Speedy.LandModel(
 land_sea_mask = Speedy.RockyPlanetMask(land.spectral_grid)
 surface_heat_flux = Speedy.SurfaceHeatFlux(land.spectral_grid, land = Speedy.PrescribedLandHeatFlux())
 surface_humidity_flux = Speedy.SurfaceHumidityFlux(land.spectral_grid, land = Speedy.PrescribedLandHumidityFlux())
-output = Speedy.NetCDFOutput(land.spectral_grid, Speedy.PrimitiveDryModel, land.geometry, path = "outputs/")
+output = Speedy.NetCDFOutput(land.spectral_grid, Speedy.PrimitiveDryModel; nlayers_soil = land.geometry.nlayers, path = "outputs/")
 time_stepping = Speedy.Leapfrog(land.spectral_grid, Δt_at_T31 = Minute(15))
 primitive_wet_coupled = Speedy.PrimitiveWetModel(
     land.spectral_grid;

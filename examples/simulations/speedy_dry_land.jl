@@ -41,7 +41,7 @@ land = SpeedyWeather.LandModel(
 
 # Build the coupled PrimitiveDryModel
 land_sea_mask = Speedy.RockyPlanetMask(land.spectral_grid)
-output = Speedy.NetCDFOutput(land.spectral_grid, Speedy.PrimitiveDryModel, land.geometry, path = "outputs/")
+output = Speedy.NetCDFOutput(land.spectral_grid, Speedy.PrimitiveDryModel; nlayers_soil = land.geometry.nlayers, path = "outputs/")
 time_stepping = Speedy.Leapfrog(land.spectral_grid, Δt_at_T31 = Minute(15))
 primitive_dry_coupled = Speedy.PrimitiveDryModel(
     land.spectral_grid;
