@@ -29,4 +29,7 @@ jobs:
         run: julia --project=examples/ -e 'using Pkg; Pkg.develop(PackageSpec(path=pwd())); Pkg.instantiate()'
       - name: Run Vegetation-Soil Column
         run: julia --project=examples/ examples/simulations/land_column.jl
+      - name: Run SpeedyWeather Wet coupling
+        run: julia --project=examples/ examples/simulations/speedy_wet_land.jl
+      
         
