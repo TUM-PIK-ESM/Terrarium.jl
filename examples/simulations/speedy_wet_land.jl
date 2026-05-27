@@ -13,11 +13,11 @@ import SpeedyWeather as Speedy
 # Choose architecture based on available hardware
 arch = CUDA.functional() ? GPU() : CPU()
 
-# --- 1. Build the SpeedyWeather ring + spectral grid ---
+# Build the SpeedyWeather ring + spectral grid
 ring_grid = RingGrids.FullGaussianGrid(24)
 spectral_grid = Speedy.SpectralGrid(ring_grid)
 
-# --- 2. Build the Terrarium land model on the matching ring grid ---
+# Build the Terrarium land model on the matching ring grid
 Nz = 30
 Δz_min = 0.05
 grid = ColumnRingGrid(CPU(), Float32, ExponentialSpacing(; N = Nz, Δz_min), ring_grid)
@@ -25,14 +25,14 @@ soil_initializer = SoilInitializer(eltype(grid))
 soil = SoilEnergyWaterCarbon(eltype(grid), hydrology = SoilHydrology(eltype(grid)))
 terrarium_model = Terrarium.LandModel(grid; initializer = soil_initializer, vegetation = nothing, soil)
 
-# --- 3. Wrap the Terrarium model as a SpeedyWeather wet-land component ---
+# Wrap the Terrarium model as a SpeedyWeather land component
 land = Speedy.LandModel(
     spectral_grid, terrarium_model;
     timestepper = ForwardEuler(eltype(grid)),
     Δt = 300.0,
 )
 
-# --- 4. Build the coupled PrimitiveWetModel ---
+# Build the coupled PrimitiveWetModel
 land_sea_mask = Speedy.RockyPlanetMask(land.spectral_grid)
 surface_heat_flux = Speedy.SurfaceHeatFlux(land.spectral_grid, land = Speedy.PrescribedLandHeatFlux())
 surface_humidity_flux = Speedy.SurfaceHumidityFlux(land.spectral_grid, land = Speedy.PrescribedLandHumidityFlux())
@@ -49,7 +49,7 @@ primitive_wet_coupled = Speedy.PrimitiveWetModel(
 )
 Speedy.add!(primitive_wet_coupled.output, Speedy.SoilTemperatureOutput())
 
-# --- 5. Run the coupled simulation ---
+# Run the coupled simulation
 sim_coupled = Speedy.initialize!(primitive_wet_coupled)
 period = Day(1)
 @info "Running simulation for $period"
