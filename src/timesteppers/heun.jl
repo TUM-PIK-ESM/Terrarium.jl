@@ -23,36 +23,36 @@ function initialize(::Heun, state::AbstractStateVariables)
 end
 
 # Save current prognostic and tendencies into the Heun cache. Recurses into namespaces.
-function save_heun_cache!(state::StateVariables)
+function save_cache!(ts::Heun, state::StateVariables)
     for name in prognostic_names(state)
         copyto!(state.cache.prognostic[name], state.prognostic[name])
         copyto!(state.cache.tendencies[name], state.tendencies[name])
     end
     fastiterate(state.namespaces) do ns
-        save_heun_cache!(ns)
+        save_cache!(ts, ns)
     end
     return nothing
 end
 
 # Restore prognostic fields from the cache. Recurses into namespaces.
-function restore_heun_prognostic!(state::StateVariables)
+function restore_prognostic!(ts::Heun, state::StateVariables)
     for name in prognostic_names(state)
         copyto!(state.prognostic[name], state.cache.prognostic[name])
     end
     fastiterate(state.namespaces) do ns
-        restore_heun_prognostic!(ns)
+        restore_prognostic!(ts, ns)
     end
     return nothing
 end
 
 # Average current tendencies with the saved predictor tendencies in-place:
 # state.tendencies ← (state.tendencies + cache.tendencies) / 2. Recurses into namespaces.
-function average_heun_tendencies!(state::StateVariables)
+function average_tendencies!(ts::Heun, state::StateVariables)
     for name in prognostic_names(state)
         state.tendencies[name] .= (state.tendencies[name] .+ state.cache.tendencies[name]) ./ 2
     end
     fastiterate(state.namespaces) do ns
-        average_heun_tendencies!(ns)
+        average_tendencies!(ts, ns)
     end
     return nothing
 end
@@ -64,7 +64,7 @@ function timestep!(integrator::ModelIntegrator, timestepper::Heun, Δt = default
     # Predictor: compute tendencies ∂u∂t₀ at the current state u₀
     update_state!(state, model, inputs, compute_tendencies = true)
     # Cache u₀ and ∂u∂t₀
-    save_heun_cache!(state)
+    save_cache!(timestepper, state)
 
     # Step state forward in place using ∂u∂t₀
     explicit_step!(state, grid, timestepper, Δt)
@@ -76,9 +76,9 @@ function timestep!(integrator::ModelIntegrator, timestepper::Heun, Δt = default
     # Recompute tendencies ∂u∂t₁ at the predictor state (u_pred, t + Δt)
     update_state!(state, model, inputs, compute_tendencies = true)
     # Average tendencies in place: state.tendencies ← (∂u∂t₀ + ∂u∂t₁) / 2
-    average_heun_tendencies!(state)
+    average_tendencies!(ts, state)
     # Restore the prognostic state to u₀ before the corrector explicit step
-    restore_heun_prognostic!(state)
+    restore_prognostic!(ts, state)
 
     # Corrector: u ← u₀ + Δt · averaged tendencies
     explicit_step!(state, grid, timestepper, Δt)
