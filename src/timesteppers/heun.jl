@@ -63,7 +63,7 @@ function timestep!(integrator::ModelIntegrator, timestepper::Heun, Δt = default
 
     # Predictor: compute tendencies ∂u∂t₀ at the current state u₀
     update_state!(state, model, inputs, compute_tendencies = true)
-    # Snapshot u₀ and ∂u∂t₀
+    # Cache u₀ and ∂u∂t₀
     save_heun_cache!(state)
 
     # Step state forward in place using ∂u∂t₀
