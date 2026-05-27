@@ -46,7 +46,7 @@ end
 function initialize(
         model::LandModel{NF};
         clock = Clock(time = zero(NF)),
-        timestepper = nothing,
+        timestepper = ForwardEuler{NF}(),
         boundary_conditions = (;),
         fields = (;),
         input_variables = ()

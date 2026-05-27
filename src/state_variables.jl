@@ -311,7 +311,7 @@ function initialize(
         model::AbstractModel{NF};
         clock = Clock(time = zero(NF)),
         input_variables = (),
-        timestepper = nothing,
+        timestepper = ForwardEuler{NF}(),
         boundary_conditions = (;),
         initializers = (;),
         fields = (;)
@@ -333,7 +333,7 @@ function initialize(
         grid::AbstractLandGrid{NF};
         clock = Clock(time = zero(NF)),
         input_variables = (),
-        timestepper = nothing,
+        timestepper = ForwardEuler{NF}(),
         boundary_conditions = (;),
         initializers = (;),
         fields = (;)
@@ -356,7 +356,7 @@ function initialize(
         @nospecialize(vars::Variables),
         grid::AbstractLandGrid{NF};
         clock::Clock = Clock(time = 0.0),
-        timestepper = nothing,
+        timestepper = ForwardEuler{NF}(),
         boundary_conditions = (;),
         initializers = (;),
         fields = (;)

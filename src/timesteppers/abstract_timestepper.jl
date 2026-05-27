@@ -48,7 +48,6 @@ Initialize and return the time stepping state cache for the given time stepper.
 implementation, which returns an empty `NamedTuple`.
 """
 initialize(timestepper::AbstractTimeStepper, state) = (;)
-initialize(::Nothing, state) = (;)
 
 """
     $SIGNATURES
