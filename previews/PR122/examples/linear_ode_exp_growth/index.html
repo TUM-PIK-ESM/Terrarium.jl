@@ -54,7 +54,7 @@ input = InputSource(grid, F, name = :F)</code></pre><pre><code class="nohighligh
 ├── initializer:  DefaultInitializer{Float64}
 </code></pre><p>We now can initialize our model, i.e. we run all pre-computation, and initialize a numerical integrator for our model by passing it to <code>initialize</code> along with a suitable timestepper and our input/forcing data, which we here choose to be the second-order <a href="../../api_index/#Terrarium.Heun"><code>Heun</code></a> method with a timestep of 1 second.</p><pre><code class="language-julia hljs">integrator = initialize(model, Heun(Δt = 1.0), input; initializers)</code></pre><pre><code class="nohighlight hljs">Integrator of Main.var&quot;##299&quot;.ExpModel{Float64, ColumnGrid{Float64, CPU, Oceananigans.Grids.RectilinearGrid{Float64, Oceananigans.Grids.Periodic, Oceananigans.Grids.Flat, Oceananigans.Grids.Bounded, Oceananigans.Grids.StaticVerticalDiscretization{OffsetArrays.OffsetVector{Float64, Vector{Float64}}, OffsetArrays.OffsetVector{Float64, Vector{Float64}}, OffsetArrays.OffsetVector{Float64, Vector{Float64}}, OffsetArrays.OffsetVector{Float64, Vector{Float64}}}, Float64, Float64, OffsetArrays.OffsetVector{Float64, StepRangeLen{Float64, Base.TwicePrecision{Float64}, Base.TwicePrecision{Float64}, Int64}}, Nothing, CPU}}, Main.var&quot;##299&quot;.LinearDynamics{Float64}, DefaultInitializer{Float64}} with Heun{Float64}
 ├── Current time: 0.0
-├── StateVariables{Float64}(clock = Clock{Float64, Float64}(time=0 seconds, iteration=0, last_Δt=Inf days), prognostic = (:u,), auxiliary = (:c,), inputs = (:F,), namespaces = (), cache = (:prognostic, :tendencies))
+├── StateVariables{Float64}(clock = Clock{Float64, Float64}(time=0 seconds, iteration=0, last_Δt=Inf days), prognostic = (:u,), auxiliary = (:c,), inputs = (:F,), namespaces = (), timestepper_cache = (:prognostic, :tendencies))
 </code></pre><p>We can advance our model by one step via the <code>timestep!</code> method:</p><pre><code class="language-julia hljs">timestep!(integrator)
 
 integrator.state.u</code></pre><pre><code class="nohighlight hljs">1×1×1 Field{Center, Center, Nothing} reduced over dims = (3,) on Oceananigans.Grids.RectilinearGrid on CPU
@@ -92,12 +92,12 @@ sim.output_writers[:snapshots] = JLD2Writer(
 run!(sim)
 @assert isfile(output_file) &quot;Output file does not exist!&quot;
 println(&quot;Simulation data saved to $(output_file)&quot;)</code></pre><pre><code class="nohighlight hljs">[ Info: Initializing simulation...
-[ Info:     ... simulation initialization complete (4.780 seconds)
+[ Info:     ... simulation initialization complete (4.582 seconds)
 [ Info: Executing initial time step...
-[ Info:     ... initial time step complete (2.533 seconds).
-[ Info: Simulation is stopping after running for 10.086 seconds.
+[ Info:     ... initial time step complete (2.471 seconds).
+[ Info: Simulation is stopping after running for 9.788 seconds.
 [ Info: Simulation time 5 minutes equals or exceeds stop time 5 minutes.
-Simulation data saved to /tmp/jl_lsN4vyraVO/simulation.jld2
+Simulation data saved to /tmp/jl_fahiZOXqJA/simulation.jld2
 </code></pre><p>Then load the output data and plot the results:</p><pre><code class="language-julia hljs">using CairoMakie
 
 fts = FieldTimeSeries(output_file, &quot;u&quot;)
@@ -132,9 +132,9 @@ Pkg.status()</code></pre><pre><code class="nohighlight hljs">Status `~/work/Terr
   [85f8d34a] NCDatasets v0.14.15
 ⌅ [9e8cae18] Oceananigans v0.106.6
   [a3a2b9e3] Rasters v0.14.7
-  [d1845624] RingGrids v0.1.5
+  [d1845624] RingGrids v0.1.6
   [80418d68] Terrarium v0.1.1 `~/work/Terrarium.jl/Terrarium.jl`
   [b77e0a4c] InteractiveUtils v1.11.0
   [d6f4376e] Markdown v1.11.0
 Info Packages marked with ⌃ and ⌅ have new versions available. Those with ⌃ may be upgradable, but those with ⌅ are restricted by compatibility constraints from upgrading. To see why use `status --outdated`
-</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../../extending/coupling_processes/">« Coupling processes</a><a class="docs-footer-nextpage" href="../simple_snow_ddm/">Example: Degree-day snow melt model »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.17.0 on <span class="colophon-date" title="Wednesday 27 May 2026 08:01">Wednesday 27 May 2026</span>. Using Julia version 1.12.6.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../../extending/coupling_processes/">« Coupling processes</a><a class="docs-footer-nextpage" href="../simple_snow_ddm/">Example: Degree-day snow melt model »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.17.0 on <span class="colophon-date" title="Wednesday 27 May 2026 12:52">Wednesday 27 May 2026</span>. Using Julia version 1.12.6.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
