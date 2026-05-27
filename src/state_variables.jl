@@ -25,7 +25,7 @@ struct StateVariables{
     auxiliary::NamedTuple{auxnames, AuxFields}
     inputs::NamedTuple{inputnames, InputFields}
     namespaces::NamedTuple{nsnames, Namespaces}
-    cache::NamedTuple{cachenames, CacheFields}
+    timestepper_cache::NamedTuple{cachenames, CacheFields}
     clock::ClockType
 
     function StateVariables(
@@ -36,7 +36,7 @@ struct StateVariables{
             auxiliary::NamedTuple{auxnames, AuxFields},
             inputs::NamedTuple{inputnames, InputFields},
             namespaces::NamedTuple{nsnames, Namespaces},
-            cache::NamedTuple{cachenames, CacheFields},
+            timestepper_cache::NamedTuple{cachenames, CacheFields},
             clock::ClockType,
         ) where {
             NF, prognames, auxnames, inputnames, nsnames, cachenames,
@@ -51,7 +51,7 @@ struct StateVariables{
             auxiliary,
             inputs,
             namespaces,
-            cache,
+            timestepper_cache,
             clock,
         )
     end
@@ -65,7 +65,7 @@ end
 @inline namespace_names(state::StateVariables) = keys(getfield(state, :namespaces))
 @inline closure_names(::StateVariables{NF, pnames, cnames}) where {NF, pnames, cnames} = cnames
 
-@inline cache_names(state::StateVariables) = keys(getfield(state, :cache))
+@inline timestepper_cache_names(state::StateVariables) = keys(getfield(state, :timestepper_cache))
 
 # Allow reconstruction from properties
 ConstructionBase.constructorof(::Type{StateVariables{NF, pnames, cnames}}) where {NF, pnames, cnames} = (args...) -> StateVariables(NF, cnames, args...)
@@ -483,7 +483,7 @@ function Adapt.adapt_structure(to, state::StateVariables{NF}) where {NF}
         Adapt.adapt_structure(to, state.auxiliary),
         Adapt.adapt_structure(to, state.inputs),
         Adapt.adapt_structure(to, state.namespaces),
-        Adapt.adapt_structure(to, state.cache),
+        Adapt.adapt_structure(to, state.timestepper_cache),
         Adapt.adapt_structure(to, state.clock),
     )
 end
@@ -549,7 +549,7 @@ end
 
 function Base.summary(state::StateVariables{NF}) where {NF}
     clockstr = summary(state.clock)
-    str = "StateVariables{$NF}(clock = $clockstr, prognostic = $(keys(state.prognostic)), auxiliary = $(keys(state.auxiliary)), inputs = $(keys(state.inputs)), namespaces = $(keys(state.namespaces)), cache = $(cache_names(state)))"
+    str = "StateVariables{$NF}(clock = $clockstr, prognostic = $(keys(state.prognostic)), auxiliary = $(keys(state.auxiliary)), inputs = $(keys(state.inputs)), namespaces = $(keys(state.namespaces)), timestepper_cache = $(timestepper_cache_names(state)))"
     return str
 end
 
@@ -568,5 +568,5 @@ function Base.show(io::IO, state::StateVariables{NF}) where {NF}
     println(io)
     print(io, "├─ Namespaces: $(keys(state.namespaces))")
     println(io)
-    return print(io, "└─ Cache: $(cache_names(state))")
+    return print(io, "└─ Timestepper cache: $(timestepper_cache_names(state))")
 end
