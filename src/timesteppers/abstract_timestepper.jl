@@ -40,14 +40,15 @@ variables defined by `model`.
 timestep!(state, model::AbstractModel, timestepper::AbstractTimeStepper, Δt) = nothing
 
 """
-    initialize(::AbstractTimeStepper, model, state)
+    initialize(::AbstractTimeStepper, state)
 
 Initialize and return the time stepping state cache for the given time stepper.
 . Allocate and return a `NamedTuple` of intermediate fields/state required by the given
 `timestepper`. Time steppers that do not require any cache can fall back to the default 
 implementation, which returns an empty `NamedTuple`.
 """
-initialize(timestepper::AbstractTimeStepper, model, state) = (;)
+initialize(timestepper::AbstractTimeStepper, state) = (;)
+initialize(::Nothing, state) = (;)
 
 """
     $SIGNATURES
