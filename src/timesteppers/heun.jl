@@ -72,7 +72,7 @@ function timestep!(integrator::ModelIntegrator, timestepper::Heun, Δt = default
     timestep!(state, model, timestepper, Δt)
     # Apply closure relations
     closure!(state, model)
- 
+
     # Recompute tendencies ∂u∂t₁ at the predictor state (u_pred, t + Δt)
     update_state!(state, model, inputs, compute_tendencies = true)
     # Average tendencies in place: state.tendencies ← (∂u∂t₀ + ∂u∂t₁) / 2
