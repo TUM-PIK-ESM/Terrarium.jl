@@ -156,8 +156,7 @@ function initialize(
     input_vars = variables(inputs)
     updated_model = isnothing(params) ? model : ParameterEditing.reconstruct(model, params)
     state = initialize(updated_model; clock, boundary_conditions, fields, input_variables = input_vars)
-    initialized_timestepper = initialize(timestepper, updated_model, state)
-    integrator = ModelIntegrator(clock, updated_model, inputs, state, initializers, initialized_timestepper)
+    integrator = ModelIntegrator(clock, updated_model, inputs, state, initializers, timestepper)
     initialize!(integrator)
     return integrator
 end

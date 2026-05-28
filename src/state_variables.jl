@@ -15,8 +15,9 @@ by the timestepping scheme.
 """
 struct StateVariables{
         NF,
-        prognames, closurenames, auxnames, inputnames, nsnames,
+        prognames, closurenames, auxnames, inputnames, nsnames, cachenames,
         ProgFields, TendFields, AuxFields, InputFields, Namespaces,
+        CacheFields,
         ClockType,
     } <: AbstractStateVariables
     prognostic::NamedTuple{prognames, ProgFields}
@@ -24,6 +25,7 @@ struct StateVariables{
     auxiliary::NamedTuple{auxnames, AuxFields}
     inputs::NamedTuple{inputnames, InputFields}
     namespaces::NamedTuple{nsnames, Namespaces}
+    timestepper_cache::NamedTuple{cachenames, CacheFields}
     clock::ClockType
 
     function StateVariables(
@@ -34,23 +36,26 @@ struct StateVariables{
             auxiliary::NamedTuple{auxnames, AuxFields},
             inputs::NamedTuple{inputnames, InputFields},
             namespaces::NamedTuple{nsnames, Namespaces},
-            clock::ClockType
+            timestepper_cache::NamedTuple{cachenames, CacheFields},
+            clock::ClockType,
         ) where {
-            NF, prognames, auxnames, inputnames, nsnames,
-            ProgFields, TendFields, AuxFields, InputFields, Namespaces, ClockType,
+            NF, prognames, auxnames, inputnames, nsnames, cachenames,
+            ProgFields, TendFields, AuxFields, InputFields, Namespaces, CacheFields, ClockType,
         }
         return new{
-            NF, prognames, closurenames, auxnames, inputnames, nsnames,
-            ProgFields, TendFields, AuxFields, InputFields, Namespaces, ClockType,
+            NF, prognames, closurenames, auxnames, inputnames, nsnames, cachenames,
+            ProgFields, TendFields, AuxFields, InputFields, Namespaces, CacheFields, ClockType,
         }(
             prognostic,
             tendencies,
             auxiliary,
             inputs,
             namespaces,
-            clock
+            timestepper_cache,
+            clock,
         )
     end
+
 end
 
 # Name getters (always type-stable, inlined constant propagation)
@@ -59,6 +64,8 @@ end
 @inline input_names(state::StateVariables) = keys(getfield(state, :inputs))
 @inline namespace_names(state::StateVariables) = keys(getfield(state, :namespaces))
 @inline closure_names(::StateVariables{NF, pnames, cnames}) where {NF, pnames, cnames} = cnames
+
+@inline timestepper_cache_names(state::StateVariables) = keys(getfield(state, :timestepper_cache))
 
 # Allow reconstruction from properties
 ConstructionBase.constructorof(::Type{StateVariables{NF, pnames, cnames}}) where {NF, pnames, cnames} = (args...) -> StateVariables(NF, cnames, args...)
@@ -305,13 +312,14 @@ function initialize(
         params = nothing;
         clock = Clock(time = zero(NF)),
         input_variables = (),
+        timestepper = ForwardEuler{NF}(),
         boundary_conditions = (;),
         initializers = (;),
         fields = (;)
     ) where {NF}
     model_rec = isnothing(params) ? model : ParameterEditing.reconstruct(model, params)
     vars = Variables(tuplejoin(variables(model_rec), input_variables))
-    state = initialize(vars, model_rec.grid; clock, boundary_conditions, initializers, fields)
+    state = initialize(vars, model_rec.grid; clock, timestepper, boundary_conditions, initializers, fields)
     return state
 end
 
@@ -328,13 +336,14 @@ function initialize(
         params = nothing;
         clock = Clock(time = zero(NF)),
         input_variables = (),
+        timestepper = ForwardEuler{NF}(),
         boundary_conditions = (;),
         initializers = (;),
         fields = (;)
     ) where {NF}
     process_rec = isnothing(params) ? process : ParameterEditing.reconstruct(process, params)
     vars = Variables(tuplejoin(variables(process_rec), input_variables))
-    state = initialize(vars, grid; clock, boundary_conditions, initializers, fields)
+    state = initialize(vars, grid; clock, timestepper, boundary_conditions, initializers, fields)
     return state
 end
 
@@ -351,6 +360,7 @@ function initialize(
         @nospecialize(vars::Variables),
         grid::AbstractLandGrid{NF};
         clock::Clock = Clock(time = 0.0),
+        timestepper = ForwardEuler{NF}(),
         boundary_conditions = (;),
         initializers = (;),
         fields = (;)
@@ -368,7 +378,20 @@ function initialize(
     end
     # get closure variable names
     closurenames = map(varname, closure_variables(values(vars.prognostic)))
-    # construct and return StateVariables
+    # construct StateVariables with an empty cache; the timestepper-specific cache
+    # is allocated below now that all other state variables have been initialized
+    initial_state = StateVariables(
+        NF,
+        closurenames,
+        prognostic_fields,
+        tendency_fields,
+        auxiliary_fields,
+        input_fields,
+        namespaces,
+        (;),
+        clock,
+    )
+    cache = initialize(timestepper, initial_state)
     state = StateVariables(
         NF,
         closurenames,
@@ -377,7 +400,8 @@ function initialize(
         auxiliary_fields,
         input_fields,
         namespaces,
-        clock
+        cache,
+        clock,
     )
     # Apply Field initializers
     initialize!(state, initializers)
@@ -463,6 +487,7 @@ function Adapt.adapt_structure(to, state::StateVariables{NF}) where {NF}
         Adapt.adapt_structure(to, state.auxiliary),
         Adapt.adapt_structure(to, state.inputs),
         Adapt.adapt_structure(to, state.namespaces),
+        Adapt.adapt_structure(to, state.timestepper_cache),
         Adapt.adapt_structure(to, state.clock),
     )
 end
@@ -528,7 +553,7 @@ end
 
 function Base.summary(state::StateVariables{NF}) where {NF}
     clockstr = summary(state.clock)
-    str = "StateVariables{$NF}(clock = $clockstr, prognostic = $(keys(state.prognostic)), auxiliary = $(keys(state.auxiliary)), inputs = $(keys(state.inputs)), namespaces = $(keys(state.namespaces)))"
+    str = "StateVariables{$NF}(clock = $clockstr, prognostic = $(keys(state.prognostic)), auxiliary = $(keys(state.auxiliary)), inputs = $(keys(state.inputs)), namespaces = $(keys(state.namespaces)), timestepper_cache = $(timestepper_cache_names(state)))"
     return str
 end
 
@@ -545,5 +570,7 @@ function Base.show(io::IO, state::StateVariables{NF}) where {NF}
     print(io, "├─ Inputs: ")
     show(io, state.inputs)
     println(io)
-    return print(io, "├─ Namespaces: $(keys(state.namespaces))")
+    print(io, "├─ Namespaces: $(keys(state.namespaces))")
+    println(io)
+    return print(io, "└─ Timestepper cache: $(timestepper_cache_names(state))")
 end
