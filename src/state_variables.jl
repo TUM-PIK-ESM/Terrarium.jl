@@ -376,7 +376,7 @@ function initialize(
     closurenames = map(varname, closure_variables(values(vars.prognostic)))
     # construct StateVariables with an empty cache; the timestepper-specific cache
     # is allocated below now that all other state variables have been initialized
-    state = StateVariables(
+    initial_state = StateVariables(
         NF,
         closurenames,
         prognostic_fields,
@@ -387,7 +387,7 @@ function initialize(
         (;),
         clock,
     )
-    cache = initialize(timestepper, state)
+    cache = initialize(timestepper, initial_state)
     state = StateVariables(
         NF,
         closurenames,
