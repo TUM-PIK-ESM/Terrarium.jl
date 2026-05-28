@@ -11,13 +11,6 @@ Base type for time steppers.
 abstract type AbstractTimeStepper{NF} end
 
 """
-    is_initialized(timestepper::AbstractTimeStepper)
-
-Return `true` if the timestepper is initialized, `false` otherwise.
-"""
-function is_initialized end
-
-"""
     default_dt(timestepper::AbstractTimeStepper)
 
 Get the current timestep size for the time stepper.
@@ -47,11 +40,14 @@ variables defined by `model`.
 timestep!(state, model::AbstractModel, timestepper::AbstractTimeStepper, Δt) = nothing
 
 """
-    initialize(::AbstractTimeStepper, model, state) where {NF}
+    initialize(::AbstractTimeStepper, state)
 
 Initialize and return the time stepping state cache for the given time stepper.
+. Allocate and return a `NamedTuple` of intermediate fields/state required by the given
+`timestepper`. Time steppers that do not require any cache can fall back to the default 
+implementation, which returns an empty `NamedTuple`.
 """
-initialize(timestepper::AbstractTimeStepper, model, state) = timestepper
+initialize(timestepper::AbstractTimeStepper, state) = (;)
 
 """
     $SIGNATURES
@@ -63,7 +59,6 @@ additional dispatches of `explicit_step_kernel!(field, tendency, ::AbstractLandG
 can be defined to implement more specialized time-stepping schemes.
 """
 function explicit_step!(state, grid::AbstractLandGrid, timestepper::AbstractTimeStepper, Δt)
-    @assert is_initialized(timestepper)
     fastiterate(keys(state.prognostic)) do name
         # apply flux BCs, if present
         compute_z_bcs!(state.tendencies[name], state.prognostic[name], grid, state)

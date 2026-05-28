@@ -153,9 +153,8 @@ function initialize(
     ) where {NF}
     inputs = InputSources(inputs...)
     input_vars = variables(inputs)
-    state = initialize(model; clock, boundary_conditions, fields, input_variables = input_vars)
-    initialized_timestepper = initialize(timestepper, model, state)
-    integrator = ModelIntegrator(clock, model, inputs, state, initializers, initialized_timestepper)
+    state = initialize(model; clock, timestepper, boundary_conditions, fields, input_variables = input_vars)
+    integrator = ModelIntegrator(clock, model, inputs, state, initializers, timestepper)
     initialize!(integrator)
     return integrator
 end
