@@ -1,4 +1,3 @@
-# Note: Should sand, silt, and clay have separate thermal properties?
 """
     $TYPEDEF
 
@@ -12,6 +11,7 @@ Default values from [hillelIntroductionSoilPhysics1982](@cite).
 * [hillelIntroductionSoilPhysics1982](@cite) Hillel, Academic Press (1982)
 """
 @parameterized @kwdef struct SoilThermalConductivities{NF}
+    # Note: Should sand, silt, and clay have separate thermal properties?
     "Thermal conductivity of water"
     @param water::NF = 0.57 (units = u"W/m/K", bounds = Positive)
 
@@ -55,20 +55,18 @@ end
 
 SoilHeatCapacities(::Type{NF}; kwargs...) where {NF} = SoilHeatCapacities{NF}(; kwargs...)
 
-# TODO: In principle, these types could change for different soil parameterizations.
-# This is something we should ideally allow for.
 """
     $TYPEDEF
 
 Properties:
 $TYPEDFIELDS
 """
-@parameterized @kwdef struct SoilThermalProperties{NF, FC, CondBulk}
+@parameterized @kwdef struct SoilThermalProperties{NF, FC, CondWeight}
     "Thermal conductivities for all constituents"
     @component conductivities::SoilThermalConductivities{NF}
 
     "Method for computing bulk thermal conductivity from constituents"
-    @component bulk_conductivity::CondBulk
+    @component conductivity_weighting::CondWeight
 
     "Thermal conductivities for all constituents"
     @component heat_capacities::SoilHeatCapacities{NF}
@@ -80,10 +78,10 @@ end
 SoilThermalProperties(
     ::Type{NF};
     conductivities::SoilThermalConductivities{NF} = SoilThermalConductivities(NF),
-    bulk_conductivity::AbstractBulkWeighting = InverseQuadratic(),
+    conductivity_weighting::AbstractBulkWeighting = InverseQuadratic(),
     heat_capacities::SoilHeatCapacities{NF} = SoilHeatCapacities(NF),
     freezecurve::FreezeCurve = FreeWater()
-) where {NF} = SoilThermalProperties{NF, typeof(freezecurve), typeof(bulk_conductivity)}(conductivities, bulk_conductivity, heat_capacities, freezecurve)
+) where {NF} = SoilThermalProperties{NF, typeof(freezecurve), typeof(conductivity_weighting)}(conductivities, conductivity_weighting, heat_capacities, freezecurve)
 
 freezecurve(
     ::SoilThermalProperties{NF, FreeWater},
@@ -99,7 +97,7 @@ Compute the bulk thermal conductivity of the given soil volume.
     κs = getproperties(props.conductivities)
     fracs = volumetric_fractions(soil)
     # apply bulk conductivity weighting
-    return props.bulk_conductivity(κs, fracs)
+    return props.conductivity_weighting(κs, fracs)
 end
 
 """
@@ -107,15 +105,32 @@ end
 
 Compute the bulk heat capacity of the given soil volume.
 """
-@inline function heat_capacity(props::SoilThermalProperties, soil::SoilVolume)
+@inline function compute_heat_capacity(props::SoilThermalProperties, soil::SoilVolume)
     cs = getproperties(props.heat_capacities)
     fracs = volumetric_fractions(soil)
     # for heat capacity, we just do a weighted average
-    return sum(fastmap(*, cs, fracs))
+    average = WeightedAverage()
+    return average(cs, fracs)
 end
 
 """
-The inverse quadratic (or "quadratic parallel") bulk thermal conductivity formula ([cosenzaSimultaneousDeterminationThermal2003](@cite)):
+    $TYPEDEF
+
+Simple weighted average formula for computing bulk quantities:
+
+```math
+\\bar{x} = \\sum_{i=1}^N \\theta_i x_i
+```
+"""
+struct WeightedAverage <: AbstractBulkWeighting end
+
+(f::WeightedAverage)(xs, weights) = sum(fastmap(*, xs, weights))
+
+"""
+    $TYPEDEF
+
+The inverse quadratic (or "quadratic parallel") bulk weighting formula
+for thermal conductivity ([cosenzaSimultaneousDeterminationThermal2003](@cite)):
 
 ```math
 k = \\left[\\sum_{i=1}^N θᵢ\\sqrt{kᵢ}\\right]^2
@@ -126,6 +141,5 @@ k = \\left[\\sum_{i=1}^N θᵢ\\sqrt{kᵢ}\\right]^2
 """
 struct InverseQuadratic <: AbstractBulkWeighting end
 
-(f::InverseQuadratic)(x::Real, weight::Real) = sqrt(x) * weight
 # we use fastmap here so that the ordering of named tuples can be arbitrary
-(f::InverseQuadratic)(xs, weights) = sum(fastmap(f, xs, weights))^2
+(f::InverseQuadratic)(xs, weights) = sum(fastmap((x, w) -> sqrt(x) * w, xs, weights))^2

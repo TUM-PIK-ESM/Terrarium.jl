@@ -92,7 +92,7 @@ end
     fields = merge(fields, (; liquid_water_fraction = out.liquid_water_fraction))
     solid = soil_matrix(i, j, k, grid, fields, strat, bgc)
     soil = SoilVolume(por, sat, liq, solid)
-    C = heat_capacity(energy.thermal_properties, soil)
+    C = compute_heat_capacity(energy.thermal_properties, soil)
     # compute energy from temperature, heat capacity, and ice fraction
     U = out.internal_energy[i, j, k] = T * C - L * sat * por * (1 - liq)
     return U
@@ -123,7 +123,7 @@ end
     # calculate soil volumetric fractions
     solid = soil_matrix(i, j, k, grid, fields, strat, bgc)
     soil = SoilVolume(por, sat, liq, solid)
-    C = heat_capacity(energy.thermal_properties, soil)
+    C = compute_heat_capacity(energy.thermal_properties, soil)
     # calculate temperature from internal energy and liquid water fraction
     T = out.temperature[i, j, k] = energy_to_temperature(fc, U, Lθ, C)
     return T
