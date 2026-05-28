@@ -72,10 +72,10 @@ $TYPEDFIELDS
 """
 @parameterized @kwdef struct ConstantSoilHydraulics{NF, RC, UnsatK <: AbstractUnsatK{NF}} <: AbstractSoilHydraulics{NF, RC, UnsatK}
     "Soil water retention curve"
-    swrc::RC
+    @component swrc::RC
 
     "Unsaturated hydraulic conductivity formulation; defaults to `sat_hydraulic_cond`"
-    unsat_hydraulic_cond::UnsatK
+    @component unsat_hydraulic_cond::UnsatK
 
     "Hydraulic conductivity at saturation"
     @param sat_hydraulic_cond::NF = 1.0e-5 (units = u"m/s", bounds = Positive, scale = 1.0e-5)
@@ -123,10 +123,10 @@ $TYPEDFIELDS
 """
 @parameterized @kwdef struct SoilHydraulicsSURFEX{NF, RC, UnsatK <: AbstractUnsatK{NF}} <: AbstractSoilHydraulics{NF, RC, UnsatK}
     "Soil water retention curve"
-    swrc::RC
+    @component swrc::RC
 
     "Unsaturated hydraulic conductivity formulation; defaults to `sat_hydraulic_cond`"
-    unsat_hydraulic_cond::UnsatK
+    @component unsat_hydraulic_cond::UnsatK
 
     "Hydraulic conductivity at saturation"
     @param sat_hydraulic_cond::NF = 1.0e-5 (units = u"m/s", bounds = Positive, scale = 1.0e-5)
