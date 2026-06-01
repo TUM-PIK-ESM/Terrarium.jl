@@ -34,11 +34,11 @@ As an example, let's consider the construction and initialization of a [`SoilMod
 ```@example simulation
 arch = CPU()
 grid = ColumnGrid(arch, Float32, ExponentialSpacing(N=10))
-model = SoilModel(grid)
-integrator = initialize(model, ForwardEuler(Float32))
+model = SoilModel(grid, timesteppers=ForwardEuler(Float32))
+integrator = initialize(model)
 ```
 
-Here `integrator` corresponds to a `ModelIntegrator` configured for a [`ForwardEuler`](@ref) time stepping scheme. State variable `Field`s can be accessed via `integrator.state`:
+Here `integrator` corresponds to a `ModelIntegrator` configured for a [`ForwardEuler`](@ref) time stepping scheme that was set in the `SoilModel`. State variable `Field`s can be accessed via `integrator.state`:
 
 ```@example simulation
 integrator.state.temperature   # current temperature Field
