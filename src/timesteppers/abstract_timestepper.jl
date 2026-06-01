@@ -99,10 +99,20 @@ define a `timesteppers` field.
 Return the names of the prognostic variables defined by `model` that are integrated by the timestepper
 filling the given `class` (`:explicit` or `:implicit`); i.e. those declared with `timestepper = class`.
 """
-function prognostic_names_for(model::AbstractModel, class::Symbol)
-    progvars = prognostic_variables(model)
-    selected = filter(var -> timestepper(var) === class, progvars)
-    return map(varname, selected)
+prognostic_names_for(model::AbstractModel, class::Symbol) = prognostic_names_for(model, Val(class))
+prognostic_names_for(model::AbstractModel, class::Val) = _prognostic_names_for(variables(model), class)
+
+# Select, at compile time, the names of all top-level prognostic variables whose timestepper type
+# parameter matches `class`. Operating on the variable types keeps this type stable.
+@generated function _prognostic_names_for(vars::Tuple, ::Val{class}) where {class}
+    names = Symbol[]
+    for T in vars.parameters
+        if T <: PrognosticVariable && T.parameters[2] === class
+            name = T.parameters[1]
+            name in names || push!(names, name)
+        end
+    end
+    return Expr(:tuple, map(QuoteNode, names)...)
 end
 
 """
