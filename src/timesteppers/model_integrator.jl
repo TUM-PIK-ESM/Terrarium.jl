@@ -3,8 +3,7 @@
 
 Represents a "integrator" for a simulation of a given `model`. `ModelIntegrator` consists of a
 `clock`, a `model`, and an initialized `StateVariables` data structure, as well as any relevant
-`inputs` provided by a corresponding `InputProvider`. The time steppers are not stored on the
-integrator; they are obtained from the `model` via [`get_timesteppers`](@ref).
+`inputs` provided by a corresponding `InputProvider`. 
 The `ModelIntegrator` implements the `Oceananigans.AbstractModel` interface and can thus be
 treated as a "model" in `Oceananigans` `Simulation`s and output reading/writing utilities.
 """
@@ -36,6 +35,7 @@ end
 
 # Outer constructor so that `ModelIntegrator` can be constructed with a timestepper type
 # so that it can correctly subtype Oceananigans.AbstractModel
+# TODO: Is this actually needed?
 # TODO: For now just take the explicit one?
 function ModelIntegrator(
         clock::Clock,
@@ -179,7 +179,7 @@ default_dt(integrator::ModelIntegrator) = default_dt(get_timesteppers(integrator
     $TYPEDSIGNATURES
 
 Creates and initializes a `ModelIntegrator` for the given `model` with input variables populated by
-the given `inputs`. This allocates all necessary `Field`s for the state variables and subsequently calls
+the given `inputs`. This method allocates all necessary `Field`s for the state variables and subsequently calls
 `initialize!(::ModelIntegrator)`.
 
 Note that this method is **not type stable** and thus should not be called from Enzyme `autodiff`. To reinitialize

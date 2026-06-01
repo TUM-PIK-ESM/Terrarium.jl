@@ -53,8 +53,7 @@ function average_tendencies!(state::StateVariables, ts::Heun, names::Tuple)
     return nothing
 end
 
-# Step only the prognostic variables named in `names` with the Heun scheme. Invoked by the
-# `timesteppers` orchestrator; the clock is advanced once by the orchestrator, not here.
+# Step only the prognostic variables named in `names` with the Heun scheme.
 function timestep!(integrator::ModelIntegrator, timestepper::Heun, Δt, names::Tuple)
     (; model, state, inputs) = integrator
     grid = get_grid(model)
