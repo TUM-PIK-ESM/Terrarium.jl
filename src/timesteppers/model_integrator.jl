@@ -159,7 +159,7 @@ are grouped by their assigned time stepper, and each group is forwarded to the c
 function timestep!(integrator::ModelIntegrator, timesteppers::NamedTuple, Δt)
     # step the prognostic variables assigned to each time stepper (grouped by :explicit/:implicit)
     fastiterate(keys(timesteppers)) do class
-        names = prognostic_names_for(integrator.model, class)
+        names = prognostic_names(integrator.state, class)
         # only invoke the time stepper if it has variables assigned to it
         isempty(names) || timestep!(integrator, timesteppers[class], Δt, names)
     end

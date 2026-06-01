@@ -15,7 +15,7 @@ by the timestepping scheme.
 """
 struct StateVariables{
         NF,
-        prognames, closurenames, auxnames, inputnames, nsnames, cachenames,
+        prognames, closurenames, timestepper_classes, auxnames, inputnames, nsnames, cachenames,
         ProgFields, TendFields, AuxFields, InputFields, Namespaces,
         CacheFields,
         ClockType,
@@ -31,6 +31,7 @@ struct StateVariables{
     function StateVariables(
             ::Type{NF},
             closurenames::Tuple{Vararg{Symbol}},
+            timestepper_classes::Tuple{Vararg{Symbol}},
             prognostic::NamedTuple{prognames, ProgFields},
             tendencies::NamedTuple{prognames, TendFields},
             auxiliary::NamedTuple{auxnames, AuxFields},
@@ -43,7 +44,7 @@ struct StateVariables{
             ProgFields, TendFields, AuxFields, InputFields, Namespaces, CacheFields, ClockType,
         }
         return new{
-            NF, prognames, closurenames, auxnames, inputnames, nsnames, cachenames,
+            NF, prognames, closurenames, timestepper_classes, auxnames, inputnames, nsnames, cachenames,
             ProgFields, TendFields, AuxFields, InputFields, Namespaces, CacheFields, ClockType,
         }(
             prognostic,
@@ -64,11 +65,12 @@ end
 @inline input_names(state::StateVariables) = keys(getfield(state, :inputs))
 @inline namespace_names(state::StateVariables) = keys(getfield(state, :namespaces))
 @inline closure_names(::StateVariables{NF, pnames, cnames}) where {NF, pnames, cnames} = cnames
+@inline timestepper_classes(::StateVariables{NF, pnames, cnames, pclasses}) where {NF, pnames, cnames, pclasses} = pclasses
 
 @inline timestepper_cache_names(state::StateVariables) = keys(getfield(state, :timestepper_cache))
 
 # Allow reconstruction from properties
-ConstructionBase.constructorof(::Type{StateVariables{NF, pnames, cnames}}) where {NF, pnames, cnames} = (args...) -> StateVariables(NF, cnames, args...)
+ConstructionBase.constructorof(::Type{StateVariables{NF, pnames, cnames, pclasses}}) where {NF, pnames, cnames, pclasses} = (args...) -> StateVariables(NF, cnames, pclasses, args...)
 
 """
     update_state!(state::StateVariables, model::AbstractModel, inputs::InputSources; compute_tendencies = true)
@@ -373,11 +375,15 @@ function StateVariables(
     end
     # get closure variable names
     closurenames = map(varname, closure_variables(values(vars.prognostic)))
+    # timestepper class (:explicit/:implicit) of each prognostic variable, in the same order as the names;
+    # stored as a type parameter so that `prognostic_names(state, class)` can select per class type stably
+    timestepper_classes = map(timestepper, values(vars.prognostic))
     # construct StateVariables with an empty cache; the timestepper-specific cache
     # is allocated below now that all other state variables have been initialized
     initial_state = StateVariables(
         NF,
         closurenames,
+        timestepper_classes,
         prognostic_fields,
         tendency_fields,
         auxiliary_fields,
@@ -391,6 +397,7 @@ function StateVariables(
     state = StateVariables(
         NF,
         closurenames,
+        timestepper_classes,
         prognostic_fields,
         tendency_fields,
         auxiliary_fields,
@@ -478,6 +485,7 @@ function Adapt.adapt_structure(to, state::StateVariables{NF}) where {NF}
     return StateVariables(
         NF,
         closure_names(state),
+        timestepper_classes(state),
         Adapt.adapt_structure(to, state.prognostic),
         Adapt.adapt_structure(to, state.tendencies),
         Adapt.adapt_structure(to, state.auxiliary),
