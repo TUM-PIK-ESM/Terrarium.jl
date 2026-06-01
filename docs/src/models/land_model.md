@@ -18,8 +18,8 @@ using Terrarium
 ```@example landmodel
 arch = CPU()
 grid = ColumnGrid(arch, Float32, ExponentialSpacing(N = 10)) # 10 soil layers
-model = LandModel(grid) # Default configuration
-integrator = initialize(model, ForwardEuler(eltype(grid)))
+model = LandModel(grid, timesteppers=ForwardEuler(eltype(grid))) # Default configuration
+integrator = initialize(model)
 ```
 
 ```@docs; canonical = false

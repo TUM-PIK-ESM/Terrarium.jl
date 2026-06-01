@@ -59,10 +59,10 @@ using Terrarium
 num_columns = 1
 arch = CPU()
 grid = ColumnGrid(arch, Float32, ExponentialSpacing(N=10), num_columns)
-model = SoilModel(grid)
+model = SoilModel(grid, timesteppers=ForwardEuler(eltype(grid)))
 # Prescribe a constant surface temperature of 1°C
 bcs = PrescribedSurfaceTemperature(:T_ub, 1.0)
-integrator = initialize(model, ForwardEuler(eltype(grid)), boundary_conditions = bcs)
+integrator = initialize(model, boundary_conditions = bcs)
 # Run the simulation forward for 10 model days
 @time run!(integrator, period = Day(10))
 ```
@@ -81,10 +81,10 @@ using CUDA # needs to be separately installed
 rings = FullGaussianGrid(8) # Gaussian grid with 16 latitudinal rings, 8 per hemisphere (512 points, ~9.0˚ lat/lon)
 arch = CUDA.functional() ? GPU() : CPU() # run on the GPU (if available)
 grid = ColumnRingGrid(arch, Float32, ExponentialSpacing(N=10), rings) # create grid
-model = SoilModel(grid)
+model = SoilModel(grid, timesteppers=ForwardEuler(eltype(grid)))
 # Prescribe a constant surface temperature of 1°C
 bcs = PrescribedSurfaceTemperature(:T_ub, 1.0)
-integrator = initialize(model, ForwardEuler(eltype(grid)), boundary_conditions = bcs)
+integrator = initialize(model, boundary_conditions = bcs)
 # Run the simulation forward for 10 model days
 @time run!(integrator, period = Day(10))
 ```
