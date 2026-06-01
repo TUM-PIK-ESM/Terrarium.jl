@@ -172,7 +172,7 @@ end
 # ## Defining a model
 #
 # To run a simulation, the process must be embedded in an `AbstractModel`. We define a minimal
-# wrapper following the same convention as other Terrarium models: positional `grid`, timestepper,  
+# wrapper following the same convention as other Terrarium models: positional `grid`, timestepper,
 # and any process and initializer keyword arguments with sensible defaults.
 
 @kwdef struct HeatModel{
