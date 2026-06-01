@@ -172,18 +172,20 @@ end
 # ## Defining a model
 #
 # To run a simulation, the process must be embedded in an `AbstractModel`. We define a minimal
-# wrapper following the same convention as other Terrarium models: positional `grid`, and any
-# process and initializer keyword arguments with sensible defaults.
+# wrapper following the same convention as other Terrarium models: positional `grid`, timestepper,  
+# and any process and initializer keyword arguments with sensible defaults.
 
 @kwdef struct HeatModel{
         NF,
         Grid <: Terrarium.AbstractLandGrid{NF},
         Cond <: AbstractHeatConduction{NF},
         Init <: Terrarium.AbstractInitializer{NF},
+        TS <: NamedTuple,
     } <: Terrarium.AbstractModel{NF, Grid}
     grid::Grid
     conduction::Cond = LinearHeatConduction(eltype(grid))
     initializer::Init = DefaultInitializer(eltype(grid))
+    timesteppers::TS = (; explicit = ForwardEuler(eltype(grid)))
 end
 
 # Forward the `AbstractModel` methods to the process:
