@@ -109,7 +109,7 @@ source = InputSource(grid, raster; reftime = DateTime(2000, 1, 1))
 Multiple `InputSource` objects are passed to `initialize` as positional arguments:
 
 ```julia
-integrator = initialize(model, Heun(Δt = 3600.0), source1, source2, source3)
+integrator = initialize(model, source1, source2, source3)
 ```
 
 Internally they are collected into an `InputSources` container, which iterates over each source in order when calling `initialize!` and `update_inputs!`.
