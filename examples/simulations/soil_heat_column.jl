@@ -22,7 +22,7 @@ initializer = SoilInitializer(
     hydrology = ConstantSaturation(eltype(grid), sat = 1.0)
 )
 
-# We're now ready to create our model. 
+# We're now ready to create our model.
 # We also choose the time stepper to be [`ForwardEuler`](@ref) for this example.
 model = SoilModel(grid; timesteppers = ForwardEuler(eltype(grid)), initializer = initializer)
 

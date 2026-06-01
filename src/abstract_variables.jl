@@ -225,7 +225,7 @@ end
 
 hasclosure(var::PrognosticVariable) = !isnothing(var.closure)
 
-#TODO: extend Oceananigas to not have a naming conflict, okay or just rename it? 
+#TODO: extend Oceananigas to not have a naming conflict, okay or just rename it?
 """
     timestepper(var::PrognosticVariable)
 

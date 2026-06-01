@@ -34,7 +34,7 @@ struct ModelIntegrator{
     initializers::Inits
 end
 
-# Outer constructor so that `ModelIntegrator` can be constructed with a timestepper type 
+# Outer constructor so that `ModelIntegrator` can be constructed with a timestepper type
 # so that it can correctly subtype Oceananigans.AbstractModel
 # TODO: For now just take the explicit one?
 function ModelIntegrator(
