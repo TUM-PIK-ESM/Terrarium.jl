@@ -30,7 +30,7 @@ end
     energy = SoilEnergyBalance(eltype(grid))
     soil = SoilEnergyWaterCarbon(eltype(grid); energy)
     constants = PhysicalConstants(eltype(grid))
-    state = initialize(soil, grid)
+    state = StateVariables(soil, grid)
     # Test initialization with 0°C temperature
     set!(state.temperature, 0.0)
     Terrarium.initialize!(state, grid, energy, soil, constants)
@@ -53,7 +53,7 @@ end
     energy = SoilEnergyBalance(eltype(grid))
     soil = SoilEnergyWaterCarbon(eltype(grid); energy)
     constants = PhysicalConstants(eltype(grid))
-    state = initialize(soil, grid)
+    state = StateVariables(soil, grid)
     set!(state.temperature, (x, z) -> 0.0 - 0.01 * z)
     Terrarium.initialize!(state, grid, energy, soil, constants)
     compute_tendencies!(state, grid, energy, soil)
@@ -65,7 +65,7 @@ end
     energy = SoilEnergyBalance(eltype(grid))
     soil = SoilEnergyWaterCarbon(eltype(grid); energy)
     constants = PhysicalConstants(eltype(grid))
-    state = initialize(soil, grid)
+    state = StateVariables(soil, grid)
     set!(state.internal_energy, 1.0e6)
     Terrarium.closure!(state, grid, energy.closure, energy, soil, constants)
     @test all(state.temperature .> 0)
@@ -119,7 +119,7 @@ end
     bcs = PrescribedSurfaceTemperature(:Tsurf, upperbc)
     # temperature initial condition
     initializers = (temperature = (x, z) -> T_sol(-z, 0.0), saturation_water_ice = 0.0)
-    integrator = initialize(model, ForwardEuler(); initializers, boundary_conditions = bcs)
+    integrator = initialize(model; initializers, boundary_conditions = bcs)
     # TODO: Rewrite this part once we have a proper output handling system
     Ts_buf = [deepcopy(integrator.state.temperature)]
     ts = [0.0]
@@ -157,7 +157,7 @@ end
     model = SoilModel(grid; soil, initializer)
     # constant upper boundary temperature set to T₁
     bcs = (temperature = (top = ValueBoundaryCondition(T₁),),)
-    integrator = initialize(model, ForwardEuler(), boundary_conditions = bcs)
+    integrator = initialize(model, boundary_conditions = bcs)
     # TODO: Rewrite this part once we have a proper output handling system
     Ts_buf = [deepcopy(integrator.state.temperature)]
     ts = [0.0]

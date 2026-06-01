@@ -3,9 +3,10 @@ using Test
 
 # mock a simple model with exponential dynamics (and a constant offset) to test time steppers
 
-@kwdef struct ExpModel{NF, Grid <: Terrarium.AbstractLandGrid{NF}, I} <: Terrarium.AbstractModel{NF, Grid}
+@kwdef struct ExpModel{NF, Grid <: Terrarium.AbstractLandGrid{NF}, I, TS <: NamedTuple} <: Terrarium.AbstractModel{NF, Grid}
     grid::Grid
     initializer::I = DefaultInitializer(eltype(grid))
+    timesteppers::TS = (; explicit = ForwardEuler(eltype(grid)))
 end
 
 Terrarium.variables(::ExpModel) = (
@@ -26,11 +27,12 @@ end
 @testset "ExpModel: Heun and Euler time steppers" begin
 
     grid = ColumnGrid(CPU(), Float64, UniformSpacing(N = 1))
-    model = ExpModel(grid)
+    model_euler = ExpModel(grid)
+    model_heun = ExpModel(grid; timesteppers = Heun())
 
     initializers = (u = 0.0, v = 0.1)
-    integrator_heun = initialize(model, Heun(); initializers)
-    integrator_euler = initialize(model, ForwardEuler(); initializers)
+    integrator_heun = initialize(model_heun; initializers)
+    integrator_euler = initialize(model_euler; initializers)
 
     # test that Heun estimate is more accurate (larger value than Euler here)
     # test that both are what we expect
@@ -40,11 +42,11 @@ end
     @test integrator_heun.state.u[2] > integrator_euler.state.u[2]
 
     # Euler: expected value: u = 0.1 * Δt
-    dt_euler = default_dt(integrator_euler.timestepper)
+    dt_euler = default_dt(integrator_euler)
     @test integrator_euler.state.u[2] == 0.1 * dt_euler
 
     # Heun: expected value: u = (0.1Δt + (0.1 * Δt + 0.1) * Δt) / 2
-    dt_heun = default_dt(integrator_heun.timestepper)
+    dt_heun = default_dt(integrator_heun)
     @test integrator_heun.state.u[2] == (0.1 * dt_heun + (0.1 * dt_heun + 0.1) * dt_heun) / 2
 end
 
@@ -58,7 +60,7 @@ end
     end
 
     initializers = (u = -20, v = -5.0)
-    integrator = initialize(model, ForwardEuler(); initializers)
+    integrator = initialize(model; initializers)
 
     # Test that timestep! clips negative values
     timestep!(integrator)

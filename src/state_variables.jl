@@ -182,8 +182,8 @@ tuple of queries from that namespace.
     type-stable variants instead.
 
 ```julia
-# initialize model
-state = initialize(model)
+# initialize model state
+state = StateVariables(model)
 # get the temperature and saturation_water_ice fields
 fields = get_fields(state, :temperature, :saturation_water_ice)
 # extract temperature as well as variables from a namespace
@@ -296,7 +296,7 @@ Retrieves all `Field`s from `state` corresponding to input variables defined on 
 end
 
 # Initialization of StateVariables from models and processes
-
+# TODO: Renamed directly to `StateVariables` because without the timestepper in the `ModelIntegrator` it would be ambiguous
 """
     $TYPEDSIGNATURES
 
@@ -305,19 +305,18 @@ associated `grid`. The `clock` specifies the initial simulation time and is muta
 `boundary_conditions` and `initializers` can be provided as `NamedTuple`s with keys corresponding to the names of state
 variables to which they should be applied. If the state variables are defined within namespaces, the given `NamedTuple`
 must follow the same structure. The `fields` argument allows for manual preconstruction of `Field`s for the named state
-variables.
+variables. The time stepper cache(s) are allocated from the model's `timesteppers`.
 """
-function initialize(
+function StateVariables(
         model::AbstractModel{NF};
         clock = Clock(time = zero(NF)),
         input_variables = (),
-        timestepper = ForwardEuler{NF}(),
         boundary_conditions = (;),
         initializers = (;),
         fields = (;)
     ) where {NF}
     vars = Variables(tuplejoin(variables(model), input_variables))
-    state = initialize(vars, model.grid; clock, timestepper, boundary_conditions, initializers, fields)
+    state = StateVariables(vars, model.grid; clock, timesteppers = get_timesteppers(model), boundary_conditions, initializers, fields)
     return state
 end
 
@@ -328,18 +327,18 @@ Initialize a `StateVariables` data structure containing `Field`s defined on the 
 for all variables defined by `process`. Any predefined `boundary_conditions` and `fields` will
 be passed through to `initialize` for each variable.
 """
-function initialize(
+function StateVariables(
         process::AbstractProcess{NF},
         grid::AbstractLandGrid{NF};
         clock = Clock(time = zero(NF)),
         input_variables = (),
-        timestepper = ForwardEuler{NF}(),
+        timesteppers = default_timesteppers(NF),
         boundary_conditions = (;),
         initializers = (;),
         fields = (;)
     ) where {NF}
     vars = Variables(tuplejoin(variables(process), input_variables))
-    state = initialize(vars, grid; clock, timestepper, boundary_conditions, initializers, fields)
+    state = StateVariables(vars, grid; clock, timesteppers, boundary_conditions, initializers, fields)
     return state
 end
 
@@ -352,11 +351,11 @@ Initialize a `StateVariables` data structure containing `Field`s defined on the 
 for all variables in `vars`. Any predefined `boundary_conditions` and `fields` will be passed
 through to `initialize` for each variable.
 """
-function initialize(
+function StateVariables(
         @nospecialize(vars::Variables),
         grid::AbstractLandGrid{NF};
         clock::Clock = Clock(time = 0.0),
-        timestepper = ForwardEuler{NF}(),
+        timesteppers = default_timesteppers(NF),
         boundary_conditions = (;),
         initializers = (;),
         fields = (;)
@@ -370,7 +369,7 @@ function initialize(
     namespaces = map(vars.namespaces) do ns
         ns_bcs = get(boundary_conditions, varname(ns), (;))
         ns_fields = get(fields, varname(ns), (;))
-        initialize(ns.vars, grid; clock, boundary_conditions = ns_bcs, fields = ns_fields)
+        StateVariables(ns.vars, grid; clock, boundary_conditions = ns_bcs, fields = ns_fields)
     end
     # get closure variable names
     closurenames = map(varname, closure_variables(values(vars.prognostic)))
@@ -387,7 +386,8 @@ function initialize(
         (;),
         clock,
     )
-    cache = initialize(timestepper, initial_state)
+    # allocate a cache for each of the model's timesteppers, keyed by timestepper class (e.g. `explicit`, `implicit`)
+    cache = map(ts -> initialize(ts, initial_state), timesteppers)
     state = StateVariables(
         NF,
         closurenames,

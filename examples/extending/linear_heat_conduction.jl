@@ -217,7 +217,7 @@ model = HeatModel(grid)
 initializers = (
     temperature = (x, z) -> ifelse(z < -0.5, 0, 10),
 )
-integrator = initialize(model, ForwardEuler(eltype(grid)); initializers)
+integrator = initialize(model; initializers)
 T_init = copy(vec(interior(integrator.state.temperature)))
 
 # Run for 2 days to let the step front diffuse:

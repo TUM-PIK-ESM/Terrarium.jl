@@ -3,7 +3,7 @@
 
 Simple forward Euler time stepping scheme.
 """
-@kwdef struct ForwardEuler{NF} <: AbstractTimeStepper{NF}
+@kwdef struct ForwardEuler{NF} <: AbstractExplicitTimestepper{NF}
     "Initial timestep size in seconds"
     Δt::NF = 300.0
 end
@@ -14,16 +14,15 @@ default_dt(euler::ForwardEuler) = euler.Δt
 
 is_adaptive(euler::ForwardEuler) = false
 
-function timestep!(integrator::ModelIntegrator, timestepper::ForwardEuler, Δt)
+# Step only the prognostic variables named in `names` with the forward Euler scheme.
+function timestep!(integrator::ModelIntegrator, timestepper::ForwardEuler, Δt, names::Tuple)
     # Compute auxiliaries and tendencies
     update_state!(integrator, compute_tendencies = true)
-    # Euler step
-    explicit_step!(integrator.state, get_grid(integrator.model), timestepper, Δt)
+    # Euler step for the assigned prognostic variables
+    explicit_step!(integrator.state, get_grid(integrator.model), timestepper, Δt, names)
     # Call timestep! on model
     timestep!(integrator.state, integrator.model, timestepper, Δt)
     # Apply closure relations
     closure!(integrator.state, integrator.model)
-    # Update clock
-    tick!(integrator.state.clock, Δt)
     return nothing
 end

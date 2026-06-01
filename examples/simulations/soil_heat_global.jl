@@ -95,7 +95,7 @@ bc = PrescribedSurfaceTemperature(:T_ub, get_temperature_bc(lon_masked, lat_mask
 inits = (temperature = initial_soil_temperature,)
 
 # We are finally ready to initialize our model with the above initial and boundary conditions:
-integrator = initialize(model, ForwardEuler(NF), boundary_conditions = bc, initializers = inits)
+integrator = initialize(model, boundary_conditions = bc, initializers = inits)
 
 # Let's already plot the initial surface temperature state to see what it looks like:
 T_surface_initial = RingGrids.Field(arch, interior(integrator.state.ground_temperature), grid)

@@ -13,6 +13,7 @@ struct SurfaceEnergyModel{
         SEB <: AbstractSurfaceEnergyBalance,
         Atmosphere <: AbstractAtmosphere,
         Initializer <: AbstractInitializer,
+        Timesteppers <: NamedTuple,
     } <: AbstractSurfaceEnergyModel{NF, GridType}
     "Spatial grid"
     grid::GridType
@@ -28,6 +29,9 @@ struct SurfaceEnergyModel{
 
     "State variable initializer"
     initializer::Initializer
+
+    "Time steppers as a `NamedTuple` with `explicit` and optional `implicit` entries"
+    timesteppers::Timesteppers
 end
 
 function SurfaceEnergyModel(
@@ -35,9 +39,10 @@ function SurfaceEnergyModel(
         surface_energy_balance::AbstractSurfaceEnergyBalance = SurfaceEnergyBalance(NF);
         atmosphere::AbstractAtmosphere = PrescribedAtmosphere(NF),
         constants::PhysicalConstants = PhysicalConstants(NF),
-        initializer::AbstractInitializer = DefaultInitializer(eltype(grid))
+        initializer::AbstractInitializer = DefaultInitializer(eltype(grid)),
+        timesteppers = default_timesteppers(eltype(grid))
     ) where {NF}
-    return SurfaceEnergyModel(grid, atmosphere, surface_energy_balance, constants, initializer)
+    return SurfaceEnergyModel(grid, atmosphere, surface_energy_balance, constants, initializer, to_timesteppers(NF, timesteppers))
 end
 
 function compute_auxiliary!(state, model::SurfaceEnergyModel)

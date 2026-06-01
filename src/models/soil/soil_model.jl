@@ -12,6 +12,7 @@ $(TYPEDFIELDS)
         Soil <: AbstractSoil{NF},
         Constants <: PhysicalConstants{NF},
         Initializer <: AbstractInitializer,
+        Timesteppers <: NamedTuple,
     } <: AbstractSoilModel{NF, GridType}
     "Spatial grid type"
     grid::GridType
@@ -24,6 +25,9 @@ $(TYPEDFIELDS)
 
     "State variable initializer"
     initializer::Initializer = DefaultInitializer(eltype(grid))
+
+    "Time steppers as a `NamedTuple` with `explicit` and optional `implicit` entries"
+    timesteppers::Timesteppers = default_timesteppers(eltype(grid))
 end
 
 # Model interface methods

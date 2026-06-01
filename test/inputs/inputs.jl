@@ -15,7 +15,7 @@ using Unitful
     @test variables(field_input) == (Terrarium.input(:X1, XY()),)
     ## check state variable is allocated and initialize! copies data
     X1 .= 1.0f0
-    state = initialize(Variables(field_input), grid)
+    state = StateVariables(Variables(field_input), grid)
     @test hasproperty(state.inputs, :X1)
     initialize!(state.inputs, field_input)
     @test all(state.inputs.X1 .≈ 1.0f0)
@@ -24,7 +24,7 @@ using Unitful
     X2 = Field(grid, XY())
     field_sources = InputSources(InputSource(grid, X1; name = :X1), InputSource(grid, X2; name = :X2))
     @test variables(field_sources) == (Terrarium.input(:X1, XY()), Terrarium.input(:X2, XY()))
-    state = initialize(Variables(field_sources), grid)
+    state = StateVariables(Variables(field_sources), grid)
     @test hasproperty(state.inputs, :X1)
     @test hasproperty(state.inputs, :X2)
 
@@ -83,7 +83,7 @@ end
     @test length(variables(sources)) == 2
 
     # Test that data is correctly converted and stored
-    state = initialize(Variables(sources), grid)
+    state = StateVariables(Variables(sources), grid)
     @test hasproperty(state.inputs, :temp)
     @test hasproperty(state.inputs, :pressure)
 

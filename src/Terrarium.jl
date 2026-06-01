@@ -122,7 +122,7 @@ export Forcings
 include("forcings.jl")
 
 # timestepping
-export timestep!, default_dt, is_adaptive
+export timestep!, default_dt, is_adaptive, get_timesteppers
 include("timesteppers/abstract_timestepper.jl")
 
 # abstract model types

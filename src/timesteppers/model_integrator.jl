@@ -2,8 +2,9 @@
     $TYPEDEF
 
 Represents a "integrator" for a simulation of a given `model`. `ModelIntegrator` consists of a
-`clock`, a `model`, and an initialized `StateVariables` data structure, as well as a `stage`
-for the timestepper and any relevant `inputs` provided by a corresponding `InputProvider`.
+`clock`, a `model`, and an initialized `StateVariables` data structure, as well as any relevant
+`inputs` provided by a corresponding `InputProvider`. The time steppers are not stored on the
+integrator; they are obtained from the `model` via [`get_timesteppers`](@ref).
 The `ModelIntegrator` implements the `Oceananigans.AbstractModel` interface and can thus be
 treated as a "model" in `Oceananigans` `Simulation`s and output reading/writing utilities.
 """
@@ -31,9 +32,24 @@ struct ModelIntegrator{
 
     "Optional named tuple of user-specified field initializers"
     initializers::Inits
+end
 
-    "Time stepper"
-    timestepper::TimeStepper
+# Outer constructor so that `ModelIntegrator` can be constructed with a timestepper type 
+# so that it can correctly subtype Oceananigans.AbstractModel
+# TODO: For now just take the explicit one?
+function ModelIntegrator(
+        clock::Clock,
+        model::AbstractModel{NF},
+        inputs::InputSources,
+        state::AbstractStateVariables,
+        initializers::NamedTuple,
+    ) where {NF}
+    grid = get_grid(model)
+    timestepper = get_timesteppers(model).explicit
+    return ModelIntegrator{
+        NF, typeof(architecture(grid)), typeof(grid), typeof(timestepper),
+        typeof(model), typeof(state), typeof(initializers), typeof(inputs),
+    }(clock, model, inputs, state, initializers)
 end
 
 # Oceananigans model interface
@@ -63,7 +79,9 @@ Oceananigans.TimeSteppers.update_state!(integrator::ModelIntegrator; compute_ten
 # consider renaming later...
 Oceananigans.TimeSteppers.time_step!(integrator::ModelIntegrator, Δt; kwargs...) = timestep!(integrator, Δt)
 
-Oceananigans.Simulations.timestepper(integrator::ModelIntegrator) = integrator.timestepper
+# TODO: for now just take the explicit one
+Oceananigans.Simulations.timestepper(integrator::ModelIntegrator) = get_timesteppers(integrator.model).explicit
+
 """
     $SIGNATURES
 
@@ -121,9 +139,9 @@ Advance the model forward by one timestep with optional timestep size `Δt`. If 
 `compute_auxiliary!` is called after the time step in order to update the values of auxiliary/diagnostic
 variables.
 """
-timestep!(integrator::ModelIntegrator; finalize = true) = timestep!(integrator, default_dt(timestepper(integrator)); finalize)
+timestep!(integrator::ModelIntegrator; finalize = true) = timestep!(integrator, default_dt(get_timesteppers(integrator.model)); finalize)
 function timestep!(integrator::ModelIntegrator, Δt; finalize = true)
-    timestep!(integrator, integrator.timestepper, convert_dt(Δt))
+    timestep!(integrator, get_timesteppers(integrator.model), convert_dt(Δt))
     if finalize
         compute_auxiliary!(integrator.state, integrator.model)
     end
@@ -131,20 +149,44 @@ function timestep!(integrator::ModelIntegrator, Δt; finalize = true)
 end
 
 """
+    timestep!(integrator::ModelIntegrator, timesteppers::NamedTuple, Δt)
+
+Advance the model forward by one timestep of size `Δt`, integrating each prognostic variable with the
+time stepper it was assigned via its `timestepper` (`:explicit` or `:implicit`). The prognostic variables
+are grouped by their assigned time stepper, and each group is forwarded to the corresponding
+`timestep!(integrator, timestepper, Δt, names)` method. The clock is advanced once for the whole step.
+"""
+function timestep!(integrator::ModelIntegrator, timesteppers::NamedTuple, Δt)
+    # step the prognostic variables assigned to each time stepper (grouped by :explicit/:implicit)
+    fastiterate(keys(timesteppers)) do class
+        names = prognostic_names_for(integrator.model, class)
+        # only invoke the time stepper if it has variables assigned to it
+        isempty(names) || timestep!(integrator, timesteppers[class], Δt, names)
+    end
+    # advance the clock once for the entire step
+    tick!(integrator.state.clock, Δt)
+    return nothing
+end
+
+"""
+    default_dt(integrator::ModelIntegrator)
+
+Return the default timestep size for the given `integrator`, taken from its model's `timesteppers`.
+"""
+default_dt(integrator::ModelIntegrator) = default_dt(get_timesteppers(integrator.model))
+
+"""
     $TYPEDSIGNATURES
 
-Creates and initializes a `ModelIntegrator` for the given `model` and `timestepper` with input variables populated by
-the given `inputs`. This method allocates all necessary `Field`s for the state variables and subsequently calls
+Creates and initializes a `ModelIntegrator` for the given `model` with input variables populated by
+the given `inputs`. This allocates all necessary `Field`s for the state variables and subsequently calls
 `initialize!(::ModelIntegrator)`.
 
 Note that this method is **not type stable** and thus should not be called from Enzyme `autodiff`. To reinitialize
 the model for an existing `state`, use `initialize!(state, model)`.
-
-See the docstring for [`initialize(::AbstractModel)`](@ref) for further details.
 """
 function initialize(
         model::AbstractModel{NF},
-        timestepper::AbstractTimeStepper,
         inputs::InputSource...;
         clock::Clock = Clock(time = zero(NF)),
         boundary_conditions = (;),
@@ -153,8 +195,8 @@ function initialize(
     ) where {NF}
     inputs = InputSources(inputs...)
     input_vars = variables(inputs)
-    state = initialize(model; clock, timestepper, boundary_conditions, fields, input_variables = input_vars)
-    integrator = ModelIntegrator(clock, model, inputs, state, initializers, timestepper)
+    state = StateVariables(model; clock, boundary_conditions, fields, input_variables = input_vars)
+    integrator = ModelIntegrator(clock, model, inputs, state, initializers)
     initialize!(integrator)
     return integrator
 end
@@ -167,8 +209,8 @@ get_steps(steps::Int, period::Period, Δt::Real) = throw(ArgumentError("both `st
 function Base.show(io::IO, integrator::ModelIntegrator)
     modelstr = summary(integrator.model)
     statestr = summary(integrator.state)
-    tsstr = summary(integrator.timestepper)
-    println(io, "Integrator of $modelstr with $tsstr")
+    tsstr = get_timesteppers(integrator.model)
+    println(io, "Integrator of $modelstr with timesteppers $tsstr")
     println(io, "├── Current time: $(current_time(integrator))")
     return println(io, "├── $statestr")
     # TODO: add more information?

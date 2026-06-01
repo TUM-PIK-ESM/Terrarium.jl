@@ -11,18 +11,99 @@ Base type for time steppers.
 abstract type AbstractTimeStepper{NF} end
 
 """
-    default_dt(timestepper::AbstractTimeStepper)
+    $TYPEDEF
 
-Get the current timestep size for the time stepper.
+Base type for *explicit* time steppers.
+"""
+abstract type AbstractExplicitTimestepper{NF} <: AbstractTimeStepper{NF} end
+
+"""
+    $TYPEDEF
+
+Base type for *implicit* time steppers.
+"""
+abstract type AbstractImplicitTimestepper{NF} <: AbstractTimeStepper{NF} end
+
+"""
+    $SIGNATURES
+
+Return the class (`:explicit` or `:implicit`) that the given `timestepper` fills within a model's
+`timesteppers` `NamedTuple`. This is determined by the abstract supertype of the time stepper.
+"""
+timestepper_class(::AbstractExplicitTimestepper) = :explicit
+timestepper_class(::AbstractImplicitTimestepper) = :implicit
+
+"""
+    default_dt(timestepper::AbstractTimeStepper)
+    default_dt(timesteppers::NamedTuple)
+
+Get the current timestep size for the time stepper. For a `NamedTuple` of timesteppers, the timestep
+size of the `explicit` timestepper is returned.
 """
 function default_dt end
 
+default_dt(timesteppers::NamedTuple) = default_dt(timesteppers.explicit)
+
 """
     is_adaptive(timestepper::AbstractTimeStepper)
+    is_adaptive(timesteppers::NamedTuple)
 
-Return `true` if the given time stepper is adaptive, false otherwise.
+Return `true` if the given time stepper is adaptive, false otherwise. For a `NamedTuple` of timesteppers,
+returns `true` if *any* of the timesteppers are adaptive.
 """
 function is_adaptive end
+
+is_adaptive(timesteppers::NamedTuple) = any(is_adaptive, values(timesteppers))
+
+"""
+    $SIGNATURES
+
+Default `timesteppers` for models, consisting of a single `explicit` [`ForwardEuler`](@ref) time stepper.
+"""
+default_timesteppers(::Type{NF}) where {NF} = (; explicit = ForwardEuler(NF))
+
+# TODO: currently at most one per class of timestepper, we might relax that in the future
+"""
+    to_timesteppers(::Type{NF}, timesteppers)
+
+Normalize a single timestepper, a tuple/vector of timesteppers, or a `NamedTuple` into the canonical
+`timesteppers` `NamedTuple` with (at most) the entries `explicit` and `implicit`. If no explicit timestepper 
+is provided, the `explicit` entry defaults to [`ForwardEuler`](@ref).
+"""
+to_timesteppers(::Type{NF}, timestepper::AbstractTimeStepper) where {NF} = to_timesteppers(NF, (timestepper,))
+function to_timesteppers(::Type{NF}, timesteppers::Union{Tuple, AbstractVector}) where {NF}
+    explicit_steppers = filter(ts -> isa(ts, AbstractExplicitTimestepper), timesteppers)
+    implicit_steppers = filter(ts -> isa(ts, AbstractImplicitTimestepper), timesteppers)
+    length(explicit_steppers) <= 1 || throw(ArgumentError("at most one explicit timestepper can be specified, got $(length(explicit_steppers))"))
+    length(implicit_steppers) <= 1 || throw(ArgumentError("at most one implicit timestepper can be specified, got $(length(implicit_steppers))"))
+    explicit = isempty(explicit_steppers) ? ForwardEuler(NF) : first(explicit_steppers)
+    return isempty(implicit_steppers) ? (; explicit) : (; explicit, implicit = first(implicit_steppers))
+end
+function to_timesteppers(::Type{NF}, timesteppers::NamedTuple) where {NF}
+    all(in((:explicit, :implicit)), keys(timesteppers)) || throw(ArgumentError("`timesteppers` keys must be a subset of (:explicit, :implicit), got $(keys(timesteppers))"))
+    explicit = get(timesteppers, :explicit, ForwardEuler(NF))
+    return haskey(timesteppers, :implicit) ? (; explicit, implicit = timesteppers.implicit) : (; explicit)
+end
+
+"""
+    get_timesteppers(model::AbstractModel)::NamedTuple
+
+Return the `timesteppers` associated with the given `model`. All `AbstractModel`s are required to
+define a `timesteppers` field.
+"""
+@inline get_timesteppers(model::AbstractModel) = model.timesteppers
+
+"""
+    $SIGNATURES
+
+Return the names of the prognostic variables defined by `model` that are integrated by the timestepper
+filling the given `class` (`:explicit` or `:implicit`); i.e. those declared with `timestepper = class`.
+"""
+function prognostic_names_for(model::AbstractModel, class::Symbol)
+    progvars = prognostic_variables(model)
+    selected = filter(var -> timestepper(var) === class, progvars)
+    return map(varname, selected)
+end
 
 """
     timestep!(integrator::ModelIntegrator, timestepper::AbstractTimeStepper, Δt)
@@ -50,16 +131,24 @@ implementation, which returns an empty `NamedTuple`.
 initialize(timestepper::AbstractTimeStepper, state) = (;)
 
 """
+    get_cache(state, timestepper::AbstractTimeStepper)
+
+Return the cache associated with `timestepper` (stored in `state.timestepper_cache` under the
+timestepper's class). Falls back to `nothing` for time steppers that do not define a cache.
+"""
+get_cache(state, ::AbstractTimeStepper) = nothing
+
+"""
     $SIGNATURES
 
-Evaluate an explicit update `u += ∂u∂t*Δt` for all prognostic fields and their corresponding
-tendencies. By default, this is implemented as a simple Euler update `u += dudt*Δt` which can
-serve as a building block for more complex, multi-stage timesteppers. Where necessary,
+Evaluate an explicit update `u += ∂u∂t*Δt` for the prognostic fields of `state` listed in `names` and
+their corresponding tendencies. By default, this is implemented as a simple Euler update `u += dudt*Δt`
+which can serve as a building block for more complex, multi-stage timesteppers. Where necessary,
 additional dispatches of `explicit_step_kernel!(field, tendency, ::AbstractLandGrid, ::TimeStepper, Δt)`
 can be defined to implement more specialized time-stepping schemes.
 """
-function explicit_step!(state, grid::AbstractLandGrid, timestepper::AbstractTimeStepper, Δt)
-    fastiterate(keys(state.prognostic)) do name
+function explicit_step!(state, grid::AbstractLandGrid, timestepper::AbstractTimeStepper, Δt, names::Tuple{Vararg{Symbol}})
+    fastiterate(names) do name
         # apply flux BCs, if present
         compute_z_bcs!(state.tendencies[name], state.prognostic[name], grid, state)
         # debug site post-BC
@@ -68,9 +157,6 @@ function explicit_step!(state, grid::AbstractLandGrid, timestepper::AbstractTime
         explicit_step!(state.prognostic[name], state.tendencies[name], grid, timestepper, Δt)
         # debug site post-step
         debugsite!(explicit_step!, state.prognostic[name], name)
-    end
-    fastiterate(state.namespaces) do ns
-        explicit_step!(ns, grid, timestepper, Δt)
     end
     return nothing
 end

@@ -46,7 +46,7 @@ function set_up_model(arch, ::Type{NF}, ring_grid::RingGrids.AbstractGrid) where
     T_ub = PrescribedTemperature((x, t) -> 30 * sin(2π * t / (24 * 3600 * 365)))
     boundary_conditions = SoilBoundaryConditions(eltype(grid), energy, hydrology, top = T_ub)
     model = SoilModel(grid; initializer, boundary_conditions, energy, hydrology)
-    state = initialize(model)
+    state = StateVariables(model)
     return state
 end
 

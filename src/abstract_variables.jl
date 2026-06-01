@@ -191,6 +191,9 @@ point in (simulation) time. From a computational perspective, they can be seen a
 computational graph for `update_state!`/`timestep!`. Prognostic variables generally should not be modified
 by any code not belonging to the timestepper or user. They automatically define a `tendency` (auxiliary)
 variable which is used to hold the value of their instantaneous time derivative computed by `compute_tendencies!`.
+
+Each prognostic variable is assigned a `timestepper` role (`:explicit` or `:implicit`) which determines
+whether it is integrated by the `explicit` or `implicit` entry of the model's `timesteppers`.
 """
 struct PrognosticVariable{
         name,
@@ -215,9 +218,20 @@ struct PrognosticVariable{
 
     "Variable description"
     desc::String
+
+    "Timestepper (`:explicit` or `:implicit`) used to integrate this variable"
+    timestepper::Symbol
 end
 
 hasclosure(var::PrognosticVariable) = !isnothing(var.closure)
+
+#TODO: extend Oceananigas to not have a naming conflict, okay or just rename it? 
+"""
+    timestepper(var::PrognosticVariable)
+
+Return the timestepper (`:explicit` or `:implicit`) assigned to the given prognostic variable.
+"""
+@inline Oceananigans.Simulations.timestepper(var::PrognosticVariable) = var.timestepper
 
 # Variable container
 
@@ -377,8 +391,14 @@ Convenience constructor for `Variable`.
 
 Convenience constructors for `PrognosticVariable`.
 """
-@inline prognostic(name::Symbol, dims::VarDims; units = NoUnits, closure = nothing, domain = RealLine(), desc = "") = prognostic(var(name, dims, units); closure, domain, desc)
-@inline prognostic(var::Variable; closure = nothing, domain = RealLine(), desc = "") = PrognosticVariable(var, closure, tendency(var), domain, desc)
+@inline prognostic(name::Symbol, dims::VarDims; units = NoUnits, closure = nothing, domain = RealLine(), desc = "", timestepper = :explicit) = prognostic(var(name, dims, units); closure, domain, desc, timestepper)
+@inline prognostic(var::Variable; closure = nothing, domain = RealLine(), desc = "", timestepper = :explicit) = PrognosticVariable(var, closure, tendency(var), domain, desc, _validate_timestepper_role(timestepper))
+
+# Validate that a prognostic variable's timestepper role is one of the supported entries.
+@inline function _validate_timestepper_role(role::Symbol)
+    role in (:explicit, :implicit) || throw(ArgumentError("prognostic variable `timestepper` must be :explicit or :implicit, got :$role"))
+    return role
+end
 
 """
     $SIGNATURES

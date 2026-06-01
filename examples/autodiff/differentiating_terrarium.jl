@@ -15,7 +15,7 @@ initializer = SoilInitializer(eltype(grid))
 model = SoilModel(grid; initializer)
 # constant surface temperature of 1°C
 bcs = PrescribedSurfaceTemperature(:T_ub, 1.0)
-integrator = initialize(model, ForwardEuler(), boundary_conditions = bcs)
+integrator = initialize(model, boundary_conditions = bcs)
 
 # So far, this is just our usual setup. In this case, for a soil column with a prescribed surface temperature.
 #

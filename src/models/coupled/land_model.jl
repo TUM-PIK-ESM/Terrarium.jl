@@ -17,6 +17,7 @@ $(TYPEDFIELDS)
         Atmosphere <: AbstractAtmosphere,
         Constants <: PhysicalConstants{NF},
         Initializer <: AbstractInitializer,
+        Timesteppers <: NamedTuple,
     } <: AbstractLandModel{NF, GridType}
     "Spatial discretization"
     grid::GridType
@@ -41,12 +42,14 @@ $(TYPEDFIELDS)
 
     "State variable initializer"
     initializer::Initializer = DefaultInitializer(eltype(grid))
+
+    "Time steppers as a `NamedTuple` with `explicit` and optional `implicit` entries"
+    timesteppers::Timesteppers = default_timesteppers(eltype(grid))
 end
 
-function initialize(
+function StateVariables(
         model::LandModel{NF};
         clock = Clock(time = zero(NF)),
-        timestepper = ForwardEuler{NF}(),
         boundary_conditions = (;),
         fields = (;),
         input_variables = ()
@@ -63,7 +66,7 @@ function initialize(
     bcs = merge_boundary_conditions(boundary_conditions, ground_heat_flux_bc, infiltration_bc)
     # Merge user-defined fields with BC fields
     fields = merge((; ground_heat_flux, infiltration), fields)
-    return initialize(vars, grid; clock, timestepper, boundary_conditions = bcs, fields)
+    return StateVariables(vars, grid; clock, timesteppers = get_timesteppers(model), boundary_conditions = bcs, fields)
 end
 
 function initialize!(state, model::LandModel)
