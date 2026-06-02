@@ -436,16 +436,20 @@ function consolidate_timestepper_classes(progvars::NamedTuple, namespaces::Named
     # (namespace entries are nested NamedTuples forwarded to the namespace's own StateVariables)
     valid_keys = (keys(progvars)..., keys(namespaces)...)
     for key in keys(overrides)
-        key in valid_keys || throw(ArgumentError(
-            "`timestepper_classes` has unknown key :$key; expected a prognostic variable or namespace name in $(valid_keys)"
-        ))
+        key in valid_keys || throw(
+            ArgumentError(
+                "`timestepper_classes` has unknown key :$key; expected a prognostic variable or namespace name in $(valid_keys)"
+            )
+        )
     end
     # resolve each prognostic variable's class, applying overrides and validating the result
     return map(values(progvars)) do var
         class = get(overrides, varname(var), timestepper(var)) # take the override if it exists, otherwise default to timestepper(var)
-        class in (:explicit, :implicit) || throw(ArgumentError(
-            "timestepper class for prognostic variable :$(varname(var)) must be :explicit or :implicit, got :$class"
-        ))
+        class in (:explicit, :implicit) || throw(
+            ArgumentError(
+                "timestepper class for prognostic variable :$(varname(var)) must be :explicit or :implicit, got :$class"
+            )
+        )
         return class
     end
 end
