@@ -34,7 +34,7 @@ As an example, let's consider the construction and initialization of a [`SoilMod
 ```@example simulation
 arch = CPU()
 grid = ColumnGrid(arch, Float32, ExponentialSpacing(N=10))
-model = SoilModel(grid, timesteppers=ForwardEuler(Float32))
+model = SoilModel(grid, timestepper=ForwardEuler(Float32))
 integrator = initialize(model)
 ```
 
@@ -46,7 +46,8 @@ integrator.state.temperature   # current temperature Field
 
 ## Time stepping schemes
 
-Terrarium currently provides two choices of explicit time steppers: [`ForwardEuler`](@ref) and [`Heun`](@ref).
+Each model carries a single `timestepper` (set via the `timestepper` keyword on the model constructor).
+Terrarium currently provides two explicit time steppers, [`ForwardEuler`](@ref) and [`Heun`](@ref):
 
 ```@docs; canonical = false
 ForwardEuler
