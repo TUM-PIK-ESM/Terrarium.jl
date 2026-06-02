@@ -1,7 +1,7 @@
 using Terrarium
 using Test
 
-using Terrarium: AbstractLandGrid, AbstractImplicitTimestepper, prognostic, XY
+using Terrarium: AbstractLandGrid, AbstractImplicitTimestepper, EmptyCache, prognostic, XY
 
 module IMEXTestTypes
 
@@ -18,6 +18,7 @@ module IMEXTestTypes
     Terrarium.default_dt(ts::MockImplicit) = ts.Δt
     Terrarium.is_adaptive(::MockImplicit) = false
 
+    # MockImplicit keeps no working state, so it doesn't fetch a cache.
     function Terrarium.timestep!(integrator, ts::MockImplicit, Δt, names::Tuple)
         Terrarium.update_state!(integrator, compute_tendencies = true)
         state = integrator.state
@@ -27,14 +28,15 @@ module IMEXTestTypes
         return nothing
     end
 
-    # Minimal two-variable model with constant unit tendencies for both prognostic variables.
+    # Minimal two-variable model with constant unit tendencies. `:a` defaults to the :explicit class and
+    # `:b` defaults to :implicit, so a single model exercises both the declared default and IMEX overrides.
     @kwdef struct TwoVarModel{NF, Grid <: AbstractLandGrid{NF}, TS <: Terrarium.AbstractTimeStepper} <: Terrarium.AbstractModel{NF, Grid}
         grid::Grid
         initializer = DefaultInitializer(eltype(grid))
         timestepper::TS = ForwardEuler(eltype(grid))
     end
 
-    Terrarium.variables(::TwoVarModel) = (prognostic(:a, XY()), prognostic(:b, XY()))
+    Terrarium.variables(::TwoVarModel) = (prognostic(:a, XY()), prognostic(:b, XY(); timestepper = :implicit))
     Terrarium.compute_auxiliary!(state, ::TwoVarModel) = nothing
     function Terrarium.compute_tendencies!(state, ::TwoVarModel)
         set!(state.tendencies.a, 1.0)
@@ -47,21 +49,20 @@ end
     grid = ColumnGrid(CPU(), Float64, UniformSpacing(N = 1))
     model = IMEXTestTypes.TwoVarModel(grid) # default: single ForwardEuler
     integrator = initialize(model)
-    # a single timestepper stores its cache bare (ForwardEuler has none → empty)
-    @test keys(integrator.state.timestepper_cache) == ()
+    # a single stateless timestepper gets an EmptyCache
+    @test integrator.state.timestepper_cache isa EmptyCache
     Δt = default_dt(integrator)
     timestep!(integrator)
-    # both variables are stepped by forward Euler regardless of their class
+    # both variables are stepped by forward Euler regardless of their declared class
     @test all(interior(integrator.state.a) .≈ Δt)
     @test all(interior(integrator.state.b) .≈ Δt)
 end
 
-@testset "Single Heun stores a bare cache" begin
+@testset "Single Heun gets a HeunCache" begin
     grid = ColumnGrid(CPU(), Float64, UniformSpacing(N = 1))
     model = IMEXTestTypes.TwoVarModel(grid; timestepper = Heun(Float64))
     integrator = initialize(model)
-    # the Heun cache is stored directly (not keyed by class)
-    @test keys(integrator.state.timestepper_cache) == (:prognostic, :tendencies)
+    @test integrator.state.timestepper_cache isa Terrarium.HeunCache
     Δt = default_dt(integrator)
     timestep!(integrator)
     # constant tendency ⇒ Heun matches forward Euler: u += 1·Δt
@@ -69,32 +70,33 @@ end
     @test all(interior(integrator.state.b) .≈ Δt)
 end
 
-@testset "IMEX routes variables to timesteppers by class" begin
+@testset "IMEX routes by declared default class" begin
     grid = ColumnGrid(CPU(), Float64, UniformSpacing(N = 1))
     timestepper = IMEX(ForwardEuler(Float64), IMEXTestTypes.MockImplicit(Float64))
     model = IMEXTestTypes.TwoVarModel(grid; timestepper)
-    # override :b to the implicit class; :a keeps the :explicit default
-    integrator = initialize(model; timestepper_classes = (; b = :implicit))
-    @test Terrarium.prognostic_names(integrator.state, :explicit) == (:a,)
-    @test Terrarium.prognostic_names(integrator.state, :implicit) == (:b,)
-    # an IMEX cache keeps the two sub-stepper caches keyed by class
-    @test keys(integrator.state.timestepper_cache) == (:explicit, :implicit)
+    integrator = initialize(model)
+    cache = integrator.state.timestepper_cache
+    # the IMEXCache holds the resolved per-variable classes (in prognostic order) as a type parameter
+    @test cache isa Terrarium.IMEXCache
+    @test Terrarium.timestepper_classes(cache) == (:explicit, :implicit)   # (:a, :b)
+    @test cache.explicit isa EmptyCache && cache.implicit isa EmptyCache
     Δt = default_dt(integrator)
     timestep!(integrator)
-    @test all(interior(integrator.state.a) .≈ Δt)       # forward Euler: a += 1·Δt
-    @test all(interior(integrator.state.b) .≈ 2 * Δt)   # mock implicit: b += 2·Δt
+    @test all(interior(integrator.state.a) .≈ Δt)       # :a default :explicit → forward Euler: a += 1·Δt
+    @test all(interior(integrator.state.b) .≈ 2 * Δt)   # :b default :implicit → mock: b += 2·Δt
 end
 
-@testset "IMEX with Heun explicit sub-stepper retrieves its cache" begin
+@testset "IMEX timestepper_classes overrides the default; Heun explicit cache" begin
     grid = ColumnGrid(CPU(), Float64, UniformSpacing(N = 1))
-    timestepper = IMEX(Heun(Float64), IMEXTestTypes.MockImplicit(Float64))
+    # flip both variables relative to their declared defaults
+    timestepper = IMEX(Heun(Float64), IMEXTestTypes.MockImplicit(Float64); timestepper_classes = (; a = :implicit, b = :explicit))
     model = IMEXTestTypes.TwoVarModel(grid; timestepper)
-    integrator = initialize(model; timestepper_classes = (; b = :implicit))
-    # Heun's (prognostic, tendencies) cache lives in the explicit slot of the IMEX cache
-    @test keys(integrator.state.timestepper_cache) == (:explicit, :implicit)
-    @test keys(integrator.state.timestepper_cache.explicit) == (:prognostic, :tendencies)
+    integrator = initialize(model)
+    cache = integrator.state.timestepper_cache
+    @test Terrarium.timestepper_classes(cache) == (:implicit, :explicit)   # (:a, :b)
+    @test cache.explicit isa Terrarium.HeunCache   # Heun's cache lives in the explicit slot
     Δt = default_dt(integrator)
     timestep!(integrator)
-    @test all(interior(integrator.state.a) .≈ Δt)       # Heun (constant tendency): a += 1·Δt
-    @test all(interior(integrator.state.b) .≈ 2 * Δt)   # mock implicit: b += 2·Δt
+    @test all(interior(integrator.state.a) .≈ 2 * Δt)   # overridden to :implicit → mock: a += 2·Δt
+    @test all(interior(integrator.state.b) .≈ Δt)       # overridden to :explicit → Heun: b += 1·Δt
 end

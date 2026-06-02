@@ -195,8 +195,8 @@ variable which is used to hold the value of their instantaneous time derivative 
 Each prognostic variable is assigned a `timestepper` class (`:explicit` or `:implicit`) which, when the
 model's `timestepper` is an [`IMEX`](@ref), determines whether it is integrated by the `explicit` or
 `implicit` timestepper. A single (non-`IMEX`) timestepper integrates all prognostic variables regardless
-of class. The class is a default that can be overridden per-variable at `StateVariables` construction via
-the `timestepper_classes` keyword.
+of class. The class declared here is a default that can be overridden per-variable via the
+`timestepper_classes` argument of the [`IMEX`](@ref) constructor.
 """
 struct PrognosticVariable{
         name,

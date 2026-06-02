@@ -50,7 +50,6 @@ end
 function StateVariables(
         model::LandModel{NF};
         clock = Clock(time = zero(NF)),
-        timestepper_classes = (;),
         boundary_conditions = (;),
         fields = (;),
         input_variables = ()
@@ -67,7 +66,7 @@ function StateVariables(
     bcs = merge_boundary_conditions(boundary_conditions, ground_heat_flux_bc, infiltration_bc)
     # Merge user-defined fields with BC fields
     fields = merge((; ground_heat_flux, infiltration), fields)
-    return StateVariables(vars, grid; clock, timestepper = get_timestepper(model), timestepper_classes, boundary_conditions = bcs, fields)
+    return StateVariables(vars, grid; clock, timestepper = get_timestepper(model), boundary_conditions = bcs, fields)
 end
 
 function initialize!(state, model::LandModel)

@@ -73,30 +73,6 @@ end
     @test hasproperty(state.submodel, :auxvar2D) && isa(state.submodel.auxvar2D, Field{Center, Center, Nothing})
 end
 
-@testset "Timestepper class overrides" begin
-    grid = ColumnGrid(CPU(), DEFAULT_NF, ExponentialSpacing(N = 10))
-    model = StateVariablesTestTypes.TestModel(; grid)
-
-    # By default, every prognostic variable uses the class it was declared with (:explicit here)
-    state = StateVariables(model)
-    @test all(==(:explicit), Terrarium.timestepper_classes(state))
-    @test Set(Terrarium.prognostic_names(state, :explicit)) == Set((:progvar3D, :cprogvar3D, :progvar2D))
-    @test Terrarium.prognostic_names(state, :implicit) == ()
-
-    # An override moves exactly the named variable into the :implicit group; the rest keep their default
-    state = StateVariables(model; timestepper_classes = (; cprogvar3D = :implicit))
-    @test Terrarium.prognostic_names(state, :implicit) == (:cprogvar3D,)
-    @test Set(Terrarium.prognostic_names(state, :explicit)) == Set((:progvar3D, :progvar2D))
-
-    # The same override is accepted (and forwarded) through `initialize(model)`
-    integrator = initialize(model; timestepper_classes = (; cprogvar3D = :implicit))
-    @test Terrarium.prognostic_names(integrator.state, :implicit) == (:cprogvar3D,)
-
-    # Invalid class values and unknown variable names are rejected at construction
-    @test_throws ArgumentError StateVariables(model; timestepper_classes = (; progvar3D = :semi_implicit))
-    @test_throws ArgumentError StateVariables(model; timestepper_classes = (; not_a_var = :implicit))
-end
-
 @testset "State variable utilities" begin
     grid = ColumnGrid(CPU(), DEFAULT_NF, ExponentialSpacing(N = 10))
     model = StateVariablesTestTypes.TestModel(; grid)

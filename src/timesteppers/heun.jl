@@ -14,21 +14,26 @@ default_dt(heun::Heun) = heun.Δt
 
 is_adaptive(heun::Heun) = false
 
-# Allocate cache for the prognostic state `u₀` and the predictor tendencies `∂u∂t₀`.
-# Heun steps in-place on `state`, so only these two NamedTuples of `Field`s are needed.
+"""
+    $TYPEDEF
+
+Cache for the [`Heun`](@ref) scheme, holding copies of the prognostic state `u₀` and the predictor
+tendencies `∂u∂t₀` (Heun steps in-place on `state`, so only these two are needed).
+"""
+struct HeunCache{NF, P, T} <: AbstractTimeStepperCache{NF}
+    prognostic::P
+    tendencies::T
+end
+
+# Allocate the Heun cache by deep-copying the prognostic and tendency field containers.
 function initialize(::Heun, state::AbstractStateVariables)
     prognostic = map(deepcopy, state.prognostic)
     tendencies = map(deepcopy, state.tendencies)
-    return (; prognostic, tendencies)
+    return HeunCache{eltype(state), typeof(prognostic), typeof(tendencies)}(prognostic, tendencies)
 end
 
-# Heun is an explicit (sub-)stepper, so it reads its cache from the explicit slot (a no-op unless the
-# model uses an IMEX timestepper, in which case the explicit sub-cache is selected).
-get_cache(state::StateVariables, ts::Heun) = explicit_cache(state.timestepper_cache)
-
 # Save the prognostic/tendency fields named in `names` into the Heun cache.
-function save_cache!(state::StateVariables, ts::Heun, names::Tuple)
-    cache = get_cache(state, ts)
+function save_cache!(cache::HeunCache, state::StateVariables, names::Tuple)
     for name in names
         copyto!(cache.prognostic[name], state.prognostic[name])
         copyto!(cache.tendencies[name], state.tendencies[name])
@@ -37,8 +42,7 @@ function save_cache!(state::StateVariables, ts::Heun, names::Tuple)
 end
 
 # Restore the prognostic fields named in `names` from the Heun cache.
-function restore_prognostic!(state::StateVariables, ts::Heun, names::Tuple)
-    cache = get_cache(state, ts)
+function restore_prognostic!(cache::HeunCache, state::StateVariables, names::Tuple)
     for name in names
         copyto!(state.prognostic[name], cache.prognostic[name])
     end
@@ -47,8 +51,7 @@ end
 
 # Average the tendencies named in `names` with the saved predictor tendencies in-place:
 # state.tendencies ← (state.tendencies + cache.tendencies) / 2.
-function average_tendencies!(state::StateVariables, ts::Heun, names::Tuple)
-    cache = get_cache(state, ts)
+function average_tendencies!(cache::HeunCache, state::StateVariables, names::Tuple)
     for name in names
         state.tendencies[name] .= (state.tendencies[name] .+ cache.tendencies[name]) ./ 2
     end
@@ -59,11 +62,13 @@ end
 function timestep!(integrator::ModelIntegrator, timestepper::Heun, Δt, names::Tuple)
     (; model, state, inputs) = integrator
     grid = get_grid(model)
+    # fetch Heun's cache (the whole timestepper_cache for a single Heun, or the explicit slot under IMEX)
+    cache = get_cache(state.timestepper_cache, timestepper)
 
     # Predictor: compute tendencies ∂u∂t₀ at the current state u₀
     update_state!(state, model, inputs, compute_tendencies = true)
     # Cache u₀ and ∂u∂t₀ for the assigned variables
-    save_cache!(state, timestepper, names)
+    save_cache!(cache, state, names)
 
     # Step state forward in place using ∂u∂t₀
     explicit_step!(state, grid, timestepper, Δt, names)
@@ -75,9 +80,9 @@ function timestep!(integrator::ModelIntegrator, timestepper::Heun, Δt, names::T
     # Recompute tendencies ∂u∂t₁ at the predictor state (u_pred, t + Δt)
     update_state!(state, model, inputs, compute_tendencies = true)
     # Average tendencies in place: state.tendencies ← (∂u∂t₀ + ∂u∂t₁) / 2
-    average_tendencies!(state, timestepper, names)
+    average_tendencies!(cache, state, names)
     # Restore the prognostic state to u₀ before the corrector explicit step
-    restore_prognostic!(state, timestepper, names)
+    restore_prognostic!(cache, state, names)
 
     # Corrector: u ← u₀ + Δt · averaged tendencies
     explicit_step!(state, grid, timestepper, Δt, names)

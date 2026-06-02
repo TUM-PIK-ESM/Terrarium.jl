@@ -15,9 +15,9 @@ by the timestepping scheme.
 """
 struct StateVariables{
         NF,
-        prognames, closurenames, timestepper_classes, auxnames, inputnames, nsnames, cachenames,
+        prognames, closurenames, auxnames, inputnames, nsnames,
         ProgFields, TendFields, AuxFields, InputFields, Namespaces,
-        CacheFields,
+        Cache,
         ClockType,
     } <: AbstractStateVariables
     prognostic::NamedTuple{prognames, ProgFields}
@@ -25,27 +25,26 @@ struct StateVariables{
     auxiliary::NamedTuple{auxnames, AuxFields}
     inputs::NamedTuple{inputnames, InputFields}
     namespaces::NamedTuple{nsnames, Namespaces}
-    timestepper_cache::NamedTuple{cachenames, CacheFields}
+    timestepper_cache::Cache
     clock::ClockType
 
     function StateVariables(
             ::Type{NF},
             closurenames::Tuple{Vararg{Symbol}},
-            timestepper_classes::Tuple{Vararg{Symbol}},
             prognostic::NamedTuple{prognames, ProgFields},
             tendencies::NamedTuple{prognames, TendFields},
             auxiliary::NamedTuple{auxnames, AuxFields},
             inputs::NamedTuple{inputnames, InputFields},
             namespaces::NamedTuple{nsnames, Namespaces},
-            timestepper_cache::NamedTuple{cachenames, CacheFields},
+            timestepper_cache::Cache,
             clock::ClockType,
         ) where {
-            NF, prognames, auxnames, inputnames, nsnames, cachenames,
-            ProgFields, TendFields, AuxFields, InputFields, Namespaces, CacheFields, ClockType,
+            NF, prognames, auxnames, inputnames, nsnames,
+            ProgFields, TendFields, AuxFields, InputFields, Namespaces, Cache, ClockType,
         }
         return new{
-            NF, prognames, closurenames, timestepper_classes, auxnames, inputnames, nsnames, cachenames,
-            ProgFields, TendFields, AuxFields, InputFields, Namespaces, CacheFields, ClockType,
+            NF, prognames, closurenames, auxnames, inputnames, nsnames,
+            ProgFields, TendFields, AuxFields, InputFields, Namespaces, Cache, ClockType,
         }(
             prognostic,
             tendencies,
@@ -65,12 +64,9 @@ end
 @inline input_names(state::StateVariables) = keys(getfield(state, :inputs))
 @inline namespace_names(state::StateVariables) = keys(getfield(state, :namespaces))
 @inline closure_names(::StateVariables{NF, pnames, cnames}) where {NF, pnames, cnames} = cnames
-@inline timestepper_classes(::StateVariables{NF, pnames, cnames, pclasses}) where {NF, pnames, cnames, pclasses} = pclasses
-
-@inline timestepper_cache_names(state::StateVariables) = keys(getfield(state, :timestepper_cache))
 
 # Allow reconstruction from properties
-ConstructionBase.constructorof(::Type{StateVariables{NF, pnames, cnames, pclasses}}) where {NF, pnames, cnames, pclasses} = (args...) -> StateVariables(NF, cnames, pclasses, args...)
+ConstructionBase.constructorof(::Type{<:StateVariables{NF, pnames, cnames}}) where {NF, pnames, cnames} = (args...) -> StateVariables(NF, cnames, args...)
 
 """
     update_state!(state::StateVariables, model::AbstractModel, inputs::InputSources; compute_tendencies = true)
@@ -307,21 +303,18 @@ associated `grid`. The `clock` specifies the initial simulation time and is muta
 `boundary_conditions` and `initializers` can be provided as `NamedTuple`s with keys corresponding to the names of state
 variables to which they should be applied. If the state variables are defined within namespaces, the given `NamedTuple`
 must follow the same structure. The `fields` argument allows for manual preconstruction of `Field`s for the named state
-variables. The time stepper cache(s) are allocated from the model's `timestepper`. The `timestepper_classes` keyword,
-a `NamedTuple` of `varname => class`, overrides the default timestepper class (`:explicit`/`:implicit`) of the named
-prognostic variables (see [`prognostic`](@ref) for how defaults are declared).
+variables. The time stepper cache is allocated from the model's `timestepper`.
 """
 function StateVariables(
         model::AbstractModel{NF};
         clock = Clock(time = zero(NF)),
         input_variables = (),
-        timestepper_classes = (;),
         boundary_conditions = (;),
         initializers = (;),
         fields = (;)
     ) where {NF}
     vars = Variables(tuplejoin(variables(model), input_variables))
-    state = StateVariables(vars, model.grid; clock, timestepper = get_timestepper(model), timestepper_classes, boundary_conditions, initializers, fields)
+    state = StateVariables(vars, model.grid; clock, timestepper = get_timestepper(model), boundary_conditions, initializers, fields)
     return state
 end
 
@@ -338,13 +331,12 @@ function StateVariables(
         clock = Clock(time = zero(NF)),
         input_variables = (),
         timestepper = default_timestepper(NF),
-        timestepper_classes = (;),
         boundary_conditions = (;),
         initializers = (;),
         fields = (;)
     ) where {NF}
     vars = Variables(tuplejoin(variables(process), input_variables))
-    state = StateVariables(vars, grid; clock, timestepper, timestepper_classes, boundary_conditions, initializers, fields)
+    state = StateVariables(vars, grid; clock, timestepper, boundary_conditions, initializers, fields)
     return state
 end
 
@@ -355,18 +347,14 @@ end
 
 Initialize a `StateVariables` data structure containing `Field`s defined on the given `grid`
 for all variables in `vars`. Any predefined `boundary_conditions` and `fields` will be passed
-through to `initialize` for each variable.
-
-By default, each prognostic variable is integrated by the timestepper class (`:explicit` or `:implicit`)
-it was declared with via [`prognostic`](@ref). The `timestepper_classes` keyword, a `NamedTuple` of
-`varname => class`, overrides this default for exactly the named variables.
+through to `initialize` for each variable. The `timestepper`'s cache is allocated via
+`initialize(timestepper, state, progvars)`.
 """
 function StateVariables(
         @nospecialize(vars::Variables),
         grid::AbstractLandGrid{NF};
         clock::Clock = Clock(time = 0.0),
         timestepper = default_timestepper(NF),
-        timestepper_classes = (;),
         boundary_conditions = (;),
         initializers = (;),
         fields = (;)
@@ -380,36 +368,28 @@ function StateVariables(
     namespaces = map(vars.namespaces) do ns
         ns_bcs = get(boundary_conditions, varname(ns), (;))
         ns_fields = get(fields, varname(ns), (;))
-        ns_classes = get(timestepper_classes, varname(ns), (;))
-        StateVariables(ns.vars, grid; clock, timestepper_classes = ns_classes, boundary_conditions = ns_bcs, fields = ns_fields)
+        StateVariables(ns.vars, grid; clock, boundary_conditions = ns_bcs, fields = ns_fields)
     end
     # get closure variable names
     closurenames = map(varname, closure_variables(values(vars.prognostic)))
-    # Resolve the timestepper class (:explicit/:implicit) of each prognostic variable, in the same order as
-    # the names. The default class is the one each variable was declared with (see `prognostic`); the
-    # `timestepper_classes` keyword overrides it per-variable. The resolved classes are stored as a type
-    # parameter so that `prognostic_names(state, class)` can select per class in a type-stable way.
-    resolved_classes = consolidate_timestepper_classes(vars.prognostic, vars.namespaces, timestepper_classes)
-    # construct StateVariables with an empty cache; the timestepper-specific cache
-    # is allocated below now that all other state variables have been initialized
+    # construct StateVariables with a placeholder cache; the timestepper-specific cache is
+    # allocated below now that all other state variables have been initialized
     initial_state = StateVariables(
         NF,
         closurenames,
-        resolved_classes,
         prognostic_fields,
         tendency_fields,
         auxiliary_fields,
         input_fields,
         namespaces,
-        (;),
+        EmptyCache{NF}(),
         clock,
     )
-    # allocate the timestepper cache(s), keyed by timestepper class (e.g. `explicit`, `implicit`)
-    cache = initialize_timestepper_cache(timestepper, initial_state)
+    # allocate the timestepper's cache
+    cache = initialize(timestepper, initial_state, vars.prognostic)
     state = StateVariables(
         NF,
         closurenames,
-        resolved_classes,
         prognostic_fields,
         tendency_fields,
         auxiliary_fields,
@@ -421,37 +401,6 @@ function StateVariables(
     # Apply Field initializers
     initialize!(state, initializers)
     return state
-end
-
-"""
-    $SIGNATURES
-
-Determine the timestepper class (`:explicit` or `:implicit`) for each prognostic variable in `progvars`,
-returned as a tuple in the same order as `keys(progvars)`. Each variable's default class is the one it was
-declared with via [`prognostic`](@ref); the `overrides` `NamedTuple` (mapping `varname => class`) replaces
-the class for exactly the named variables. Unrecognized keys raise an `ArgumentError`.
-"""
-function consolidate_timestepper_classes(progvars::NamedTuple, namespaces::NamedTuple, overrides::NamedTuple)
-    # validate override keys: each must name a prognostic variable at this level or a namespace
-    # (namespace entries are nested NamedTuples forwarded to the namespace's own StateVariables)
-    valid_keys = (keys(progvars)..., keys(namespaces)...)
-    for key in keys(overrides)
-        key in valid_keys || throw(
-            ArgumentError(
-                "`timestepper_classes` has unknown key :$key; expected a prognostic variable or namespace name in $(valid_keys)"
-            )
-        )
-    end
-    # resolve each prognostic variable's class, applying overrides and validating the result
-    return map(values(progvars)) do var
-        class = get(overrides, varname(var), timestepper(var)) # take the override if it exists, otherwise default to timestepper(var)
-        class in (:explicit, :implicit) || throw(
-            ArgumentError(
-                "timestepper class for prognostic variable :$(varname(var)) must be :explicit or :implicit, got :$class"
-            )
-        )
-        return class
-    end
 end
 
 # Base case: empty named tuples
@@ -528,7 +477,6 @@ function Adapt.adapt_structure(to, state::StateVariables{NF}) where {NF}
     return StateVariables(
         NF,
         closure_names(state),
-        timestepper_classes(state),
         Adapt.adapt_structure(to, state.prognostic),
         Adapt.adapt_structure(to, state.tendencies),
         Adapt.adapt_structure(to, state.auxiliary),
@@ -600,7 +548,7 @@ end
 
 function Base.summary(state::StateVariables{NF}) where {NF}
     clockstr = summary(state.clock)
-    str = "StateVariables{$NF}(clock = $clockstr, prognostic = $(keys(state.prognostic)), auxiliary = $(keys(state.auxiliary)), inputs = $(keys(state.inputs)), namespaces = $(keys(state.namespaces)), timestepper_cache = $(timestepper_cache_names(state)))"
+    str = "StateVariables{$NF}(clock = $clockstr, prognostic = $(keys(state.prognostic)), auxiliary = $(keys(state.auxiliary)), inputs = $(keys(state.inputs)), namespaces = $(keys(state.namespaces)), timestepper_cache = $(nameof(typeof(state.timestepper_cache))))"
     return str
 end
 
@@ -619,5 +567,5 @@ function Base.show(io::IO, state::StateVariables{NF}) where {NF}
     println(io)
     print(io, "├─ Namespaces: $(keys(state.namespaces))")
     println(io)
-    return print(io, "└─ Timestepper cache: $(timestepper_cache_names(state))")
+    return print(io, "└─ Timestepper cache: $(nameof(typeof(state.timestepper_cache)))")
 end

@@ -1,7 +1,18 @@
 """
-Base type for time-stepper state caches.
+    $TYPEDEF
+
+Base type for time stepper caches. Each [`AbstractTimeStepper`](@ref) allocates a corresponding
+`AbstractTimeStepperCache` subtype (via [`initialize`](@ref)) to hold any working state it needs between
+stages/steps.
 """
 abstract type AbstractTimeStepperCache{NF} end
+
+"""
+    $TYPEDEF
+
+Trivial cache for time steppers that require no working state (e.g. [`ForwardEuler`](@ref)).
+"""
+struct EmptyCache{NF} <: AbstractTimeStepperCache{NF} end
 
 # AbstractTimeStepper
 
@@ -55,29 +66,12 @@ define a `timestepper` field holding an [`AbstractTimeStepper`](@ref) (e.g. [`Fo
 @inline get_timestepper(model::AbstractModel) = model.timestepper
 
 """
-    $SIGNATURES
+    initialize(timestepper::AbstractTimeStepper, state, progvars)
 
-Allocate the time stepper cache for `timestepper` against the given `state`.
+Allocate the time stepper cache for `timestepper` against the given `state`. `progvars` is the named tuple
+of prognostic variable metadata (needed e.g. by [`IMEX`](@ref))
 """
-initialize_timestepper_cache(timestepper::AbstractTimeStepper, state) = initialize(timestepper, state)
-
-"""
-    $SIGNATURES
-
-Return the names of the prognostic variables in `state` that are integrated by the timestepper filling the
-given `class` (`:explicit` or `:implicit`); i.e. those declared with `timestepper = class`. The names and
-their classes are read from the `state` type parameters, which keeps this type stable.
-"""
-prognostic_names(state::StateVariables, class::Symbol) = prognostic_names(state, Val(class))
-
-# Select, at compile time, the names of the prognostic variables whose timestepper class matches `class`.
-# Operating on the `timestepper_classes` type parameters of `StateVariables` keeps this type stable.
-@generated function prognostic_names(
-        ::StateVariables{NF, prognames, closurenames, timestepper_classes}, ::Val{class}
-    ) where {NF, prognames, closurenames, timestepper_classes, class}
-    selected = Symbol[name for (name, c) in zip(prognames, timestepper_classes) if c === class]
-    return Expr(:tuple, map(QuoteNode, selected)...)
-end
+initialize(timestepper::AbstractTimeStepper, state, progvars) = initialize(timestepper, state)
 
 """
     timestep!(integrator::ModelIntegrator, timestepper::AbstractTimeStepper, Δt)
@@ -97,31 +91,20 @@ timestep!(state, model::AbstractModel, timestepper::AbstractTimeStepper, Δt) = 
 """
     initialize(::AbstractTimeStepper, state)
 
-Initialize and return the time stepping state cache for the given time stepper.
-. Allocate and return a `NamedTuple` of intermediate fields/state required by the given
-`timestepper`. Time steppers that do not require any cache can fall back to the default 
-implementation, which returns an empty `NamedTuple`.
+Initialize and return the [`AbstractTimeStepperCache`](@ref) holding any intermediate fields/state required by the
+given `timestepper`. Time steppers that need no working state fall back to the default implementation,
+which returns an [`EmptyCache`](@ref).
 """
-initialize(timestepper::AbstractTimeStepper, state) = (;)
+initialize(timestepper::AbstractTimeStepper{NF}, state) where {NF} = EmptyCache{NF}()
 
 """
-    get_cache(state, timestepper::AbstractTimeStepper)
+    get_cache(cache::AbstractTimeStepperCache, timestepper::AbstractTimeStepper)
 
-Return the cache associated with `timestepper` (retrieved from `state.timestepper_cache`). Falls back to
-`nothing` for time steppers that do not define a cache.
+Return the working cache for `timestepper` given the model's `state.timestepper_cache`. For a single
+timestepper this is the cache itself; an [`IMEX`](@ref) cache returns the sub-cache matching the
+timestepper's class.
 """
-get_cache(state, ::AbstractTimeStepper) = nothing
-
-"""
-    explicit_cache(timestepper_cache)
-    implicit_cache(timestepper_cache)
-
-Select the cache belonging to the explicit/implicit (sub-)stepper from a `state.timestepper_cache`. For a
-single timestepper the cache is stored bare and returned as-is; for an [`IMEX`](@ref) timestepper the
-per-class sub-caches are selected by the IMEX-specific methods in `imex.jl`.
-"""
-explicit_cache(cache) = cache
-implicit_cache(cache) = cache
+get_cache(cache::AbstractTimeStepperCache, ::AbstractTimeStepper) = cache
 
 """
     $SIGNATURES
