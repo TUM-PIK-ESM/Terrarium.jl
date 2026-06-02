@@ -307,18 +307,21 @@ associated `grid`. The `clock` specifies the initial simulation time and is muta
 `boundary_conditions` and `initializers` can be provided as `NamedTuple`s with keys corresponding to the names of state
 variables to which they should be applied. If the state variables are defined within namespaces, the given `NamedTuple`
 must follow the same structure. The `fields` argument allows for manual preconstruction of `Field`s for the named state
-variables. The time stepper cache(s) are allocated from the model's `timesteppers`.
+variables. The time stepper cache(s) are allocated from the model's `timesteppers`. The `timestepper_classes` keyword,
+a `NamedTuple` of `varname => class`, overrides the default timestepper class (`:explicit`/`:implicit`) of the named
+prognostic variables (see [`prognostic`](@ref) for how defaults are declared).
 """
 function StateVariables(
         model::AbstractModel{NF};
         clock = Clock(time = zero(NF)),
         input_variables = (),
+        timestepper_classes = (;),
         boundary_conditions = (;),
         initializers = (;),
         fields = (;)
     ) where {NF}
     vars = Variables(tuplejoin(variables(model), input_variables))
-    state = StateVariables(vars, model.grid; clock, timesteppers = get_timesteppers(model), boundary_conditions, initializers, fields)
+    state = StateVariables(vars, model.grid; clock, timesteppers = get_timesteppers(model), timestepper_classes, boundary_conditions, initializers, fields)
     return state
 end
 
@@ -335,12 +338,13 @@ function StateVariables(
         clock = Clock(time = zero(NF)),
         input_variables = (),
         timesteppers = default_timesteppers(NF),
+        timestepper_classes = (;),
         boundary_conditions = (;),
         initializers = (;),
         fields = (;)
     ) where {NF}
     vars = Variables(tuplejoin(variables(process), input_variables))
-    state = StateVariables(vars, grid; clock, timesteppers, boundary_conditions, initializers, fields)
+    state = StateVariables(vars, grid; clock, timesteppers, timestepper_classes, boundary_conditions, initializers, fields)
     return state
 end
 
@@ -352,12 +356,17 @@ end
 Initialize a `StateVariables` data structure containing `Field`s defined on the given `grid`
 for all variables in `vars`. Any predefined `boundary_conditions` and `fields` will be passed
 through to `initialize` for each variable.
+
+By default, each prognostic variable is integrated by the timestepper class (`:explicit` or `:implicit`)
+it was declared with via [`prognostic`](@ref). The `timestepper_classes` keyword, a `NamedTuple` of
+`varname => class`, overrides this default for exactly the named variables.
 """
 function StateVariables(
         @nospecialize(vars::Variables),
         grid::AbstractLandGrid{NF};
         clock::Clock = Clock(time = 0.0),
         timesteppers = default_timesteppers(NF),
+        timestepper_classes = (;),
         boundary_conditions = (;),
         initializers = (;),
         fields = (;)
@@ -371,19 +380,22 @@ function StateVariables(
     namespaces = map(vars.namespaces) do ns
         ns_bcs = get(boundary_conditions, varname(ns), (;))
         ns_fields = get(fields, varname(ns), (;))
-        StateVariables(ns.vars, grid; clock, boundary_conditions = ns_bcs, fields = ns_fields)
+        ns_classes = get(timestepper_classes, varname(ns), (;))
+        StateVariables(ns.vars, grid; clock, timestepper_classes = ns_classes, boundary_conditions = ns_bcs, fields = ns_fields)
     end
     # get closure variable names
     closurenames = map(varname, closure_variables(values(vars.prognostic)))
-    # timestepper class (:explicit/:implicit) of each prognostic variable, in the same order as the names;
-    # stored as a type parameter so that `prognostic_names(state, class)` can select per class type stably
-    timestepper_classes = map(timestepper, values(vars.prognostic))
+    # Resolve the timestepper class (:explicit/:implicit) of each prognostic variable, in the same order as
+    # the names. The default class is the one each variable was declared with (see `prognostic`); the
+    # `timestepper_classes` keyword overrides it per-variable. The resolved classes are stored as a type
+    # parameter so that `prognostic_names(state, class)` can select per class in a type-stable way.
+    resolved_classes = consolidate_timestepper_classes(vars.prognostic, vars.namespaces, timestepper_classes)
     # construct StateVariables with an empty cache; the timestepper-specific cache
     # is allocated below now that all other state variables have been initialized
     initial_state = StateVariables(
         NF,
         closurenames,
-        timestepper_classes,
+        resolved_classes,
         prognostic_fields,
         tendency_fields,
         auxiliary_fields,
@@ -397,7 +409,7 @@ function StateVariables(
     state = StateVariables(
         NF,
         closurenames,
-        timestepper_classes,
+        resolved_classes,
         prognostic_fields,
         tendency_fields,
         auxiliary_fields,
@@ -409,6 +421,33 @@ function StateVariables(
     # Apply Field initializers
     initialize!(state, initializers)
     return state
+end
+
+"""
+    $SIGNATURES
+
+Determine the timestepper class (`:explicit` or `:implicit`) for each prognostic variable in `progvars`,
+returned as a tuple in the same order as `keys(progvars)`. Each variable's default class is the one it was
+declared with via [`prognostic`](@ref); the `overrides` `NamedTuple` (mapping `varname => class`) replaces
+the class for exactly the named variables. Unrecognized keys raise an `ArgumentError`.
+"""
+function consolidate_timestepper_classes(progvars::NamedTuple, namespaces::NamedTuple, overrides::NamedTuple)
+    # validate override keys: each must name a prognostic variable at this level or a namespace
+    # (namespace entries are nested NamedTuples forwarded to the namespace's own StateVariables)
+    valid_keys = (keys(progvars)..., keys(namespaces)...)
+    for key in keys(overrides)
+        key in valid_keys || throw(ArgumentError(
+            "`timestepper_classes` has unknown key :$key; expected a prognostic variable or namespace name in $(valid_keys)"
+        ))
+    end
+    # resolve each prognostic variable's class, applying overrides and validating the result
+    return map(values(progvars)) do var
+        class = get(overrides, varname(var), timestepper(var)) # take the override if it exists, otherwise default to timestepper(var)
+        class in (:explicit, :implicit) || throw(ArgumentError(
+            "timestepper class for prognostic variable :$(varname(var)) must be :explicit or :implicit, got :$class"
+        ))
+        return class
+    end
 end
 
 # Base case: empty named tuples

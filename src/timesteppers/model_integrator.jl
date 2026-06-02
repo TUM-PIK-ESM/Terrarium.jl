@@ -182,6 +182,9 @@ Creates and initializes a `ModelIntegrator` for the given `model` with input var
 the given `inputs`. This method allocates all necessary `Field`s for the state variables and subsequently calls
 `initialize!(::ModelIntegrator)`.
 
+The `timestepper_classes` keyword, a `NamedTuple` of `varname => class`, overrides the default timestepper class
+(`:explicit`/`:implicit`) of the named prognostic variables (see [`prognostic`](@ref) for how defaults are declared).
+
 Note that this method is **not type stable** and thus should not be called from Enzyme `autodiff`. To reinitialize
 the model for an existing `state`, use `initialize!(state, model)`.
 """
@@ -189,13 +192,14 @@ function initialize(
         model::AbstractModel{NF},
         inputs::InputSource...;
         clock::Clock = Clock(time = zero(NF)),
+        timestepper_classes = (;),
         boundary_conditions = (;),
         initializers = (;),
         fields = (;)
     ) where {NF}
     inputs = InputSources(inputs...)
     input_vars = variables(inputs)
-    state = StateVariables(model; clock, boundary_conditions, fields, input_variables = input_vars)
+    state = StateVariables(model; clock, timestepper_classes, boundary_conditions, fields, input_variables = input_vars)
     integrator = ModelIntegrator(clock, model, inputs, state, initializers)
     initialize!(integrator)
     return integrator
