@@ -192,8 +192,11 @@ computational graph for `update_state!`/`timestep!`. Prognostic variables genera
 by any code not belonging to the timestepper or user. They automatically define a `tendency` (auxiliary)
 variable which is used to hold the value of their instantaneous time derivative computed by `compute_tendencies!`.
 
-Each prognostic variable is assigned a `timestepper` role (`:explicit` or `:implicit`) which determines
-whether it is integrated by the `explicit` or `implicit` entry of the model's `timesteppers`.
+Each prognostic variable is assigned a `timestepper` class (`:explicit` or `:implicit`) which, when the
+model's `timestepper` is an [`IMEX`](@ref), determines whether it is integrated by the `explicit` or
+`implicit` timestepper. A single (non-`IMEX`) timestepper integrates all prognostic variables regardless
+of class. The class is a default that can be overridden per-variable at `StateVariables` construction via
+the `timestepper_classes` keyword.
 """
 struct PrognosticVariable{
         name,

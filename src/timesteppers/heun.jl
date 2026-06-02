@@ -22,7 +22,9 @@ function initialize(::Heun, state::AbstractStateVariables)
     return (; prognostic, tendencies)
 end
 
-get_cache(state::StateVariables, ts::Heun) = state.timestepper_cache[:explicit]
+# Heun is an explicit (sub-)stepper, so it reads its cache from the explicit slot (a no-op unless the
+# model uses an IMEX timestepper, in which case the explicit sub-cache is selected).
+get_cache(state::StateVariables, ts::Heun) = explicit_cache(state.timestepper_cache)
 
 # Save the prognostic/tendency fields named in `names` into the Heun cache.
 function save_cache!(state::StateVariables, ts::Heun, names::Tuple)

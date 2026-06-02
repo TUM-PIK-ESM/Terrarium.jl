@@ -122,7 +122,7 @@ export Forcings
 include("forcings.jl")
 
 # timestepping
-export timestep!, default_dt, is_adaptive, get_timesteppers
+export timestep!, default_dt, is_adaptive, get_timestepper
 include("timesteppers/abstract_timestepper.jl")
 
 # abstract model types
@@ -143,5 +143,7 @@ export ForwardEuler
 include("timesteppers/forward_euler.jl")
 export Heun
 include("timesteppers/heun.jl")
+export IMEX
+include("timesteppers/imex.jl")
 
 end # module Terrarium

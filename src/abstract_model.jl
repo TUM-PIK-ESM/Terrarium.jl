@@ -215,19 +215,13 @@ defined by the coupling interface for the process type.
 invclosure!(state, grid, closure::AbstractClosureRelation, ::AbstractProcess, args...) = nothing
 
 """
-    (::Type{Model})(grid::AbstractLandGrid, args...; timesteppers = ..., kwargs...) where {Model <: AbstractModel}
+    (::Type{Model})(grid::AbstractLandGrid, args...; kwargs...) where {Model <: AbstractModel}
 
-Convenience constructor for all `AbstractModel` types that allows the `grid` to be passed
-as the first positional argument. The `timesteppers` keyword can be a single timestepper, 
-a tuple/vector of timesteppers, or a `NamedTuple`.  All converted into the canonical 
-`(; explicit[, implicit])` form.
+Convenience constructor for all `AbstractModel` types that allows the `grid` to be passed as the first
+positional argument; all other arguments are forwarded to the model's keyword constructor.
 """
-function (::Type{Model})(grid::AbstractLandGrid, args...; timesteppers = nothing, kwargs...) where {Model <: AbstractModel}
-    return if isnothing(timesteppers)
-        Model(args...; grid, kwargs...)
-    else
-        Model(args...; grid, timesteppers = to_timesteppers(eltype(grid), timesteppers), kwargs...)
-    end
+function (::Type{Model})(grid::AbstractLandGrid, args...; kwargs...) where {Model <: AbstractModel}
+    return Model(args...; grid, kwargs...)
 end
 
 function Base.show(io::IO, model::AbstractModel{NF}) where {NF}

@@ -15,7 +15,7 @@ $TYPEDFIELDS
         GridType <: AbstractLandGrid{NF},
         Constants <: PhysicalConstants{NF},
         Initializer <: AbstractInitializer,
-        Timesteppers <: NamedTuple,
+        Timestepper <: AbstractTimeStepper{NF},
     } <: AbstractVegetationModel{NF, GridType}
     "Spatial grid type"
     grid::GridType
@@ -32,8 +32,8 @@ $TYPEDFIELDS
     "State variable initializer"
     initializer::Initializer = DefaultInitializer(eltype(grid))
 
-    "Time steppers as a `NamedTuple` with `explicit` and optional `implicit` entries"
-    timesteppers::Timesteppers = default_timesteppers(eltype(grid))
+    "Time stepper: a single `AbstractTimeStepper` (e.g. `ForwardEuler`, `Heun`) or an `IMEX`"
+    timestepper::Timestepper = default_timestepper(eltype(grid))
 end
 
 function compute_auxiliary!(state, model::VegetationModel)

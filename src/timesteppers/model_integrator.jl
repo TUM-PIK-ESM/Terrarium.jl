@@ -45,7 +45,7 @@ function ModelIntegrator(
         initializers::NamedTuple,
     ) where {NF}
     grid = get_grid(model)
-    timestepper = get_timesteppers(model).explicit
+    timestepper = get_timestepper(model)
     return ModelIntegrator{
         NF, typeof(architecture(grid)), typeof(grid), typeof(timestepper),
         typeof(model), typeof(state), typeof(initializers), typeof(inputs),
@@ -79,8 +79,7 @@ Oceananigans.TimeSteppers.update_state!(integrator::ModelIntegrator; compute_ten
 # consider renaming later...
 Oceananigans.TimeSteppers.time_step!(integrator::ModelIntegrator, Δt; kwargs...) = timestep!(integrator, Δt)
 
-# TODO: for now just take the explicit one
-Oceananigans.Simulations.timestepper(integrator::ModelIntegrator) = get_timesteppers(integrator.model).explicit
+Oceananigans.Simulations.timestepper(integrator::ModelIntegrator) = get_timestepper(integrator.model)
 
 """
     $SIGNATURES
@@ -139,9 +138,9 @@ Advance the model forward by one timestep with optional timestep size `Δt`. If 
 `compute_auxiliary!` is called after the time step in order to update the values of auxiliary/diagnostic
 variables.
 """
-timestep!(integrator::ModelIntegrator; finalize = true) = timestep!(integrator, default_dt(get_timesteppers(integrator.model)); finalize)
+timestep!(integrator::ModelIntegrator; finalize = true) = timestep!(integrator, default_dt(get_timestepper(integrator.model)); finalize)
 function timestep!(integrator::ModelIntegrator, Δt; finalize = true)
-    timestep!(integrator, get_timesteppers(integrator.model), convert_dt(Δt))
+    timestep!(integrator, get_timestepper(integrator.model), convert_dt(Δt))
     if finalize
         compute_auxiliary!(integrator.state, integrator.model)
     end
@@ -149,20 +148,16 @@ function timestep!(integrator::ModelIntegrator, Δt; finalize = true)
 end
 
 """
-    timestep!(integrator::ModelIntegrator, timesteppers::NamedTuple, Δt)
+    timestep!(integrator::ModelIntegrator, timestepper::AbstractTimeStepper, Δt)
 
-Advance the model forward by one timestep of size `Δt`, integrating each prognostic variable with the
-time stepper it was assigned via its `timestepper` (`:explicit` or `:implicit`). The prognostic variables
-are grouped by their assigned time stepper, and each group is forwarded to the corresponding
-`timestep!(integrator, timestepper, Δt, names)` method. The clock is advanced once for the whole step.
+Advance the model forward by one timestep of size `Δt` using a single `timestepper`, which integrates
+*all* prognostic variables. The variable names are forwarded to the corresponding
+`timestep!(integrator, timestepper, Δt, names)` method and the clock is advanced once for the whole step.
 """
-function timestep!(integrator::ModelIntegrator, timesteppers::NamedTuple, Δt)
-    # step the prognostic variables assigned to each time stepper (grouped by :explicit/:implicit)
-    fastiterate(keys(timesteppers)) do class
-        names = prognostic_names(integrator.state, class)
-        # only invoke the time stepper if it has variables assigned to it
-        isempty(names) || timestep!(integrator, timesteppers[class], Δt, names)
-    end
+function timestep!(integrator::ModelIntegrator, timestepper::AbstractTimeStepper, Δt)
+    # a single time stepper integrates all prognostic variables
+    names = prognostic_names(integrator.state)
+    isempty(names) || timestep!(integrator, timestepper, Δt, names)
     # advance the clock once for the entire step
     tick!(integrator.state.clock, Δt)
     return nothing
@@ -171,9 +166,9 @@ end
 """
     default_dt(integrator::ModelIntegrator)
 
-Return the default timestep size for the given `integrator`, taken from its model's `timesteppers`.
+Return the default timestep size for the given `integrator`, taken from its model's `timestepper`.
 """
-default_dt(integrator::ModelIntegrator) = default_dt(get_timesteppers(integrator.model))
+default_dt(integrator::ModelIntegrator) = default_dt(get_timestepper(integrator.model))
 
 """
     $TYPEDSIGNATURES
@@ -213,8 +208,8 @@ get_steps(steps::Int, period::Period, Δt::Real) = throw(ArgumentError("both `st
 function Base.show(io::IO, integrator::ModelIntegrator)
     modelstr = summary(integrator.model)
     statestr = summary(integrator.state)
-    tsstr = get_timesteppers(integrator.model)
-    println(io, "Integrator of $modelstr with timesteppers $tsstr")
+    tsstr = get_timestepper(integrator.model)
+    println(io, "Integrator of $modelstr with timestepper $tsstr")
     println(io, "├── Current time: $(current_time(integrator))")
     return println(io, "├── $statestr")
     # TODO: add more information?

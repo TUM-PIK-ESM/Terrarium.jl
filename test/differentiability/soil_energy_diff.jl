@@ -69,7 +69,7 @@ end
     model = build_soil_energy_model(CPU(), Float64)
     integrator = initialize(model)
     dintegrator = make_zero(integrator)
-    Δt = get_timesteppers(integrator.model).explicit.Δt
+    Δt = get_timestepper(integrator.model).Δt
     @time Enzyme.autodiff(set_runtime_activity(Reverse), mean_soil_temperature_step!, Active, Duplicated(integrator, dintegrator), Const(Δt))
     @test all(isfinite.(dintegrator.state.temperature))
 end

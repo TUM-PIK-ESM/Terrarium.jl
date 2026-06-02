@@ -25,73 +25,41 @@ Base type for *implicit* time steppers.
 abstract type AbstractImplicitTimestepper{NF} <: AbstractTimeStepper{NF} end
 
 """
-    $SIGNATURES
-
-Return the class (`:explicit` or `:implicit`) that the given `timestepper` fills within a model's
-`timesteppers` `NamedTuple`. This is determined by the abstract supertype of the time stepper.
-"""
-timestepper_class(::AbstractExplicitTimestepper) = :explicit
-timestepper_class(::AbstractImplicitTimestepper) = :implicit
-
-"""
     default_dt(timestepper::AbstractTimeStepper)
-    default_dt(timesteppers::NamedTuple)
 
-Get the current timestep size for the time stepper. For a `NamedTuple` of timesteppers, the timestep
-size of the `explicit` timestepper is returned.
+Get the current timestep size for the time stepper.
 """
 function default_dt end
 
-default_dt(timesteppers::NamedTuple) = default_dt(timesteppers.explicit)
-
 """
     is_adaptive(timestepper::AbstractTimeStepper)
-    is_adaptive(timesteppers::NamedTuple)
 
-Return `true` if the given time stepper is adaptive, false otherwise. For a `NamedTuple` of timesteppers,
-returns `true` if *any* of the timesteppers are adaptive.
+Return `true` if the given time stepper is adaptive, false otherwise.
 """
 function is_adaptive end
-
-is_adaptive(timesteppers::NamedTuple) = any(is_adaptive, values(timesteppers))
 
 """
     $SIGNATURES
 
-Default `timesteppers` for models, consisting of a single `explicit` [`ForwardEuler`](@ref) time stepper.
+Default `timestepper` for models: a single `explicit` [`ForwardEuler`](@ref) time stepper.
 """
-default_timesteppers(::Type{NF}) where {NF} = (; explicit = ForwardEuler(NF))
-
-# TODO: currently at most one per class of timestepper, we might relax that in the future
-"""
-    to_timesteppers(::Type{NF}, timesteppers)
-
-Normalize a single timestepper, a tuple/vector of timesteppers, or a `NamedTuple` into the canonical
-`timesteppers` `NamedTuple` with (at most) the entries `explicit` and `implicit`. If no explicit timestepper 
-is provided, the `explicit` entry defaults to [`ForwardEuler`](@ref).
-"""
-to_timesteppers(::Type{NF}, timestepper::AbstractTimeStepper) where {NF} = to_timesteppers(NF, (timestepper,))
-function to_timesteppers(::Type{NF}, timesteppers::Union{Tuple, AbstractVector}) where {NF}
-    explicit_steppers = filter(ts -> isa(ts, AbstractExplicitTimestepper), timesteppers)
-    implicit_steppers = filter(ts -> isa(ts, AbstractImplicitTimestepper), timesteppers)
-    length(explicit_steppers) <= 1 || throw(ArgumentError("at most one explicit timestepper can be specified, got $(length(explicit_steppers))"))
-    length(implicit_steppers) <= 1 || throw(ArgumentError("at most one implicit timestepper can be specified, got $(length(implicit_steppers))"))
-    explicit = isempty(explicit_steppers) ? ForwardEuler(NF) : first(explicit_steppers)
-    return isempty(implicit_steppers) ? (; explicit) : (; explicit, implicit = first(implicit_steppers))
-end
-function to_timesteppers(::Type{NF}, timesteppers::NamedTuple) where {NF}
-    all(in((:explicit, :implicit)), keys(timesteppers)) || throw(ArgumentError("`timesteppers` keys must be a subset of (:explicit, :implicit), got $(keys(timesteppers))"))
-    explicit = get(timesteppers, :explicit, ForwardEuler(NF))
-    return haskey(timesteppers, :implicit) ? (; explicit, implicit = timesteppers.implicit) : (; explicit)
-end
+default_timestepper(::Type{NF}) where {NF} = ForwardEuler(NF)
 
 """
-    get_timesteppers(model::AbstractModel)::NamedTuple
+    get_timestepper(model::AbstractModel)::AbstractTimeStepper
 
-Return the `timesteppers` associated with the given `model`. All `AbstractModel`s are required to
-define a `timesteppers` field.
+Return the `timestepper` associated with the given `model`. All `AbstractModel`s are required to
+define a `timestepper` field holding an [`AbstractTimeStepper`](@ref) (e.g. [`ForwardEuler`](@ref),
+[`Heun`](@ref), or [`IMEX`](@ref)).
 """
-@inline get_timesteppers(model::AbstractModel) = model.timesteppers
+@inline get_timestepper(model::AbstractModel) = model.timestepper
+
+"""
+    $SIGNATURES
+
+Allocate the time stepper cache for `timestepper` against the given `state`.
+"""
+initialize_timestepper_cache(timestepper::AbstractTimeStepper, state) = initialize(timestepper, state)
 
 """
     $SIGNATURES
@@ -139,10 +107,21 @@ initialize(timestepper::AbstractTimeStepper, state) = (;)
 """
     get_cache(state, timestepper::AbstractTimeStepper)
 
-Return the cache associated with `timestepper` (stored in `state.timestepper_cache` under the
-timestepper's class). Falls back to `nothing` for time steppers that do not define a cache.
+Return the cache associated with `timestepper` (retrieved from `state.timestepper_cache`). Falls back to
+`nothing` for time steppers that do not define a cache.
 """
 get_cache(state, ::AbstractTimeStepper) = nothing
+
+"""
+    explicit_cache(timestepper_cache)
+    implicit_cache(timestepper_cache)
+
+Select the cache belonging to the explicit/implicit (sub-)stepper from a `state.timestepper_cache`. For a
+single timestepper the cache is stored bare and returned as-is; for an [`IMEX`](@ref) timestepper the
+per-class sub-caches are selected by the IMEX-specific methods in `imex.jl`.
+"""
+explicit_cache(cache) = cache
+implicit_cache(cache) = cache
 
 """
     $SIGNATURES

@@ -307,7 +307,7 @@ associated `grid`. The `clock` specifies the initial simulation time and is muta
 `boundary_conditions` and `initializers` can be provided as `NamedTuple`s with keys corresponding to the names of state
 variables to which they should be applied. If the state variables are defined within namespaces, the given `NamedTuple`
 must follow the same structure. The `fields` argument allows for manual preconstruction of `Field`s for the named state
-variables. The time stepper cache(s) are allocated from the model's `timesteppers`. The `timestepper_classes` keyword,
+variables. The time stepper cache(s) are allocated from the model's `timestepper`. The `timestepper_classes` keyword,
 a `NamedTuple` of `varname => class`, overrides the default timestepper class (`:explicit`/`:implicit`) of the named
 prognostic variables (see [`prognostic`](@ref) for how defaults are declared).
 """
@@ -321,7 +321,7 @@ function StateVariables(
         fields = (;)
     ) where {NF}
     vars = Variables(tuplejoin(variables(model), input_variables))
-    state = StateVariables(vars, model.grid; clock, timesteppers = get_timesteppers(model), timestepper_classes, boundary_conditions, initializers, fields)
+    state = StateVariables(vars, model.grid; clock, timestepper = get_timestepper(model), timestepper_classes, boundary_conditions, initializers, fields)
     return state
 end
 
@@ -337,14 +337,14 @@ function StateVariables(
         grid::AbstractLandGrid{NF};
         clock = Clock(time = zero(NF)),
         input_variables = (),
-        timesteppers = default_timesteppers(NF),
+        timestepper = default_timestepper(NF),
         timestepper_classes = (;),
         boundary_conditions = (;),
         initializers = (;),
         fields = (;)
     ) where {NF}
     vars = Variables(tuplejoin(variables(process), input_variables))
-    state = StateVariables(vars, grid; clock, timesteppers, timestepper_classes, boundary_conditions, initializers, fields)
+    state = StateVariables(vars, grid; clock, timestepper, timestepper_classes, boundary_conditions, initializers, fields)
     return state
 end
 
@@ -365,7 +365,7 @@ function StateVariables(
         @nospecialize(vars::Variables),
         grid::AbstractLandGrid{NF};
         clock::Clock = Clock(time = 0.0),
-        timesteppers = default_timesteppers(NF),
+        timestepper = default_timestepper(NF),
         timestepper_classes = (;),
         boundary_conditions = (;),
         initializers = (;),
@@ -404,8 +404,8 @@ function StateVariables(
         (;),
         clock,
     )
-    # allocate a cache for each of the model's timesteppers, keyed by timestepper class (e.g. `explicit`, `implicit`)
-    cache = map(ts -> initialize(ts, initial_state), timesteppers)
+    # allocate the timestepper cache(s), keyed by timestepper class (e.g. `explicit`, `implicit`)
+    cache = initialize_timestepper_cache(timestepper, initial_state)
     state = StateVariables(
         NF,
         closurenames,

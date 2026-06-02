@@ -15,7 +15,7 @@ module StateVariablesTestTypes
     @kwdef struct SubModel{NF, Grid <: AbstractLandGrid{NF}} <: Terrarium.AbstractModel{NF, Grid}
         grid::Grid
         initializer = DefaultInitializer(eltype(grid))
-        timesteppers = (; explicit = ForwardEuler(eltype(grid)))
+        timestepper = ForwardEuler(eltype(grid))
     end
 
     Terrarium.variables(model::SubModel) = (
@@ -29,7 +29,7 @@ module StateVariablesTestTypes
         grid::Grid
         submodel = SubModel(; grid)
         initializer = DefaultInitializer(eltype(grid))
-        timesteppers = (; explicit = ForwardEuler(eltype(grid)))
+        timestepper = ForwardEuler(eltype(grid))
     end
 
     struct TestClosure <: Terrarium.AbstractClosureRelation end

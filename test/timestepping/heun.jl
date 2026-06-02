@@ -3,10 +3,10 @@ using Test
 
 # mock a simple model with exponential dynamics (and a constant offset) to test time steppers
 
-@kwdef struct ExpModel{NF, Grid <: Terrarium.AbstractLandGrid{NF}, I, TS <: NamedTuple} <: Terrarium.AbstractModel{NF, Grid}
+@kwdef struct ExpModel{NF, Grid <: Terrarium.AbstractLandGrid{NF}, I, TS <: Terrarium.AbstractTimeStepper} <: Terrarium.AbstractModel{NF, Grid}
     grid::Grid
     initializer::I = DefaultInitializer(eltype(grid))
-    timesteppers::TS = (; explicit = ForwardEuler(eltype(grid)))
+    timestepper::TS = ForwardEuler(eltype(grid))
 end
 
 Terrarium.variables(::ExpModel) = (
@@ -28,7 +28,7 @@ end
 
     grid = ColumnGrid(CPU(), Float64, UniformSpacing(N = 1))
     model_euler = ExpModel(grid)
-    model_heun = ExpModel(grid; timesteppers = Heun())
+    model_heun = ExpModel(grid; timestepper = Heun())
 
     initializers = (u = 0.0, v = 0.1)
     integrator_heun = initialize(model_heun; initializers)

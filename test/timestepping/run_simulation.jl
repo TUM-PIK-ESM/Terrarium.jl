@@ -29,7 +29,7 @@ end
 
 @testset "run! SoilModel w/ Heun" begin
     grid = ColumnRingGrid(CPU(), Float64, ExponentialSpacing(N = 50), RingGrids.FullHEALPixGrid(16))
-    model = SoilModel(grid; timesteppers = Heun())
+    model = SoilModel(grid; timestepper = Heun())
     integrator = initialize(model)
 
     run!(integrator; steps = 2)
