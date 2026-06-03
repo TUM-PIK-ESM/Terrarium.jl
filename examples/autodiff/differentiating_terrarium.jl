@@ -7,17 +7,19 @@
 # Without much further ado, let us look into how we can differentiate Terrarium hands-on and perform a small sensitivity analysis of a one column soil model. First, we set up our model as usual:
 
 using Terrarium, Enzyme, Checkpointing
+using CUDA
 using BenchmarkTools
 using LinearAlgebra
 
 import CairoMakie as Makie
 
-grid = ColumnGrid(UniformSpacing()) # Easier Jacobian
+FT = Float32
+grid = ColumnGrid(GPU(), FT, UniformSpacing(), 1) # Easier Jacobian
 initializer = SoilInitializer(eltype(grid))
 model = SoilModel(grid; initializer)
 # constant surface temperature of 1°C
-bcs = PrescribedSurfaceTemperature(:T_ub, 1.0)
-integrator = initialize(model, ForwardEuler(), boundary_conditions = bcs)
+bcs = PrescribedSurfaceTemperature(:T_ub, FT(1.0))
+integrator = initialize(model, ForwardEuler(FT), boundary_conditions = bcs)
 
 # So far, this is just our usual setup. In this case, for a soil column with a prescribed surface temperature.
 #
@@ -33,7 +35,7 @@ scheme = Revolve(1)
 
 dintegrator = make_zero(integrator)
 # set a one hot seed for a sensitivity analysis of T for now
-interior(dintegrator.state.temperature)[1, 1, 2] = 1.0
+interior(dintegrator.state.temperature)[1, 1, 2] = FT(1.0)
 
 # how many steps we want to integrate for
 N_t = 200
@@ -109,12 +111,42 @@ jac_full = zeros(eltype(grid), n_prog, n_prog)
 
 tend_vars = (:internal_energy,)
 
+# Benchmark a JVP
+dstate = make_zero(state)
+CUDA.@allowscalar  interior(getproperty(dstate.prognostic, :internal_energy))[1, 1, 1] = one(eltype(grid))
+
+# Measure time for copmpilation
+@time Enzyme.autodiff(
+    set_runtime_activity(Forward),
+    compute_f!,
+    Const,
+    Duplicated(state, dstate),
+    Const(model.grid),
+    Const(model.soil),
+    Const(model.constants),
+)
+
+# Benchmark after compilation for the first time
+dstate = make_zero(state)
+CUDA.@allowscalar  interior(getproperty(dstate.prognostic, :internal_energy))[1, 1, 1] = one(eltype(grid))
+
+@benchmark Enzyme.autodiff(
+    set_runtime_activity(Forward),
+    compute_f!,
+    Const,
+    Duplicated(state, dstate),
+    Const(model.grid),
+    Const(model.soil),
+    Const(model.constants),
+)
+
+# Jacobian
 for (col_offset, var_in) in enumerate(prog_vars)
     for k in 1:N_z
         col = (col_offset - 1) * N_z + k
 
         dstate = make_zero(state)
-        interior(getproperty(dstate.prognostic, var_in))[1, 1, k] = one(eltype(grid))
+        CUDA.@allowscalar  interior(getproperty(dstate.prognostic, var_in))[1, 1, k] = one(eltype(grid))
 
         Enzyme.autodiff(
             set_runtime_activity(Forward),
@@ -128,7 +160,7 @@ for (col_offset, var_in) in enumerate(prog_vars)
 
         for (row_offset, var_out) in enumerate(tend_vars)
             rows = ((row_offset - 1) * N_z + 1):(row_offset * N_z)
-            jac_full[rows, col] .= interior(getproperty(dstate.tendencies, var_out))[1, 1, :]
+            CUDA.@allowscalar jac_full[rows, col] .= interior(getproperty(dstate.tendencies, var_out))[1, 1, :]
         end
     end
 end
@@ -142,18 +174,3 @@ ax2 = Makie.Axis(f3[1, 2], yreversed = true, title = "W = I − Δt·J_f  (Newto
 Makie.heatmap!(ax1, jac_full)
 Makie.heatmap!(ax2, W)
 f3
-
-
-# Benchmark a JVP
-dstate = make_zero(state)
-interior(getproperty(dstate.prognostic, :internal_energy))[1, 1, 1] = one(eltype(grid))
-
-@benchmark Enzyme.autodiff(
-    set_runtime_activity(Forward),
-    compute_f!,
-    Const,
-    Duplicated(state, dstate),
-    Const(model.grid),
-    Const(model.soil),
-    Const(model.constants),
-)
