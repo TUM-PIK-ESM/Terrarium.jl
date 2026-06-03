@@ -7,10 +7,11 @@
 # Without much further ado, let us look into how we can differentiate Terrarium hands-on and perform a small sensitivity analysis of a one column soil model. First, we set up our model as usual:
 
 using Terrarium, Enzyme, Checkpointing
+using LinearAlgebra
 
 import CairoMakie as Makie
 
-grid = ColumnGrid(ExponentialSpacing())
+grid = ColumnGrid(UniformSpacing()) # Easier Jacobian
 initializer = SoilInitializer(eltype(grid))
 model = SoilModel(grid; initializer)
 # constant surface temperature of 1°C
@@ -59,3 +60,84 @@ f2
 # As expected the sensitivity is the highest locally, with the same and neighbouring soil layers contributing and no sensitivity wrt higher soil layers for our still rather short integration of only ``N_t\cdot 300s``.
 #
 # This example should just demonstrate the technical possibilities of Terrarium.jl in an easy and fast to compute setup, stay tuned for more complex examples.
+
+# ## Jacobian of the tendency map w.r.t. all prognostic variables
+#
+# The motivation is **implicit timestepping** of the coupled land model.  A backward-Euler
+# step requires solving the nonlinear system
+#
+#   g(U^{n+1}) = U^{n+1} - U^n - Δt·f(U^{n+1}) = 0
+#
+# via Newton iterations, each of which needs the Jacobian
+#
+#   W = I - Δt·J_f,   J_f = ∂f/∂U   (W is the standard notation in Hairer & Wanner)
+#
+# where U is the prognostic vector: [internal_energy] only in this example.
+# The model uses the default `SoilHydrology` with `NoFlow` vertical flow (no Richards
+# equation), so `saturation_water_ice` is frozen in place — its tendency is purely
+# from freeze/thaw driven by the energy balance and is zero here.
+# We therefore build the Jacobian only w.r.t. `internal_energy`.
+#
+# Key insight: the tendency f(U) flows through two stages
+#
+#   U  ──closure!──►  T, liq, ...  ──compute_tendencies!──►  ∂U∂t
+#
+# `compute_auxiliary!(state, grid, energy::SoilEnergyBalance, ...)` is a no-op; the
+# actual U→T mapping lives in `closure!` (called by the timestepper after each step).
+# Differentiating only `compute_tendencies!` gives zero because temperature hasn't been
+# updated from the perturbed energy.  We must differentiate through `closure!` + tendencies.
+
+Terrarium.initialize!(integrator)
+state = integrator.state
+
+N_z = size(interior(state.internal_energy), 3)
+
+# Combined function: closure + tendency in one call so the full U→T→∂U∂t chain
+# is visible to Enzyme.
+function compute_f!(state, grid, soil, constants)
+    Terrarium.closure!(state, grid, soil, constants)
+    Terrarium.compute_tendencies!(state, grid, soil, constants)
+    return nothing
+end
+
+# Only internal_energy has a non-trivial tendency with NoFlow hydrology.
+# saturation_water_ice is immobile (NoFlow); its tendency is zero in this configuration.
+prog_vars = (:internal_energy,)
+n_prog = length(prog_vars) * N_z        # total prognostic DOFs
+jac_full = zeros(eltype(grid), n_prog, n_prog)
+
+tend_vars = (:internal_energy,)
+
+for (col_offset, var_in) in enumerate(prog_vars)
+    for k in 1:N_z
+        col = (col_offset - 1) * N_z + k
+
+        dstate = make_zero(state)
+        interior(getproperty(dstate.prognostic, var_in))[1, 1, k] = one(eltype(grid))
+
+        Enzyme.autodiff(
+            set_runtime_activity(Forward),
+            compute_f!,
+            Const,
+            Duplicated(state, dstate),
+            Const(model.grid),
+            Const(model.soil),
+            Const(model.constants),
+        )
+
+        for (row_offset, var_out) in enumerate(tend_vars)
+            rows = ((row_offset - 1) * N_z + 1):(row_offset * N_z)
+            jac_full[rows, col] .= interior(getproperty(dstate.tendencies, var_out))[1, 1, :]
+        end
+    end
+end
+
+Δt = integrator.timestepper.Δt   # or any chosen implicit timestep
+W = I(N_z) - Δt * jac_full
+
+f3 = Makie.Figure(size = (800, 400))
+ax1 = Makie.Axis(f3[1, 1], yreversed = true, title = "J_f = ∂(∂U∂t)/∂U  (heat equation, NoFlow)", xlabel = "Layer k", ylabel = "Layer i")
+ax2 = Makie.Axis(f3[1, 2], yreversed = true, title = "W = I − Δt·J_f  (Newton matrix, Hairer & Wanner)", xlabel = "Layer k", ylabel = "Layer i")
+Makie.heatmap!(ax1, jac_full)
+Makie.heatmap!(ax2, W)
+f3
