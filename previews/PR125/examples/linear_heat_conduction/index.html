@@ -54,12 +54,12 @@ end</code></pre><p><code>Terrarium.tendency_fields</code> extracts the tendency 
         Grid &lt;: Terrarium.AbstractLandGrid{NF},
         Cond &lt;: AbstractHeatConduction{NF},
         Init &lt;: Terrarium.AbstractInitializer{NF},
-        TS &lt;: NamedTuple,
+        TS &lt;: Terrarium.AbstractTimeStepper,
     } &lt;: Terrarium.AbstractModel{NF, Grid}
     grid::Grid
     conduction::Cond = LinearHeatConduction(eltype(grid))
     initializer::Init = DefaultInitializer(eltype(grid))
-    timesteppers::TS = (; explicit = ForwardEuler(eltype(grid)))
+    timestepper::TS = ForwardEuler(eltype(grid))
 end</code></pre><p>Forward the <code>AbstractModel</code> methods to the process:</p><pre><code class="language-julia hljs">function Terrarium.compute_auxiliary!(state, model::HeatModel)
     Terrarium.compute_auxiliary!(state, model.grid, model.conduction)
     return nothing
@@ -73,7 +73,7 @@ model = HeatModel(grid)</code></pre><pre><code class="nohighlight hljs">HeatMode
 ├── grid:  ColumnGrid{Float64, CPU} with dimensions (1, 1, 10)
 ├── conduction:  Main.var&quot;##306&quot;.LinearHeatConduction{Float64}
 ├── initializer:  DefaultInitializer{Float64}
-├── timesteppers:  @NamedTuple{explicit::ForwardEuler{Float64}}
+├── timestepper:  ForwardEuler{Float64}
 </code></pre><p>We will initialize the model with a piecewise constant temperature profile: 10°C in the upper half (z &gt; −0.5 m), 0°C in the lower half. By convention, <code>z = 0</code> corresponds to the surface with <code>z</code> (elevation) decreasing with depth.</p><pre><code class="language-julia hljs">initializers = (
     temperature = (x, z) -&gt; ifelse(z &lt; -0.5, 0, 10),
 )
@@ -92,10 +92,10 @@ T_init = copy(vec(interior(integrator.state.temperature)))</code></pre><pre><cod
 
 sim = Simulation(integrator; stop_time = 2days, Δt = 600.0)
 run!(sim)</code></pre><pre><code class="nohighlight hljs">[ Info: Initializing simulation...
-[ Info:     ... simulation initialization complete (288.250 ms)
+[ Info:     ... simulation initialization complete (353.479 ms)
 [ Info: Executing initial time step...
-[ Info:     ... initial time step complete (630.965 ms).
-[ Info: Simulation is stopping after running for 925.554 ms.
+[ Info:     ... initial time step complete (490.589 ms).
+[ Info: Simulation is stopping after running for 914.588 ms.
 [ Info: Simulation time 2 days equals or exceeds stop time 2 days.
 </code></pre><p>Extract the temperature profile and compare with the initial condition:</p><pre><code class="language-julia hljs">using CairoMakie
 
@@ -115,9 +115,9 @@ Build Info:
   Official https://julialang.org release
 Platform Info:
   OS: Linux (x86_64-linux-gnu)
-  CPU: 4 × AMD EPYC 9V74 80-Core Processor
+  CPU: 4 × AMD EPYC 7763 64-Core Processor
   WORD_SIZE: 64
-  LLVM: libLLVM-18.1.7 (ORCJIT, znver4)
+  LLVM: libLLVM-18.1.7 (ORCJIT, znver3)
   GC: Built with stock GC
 Threads: 1 default, 1 interactive, 1 GC (on 4 virtual cores)
 Environment:
@@ -136,10 +136,11 @@ Pkg.status()</code></pre><pre><code class="nohighlight hljs">Status `~/work/Terr
   [63c18a36] KernelAbstractions v0.9.41
   [98b081ad] Literate v2.21.0
   [85f8d34a] NCDatasets v0.14.15
-  [9e8cae18] Oceananigans v0.109.2
+⌅ [9e8cae18] Oceananigans v0.109.2
   [a3a2b9e3] Rasters v0.14.7
   [d1845624] RingGrids v0.1.6
   [80418d68] Terrarium v0.1.1 `~/work/Terrarium.jl/Terrarium.jl`
   [b77e0a4c] InteractiveUtils v1.11.0
   [d6f4376e] Markdown v1.11.0
-</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../simple_snow_ddm/">« Example: Degree-day snow melt model</a><a class="docs-footer-nextpage" href="../../models/land_model/">Land model »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.17.0 on <span class="colophon-date" title="Tuesday 2 June 2026 15:50">Tuesday 2 June 2026</span>. Using Julia version 1.12.6.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+Info Packages marked with ⌅ have new versions available but compatibility constraints restrict them from upgrading. To see why use `status --outdated`
+</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../simple_snow_ddm/">« Example: Degree-day snow melt model</a><a class="docs-footer-nextpage" href="../../models/land_model/">Land model »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.17.0 on <span class="colophon-date" title="Wednesday 3 June 2026 08:25">Wednesday 3 June 2026</span>. Using Julia version 1.12.6.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

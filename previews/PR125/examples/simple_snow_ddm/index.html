@@ -21,15 +21,15 @@ end</code></pre><pre><code class="language-julia hljs">Terrarium.variables(model
     Terrarium.prognostic(:snow_storage, XY(), units = u&quot;m&quot;, desc = &quot;Snow water equivalent in m&quot;),
 )
 
-@kwdef struct SnowModel{NF, Grid &lt;: Terrarium.AbstractLandGrid{NF}, Pro, Init, TS &lt;: NamedTuple} &lt;: Terrarium.AbstractModel{NF, Grid}
+@kwdef struct SnowModel{NF, Grid &lt;: Terrarium.AbstractLandGrid{NF}, Pro, Init, TS &lt;: Terrarium.AbstractTimeStepper} &lt;: Terrarium.AbstractModel{NF, Grid}
     &quot;Spatial grid on which state variables are discretized&quot;
     grid::Grid
     &quot;Snow melting process&quot;
     snow_melt::Pro = DegreeDaySnow()
     &quot;Model initializer&quot;
     initializer::Init = DefaultInitializer(eltype(grid))
-    &quot;Time steppers as a `NamedTuple` with `explicit` and optional `implicit` entries&quot;
-    timesteppers::TS = (; explicit = ForwardEuler(eltype(grid)))
+    &quot;Time stepper (e.g. `ForwardEuler`, `Heun`, or `IMEX`)&quot;
+    timestepper::TS = ForwardEuler(eltype(grid))
 end</code></pre><pre><code class="language-julia hljs">Terrarium.variables(model::SnowModel) = (
     Terrarium.variables(model.snow_melt)...,
 )</code></pre><p>Then, we need to define the dynamics. Typically, we launch kernels on the level of <code>AbstractProcess</code>es in Terrarium. These processes then might have further parameterizations attached to them that need to be computed. We have a few utilities and conventions for this purpose:</p><ul><li>Kernels are typically named <code>compute_*_kernel!</code>, and follow a signature <code>compute_*_kernel!(output_fields, grid, fields, processes..., args...)</code>.</li></ul><p>We always hand over only the minimum set of <code>fields</code> that the process (and its dependencies) actually need. You can either assemble these fields manually, or use the convenience function <code>get_fields(state, processes...)</code> that returns all the fields that are defined in the <code>variables</code> of the respective processes or the model. Only the minimum set of <code>fields</code> is used, as handing over the full <code>state</code> to the kernels would come with high computational overhead due to the need to copy type information from the host device to the GPU.</p><ul><li>Kernels are launched with the <a href="https://clima.github.io/OceananigansDocumentation/stable/appendix/library#Oceananigans.Utils.launch%21-Tuple"><code>launch!</code></a> that defines whether the kernel is launched over all columns/grid points <code>XY</code> (2D) or also over all vertical layers <code>XYZ</code> (3D) of the model <code>grid</code>. See <a href="../../introduction/numerical_core/#Kernel-programming">Kernel programming</a> for more details.</li><li>The functions that define the kernels with <a href="https://juliagpu.github.io/KernelAbstractions.jl/stable/api/#KernelAbstractions.%40kernel"><code>@kernel</code></a> are supposed to be very minimal functions that forward the actual computation to pointwise compute functions that compute the needed quantity for the grid points <code>i,j</code>. This increases the reusability and composability of our model code. These compute functions are really the core of the implementation of our model and similar to functions you might find in more traditional land model, called from within a loop.They compute the action of a process for a single grid point given inputs and parameters.</li><li>The compute functions follow either a mutating pattern <code>compute_*!(out, i, j, grid, fields, processes..., args...)</code> or a non-mutating pattern <code>compute_*(i, j, grid, fields, processes..., args...)</code>. As a general rule, the mutating functions should defer all actual computations to non-mutating functions and then store the results in the <code>Field</code>s given in the first argument.</li></ul><p>Let&#39;s put all of this in practice now for our example.</p><p>First, we need to define the <code>compute_tendencies!</code> for our <code>Model</code> as before, then we launch the kernel in the <code>compute_tendencies!</code> of our <code>Process</code>. For this model we don&#39;t actually have auxiliary variables, so we don&#39;t have to actually define a <code>compute_auxiliary!</code> in this case, as we inherit a default <code>compute_auxiliary!(args...) = nothing</code>.</p><pre><code class="language-julia hljs">function Terrarium.compute_tendencies!(state, model::SnowModel)
@@ -71,10 +71,10 @@ lst_input = InputSource(snow_grid, lst_climatology[:, 1], name = :air_temperatur
 ├── boundary conditions: FieldBoundaryConditions
 │   └── west: Periodic, east: Periodic, south: Nothing, north: Nothing, bottom: Nothing, top: Nothing, immersed: Nothing
 └── data: 1416×1×1 OffsetArray(::Array{Float32, 3}, -2:1413, 1:1, 1:1) with eltype Float32 with indices -2:1413×1:1×1:1
-    └── max=36.2279, min=-44.1269, mean=-7.27615)</code></pre><p>As an initial condition, we just cover the whole Earth in deep snow (everywhere the same)!</p><pre><code class="language-julia hljs">snow_initializers = (snow_storage = 0.5,)</code></pre><pre><code class="nohighlight hljs">(snow_storage = 0.5,)</code></pre><p>Now, we initialize our model and the integrator. As in the first example, we use a <code>Heun</code> time stepper</p><pre><code class="language-julia hljs">snow_model = SnowModel(snow_grid; timesteppers = Heun(Δt = Float32(1.0)));
-snow_integrator = initialize(snow_model, snow_input, lst_input; initializers = snow_initializers)</code></pre><pre><code class="nohighlight hljs">Integrator of Main.var&quot;##300&quot;.SnowModel{Float32, ColumnRingGrid{Float32, CPU, RingGrids.FullGaussianGrid{SpeedyWeatherInternals.Architectures.CPU{KernelAbstractions.CPU}, Vector{UnitRange{Int64}}, Vector{Int64}, Int64}, Oceananigans.Grids.RectilinearGrid{Float32, Oceananigans.Grids.Periodic, Oceananigans.Grids.Flat, Oceananigans.Grids.Bounded, Oceananigans.Grids.StaticVerticalDiscretization{OffsetArrays.OffsetVector{Float32, Vector{Float32}}, OffsetArrays.OffsetVector{Float32, Vector{Float32}}, OffsetArrays.OffsetVector{Float32, Vector{Float32}}, OffsetArrays.OffsetVector{Float32, Vector{Float32}}}, Float32, Float32, OffsetArrays.OffsetVector{Float32, StepRangeLen{Float32, Float64, Float64, Int64}}, Nothing, CPU}, RingGrids.Field{Bool, 1, Vector{Bool}, RingGrids.FullGaussianGrid{SpeedyWeatherInternals.Architectures.CPU{KernelAbstractions.CPU}, Vector{UnitRange{Int64}}, Vector{Int64}, Int64}}}, Main.var&quot;##300&quot;.DegreeDaySnow{Float64}, DefaultInitializer{Float32}, @NamedTuple{explicit::Heun{Float32}}} with timesteppers (explicit = Heun{Float32}(1.0f0),)
+    └── max=36.2279, min=-44.1269, mean=-7.27614)</code></pre><p>As an initial condition, we just cover the whole Earth in deep snow (everywhere the same)!</p><pre><code class="language-julia hljs">snow_initializers = (snow_storage = 0.5,)</code></pre><pre><code class="nohighlight hljs">(snow_storage = 0.5,)</code></pre><p>Now, we initialize our model and the integrator. As in the first example, we use a <code>Heun</code> time stepper</p><pre><code class="language-julia hljs">snow_model = SnowModel(snow_grid; timestepper = Heun(Δt = Float32(1.0)));
+snow_integrator = initialize(snow_model, snow_input, lst_input; initializers = snow_initializers)</code></pre><pre><code class="nohighlight hljs">Integrator of Main.var&quot;##300&quot;.SnowModel{Float32, ColumnRingGrid{Float32, CPU, RingGrids.FullGaussianGrid{SpeedyWeatherInternals.Architectures.CPU{KernelAbstractions.CPU}, Vector{UnitRange{Int64}}, Vector{Int64}, Int64}, Oceananigans.Grids.RectilinearGrid{Float32, Oceananigans.Grids.Periodic, Oceananigans.Grids.Flat, Oceananigans.Grids.Bounded, Oceananigans.Grids.StaticVerticalDiscretization{OffsetArrays.OffsetVector{Float32, Vector{Float32}}, OffsetArrays.OffsetVector{Float32, Vector{Float32}}, OffsetArrays.OffsetVector{Float32, Vector{Float32}}, OffsetArrays.OffsetVector{Float32, Vector{Float32}}}, Float32, Float32, OffsetArrays.OffsetVector{Float32, StepRangeLen{Float32, Float64, Float64, Int64}}, Nothing, CPU}, RingGrids.Field{Bool, 1, Vector{Bool}, RingGrids.FullGaussianGrid{SpeedyWeatherInternals.Architectures.CPU{KernelAbstractions.CPU}, Vector{UnitRange{Int64}}, Vector{Int64}, Int64}}}, Main.var&quot;##300&quot;.DegreeDaySnow{Float64}, DefaultInitializer{Float32}, Heun{Float32}} with timestepper Heun{Float32}(1.0f0)
 ├── Current time: 0.0
-├── StateVariables{Float32}(clock = Clock{Float32, Float64}(time=0 seconds, iteration=0, last_Δt=Inf days), prognostic = (:snow_storage,), auxiliary = (), inputs = (:air_temperature, :snow_fall), namespaces = (), timestepper_cache = (:explicit,))
+├── StateVariables{Float32}(clock = Clock{Float32, Float64}(time=0 seconds, iteration=0, last_Δt=Inf days), prognostic = (:snow_storage,), auxiliary = (), inputs = (:air_temperature, :snow_fall), namespaces = (), timestepper_cache = HeunCache)
 </code></pre><p>... and we can finally run the model. As before, by wrapping it in an <code>Oceananigans.Simulation</code> to output our results</p><pre><code class="language-julia hljs">snow_sim = Simulation(snow_integrator; stop_time = 80days, Δt = 3600.0)
 Terrarium.initialize!(snow_integrator)
 output_dir_snow = mkpath(tempname())
@@ -92,18 +92,18 @@ run!(snow_sim)
 println(&quot;Simulation data saved to $(output_file_snow)&quot;)</code></pre><pre><code class="nohighlight hljs">[ Info: Initializing simulation...
 ┌ Warning: error ArgumentError(&quot;a group or dataset named grid is already present within this group&quot;) thrown when trying to serialize the grid at serialized/grid
 └ @ Oceananigans.OutputWriters ~/.julia/packages/Oceananigans/5zrT1/src/OutputWriters/jld2_writer.jl:234
-[ Info:     ... simulation initialization complete (3.251 seconds)
+[ Info:     ... simulation initialization complete (4.124 seconds)
 [ Info: Executing initial time step...
-[ Info:     ... initial time step complete (1.602 seconds).
-[ Info: Simulation is stopping after running for 27.517 seconds.
+[ Info:     ... initial time step complete (1.904 seconds).
+[ Info: Simulation is stopping after running for 16.605 seconds.
 [ Info: Simulation time 80 days equals or exceeds stop time 80 days.
-Simulation data saved to /tmp/jl_Jgro7u1Cvy/ddsnow-simulation.jld2
-</code></pre><p>And now, we plot that data. First we load the JLD2 file.</p><pre><code class="language-julia hljs">fts_result = FieldTimeSeries(output_file_snow, &quot;snow_storage&quot;)</code></pre><pre><code class="nohighlight hljs">1410×1×1×1921 FieldTimeSeries{Oceananigans.OutputReaders.InMemory} located at (Center, Center, ⋅) of snow_storage at /tmp/jl_Jgro7u1Cvy/ddsnow-simulation.jld2
+Simulation data saved to /tmp/jl_iRi7sHWxQD/ddsnow-simulation.jld2
+</code></pre><p>And now, we plot that data. First we load the JLD2 file.</p><pre><code class="language-julia hljs">fts_result = FieldTimeSeries(output_file_snow, &quot;snow_storage&quot;)</code></pre><pre><code class="nohighlight hljs">1410×1×1×1921 FieldTimeSeries{Oceananigans.OutputReaders.InMemory} located at (Center, Center, ⋅) of snow_storage at /tmp/jl_iRi7sHWxQD/ddsnow-simulation.jld2
 ├── grid: 1410×1×1 RectilinearGrid{Float32, Periodic, Flat, Bounded} on CPU with 3×0×1 halo
 ├── indices: (:, :, :)
 ├── time_indexing: Linear()
 ├── backend: InMemory()
-├── path: /tmp/jl_Jgro7u1Cvy/ddsnow-simulation.jld2
+├── path: /tmp/jl_iRi7sHWxQD/ddsnow-simulation.jld2
 ├── name: snow_storage
 └── data: 1416×1×1×1921 OffsetArray(::Array{Float32, 4}, -2:1413, 1:1, 1:1, 1:1921) with eltype Float32 with indices -2:1413×1:1×1:1×1:1921
     └── max=27.1672, min=0.0, mean=4.50698</code></pre><p>Then, we plot it using <code>CairoMakie</code>. For this purpose we first convert to a <code>RingGrids.Field</code> and then plot it via <code>heatmap</code> like so</p><pre><code class="language-julia hljs">tsteps = 1
@@ -139,9 +139,9 @@ Build Info:
   Official https://julialang.org release
 Platform Info:
   OS: Linux (x86_64-linux-gnu)
-  CPU: 4 × AMD EPYC 9V74 80-Core Processor
+  CPU: 4 × AMD EPYC 7763 64-Core Processor
   WORD_SIZE: 64
-  LLVM: libLLVM-18.1.7 (ORCJIT, znver4)
+  LLVM: libLLVM-18.1.7 (ORCJIT, znver3)
   GC: Built with stock GC
 Threads: 1 default, 1 interactive, 1 GC (on 4 virtual cores)
 Environment:
@@ -160,10 +160,11 @@ Pkg.status()</code></pre><pre><code class="nohighlight hljs">Status `~/work/Terr
   [63c18a36] KernelAbstractions v0.9.41
   [98b081ad] Literate v2.21.0
   [85f8d34a] NCDatasets v0.14.15
-  [9e8cae18] Oceananigans v0.109.2
+⌅ [9e8cae18] Oceananigans v0.109.2
   [a3a2b9e3] Rasters v0.14.7
   [d1845624] RingGrids v0.1.6
   [80418d68] Terrarium v0.1.1 `~/work/Terrarium.jl/Terrarium.jl`
   [b77e0a4c] InteractiveUtils v1.11.0
   [d6f4376e] Markdown v1.11.0
-</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../linear_ode_exp_growth/">« Example: Simple exponential growth model</a><a class="docs-footer-nextpage" href="../linear_heat_conduction/">Example: Linear heat conduction »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.17.0 on <span class="colophon-date" title="Tuesday 2 June 2026 15:50">Tuesday 2 June 2026</span>. Using Julia version 1.12.6.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+Info Packages marked with ⌅ have new versions available but compatibility constraints restrict them from upgrading. To see why use `status --outdated`
+</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../linear_ode_exp_growth/">« Example: Simple exponential growth model</a><a class="docs-footer-nextpage" href="../linear_heat_conduction/">Example: Linear heat conduction »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.17.0 on <span class="colophon-date" title="Wednesday 3 June 2026 08:25">Wednesday 3 June 2026</span>. Using Julia version 1.12.6.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
