@@ -103,15 +103,19 @@ Resolve the timestepper class of each prognostic variable in `progvars` (a `Name
 """
 function resolve_timestepper_classes(progvars::NamedTuple, overrides::NamedTuple)
     for key in keys(overrides)
-        key in keys(progvars) || throw(ArgumentError(
-            "`timestepper_classes` has unknown key :$key; expected a prognostic variable in $(keys(progvars))"
-        ))
+        key in keys(progvars) || throw(
+            ArgumentError(
+                "`timestepper_classes` has unknown key :$key; expected a prognostic variable in $(keys(progvars))"
+            )
+        )
     end
     return map(values(progvars)) do var
         class = get(overrides, varname(var), timestepper(var))
-        class in (:explicit, :implicit) || throw(ArgumentError(
-            "timestepper class for prognostic variable :$(varname(var)) must be :explicit or :implicit, got :$class"
-        ))
+        class in (:explicit, :implicit) || throw(
+            ArgumentError(
+                "timestepper class for prognostic variable :$(varname(var)) must be :explicit or :implicit, got :$class"
+            )
+        )
         return class
     end
 end
