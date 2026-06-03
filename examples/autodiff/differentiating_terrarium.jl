@@ -7,6 +7,7 @@
 # Without much further ado, let us look into how we can differentiate Terrarium hands-on and perform a small sensitivity analysis of a one column soil model. First, we set up our model as usual:
 
 using Terrarium, Enzyme, Checkpointing
+using BenchmarkTools
 using LinearAlgebra
 
 import CairoMakie as Makie
@@ -141,3 +142,18 @@ ax2 = Makie.Axis(f3[1, 2], yreversed = true, title = "W = I − Δt·J_f  (Newto
 Makie.heatmap!(ax1, jac_full)
 Makie.heatmap!(ax2, W)
 f3
+
+
+# Benchmark a JVP
+dstate = make_zero(state)
+interior(getproperty(dstate.prognostic, :internal_energy))[1, 1, 1] = one(eltype(grid))
+
+@benchmark Enzyme.autodiff(
+    set_runtime_activity(Forward),
+    compute_f!,
+    Const,
+    Duplicated(state, dstate),
+    Const(model.grid),
+    Const(model.soil),
+    Const(model.constants),
+)
