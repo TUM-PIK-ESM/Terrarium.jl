@@ -179,6 +179,8 @@ the given `inputs`. This method allocates all necessary `Field`s for the state v
 
 Note that this method is **not type stable** and thus should not be called from Enzyme `autodiff`. To reinitialize
 the model for an existing `state`, use `initialize!(state, model)`.
+
+See the docstring for [`initialize(::AbstractModel)`](@ref) for further details.
 """
 function initialize(
         model::AbstractModel{NF},

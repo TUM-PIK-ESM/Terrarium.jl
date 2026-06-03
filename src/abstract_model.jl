@@ -217,12 +217,10 @@ invclosure!(state, grid, closure::AbstractClosureRelation, ::AbstractProcess, ar
 """
     (::Type{Model})(grid::AbstractLandGrid, args...; kwargs...) where {Model <: AbstractModel}
 
-Convenience constructor for all `AbstractModel` types that allows the `grid` to be passed as the first
-positional argument; all other arguments are forwarded to the model's keyword constructor.
+Convenience constructor for all `AbstractModel` types that allows the `grid` to be passed
+as the first positional argument.
 """
-function (::Type{Model})(grid::AbstractLandGrid, args...; kwargs...) where {Model <: AbstractModel}
-    return Model(args...; grid, kwargs...)
-end
+(::Type{Model})(grid::AbstractLandGrid, args...; kwargs...) where {Model <: AbstractModel} = Model(args...; grid, kwargs...)
 
 function Base.show(io::IO, model::AbstractModel{NF}) where {NF}
     println(io, "$(nameof(typeof(model))){$NF} on $(architecture(get_grid(model)))")

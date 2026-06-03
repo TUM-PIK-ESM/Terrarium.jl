@@ -294,7 +294,6 @@ Retrieves all `Field`s from `state` corresponding to input variables defined on 
 end
 
 # Initialization of StateVariables from models and processes
-# TODO: Renamed directly to `StateVariables` because without the timestepper in the `ModelIntegrator` it would be ambiguous
 """
     $TYPEDSIGNATURES
 
@@ -372,8 +371,8 @@ function StateVariables(
     end
     # get closure variable names
     closurenames = map(varname, closure_variables(values(vars.prognostic)))
-    # construct StateVariables with a placeholder cache; the timestepper-specific cache is
-    # allocated below now that all other state variables have been initialized
+    # construct StateVariables with an empty cache; the timestepper-specific cache
+    # is allocated below now that all other state variables have been initialized
     initial_state = StateVariables(
         NF,
         closurenames,
