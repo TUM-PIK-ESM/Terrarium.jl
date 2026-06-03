@@ -24,7 +24,7 @@ initializer = SoilInitializer(
 
 # We're now ready to create our model.
 # We also choose the time stepper to be [`ForwardEuler`](@ref) for this example.
-model = SoilModel(grid; timesteppers = ForwardEuler(eltype(grid)), initializer = initializer)
+model = SoilModel(grid; timestepper = ForwardEuler(eltype(grid)), initializer = initializer)
 
 # Boundary conditions are imposed directly on the corresponding `Field`s during
 # initialization. We here set a constant surface temperature of 1°C, while the lower

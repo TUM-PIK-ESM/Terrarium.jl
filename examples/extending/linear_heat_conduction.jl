@@ -180,12 +180,12 @@ end
         Grid <: Terrarium.AbstractLandGrid{NF},
         Cond <: AbstractHeatConduction{NF},
         Init <: Terrarium.AbstractInitializer{NF},
-        TS <: NamedTuple,
+        TS <: Terrarium.AbstractTimeStepper,
     } <: Terrarium.AbstractModel{NF, Grid}
     grid::Grid
     conduction::Cond = LinearHeatConduction(eltype(grid))
     initializer::Init = DefaultInitializer(eltype(grid))
-    timesteppers::TS = (; explicit = ForwardEuler(eltype(grid)))
+    timestepper::TS = ForwardEuler(eltype(grid))
 end
 
 # Forward the `AbstractModel` methods to the process:

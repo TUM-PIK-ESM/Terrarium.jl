@@ -54,15 +54,15 @@ grid = ColumnGrid(CPU(), Float64, UniformSpacing(N = 1))
     c::NF = 0.1
 end
 #
-@kwdef struct ExpModel{NF, Grid <: Terrarium.AbstractLandGrid{NF}, Dyn, Init, TS <: NamedTuple} <: Terrarium.AbstractModel{NF, Grid}
+@kwdef struct ExpModel{NF, Grid <: Terrarium.AbstractLandGrid{NF}, Dyn, Init, TS <: Terrarium.AbstractTimeStepper} <: Terrarium.AbstractModel{NF, Grid}
     "Spatial grid on which state variables are discretized"
     grid::Grid
     "Linear dynamics process"
     dynamics::Dyn = LinearDynamics()
     "Model initializer"
     initializer::Init = DefaultInitializer(eltype(grid))
-    "Time steppers as a `NamedTuple` with `explicit` and optional `implicit` entries"
-    timesteppers::TS = (; explicit = ForwardEuler(eltype(grid)))
+    "Time stepper (e.g. `ForwardEuler`, `Heun`, or `IMEX`)"
+    timestepper::TS = ForwardEuler(eltype(grid))
 end
 
 # ## Defining the model behavior
@@ -143,9 +143,9 @@ input = InputSource(grid, F, name = :F)
 # Here we constructed a 2D (`XY()`) time series on our `grid` at times `t_F` with random normal distributed data and defined our `InputSource` for our model based on it.
 
 # Then, we construct our model from the chosen `grid`. The timestepper is configured on the model itself;
-# here we choose the second-order [`Heun`](@ref) method with a timestep of 1 second via the `timesteppers` keyword.
+# here we choose the second-order [`Heun`](@ref) method with a timestep of 1 second via the `timestepper` keyword.
 
-model = ExpModel(grid; timesteppers = Heun(Δt = 1.0))
+model = ExpModel(grid; timestepper = Heun(Δt = 1.0))
 
 # We now can initialize our model, i.e. we run all pre-computation, and initialize a numerical integrator for our model by passing it
 # to `initialize` along with our input/forcing data.
