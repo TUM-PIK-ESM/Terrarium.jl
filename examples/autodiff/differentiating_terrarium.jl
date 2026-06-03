@@ -13,8 +13,8 @@ using LinearAlgebra
 
 import CairoMakie as Makie
 
-FT = Float32
-grid = ColumnGrid(GPU(), FT, UniformSpacing(), 1) # Easier Jacobian
+FT = Float64
+grid = ColumnGrid(CPU(), FT, UniformSpacing(), 1) # Easier Jacobian
 initializer = SoilInitializer(eltype(grid))
 model = SoilModel(grid; initializer)
 # constant surface temperature of 1°C
@@ -92,12 +92,14 @@ f2
 
 Terrarium.initialize!(integrator)
 state = integrator.state
+Δt = integrator.timestepper.Δt   # or any chosen implicit timestep
 
 N_z = size(interior(state.internal_energy), 3)
 
 # Combined function: closure + tendency in one call so the full U→T→∂U∂t chain
 # is visible to Enzyme.
 function compute_f!(state, grid, soil, constants)
+    Terrarium.reset_tendencies!(state)
     Terrarium.closure!(state, grid, soil, constants)
     Terrarium.compute_tendencies!(state, grid, soil, constants)
     return nothing
@@ -165,7 +167,6 @@ for (col_offset, var_in) in enumerate(prog_vars)
     end
 end
 
-Δt = integrator.timestepper.Δt   # or any chosen implicit timestep
 W = I(N_z) - Δt * jac_full
 
 f3 = Makie.Figure(size = (800, 400))
@@ -174,3 +175,87 @@ ax2 = Makie.Axis(f3[1, 2], yreversed = true, title = "W = I − Δt·J_f  (Newto
 Makie.heatmap!(ax1, jac_full)
 Makie.heatmap!(ax2, W)
 f3
+
+# Using Newton-Krylov method
+using Ariadne
+
+# Basically just copying from https://numericalmathematics.github.io/Ariadne.jl/stable/generated/implicit/
+# Renaming u_n to u_prev for clarity: u_prev is the known state at the previous time step.
+
+# 1. Adapt your compute_f! to the Ariadne interface: f!(du, u, p, t)
+# This wrapper handles the mapping between the vector `u` used by the solver
+# and the structured `state` used by Terrarium.
+function f_ariadne!(du, u, p, t)
+    state, grid, soil, constants, compute_f! = p
+
+    # Update internal state with current guess u
+    interior(state.prognostic.internal_energy) .= reshape(u, size(interior(state.prognostic.internal_energy))) # back to 3D shape
+
+    # Compute the tendencies f(u)
+    compute_f!(state, grid, soil, constants)
+
+    # Extract the computed tendency into du
+    du .= vec(interior(state.tendencies.internal_energy)) # 3D to 1D shape
+    return nothing
+end
+
+# 2. Define the Implicit Euler residual: G = u - u_prev - Δt*f(u) = 0
+function G_euler!(res, u_prev, Δt, f!, du, u, p, t)
+    f!(du, u, p, t)
+    res .= u .- u_prev .- Δt .* du
+    return nothing
+end
+
+function jacobian(G!, f!, u_prev, p, Δt, t)
+    u = copy(u_prev)
+    du = zero(u_prev)
+    res = zero(u_prev)
+
+    F!(res, u, (u_prev, Δt, du, p, t)) = G!(res, u_prev, Δt, f!, du, u, p, t)
+
+    J = Ariadne.JacobianOperator(F!, res, u, (u_prev, Δt, du, p, t))
+    return collect(J)
+end
+
+# 3. Setup the solve
+
+Terrarium.initialize!(integrator) # reset integrator
+state = integrator.state
+u_prev = copy(vec(interior(state.prognostic.internal_energy)))
+u = copy(u_prev)      # Initial guess (usually the solution at the previous step)
+du = zero(u)
+res = zero(u)
+t = FT(0.0)        # Time (not used in this autonomous example, but required for signature)
+
+# Parameters passed into f_ariadne!
+p = (state = state, grid = model.grid, soil = model.soil, constants = model.constants, compute_f! = compute_f!)
+
+# Define the wrapper F!(res, u, params) that Ariadne's solver expects
+# The params tuple matches the arguments of G_euler!
+F!(res, u, params) = G_euler!(res, params.u_prev, params.Δt, f_ariadne!, params.du, u, params.p, params.t)
+
+params = (u_prev = u_prev, Δt = Δt, du = du, p = p, t = t)
+
+# 4. Perform the Newton-Krylov solve
+# Note: For energy units (10^7 J/m³), we use a more realistic absolute tolerance.
+newton_krylov_kwargs = (tol_abs = 1.0e-2, verbose = 0)
+algo = :gmres
+
+@time  _, stats = newton_krylov!(F!, u, params, res; algo, newton_krylov_kwargs...)
+
+if stats.solved
+    println("Newton-Krylov converged")
+    # The converged u now contains the updated internal_energy
+else
+    @error "Newton-Krylov solve failed!" stats
+end
+
+# 5. Optional: Compute the Jacobian accurately using Ariadne's JacobianOperator
+# This can be used to compare against your manual jac_full
+J_op = Ariadne.JacobianOperator(F!, res, u, params)
+jac_ariadne = collect(J_op)
+
+fig = Makie.Figure(size = (400, 400))
+ax = Makie.Axis(fig[1, 1], yreversed = true, title = "W Jacobian from Ariadne")
+Makie.heatmap!(ax, jac_ariadne)
+fig
