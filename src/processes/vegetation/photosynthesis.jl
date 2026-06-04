@@ -35,13 +35,13 @@ $TYPEDFIELDS
     @param q10_Ko::NF = 1.2 (bounds = Positive,)
 
     "Leaf albedo in PAR range"
-    @param α_leaf::NF = 0.17 (bounds = UnitInterval(),)
+    @param α_leaf::NF = 0.17 (bounds = UnitInterval,)
 
     "Fraction of PAR assimilated at ecosystem level, relative to leaf level"
-    @param α_a::NF = 0.5 (bounds = UnitInterval(),)
+    @param α_a::NF = 0.5 (bounds = UnitInterval,)
 
     "Intrinsic quantum efficiency of CO2 uptake in C3 plants"
-    @param α_C3::NF = 0.08 (bounds = UnitInterval(),)
+    @param α_C3::NF = 0.08 (bounds = UnitInterval,)
 
     "Conversion factor for solar radiation at 550 nm from J/m² to mol/m²"
     @param cq::NF = 4.6e-6 (units = u"mol/J", bounds = Positive, scale = 1.0e-6)
@@ -62,7 +62,7 @@ $TYPEDFIELDS
     @param T_photos_low::NF = 15.0 (units = u"°C",)
 
     "Root of quadratic mean shape parameter. Controls smoothness of interpolation between light and RuBisCO limitations (0.7 for smooth, 0.5 for arithmetic mean)."
-    @param θ_r::NF = 0.7 (bounds = UnitInterval(),)
+    @param θ_r::NF = 0.7 (bounds = UnitInterval,)
 end
 
 LUEPhotosynthesis(::Type{NF}; kwargs...) where {NF} = LUEPhotosynthesis{NF}(; kwargs...)

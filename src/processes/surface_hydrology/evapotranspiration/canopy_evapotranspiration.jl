@@ -23,7 +23,7 @@ $FIELDS
 """
 @parameterized @kwdef struct PALADYNCanopyEvapotranspiration{NF, GR <: AbstractGroundEvaporationResistanceFactor} <: AbstractEvapotranspiration{NF}
     "Drag coefficient for the transfer of heat and water between the ground and canopy"
-    @param C_can::NF (bounds = PositiveRealLine,)
+    @param C_can::NF (bounds = Positive,)
 
     "Parameterization for ground resistance to evaporation/sublimation"
     @component ground_resistance::GR

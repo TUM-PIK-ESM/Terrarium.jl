@@ -7,7 +7,7 @@ Represents a spatiotemporally constant ground evaporation resistance factor.
 """
 @parameterized @kwdef struct ConstantEvaporationResistanceFactor{NF} <: AbstractGroundEvaporationResistanceFactor
     "Unit interval factor that determines resistance to evaporation; zero corresponds to no evaporation"
-    @param factor::NF = 1.0 (bounds = UnitInterval(),)
+    @param factor::NF = 1.0 (bounds = UnitInterval,)
 end
 
 ConstantEvaporationResistanceFactor(::Type{NF}; kwargs...) where {NF} = ConstantEvaporationResistanceFactor{NF}(; kwargs...)

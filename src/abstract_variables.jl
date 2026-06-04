@@ -139,7 +139,7 @@ struct AuxiliaryVariable{
         VD <: VarDims,
         UT <: Units,
         Var <: Variable{name, VD, UT},
-        DT <: AbstractInterval,
+        DT <: DomainSets.AbstractInterval,
         FC <: Union{Nothing, Function},
     } <: AbstractProcessVariable{name, VD, UT}
     "State variable"
@@ -166,7 +166,7 @@ struct InputVariable{
         VD <: VarDims,
         UT <: Units,
         Var <: Variable{name, VD, UT},
-        DT <: AbstractInterval,
+        DT <: DomainSets.AbstractInterval,
         Def <: Union{Nothing, Number, Function},
     } <: AbstractProcessVariable{name, VD, UT}
     "State variable"
@@ -199,7 +199,7 @@ struct PrognosticVariable{
         Var <: Variable{name, VD, UT},
         CL <: Union{Nothing, AbstractClosureRelation},
         TV <: Union{Nothing, AuxiliaryVariable},
-        DT <: AbstractInterval,
+        DT <: DomainSets.AbstractInterval,
     } <: AbstractProcessVariable{name, VD, UT}
     "State variable"
     var::Var
@@ -377,25 +377,25 @@ Convenience constructor for `Variable`.
 
 Convenience constructors for `PrognosticVariable`.
 """
-@inline prognostic(name::Symbol, dims::VarDims; units = NoUnits, closure = nothing, domain = RealLine(), desc = "") = prognostic(var(name, dims, units); closure, domain, desc)
-@inline prognostic(var::Variable; closure = nothing, domain = RealLine(), desc = "") = PrognosticVariable(var, closure, tendency(var), domain, desc)
+@inline prognostic(name::Symbol, dims::VarDims; units = NoUnits, closure = nothing, domain = Unbounded, desc = "") = prognostic(var(name, dims, units); closure, domain, desc)
+@inline prognostic(var::Variable; closure = nothing, domain = Unbounded, desc = "") = PrognosticVariable(var, closure, tendency(var), domain, desc)
 
 """
     $SIGNATURES
 
 Convenience constructor method for `AuxiliaryVariable`.
 """
-@inline auxiliary(name::Symbol, dims::VarDims, ctor = nothing, params = nothing; units = NoUnits, domain = RealLine(), desc = "") = auxiliary(var(name, dims, units), ctor, params; domain, desc)
-@inline auxiliary(var::Variable, ::Nothing, ::Nothing; domain = RealLine(), desc = "") = AuxiliaryVariable(var, nothing, domain, desc)
-@inline auxiliary(var::Variable, ctor::Function, params; domain = RealLine(), desc = "") = AuxiliaryVariable(var, (args...) -> ctor(params, args...), domain, desc)
+@inline auxiliary(name::Symbol, dims::VarDims, ctor = nothing, params = nothing; units = NoUnits, domain = Unbounded, desc = "") = auxiliary(var(name, dims, units), ctor, params; domain, desc)
+@inline auxiliary(var::Variable, ::Nothing, ::Nothing; domain = Unbounded, desc = "") = AuxiliaryVariable(var, nothing, domain, desc)
+@inline auxiliary(var::Variable, ctor::Function, params; domain = Unbounded, desc = "") = AuxiliaryVariable(var, (args...) -> ctor(params, args...), domain, desc)
 
 """
     $SIGNATURES
 
 Convenience constructor method for `InputVariable`.
 """
-@inline input(name::Symbol, dims::VarDims; default = nothing, units = NoUnits, domain = RealLine(), desc = "") = input(var(name, dims, units); default, domain, desc)
-@inline input(var::Variable; default = nothing, domain = RealLine(), desc = "") = InputVariable(var, default, domain, desc)
+@inline input(name::Symbol, dims::VarDims; default = nothing, units = NoUnits, domain = Unbounded, desc = "") = input(var(name, dims, units); default, domain, desc)
+@inline input(var::Variable; default = nothing, domain = Unbounded, desc = "") = InputVariable(var, default, domain, desc)
 
 """
     $SIGNATURES

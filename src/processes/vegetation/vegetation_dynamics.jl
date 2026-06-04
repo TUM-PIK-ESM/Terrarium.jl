@@ -15,7 +15,7 @@ $TYPEDFIELDS
 """
 @parameterized @kwdef struct PALADYNVegetationDynamics{NF} <: AbstractVegetationDynamics{NF}
     "Vegetation seed fraction"
-    @param ν_seed::NF = 0.001 (bounds = UnitInterval(),)
+    @param ν_seed::NF = 0.001 (bounds = UnitInterval,)
 
     "Minimum vegetation disturbance rate"
     # TODO this parameter is yearly, should be changed to daily for now

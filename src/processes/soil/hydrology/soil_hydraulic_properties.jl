@@ -81,13 +81,13 @@ $TYPEDFIELDS
     @param sat_hydraulic_cond::NF = 1.0e-5 (units = u"m/s", bounds = Positive, scale = 1.0e-5)
 
     "Constant field capacity"
-    @param field_capacity::NF = 0.25 (bounds = UnitInterval(),)
+    @param field_capacity::NF = 0.25 (bounds = UnitInterval,)
 
     "Constant wilting point"
-    @param wilting_point::NF = 0.05 (bounds = UnitInterval())
+    @param wilting_point::NF = 0.05 (bounds = UnitInterval,)
 
     "Residual (minimum) saturation level"
-    @param residual::NF = 0.01 (bounds = UnitInterval())
+    @param residual::NF = 0.01 (bounds = UnitInterval,)
 end
 
 function ConstantSoilHydraulics(
@@ -141,7 +141,7 @@ $TYPEDFIELDS
     @param field_capacity_exp::NF = 0.35 (bounds = Positive,)
 
     "Residual (minimum) saturation level"
-    @param residual::NF = 0.01 (bounds = UnitInterval(),)
+    @param residual::NF = 0.01 (bounds = UnitInterval,)
 end
 
 function SoilHydraulicsSURFEX(

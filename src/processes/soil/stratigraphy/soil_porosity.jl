@@ -6,10 +6,10 @@ for the `mineral` and `organic` components.
 """
 @parameterized @kwdef struct ConstantSoilPorosity{NF} <: AbstractSoilPorosity{NF}
     "Prescribed mineral soil porosity"
-    @param mineral_porosity::NF = 0.49 (bounds = UnitInterval(),)
+    @param mineral_porosity::NF = 0.49 (bounds = UnitInterval,)
 
     "Natural porosity of organic material"
-    @param organic_porosity::NF = 0.9 (bounds = UnitInterval(),)
+    @param organic_porosity::NF = 0.9 (bounds = UnitInterval,)
 end
 
 ConstantSoilPorosity(::Type{NF}; kwargs...) where {NF} = ConstantSoilPorosity{NF}(; kwargs...)
@@ -29,13 +29,13 @@ SURFEX parameterization of mineral soil porosity [noilhanISBA1996; Eq. (27)](@ci
 """
 @parameterized @kwdef struct SoilPorositySURFEX{NF} <: AbstractSoilPorosity{NF}
     "Assumed default porosity of the soil without sand"
-    @param porosity_default::NF = 0.49 (bounds = UnitInterval(),)
+    @param porosity_default::NF = 0.49 (bounds = UnitInterval,)
 
     "Linear coefficient of porosity adjustment for sand"
     @param porosity_sand_coef::NF = -0.11
 
     "Natural porosity of organic material"
-    @param porosity_organic::NF = 0.9 (bounds = UnitInterval(),)
+    @param porosity_organic::NF = 0.9 (bounds = UnitInterval,)
 end
 
 SoilPorositySURFEX(::Type{NF}; kwargs...) where {NF} = SoilPorositySURFEX{NF}(; kwargs...)

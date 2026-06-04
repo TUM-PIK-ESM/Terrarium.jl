@@ -18,11 +18,11 @@ closure relating saturation and pressure head.
 @kwdef struct RichardsEq <: AbstractVerticalFlow end
 
 variables(hydrology::SoilHydrology{NF, RichardsEq}) where {NF} = (
-    prognostic(:saturation_water_ice, XYZ(); closure = get_closure(hydrology), domain = UnitInterval(), desc = "Saturation level of water and ice in the pore space"),
+    prognostic(:saturation_water_ice, XYZ(); closure = get_closure(hydrology), domain = UnitInterval, desc = "Saturation level of water and ice in the pore space"),
     prognostic(:surface_excess_water, XY(), units = u"m", desc = "Excess water at the soil surface in m³/m²"),
     auxiliary(:hydraulic_conductivity, XYZ(z = Face()), units = u"m/s", desc = "Hydraulic conductivity of soil volumes in m/s"),
     auxiliary(:water_table, XY(), units = u"m", desc = "Elevation of the water table in meters"),
-    input(:liquid_water_fraction, XYZ(), default = NF(1), domain = UnitInterval(), desc = "Fraction of unfrozen water in the pore space"),
+    input(:liquid_water_fraction, XYZ(), default = NF(1), domain = UnitInterval, desc = "Fraction of unfrozen water in the pore space"),
 )
 
 @propagate_inbounds surface_excess_water(i, j, grid, fields, ::SoilHydrology{NF, RichardsEq}) where {NF} = fields.surface_excess_water[i, j]

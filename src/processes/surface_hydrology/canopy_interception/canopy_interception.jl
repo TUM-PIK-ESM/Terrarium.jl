@@ -39,7 +39,7 @@ $FIELDS
 """
 @parameterized @kwdef struct PALADYNCanopyInterception{NF} <: AbstractCanopyInterception{NF}
     "Canopy water interception factor for tree PFTs"
-    @param α_int::NF = 0.2 (bounds = UnitInterval(),)
+    @param α_int::NF = 0.2 (bounds = UnitInterval,)
 
     # TODO: Duplicated
     "Extinction coefficient for radiation through vegetation"
