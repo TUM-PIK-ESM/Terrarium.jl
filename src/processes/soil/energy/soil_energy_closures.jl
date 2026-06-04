@@ -21,7 +21,7 @@ Defines `temperature` as the closure variable for `SoilEnergyTemperatureClosure`
 """
 variables(::SoilEnergyTemperatureClosure) = (
     auxiliary(:temperature, XYZ(), units = u"°C", desc = "Temperature of the soil volume in °C"),
-    auxiliary(:liquid_water_fraction, XYZ(), domain = UnitInterval, desc = "Fraction of unfrozen water in the pore space"),
+    auxiliary(:liquid_water_fraction, XYZ(), bounds = UnitInterval, desc = "Fraction of unfrozen water in the pore space"),
 )
 
 function closure!(
