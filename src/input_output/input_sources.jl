@@ -54,8 +54,8 @@ struct InputSources{NF, Sources <: Tuple{Vararg{InputSource{NF}}}} <: InputSourc
     sources::Sources
 end
 
-InputSources(input::InputSource...) = InputSources(Tuple(input))
 InputSources(::Type{NF}) where {NF} = InputSources{NF, Tuple{}}(())
+InputSources(input::InputSource, others::InputSource...) = InputSources(tuple(input, others...))
 InputSources(input::InputSources) = input
 
 variables(sources::InputSources) = tuplejoin(map(variables, sources.sources)...)
