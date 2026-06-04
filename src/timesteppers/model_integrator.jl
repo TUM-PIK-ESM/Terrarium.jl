@@ -35,8 +35,6 @@ end
 
 # Outer constructor so that `ModelIntegrator` can be constructed with a timestepper type
 # so that it can correctly subtype Oceananigans.AbstractModel
-# TODO: Is this actually needed?
-# TODO: For now just take the explicit one?
 function ModelIntegrator(
         clock::Clock,
         model::AbstractModel{NF},
