@@ -131,6 +131,9 @@ function timestep!(integrator::ModelIntegrator, Δt; finalize = true)
     return nothing
 end
 
+# Define Terrarium timestep! for Simulation
+timestep!(sim::Simulation) = Oceananigans.TimeSteppers.time_step!(sim)
+
 """
     $TYPEDSIGNATURES
 
