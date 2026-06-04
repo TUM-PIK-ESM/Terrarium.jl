@@ -9,7 +9,7 @@ $TYPEDFIELDS
 """
 @parameterized @kwdef struct ConstantSoilCarbonDensity{NF} <: AbstractSoilBiogeochemistry{NF}
     "Soil organic carbon density"
-    @param ρ_soc::NF = 0.0 (units = u"kg/m^3", bounds = Nonnegative)
+    @param ρ_soc::NF = 0.0 (units = u"kg/m^3", bounds = Positive)
 
     "Pure organic matter density"
     @param ρ_org::NF = 1300.0 (units = u"kg/m^3", bounds = Positive)
