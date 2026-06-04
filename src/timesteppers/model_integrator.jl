@@ -153,9 +153,10 @@ function initialize(
         initializers = (;),
         fields = (;)
     ) where {NF}
+    inputs = InputSources(inputs)
     input_vars = variables(inputs)
     updated_model = isnothing(params) ? model : ParameterEditing.reconstruct(model, params)
-    state = initialize(updated_model; clock, boundary_conditions, fields, input_variables = input_vars)
+    state = initialize(updated_model; clock, timestepper, boundary_conditions, fields, input_variables = input_vars)
     integrator = ModelIntegrator(clock, updated_model, inputs, state, initializers, timestepper)
     initialize!(integrator)
     return integrator
@@ -170,9 +171,10 @@ The `clock` and `inputs` can also optionally be updated via their respective key
 function initialize(
         integrator::ModelIntegrator,
         params;
-        clock = integrator.clock,
-        inputs = integrator.inputs
+        clock::Clock = integrator.clock,
+        inputs::InputSource = integrator.inputs
     )
+    inputs = InputSources(inputs)
     model = ParameterEditing.reconstruct(integrator.model, params)
     integrator = ModelIntegrator(clock, model, inputs, integrator.state, integrator.initializers, integrator.timestepper)
     initialize!(integrator)
