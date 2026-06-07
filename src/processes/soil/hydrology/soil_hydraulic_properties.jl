@@ -132,10 +132,10 @@ $TYPEDFIELDS
     @param sat_hydraulic_cond::NF = 1.0e-5 (units = u"m/s", bounds = Positive, scale = 1.0e-5)
 
     "Linear coefficient of wilting point adjustment due to clay content"
-    @param wilting_point_coef::NF = 37.13e-3 (bounds = Positive,)
+    @param wilting_point_effect::NF = 37.13e-3 (bounds = Positive,)
 
     "Linear coefficient of field capacity adjustment due to clay content"
-    @param field_capacity_coef::NF = 89.0e-3 (bounds = Positive,)
+    @param field_capacity_effect::NF = 89.0e-3 (bounds = Positive,)
 
     "Exponent of field capacity adjustment due to clay content"
     @param field_capacity_exp::NF = 0.35 (bounds = Positive,)
@@ -160,14 +160,14 @@ end
 @inline residual_saturation(hydraulics::SoilHydraulicsSURFEX, args...) = hydraulics.residual
 
 @inline function wilting_point(hydraulics::SoilHydraulicsSURFEX, texture::SoilTexture)
-    β_w = hydraulics.wilting_point_coef
+    β_w = hydraulics.wilting_point_effect
     wp = β_w * sqrt(texture.clay * 100)
     return wp
 end
 
 @inline function field_capacity(hydraulics::SoilHydraulicsSURFEX, texture::SoilTexture)
     η = hydraulics.field_capacity_exp
-    β_c = hydraulics.field_capacity_coef
+    β_c = hydraulics.field_capacity_effect
     fc = β_c * (texture.clay * 100)^η
     return fc
 end
