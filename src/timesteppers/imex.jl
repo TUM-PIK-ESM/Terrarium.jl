@@ -129,6 +129,7 @@ variable is routed to the explicit or implicit sub-stepper according to the reso
 advanced once for the whole step.
 """
 function timestep!(integrator::ModelIntegrator, timestepper::IMEX, Δt)
+    # TODO: loop over the namespaces here instead
     cache = integrator.state.timestepper_cache
     # type-stable split of the prognostic variables by their resolved class
     explicit_names = prognostic_names(integrator.state, cache, Val(:explicit))
