@@ -8,12 +8,11 @@ Multiple PFTs can be later handled with a `TiledVegetationModel` type that compo
 Properties:
 $TYPEDFIELDS
 """
-@kwdef struct VegetationModel{
+@parameterized @kwdef struct VegetationModel{
         NF,
         Vegetation <: AbstractVegetation{NF},
         Atmosphere <: AbstractAtmosphere{NF},
         GridType <: AbstractLandGrid{NF},
-        Constants <: PhysicalConstants{NF},
         Initializer <: AbstractInitializer,
         Timestepper <: AbstractTimeStepper{NF},
     } <: AbstractVegetationModel{NF, GridType}
@@ -21,19 +20,19 @@ $TYPEDFIELDS
     grid::GridType
 
     "Atmospheric input configuration"
-    atmosphere::Atmosphere = PrescribedAtmosphere(eltype(grid))
+    @component atmosphere::Atmosphere = PrescribedAtmosphere(eltype(grid))
 
     "Vegetation processes"
-    vegetation::Vegetation = VegetationCarbon(eltype(grid))
+    @component vegetation::Vegetation = VegetationCarbon(eltype(grid))
 
     "Physical constants"
-    constants::Constants = PhysicalConstants(eltype(grid))
+    @component constants::PhysicalConstants{NF} = PhysicalConstants(eltype(grid))
 
     "State variable initializer"
-    initializer::Initializer = DefaultInitializer(eltype(grid))
+    @component initializer::Initializer = DefaultInitializer(eltype(grid))
 
     "Time stepper: a single `AbstractTimeStepper` (e.g. `ForwardEuler`, `Heun`) or an `IMEX`"
-    timestepper::Timestepper = default_timestepper(eltype(grid))
+    @component timestepper::Timestepper = default_timestepper(eltype(grid))
 end
 
 function compute_auxiliary!(state, model::VegetationModel)

@@ -12,8 +12,6 @@ using DataStructures: OrderedDict
 
 using Dates: Dates, TimeType, Period, Year, Month, Day, Hour, Minute, Second
 
-using DomainSets: RealLine, HalfLine, PositiveRealLine, UnitInterval, AbstractInterval
-
 using Flatten: flatten, flattenable, reconstruct
 
 using KernelAbstractions: @kernel, @index
@@ -47,20 +45,31 @@ using Unitful: 𝐋, 𝐌, 𝐓
 using Unitful: Units, Quantity, AbstractQuantity, NoUnits
 using Unitful: @u_str, uconvert, ustrip, upreferred
 
+# Parameter handling (imported from SpeedyWeatherInternals for now)
+using SpeedyWeatherInternals.ParameterEditing: ParameterEditing, ParameterTable, ComponentVector,
+    Positive, Nonnegative, Unbounded, parameters, @parameterized
+
 # Explicit imports
+import DomainSets
 import Interpolations
+import ModelParameters
 import Oceananigans
 import Oceananigans.Diagnostics
 import RingGrids
 import Thermodynamics
 
 """
-Alias for numeric `Quantity` with type `NF` and units `U`.
+Alias for `DomainSets.UnitInterval()`
+"""
+const UnitInterval = DomainSets.UnitInterval()
+
+"""
+Alias for numeric `Quantity` with type `NF` and units `U`
 """
 const LengthQuantity{NF, U} = Quantity{NF, 𝐋, U} where {NF, U <: Units}
 
 """
-Alias for Oceananigans `AbstractBoundaryConditionClassification`.
+Alias for Oceananigans `AbstractBoundaryConditionClassification`
 """
 const BCType = AbstractBoundaryConditionClassification
 

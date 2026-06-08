@@ -39,7 +39,8 @@ initializers = (
     # dry soil
     saturation_water_ice = 1.0,
 )
-integrator = initialize(model, Tair_forcing; initializers, boundary_conditions)
+inputs = InputSources(Tair_forcing)
+integrator = initialize(model; inputs, initializers, boundary_conditions)
 @time timestep!(integrator)
 @time run!(integrator, period = Day(10), dt = 120.0)
 

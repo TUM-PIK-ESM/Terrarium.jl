@@ -9,8 +9,8 @@ $TYPEDFIELDS
 PrescribedAlbedo(::Type{NF}) where {NF} = PrescribedAlbedo{NF}()
 
 variables(::PrescribedAlbedo) = (
-    input(:albedo, XY(), domain = UnitInterval(), desc = "Surface albedo, i.e. ratio of outgoing to incoming shortwave radiation [-]"),
-    input(:emissivity, XY(), domain = UnitInterval(), desc = "Surface emissivity, i.e. efficiency of longwave emission [-]"),
+    input(:albedo, XY(), bounds = UnitInterval, desc = "Surface albedo, i.e. ratio of outgoing to incoming shortwave radiation [-]"),
+    input(:emissivity, XY(), bounds = UnitInterval, desc = "Surface emissivity, i.e. efficiency of longwave emission [-]"),
 )
 
 """
@@ -19,12 +19,12 @@ variables(::PrescribedAlbedo) = (
 Properties:
 $TYPEDFIELDS
 """
-@kwdef struct ConstantAlbedo{NF} <: AbstractAlbedo{NF}
-    "Surface albedo, i.e. ratio of outgoing to incoming shortwave radiation [-]"
-    albedo::NF = 0.3
+@parameterized @kwdef struct ConstantAlbedo{NF} <: AbstractAlbedo{NF}
+    "Surface albedo, i.e. ratio of outgoing to incoming shortwave radiation"
+    @param albedo::NF = 0.3 (bounds = UnitInterval,)
 
-    "Surface emissivity, i.e. fraction of thermal radiation emitted from the surface [-]"
-    emissivity::NF = 0.97
+    "Surface emissivity, i.e. fraction of thermal radiation emitted from the surface"
+    @param emissivity::NF = 0.97 (bounds = UnitInterval,)
 end
 
 ConstantAlbedo(::Type{NF}; kwargs...) where {NF} = ConstantAlbedo{NF}(; kwargs...)

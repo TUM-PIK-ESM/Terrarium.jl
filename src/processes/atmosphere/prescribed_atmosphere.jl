@@ -87,6 +87,8 @@ function PrescribedAtmosphere(
     return PrescribedAtmosphere(altitude, min_windspeed, precip, radiation, humidity, aerodynamics, tracers)
 end
 
+ParameterEditing.parameters(::PrescribedAtmosphere) = (;)
+
 variables(atmos::PrescribedAtmosphere{NF}) where {NF} = (
     input(:air_temperature, XY(), default = NF(10), units = u"°C", desc = "Near-surface air temperature in °C"),
     input(:air_pressure, XY(), default = NF(101_325), units = u"Pa", desc = "Atmospheric pressure at the surface in Pa"),

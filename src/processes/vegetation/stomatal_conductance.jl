@@ -14,13 +14,13 @@ $TYPEDFIELDS
 * [medlynReconcilingOptimalEmpirical2011](@cite) Medlyn et al., Global Change Biology (2011)
 * [willeitPALADYNV10Comprehensive2016](@cite) Willeit & Ganopolski, Geoscientific Model Development (2016)
 """
-@kwdef struct MedlynStomatalConductance{NF} <: AbstractStomatalConductance{NF}
+@parameterized @kwdef struct MedlynStomatalConductance{NF} <: AbstractStomatalConductance{NF}
     "Parameter in optimal stomatal conductance formulation representing the quasi-linear
-    relationship between conductance and net assimilation, [linOptimalStomatalBehaviour2015](@cite) [-], PFT specific"
-    g₁::NF = 2.3 # TODO: value for Needleleaf tree PFT
+    relationship between conductance and net assimilation, [linOptimalStomatalBehaviour2015](@cite). PFT specific."
+    @param g₁::NF = 2.3 (bounds = Positive,) # TODO: value for Needleleaf tree PFT
 
-    "Minimum stomatal condutance parameter [mm s⁻¹]"
-    g_min::NF = 0.5
+    "Minimum stomatal conductance parameter"
+    @param g_min::NF = 0.5 (units = u"mm/s", bounds = Positive)
 end
 
 MedlynStomatalConductance(::Type{NF}; kwargs...) where {NF} = MedlynStomatalConductance{NF}(; kwargs...)

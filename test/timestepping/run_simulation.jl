@@ -3,7 +3,6 @@ using Test
 
 import RingGrids
 import Dates: Hour
-import Oceananigans: time_step!
 
 @testset "run! SoilModel w/ ForwardEuler" begin
     grid = ColumnRingGrid(CPU(), Float64, ExponentialSpacing(N = 50), RingGrids.FullHEALPixGrid(16))
@@ -22,7 +21,7 @@ import Oceananigans: time_step!
     # test Oceananigans Simulation
     integrator = initialize(model)
     sim = Simulation(integrator; Δt = 900.0, stop_time = 3600.0)
-    time_step!(sim)
+    timestep!(sim)
     run!(sim)
     @test integrator.clock.time == 3600.0
 end

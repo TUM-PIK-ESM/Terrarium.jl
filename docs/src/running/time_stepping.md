@@ -13,7 +13,7 @@ using Terrarium
 Terrarium explicitly separates process computations in `compute_auxiliary!` and `compute_tendencies!` from the choice of time stepping scheme. As a general rule, only models can be configured for timestepping. A model can be initialized for timestepping via
 
 ```@docs; canonical = false
-initialize(model::AbstractModel, inputs::InputSource...)
+initialize(model::AbstractModel, params::Union{Nothing, ComponentVector, ParameterTable})
 ```
 
 This will return a [`ModelIntegrator`](@ref):

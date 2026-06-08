@@ -215,12 +215,20 @@ defined by the coupling interface for the process type.
 invclosure!(state, grid, closure::AbstractClosureRelation, ::AbstractProcess, args...) = nothing
 
 """
-    (::Type{Model})(grid::AbstractLandGrid, args...; kwargs...) where {Model <: AbstractModel}
+    (::Type{Model})(grid::AbstractLandGrid; kwargs...) where {Model <: AbstractModel}
 
-Convenience constructor for all `AbstractModel` types that allows the `grid` to be passed
-as the first positional argument.
+Convenience constructor for all `AbstractModel` types that accepts `grid` as a positional argument.
 """
-(::Type{Model})(grid::AbstractLandGrid, args...; kwargs...) where {Model <: AbstractModel} = Model(args...; grid, kwargs...)
+(::Type{Model})(grid::AbstractLandGrid; kwargs...) where {Model <: AbstractModel} = Model(; grid, kwargs...)
+
+# Default parameters collection for processes
+function ParameterEditing.parameters(proc::AbstractProcess; kwargs...)
+    proc_params = map(fieldnames(typeof(proc))) do name
+        name => ParameterEditing.parameters(getproperty(proc, name))
+    end
+    nonempty_params = filter(p -> length(p[2]) > 0, proc_params)
+    return ParameterEditing.ParameterTable((; nonempty_params...))
+end
 
 function Base.show(io::IO, model::AbstractModel{NF}) where {NF}
     println(io, "$(nameof(typeof(model))){$NF} on $(architecture(get_grid(model)))")

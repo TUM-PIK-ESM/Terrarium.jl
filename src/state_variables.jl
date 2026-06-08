@@ -305,15 +305,17 @@ must follow the same structure. The `fields` argument allows for manual preconst
 variables. The time stepper cache is allocated from the model's `timestepper`.
 """
 function StateVariables(
-        model::AbstractModel{NF};
+        model::AbstractModel{NF},
+        params = nothing;
         clock = Clock(time = zero(NF)),
         input_variables = (),
         boundary_conditions = (;),
         initializers = (;),
         fields = (;)
     ) where {NF}
-    vars = Variables(tuplejoin(variables(model), input_variables))
-    state = StateVariables(vars, model.grid; clock, timestepper = get_timestepper(model), boundary_conditions, initializers, fields)
+    model_rec = isnothing(params) ? model : ParameterEditing.reconstruct(model, params)
+    vars = Variables(tuplejoin(variables(model_rec), input_variables))
+    state = StateVariables(vars, model_rec.grid; clock, timestepper = get_timestepper(model), boundary_conditions, initializers, fields)
     return state
 end
 
@@ -326,7 +328,8 @@ be passed through to `initialize` for each variable.
 """
 function StateVariables(
         process::AbstractProcess{NF},
-        grid::AbstractLandGrid{NF};
+        grid::AbstractLandGrid{NF},
+        params = nothing;
         clock = Clock(time = zero(NF)),
         input_variables = (),
         timestepper = default_timestepper(NF),
@@ -334,7 +337,8 @@ function StateVariables(
         initializers = (;),
         fields = (;)
     ) where {NF}
-    vars = Variables(tuplejoin(variables(process), input_variables))
+    process_rec = isnothing(params) ? process : ParameterEditing.reconstruct(process, params)
+    vars = Variables(tuplejoin(variables(process_rec), input_variables))
     state = StateVariables(vars, grid; clock, timestepper, boundary_conditions, initializers, fields)
     return state
 end

@@ -6,11 +6,10 @@ General implementation of a 1D column model of soil energy, water, and carbon tr
 Properties:
 $(TYPEDFIELDS)
 """
-@kwdef struct SoilModel{
+@parameterized @kwdef struct SoilModel{
         NF,
         GridType <: AbstractLandGrid{NF},
         Soil <: AbstractSoil{NF},
-        Constants <: PhysicalConstants{NF},
         Initializer <: AbstractInitializer,
         Timestepper <: AbstractTimeStepper{NF},
     } <: AbstractSoilModel{NF, GridType}
@@ -18,16 +17,16 @@ $(TYPEDFIELDS)
     grid::GridType
 
     "Soil processes"
-    soil::Soil = SoilEnergyWaterCarbon(eltype(grid))
+    @component soil::Soil = SoilEnergyWaterCarbon(eltype(grid))
 
     "Physical constants"
-    constants::Constants = PhysicalConstants(eltype(grid))
+    @component constants::PhysicalConstants{NF} = PhysicalConstants(eltype(grid))
 
     "State variable initializer"
-    initializer::Initializer = DefaultInitializer(eltype(grid))
+    @component initializer::Initializer = DefaultInitializer(eltype(grid))
 
     "Time stepper: a single `AbstractTimeStepper` (e.g. `ForwardEuler`, `Heun`) or an `IMEX`"
-    timestepper::Timestepper = default_timestepper(eltype(grid))
+    @component timestepper::Timestepper = default_timestepper(eltype(grid))
 end
 
 # Model interface methods

@@ -14,17 +14,17 @@ $TYPEDFIELDS
 * [willeitPALADYNV10Comprehensive2016](@cite) Willeit & Ganopolski, Geoscientific Model Development (2016)
 * [coxDescriptionTRIFFIDDynamic2001](@cite) Cox, Hadley Centre Technical Note (2001)
 """
-@kwdef struct PALADYNAutotrophicRespiration{NF} <: AbstractAutotrophicRespiration{NF}
+@parameterized @kwdef struct PALADYNAutotrophicRespiration{NF} <: AbstractAutotrophicRespiration{NF}
     # TODO check physical meaning of this parameter + add unit
     "Sapwood parameter"
-    cn_sapwood::NF = 330.0
+    @param cn_sapwood::NF = 330.0 (bounds = Positive,)
 
     # TODO check physical meaning of this parameter + add unit
     "Root parameter"
-    cn_root::NF = 29.0
+    @param cn_root::NF = 29.0 (bounds = Positive,)
 
-    "Ratio of total to respiring stem carbon, [coxDescriptionTRIFFIDDynamic2001](@cite), PFT specific [-]"
-    aws::NF = 10.0 # Value for Needleleaf tree PFT
+    "Ratio of total to respiring stem carbon, [coxDescriptionTRIFFIDDynamic2001](@cite). PFT specific."
+    @param aws::NF = 10.0 (bounds = Positive,) # Value for Needleleaf tree PFT
 end
 
 PALADYNAutotrophicRespiration(::Type{NF}; kwargs...) where {NF} = PALADYNAutotrophicRespiration{NF}(; kwargs...)

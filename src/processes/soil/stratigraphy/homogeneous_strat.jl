@@ -6,12 +6,12 @@ Represents a soil stratigraphy of well mixed material with homogeneous soil text
 Properties:
 $TYPEDFIELDS
 """
-struct HomogeneousStratigraphy{NF, SoilPorosity <: AbstractSoilPorosity{NF}} <: AbstractStratigraphy{NF}
+@parameterized struct HomogeneousStratigraphy{NF, SoilPorosity <: AbstractSoilPorosity{NF}} <: AbstractStratigraphy{NF}
     "Material composition of mineral soil component"
-    texture::SoilTexture{NF}
+    @component texture::SoilTexture{NF}
 
     "Parameterization of soil porosity"
-    porosity::SoilPorosity
+    @component porosity::SoilPorosity
 end
 
 function HomogeneousStratigraphy(

@@ -16,30 +16,30 @@ $TYPEDFIELDS
 * [clarkJointUKLand2011](@cite) Clark et al., Geoscientific Model Development (2011)
 * [kattgeTRYGlobalDatabase2011](@cite) Kattge et al., Global Change Biology (2011)
 """
-@kwdef struct PALADYNCarbonDynamics{NF} <: AbstractVegetationCarbonDynamics{NF}
-    "Specific leaf area ([kattgeTRYGlobalDatabase2011](@cite)) [m²/kgC], PFT specific"
-    SLA::NF = 10.0 # Value for Needleleaf tree PFT
+@parameterized @kwdef struct PALADYNCarbonDynamics{NF} <: AbstractVegetationCarbonDynamics{NF}
+    "Specific leaf area ([kattgeTRYGlobalDatabase2011](@cite)). PFT specific."
+    @param SLA::NF = 10.0 (units = u"m^2/kg", bounds = Positive) # Value for Needleleaf tree PFT
 
-    "Allometric coefficient, modified from [coxDescriptionTRIFFIDDynamic2001](@cite) to account for bwl=1 [kgC/m²], PFT specific"
-    awl::NF = 2.0 # Value for Needleleaf tree PFT
+    "Allometric coefficient, modified from [coxDescriptionTRIFFIDDynamic2001](@cite) to account for bwl=1. PFT specific."
+    @param awl::NF = 2.0 (units = u"kg/m^2", bounds = Positive) # Value for Needleleaf tree PFT
 
-    "Minimum Leaf Area Index modified from [clarkJointUKLand2011](@cite) [m²/m²], PFT specific"
-    LAI_min::NF = 1.0 # Value for Needleleaf tree PFT
+    "Minimum Leaf Area Index modified from [clarkJointUKLand2011](@cite). PFT specific."
+    @param LAI_min::NF = 1.0 (bounds = Positive,) # Value for Needleleaf tree PFT
 
-    "Maximum Leaf Area Index modified from [clarkJointUKLand2011](@cite) [m²/m²], PFT specific"
-    LAI_max::NF = 6.0 # Value for Needleleaf tree PFT
+    "Maximum Leaf Area Index modified from [clarkJointUKLand2011](@cite). PFT specific."
+    @param LAI_max::NF = 6.0 (bounds = Positive,) # Value for Needleleaf tree PFT
 
-    "Leaf turnover rate ([kattgeTRYGlobalDatabase2011](@cite)) [1/year], PFT specific"
+    "Leaf turnover rate ([kattgeTRYGlobalDatabase2011](@cite)). PFT specific."
     # TODO this parameter is yearly, should be changed to daily for now
-    γL::NF = 0.3 # Value for Needleleaf tree PFT
+    @param γL::NF = 0.3 (units = u"yr^-1", bounds = Positive) # Value for Needleleaf tree PFT
 
-    "Root turnover rate [1/year], PFT specific"
+    "Root turnover rate. PFT specific."
     # TODO this parameter is yearly, should be changed to daily for now
-    γR::NF = 0.3 # Value for Needleleaf tree PFT
+    @param γR::NF = 0.3 (units = u"yr^-1", bounds = Positive) # Value for Needleleaf tree PFT
 
-    "Stem turnover rate modified from [clarkJointUKLand2011](@cite) [1/year], PFT specific"
+    "Stem turnover rate modified from [clarkJointUKLand2011](@cite). PFT specific."
     # TODO this parameter is yearly, should be changed to daily for now
-    γS::NF = 0.05 # Value for Needleleaf tree PFT
+    @param γS::NF = 0.05 (units = u"yr^-1", bounds = Positive) # Value for Needleleaf tree PFT
 end
 
 PALADYNCarbonDynamics(::Type{NF}; kwargs...) where {NF} = PALADYNCarbonDynamics{NF}(; kwargs...)

@@ -14,11 +14,12 @@ struct ModelIntegrator{
         TimeStepper <: AbstractTimeStepper{NF},
         Model <: AbstractModel{NF, Grid},
         StateVars <: AbstractStateVariables,
+        ClockType <: Clock,
         Inits <: NamedTuple,
         Inputs <: InputSources,
     } <: Oceananigans.AbstractModel{TimeStepper, Arch}
     "The clock holding all information about the current timestep/iteration of a simulation"
-    clock::Clock
+    clock::ClockType
 
     "Underlying model evaluated by this integrator"
     model::Model
@@ -102,6 +103,8 @@ function Oceananigans.Simulations.run!(
     return integrator
 end
 
+# Terrarium method interfaces
+
 """
     $TYPEDEF
 
@@ -123,8 +126,6 @@ function initialize!(integrator::ModelIntegrator)
     return integrator
 end
 
-# Terrarium method interfaces
-
 current_time(integrator::ModelIntegrator) = integrator.clock.time
 
 get_fields(integrator::ModelIntegrator, queries...) = get_fields(integrator.state, queries...)
@@ -144,6 +145,9 @@ function timestep!(integrator::ModelIntegrator, Δt; finalize = true)
     end
     return nothing
 end
+
+# Define Terrarium timestep! for Simulation
+timestep!(sim::Simulation) = Oceananigans.TimeSteppers.time_step!(sim)
 
 """
     timestep!(integrator::ModelIntegrator, timestepper::AbstractTimeStepper, Δt)
@@ -172,7 +176,8 @@ default_dt(integrator::ModelIntegrator) = default_dt(get_timestepper(integrator.
     $TYPEDSIGNATURES
 
 Creates and initializes a `ModelIntegrator` for the given `model` with input variables populated by
-the given `inputs`. This method allocates all necessary `Field`s for the state variables and subsequently calls
+the given `inputs` and optionally `params` . `InputSource`s can be specified via the `inputs` keyword argument. 
+This method allocates all necessary `Field`s for the state variables and subsequently calls
 `initialize!(::ModelIntegrator)`.
 
 Note that this method is **not type stable** and thus should not be called from Enzyme `autodiff`. To reinitialize
@@ -182,16 +187,37 @@ See the docstring for [`initialize(::AbstractModel)`](@ref) for further details.
 """
 function initialize(
         model::AbstractModel{NF},
-        inputs::InputSource...;
+        params = nothing;
         clock::Clock = Clock(time = zero(NF)),
+        inputs::InputSource = InputSources(NF),
         boundary_conditions = (;),
         initializers = (;),
         fields = (;)
     ) where {NF}
-    inputs = InputSources(inputs...)
+    inputs = InputSources(inputs)
     input_vars = variables(inputs)
-    state = StateVariables(model; clock, boundary_conditions, fields, input_variables = input_vars)
-    integrator = ModelIntegrator(clock, model, inputs, state, initializers)
+    updated_model = isnothing(params) ? model : ParameterEditing.reconstruct(model, params)
+    state = StateVariables(updated_model; clock, boundary_conditions, fields, input_variables = input_vars)
+    integrator = ModelIntegrator(clock, updated_model, inputs, state, initializers)
+    initialize!(integrator)
+    return integrator
+end
+
+"""
+    $SIGNATURES
+
+Reconstruct the given `integrator` using the same underlying model populated with the given `params`.
+The `clock` and `inputs` can also optionally be updated via their respective keyword arguments.
+"""
+function initialize(
+        integrator::ModelIntegrator,
+        params;
+        clock::Clock = integrator.clock,
+        inputs::InputSource = integrator.inputs
+    )
+    inputs = InputSources(inputs)
+    model = ParameterEditing.reconstruct(integrator.model, params)
+    integrator = ModelIntegrator(clock, model, inputs, integrator.state, integrator.initializers)
     initialize!(integrator)
     return integrator
 end
@@ -207,6 +233,7 @@ function Base.show(io::IO, integrator::ModelIntegrator)
     tsstr = get_timestepper(integrator.model)
     println(io, "Integrator of $modelstr with timestepper $tsstr")
     println(io, "├── Current time: $(current_time(integrator))")
-    return println(io, "├── $statestr")
+    println(io, "├── $statestr")
     # TODO: add more information?
+    return nothing
 end
