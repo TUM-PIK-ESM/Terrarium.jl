@@ -6,14 +6,13 @@ Model for surface hydrology processes.
 Properties:
 $TYPEDFIELDS
 """
-@kwdef struct SurfaceHydrologyModel{
+@parameterized @kwdef struct SurfaceHydrologyModel{
         NF,
         GridType <: AbstractLandGrid{NF},
         Atmosphere <: AbstractAtmosphere,
         CanopyHydrology <: AbstractCanopyInterception,
         CanopyET <: AbstractEvapotranspiration,
         SurfaceRunoff <: AbstractSurfaceRunoff,
-        Constants <: PhysicalConstants{NF},
         Initializer <: AbstractInitializer,
     } <: AbstractSurfaceHydrologyModel{NF, GridType}
     "Spatial grid type"
@@ -32,7 +31,7 @@ $TYPEDFIELDS
     surface_runoff::SurfaceRunoff = DirectSurfaceRunoff(eltype(grid))
 
     "Physical constants"
-    constants::Constants = PhysicalConstants(eltype(grid))
+    constants::PhysicalConstants{NF} = PhysicalConstants(eltype(grid))
 
     "State variable initializer"
     initializer::Initializer = DefaultInitializer(eltype(grid))

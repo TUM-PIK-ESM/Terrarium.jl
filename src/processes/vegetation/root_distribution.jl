@@ -19,12 +19,12 @@ $FIELDS
 * [willeitPALADYNV10Comprehensive2016](@cite) Willeit & Ganopolski, Geoscientific Model Development (2016)
 * [zengGlobalVegetationRoot2001](@cite) Zeng, Journal of Hydrometeorology (2001)
 """
-@kwdef struct StaticExponentialRootDistribution{NF} <: AbstractRootDistribution{NF}
+@parameterized @kwdef struct StaticExponentialRootDistribution{NF} <: AbstractRootDistribution{NF}
     "First empirical rate parameter for root distribution"
-    a::NF = 7.0 # TODO PFT-specific parameter (here needleleaf tree)
+    @param a::NF = 7.0 (units = u"m^-1", bounds = Positive) # TODO PFT-specific parameter (here needleleaf tree)
 
     "Second empirical rate parameter for root distribution"
-    b::NF = 2.0 # TODO PFT-specific parameter (here needleleaf tree)
+    @param b::NF = 2.0 (units = u"m^-1", bounds = Positive) # TODO PFT-specific parameter (here needleleaf tree)
 end
 
 StaticExponentialRootDistribution(::Type{NF}; kwargs...) where {NF} = StaticExponentialRootDistribution{NF}(; kwargs...)

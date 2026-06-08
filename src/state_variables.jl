@@ -308,7 +308,8 @@ must follow the same structure. The `fields` argument allows for manual preconst
 variables.
 """
 function initialize(
-        model::AbstractModel{NF};
+        model::AbstractModel{NF},
+        params = nothing;
         clock = Clock(time = zero(NF)),
         input_variables = (),
         timestepper = ForwardEuler{NF}(),
@@ -316,8 +317,9 @@ function initialize(
         initializers = (;),
         fields = (;)
     ) where {NF}
-    vars = Variables(tuplejoin(variables(model), input_variables))
-    state = initialize(vars, model.grid; clock, timestepper, boundary_conditions, initializers, fields)
+    model_rec = isnothing(params) ? model : ParameterEditing.reconstruct(model, params)
+    vars = Variables(tuplejoin(variables(model_rec), input_variables))
+    state = initialize(vars, model_rec.grid; clock, timestepper, boundary_conditions, initializers, fields)
     return state
 end
 
@@ -330,7 +332,8 @@ be passed through to `initialize` for each variable.
 """
 function initialize(
         process::AbstractProcess{NF},
-        grid::AbstractLandGrid{NF};
+        grid::AbstractLandGrid{NF},
+        params = nothing;
         clock = Clock(time = zero(NF)),
         input_variables = (),
         timestepper = ForwardEuler{NF}(),
@@ -338,7 +341,8 @@ function initialize(
         initializers = (;),
         fields = (;)
     ) where {NF}
-    vars = Variables(tuplejoin(variables(process), input_variables))
+    process_rec = isnothing(params) ? process : ParameterEditing.reconstruct(process, params)
+    vars = Variables(tuplejoin(variables(process_rec), input_variables))
     state = initialize(vars, grid; clock, timestepper, boundary_conditions, initializers, fields)
     return state
 end
