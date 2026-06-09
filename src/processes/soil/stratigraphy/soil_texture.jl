@@ -1,12 +1,17 @@
 """
     $TYPEDEF
 
-Represents soil texture as a fractional mixture of sand, silt, and clay. Accepts values 
+Represents soil texture as a fractional mixture of sand, silt, and clay.
 """
-@kwdef struct SoilTexture{NF}
-    sand::NF = 1.0
-    clay::NF = 0.0
-    silt::NF = 1 - sand - clay
+@parameterized @kwdef struct SoilTexture{NF}
+    "Fraction of sand"
+    @param sand::NF = 1.0 (bounds = UnitInterval,)
+
+    "Fraction of silt"
+    @param silt::NF = 1 - sand - clay (bounds = UnitInterval,)
+
+    "Fraction of clay"
+    @param clay::NF = 0.0 (bounds = UnitInterval,)
 
     SoilTexture(sand, silt, clay) = SoilTexture{promote_type(typeof(sand), typeof(silt), typeof(clay))}(sand, silt, clay)
     function SoilTexture{NF}(sand, silt, clay) where {NF <: Number}
