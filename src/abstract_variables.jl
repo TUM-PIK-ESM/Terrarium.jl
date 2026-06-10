@@ -414,6 +414,13 @@ Convenience constructor method for variable `Namespace`s.
 @inline namespace(name::Symbol, vars::Tuple) = Namespace(name, Variables(vars...))
 
 """
+    $SIGNATURES
+
+Convert the given `NamedTuple` of variables into a tuple of `Namespace`s.
+"""
+@inline namespaces(nt::NamedTuple{names}) where {names} = map((nm, vars) -> namespace(name, vars), names, values(nt))
+
+"""
 Alias for `Variables(vars...)`
 """
 @inline variables(vars::Union{AbstractVariable, Namespace}...) = Variables(vars)
