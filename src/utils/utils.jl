@@ -75,7 +75,16 @@ Same as `fastmap` but simply invokes `f!` on each argument set without construct
     push!(expr.args, :(return nothing))
     return expr
 end
-fastiterate(f!::F, iters::NamedTuple) where {F} = fastiterate(f!, values(iters))
+
+@generated function fastiterate(f::F, nts::NamedTuple...) where {F}
+    expr = Expr(:block)
+    # get keys from first named tuple
+    keys = nts[1].parameters[1]
+    for key in keys
+        push!(expr.args, :(f($(map(i -> :(nts[$i].$key), 1:length(nts))...))))
+    end
+    return expr
+end
 
 include("tuple_utils.jl")
 include("interpolation_utils.jl")

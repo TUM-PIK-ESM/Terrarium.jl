@@ -45,6 +45,14 @@ function organic_porosity end
 """
     $TYPEDEF
 
+Base type for soil "horizons", i.e. vertical segments of soil with homogeneous soil
+properties.
+"""
+abstract type AbstractSoilHorizon{NF} end
+
+"""
+    $TYPEDEF
+
 Base type for soil stratigraphy parameterizations.
 """
 abstract type AbstractStratigraphy{NF} end
@@ -52,6 +60,7 @@ abstract type AbstractStratigraphy{NF} end
 # Kernel functions
 
 """
+    soil_texture(i, j, grid, fields, ::AbstractSoilHorizon, args...)
     soil_texture(i, j, k, grid, fields, ::AbstractStratigraphy, args...)
 
 Return the texture of the soil at index `i, j, k` for the given stratigraphy parameterization.
@@ -59,6 +68,7 @@ Return the texture of the soil at index `i, j, k` for the given stratigraphy par
 function soil_texture end
 
 """
+    soil_matrix(i, j, grid, fields, ::AbstractSoilHorizon, args...)
     soil_matrix(i, j, k, grid, fields, ::AbstractStratigraphy, args...)
 
 Return the solid matrix of the soil at index `i, j, k` for the given stratigraphy parameterization.

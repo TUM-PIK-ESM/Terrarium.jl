@@ -7,39 +7,47 @@ Represents soil texture as a fractional mixture of sand, silt, and clay.
     "Fraction of sand"
     @param sand::NF = 1.0 (bounds = UnitInterval,)
 
-    "Fraction of silt"
-    @param silt::NF = 1 - sand - clay (bounds = UnitInterval,)
-
     "Fraction of clay"
     @param clay::NF = 0.0 (bounds = UnitInterval,)
 
-    SoilTexture(sand, silt, clay) = SoilTexture{promote_type(typeof(sand), typeof(silt), typeof(clay))}(sand, silt, clay)
-    function SoilTexture{NF}(sand, silt, clay) where {NF <: Number}
+    "Fraction of silt"
+    @param silt::NF = 1 - sand - clay (bounds = UnitInterval,)
+
+    SoilTexture(sand, clay, silt) = SoilTexture{promote_type(typeof(sand), typeof(silt), typeof(clay))}(sand, clay, silt)
+    function SoilTexture{NF}(sand, clay, silt) where {NF <: Number}
         @assert zero(sand) <= sand <= one(sand)
-        @assert zero(silt) <= silt <= one(silt)
         @assert zero(clay) <= clay <= one(clay)
+        @assert zero(silt) <= silt <= one(silt)
         @assert sand + silt + clay ≈ 1.0 "sand, silt, and clay fractions must sum to unity"
-        return new{NF}(sand, silt, clay)
+        return new{NF}(sand, clay, silt)
     end
 end
 
 SoilTexture(::Type{NF}; kwargs...) where {NF} = SoilTexture{NF}(; kwargs...)
+
+# Convenience Field setter
+function Oceananigans.Fields.set!(fields, texture::SoilTexture)
+    set!(fields.sand, texture.sand)
+    set!(fields.clay, texture.clay)
+    set!(fields.silt, texture.silt)
+    return nothing
+end
 
 Base.eltype(::SoilTexture{NF}) where {NF} = NF
 
 @inline @propagate_inbounds function Base.getindex(texture::SoilTexture{<:AbstractArray}, idx...)
     return SoilTexture(
         texture.sand[idx...],
-        texture.silt[idx...],
-        texture.clay[idx...]
+        texture.clay[idx...],
+        texture.silt[idx...]
     )
 end
 
 function Base.convert(::SoilTexture{NewType}, texture::SoilTexture) where {NewType}
     return SoilTexture(
         convert(NewType, texture.sand),
-        convert(NewType, texture.silt),
-        convert(NewType, texture.clay)
+        convert(NewType, texture.clay),
+        convert(NewType, texture.silt)
     )
 end
 

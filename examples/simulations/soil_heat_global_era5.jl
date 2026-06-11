@@ -11,6 +11,17 @@ import SpeedyWeather
 # run on GPU if available
 arch = CUDA.functional() ? GPU() : CPU()
 
+ring_grid = RingGrids.FullGaussianGrid(72)
+lon, lat = RingGrids.get_londlatds(ring_grid)
+
+soildata = RasterStack("data/land/soilgrids/soilgrids2_clenshaw_10km.nc")
+soildata_mean = soildata[stat = (At("mean"))]
+# Plot global sand at uppermost soil layer
+heatmap(RingGrids.FullClenshawField(replace(soildata_mean[:sand].data[:, 2:(end - 1), 1], missing => NaN), input_as = Matrix))
+
+sand_field1 = RingGrids.FullClenshawField(replace(soildata_mean[:sand].data[:, 2:(end - 1), 1], missing => NaN), input_as = Matrix)
+heatmap(RingGrids.interpolate(RingGrids.FullGaussianGrid(72), sand_field1))
+
 # Load land-sea mask at ~1° resolution
 land_sea_frac = convert.(Float32, dropdims(Raster("inputs/era5-land_land_sea_mask_N72.nc"), dims = Ti))
 land_sea_frac_field = RingGrids.FullGaussianField(Matrix(land_sea_frac), input_as = Matrix)

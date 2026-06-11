@@ -1,30 +1,55 @@
 """
     $TYPEDEF
 
-Represents a soil stratigraphy of well mixed material with homogeneous soil texture.
+Represents a soil stratigraphy.
 
 Properties:
 $TYPEDFIELDS
 """
-@parameterized struct HomogeneousStratigraphy{NF, SoilPorosity <: AbstractSoilPorosity{NF}} <: AbstractStratigraphy{NF}
-    "Material composition of mineral soil component"
-    @component texture::SoilTexture{NF}
-
-    "Parameterization of soil porosity"
-    @component porosity::SoilPorosity
+struct SoilStratigraphy{NF, Horizons <: NamedTuple} <: AbstractStratigraphy{NF}
+    horizons::Horizons
 end
 
-function HomogeneousStratigraphy(
-        ::Type{NF};
-        texture::SoilTexture{NF} = SoilTexture(NF),
-        porosity::AbstractSoilPorosity{NF} = ConstantSoilPorosity(NF)
-    ) where {NF}
-    return HomogeneousStratigraphy(texture, porosity)
+function SoilStratigraphy(::Type{NF}; horizons...) where {NF}
+    horizon_nt = (; horizons...)
+    return SoilStratigraphy{NF, typeof(horizon_nt)}(horizon_nt)
+end
+
+Base.length(strat::SoilStratigraphy) = length(strat.horizons)
+Base.iterate(strat::SoilStratigraphy) = Base.iterate(strat.horizons)
+Base.iterate(strat::SoilStratigraphy, iter) = Base.iterate(strat.horizons, iter)
+
+# Variables
+
+function variables(strat::SoilStratigraphy)
+    horizon_vars = map(variables, strat.horizons)
+    return namespaces(horizon_vars)
 end
 
 # Kernel functions
 
-soil_texture(i, j, k, grid, fields, strat::HomogeneousStratigraphy) = strat.texture
+@inline function soil_horizon(i, j, k, grid, fields, strat::SoilStratigraphy{NF}) where {NF}
+    fgrid = get_field_grid(grid)
+    # get midpoint of current node at k
+    zₖ = znode(i, j, k, fgrid, Center(), Center(), Center())
+    # initially set z to uppermost layer boundary
+    z = znode(i, j, fgrid.Nz + 1, fgrid, Center(), Center(), Face())
+    iₖ = 1
+    for (l, name) in enumerate(keys(strat.horizons))
+        horizon = strat.horizons[name]
+        horizon_fields = fields.namespaces[name]
+        iₖ = ifelse(zₖ <= z, l, iₖ)
+        Δzₗ = soil_thickness(i, j, grid, horizon_fields, horizon)
+        z -= Δzₗ
+    end
+    return strat.horizons[iₖ]
+end
+
+@inline function soil_texture(i, j, k, grid, fields, strat::SoilStratigraphy{NF}) where {NF}
+    horizon = soil_horizon(i, j, k, grid, fields, strat)
+    texture = soil_texture(i, j, grid, fields, horizon)
+    return texture
+end
 
 """
     $TYPEDSIGNATURES
@@ -33,12 +58,13 @@ Compute the organic fraction of solid material in the soil volume at index `i, j
 """
 @inline function organic_fraction(
         i, j, k, grid, fields,
-        strat::HomogeneousStratigraphy,
+        strat::SoilStratigraphy,
         bgc::AbstractSoilBiogeochemistry
     )
     ρ_soc = density_soc(i, j, k, grid, fields, bgc)
     ρ_org = density_pure_soc(bgc)
-    por = organic_porosity(i, j, k, grid, fields, strat.porosity, strat.texture)
+    horizon = soil_horizon(i, j, k, grid, fields, strat)
+    por = organic_porosity(i, j, k, grid, fields, horizon.porosity, horizon.texture)
     organic = ρ_soc / ((1 - por) * ρ_org)
     return organic
 end
@@ -50,13 +76,13 @@ Compute the porosity of the soil volume at the given indices.
 """
 @propagate_inbounds function porosity(
         i, j, k, grid, fields,
-        strat::HomogeneousStratigraphy,
+        strat::SoilStratigraphy,
         bgc::AbstractSoilBiogeochemistry
     )
     organic = organic_fraction(i, j, k, grid, fields, strat, bgc)
-    texture = strat.texture
-    por_m = mineral_porosity(i, j, k, grid, fields, strat.porosity, texture)
-    por_o = organic_porosity(i, j, k, grid, fields, strat.porosity, texture)
+    horizon = soil_horizon(i, j, k, grid, fields, strat)
+    por_m = mineral_porosity(i, j, k, grid, fields, horizon.porosity, horizon.texture)
+    por_o = organic_porosity(i, j, k, grid, fields, horizon.porosity, horizon.texture)
     return (1 - organic) * por_m + organic * por_o
 end
 

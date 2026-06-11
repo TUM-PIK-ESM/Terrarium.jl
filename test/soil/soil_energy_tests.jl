@@ -103,7 +103,7 @@ end
     # set porosity to zero to remove influence of pore space;
     # this is just a hack to configure the model to simulate heat conduction in a fully solid medium
     soil_porosity = ConstantSoilPorosity(mineral_porosity = 0.0)
-    strat = HomogeneousStratigraphy(Float64; porosity = soil_porosity)
+    strat = SoilStratigraphy(Float64; porosity = soil_porosity)
     # set thermal properties
     thermal_properties = SoilThermalProperties(
         eltype(grid);
@@ -152,7 +152,7 @@ end
     # set porosity to zero to remove influence of pore space;
     # this is just a hack to configure the model to simulate heat conduction in a fully solid medium
     soil_porosity = ConstantSoilPorosity(mineral_porosity = 0.0)
-    strat = HomogeneousStratigraphy(Float64; porosity = soil_porosity)
+    strat = SoilStratigraphy(Float64; porosity = soil_porosity)
     soil = SoilEnergyWaterCarbon(eltype(grid); strat, biogeochem)
     model = SoilModel(grid; soil, initializer)
     # constant upper boundary temperature set to T₁
