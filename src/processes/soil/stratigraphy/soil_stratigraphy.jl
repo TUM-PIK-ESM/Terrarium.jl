@@ -14,6 +14,7 @@ struct SoilStratigraphy{NF, Horizons <: NamedTuple} <: AbstractStratigraphy{NF}
 end
 
 function SoilStratigraphy(::Type{NF}; horizons...) where {NF}
+    @assert length(horizons) > 0 "At least one soil horizon must be specified; for simple configurations, consider using HomogeneousSoilStratigraphy."
     horizon_nt = (; horizons...)
     return SoilStratigraphy{NF, typeof(horizon_nt)}(horizon_nt)
 end
