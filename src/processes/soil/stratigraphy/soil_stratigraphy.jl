@@ -1,18 +1,68 @@
 """
     $TYPEDEF
 
-Represents a soil stratigraphy.
+Represents a soil stratigraphy as a stack of named [soil horizons](https://en.wikipedia.org/wiki/Soil_horizon).
+Each soil horizon is assumed to have internally homogeneous soil properties. The number of horizons and their
+respective names are defined by the user.
 
 Properties:
 $TYPEDFIELDS
 """
 struct SoilStratigraphy{NF, Horizons <: NamedTuple} <: AbstractStratigraphy{NF}
+    "Named tuple of soil horizons ordered from top to bottom"
     horizons::Horizons
 end
 
 function SoilStratigraphy(::Type{NF}; horizons...) where {NF}
     horizon_nt = (; horizons...)
     return SoilStratigraphy{NF, typeof(horizon_nt)}(horizon_nt)
+end
+
+# Convenience constructors
+
+"""
+    $TYPEDSIGNATURES
+
+Convenience constructor that creates a `SoilStratigraphy` with a single `ConstantSoilHorizon`.
+"""
+function HomogeneousSoilStratigraphy(
+        ::Type{NF};
+        texture::SoilTexture = SoilTexture(NF),
+        porosity::AbstractSoilPorosity = ConstantSoilPorosity(NF)
+    ) where {NF}
+    return SoilStratigraphy(NF, horizon = ConstantSoilHorizon(NF; texture, porosity))
+end
+
+"""
+    $TYPEDSIGNATURES
+
+Convenience constructor that creates a three-layer `SoilStratigraphy` with spatially varying
+organic (O), surface (A), and bedrock (R) horizons.
+"""
+function OARSoilStratigraphy(
+        ::Type{NF};
+        organic::AbstractSoilHorizon = PrescribedSoilHorizon(NF),
+        surface::AbstractSoilHorizon = PrescribedSoilHorizon(NF),
+        bedrock::AbstractSoilHorizon = PrescribedSoilHorizon(NF)
+    ) where {NF}
+    return SoilStratigraphy(NF; organic, surface, bedrock)
+end
+
+"""
+    $TYPEDSIGNATURES
+
+Convenience constructor that creates a three-layer `SoilStratigraphy` with spatially varying
+organic (O), surface (A), subsoil (B), substratum (C), and bedrock (R) horizons.
+"""
+function OABCRSoilStratigraphy(
+        ::Type{NF};
+        organic::AbstractSoilHorizon = PrescribedSoilHorizon(NF),
+        surface::AbstractSoilHorizon = PrescribedSoilHorizon(NF),
+        subsoil::AbstractSoilHorizon = PrescribedSoilHorizon(NF),
+        substratum::AbstractSoilHorizon = PrescribedSoilHorizon(NF),
+        bedrock::AbstractSoilHorizon = PrescribedSoilHorizon(NF)
+    ) where {NF}
+    return SoilStratigraphy(NF; organic, surface, subsoil, substratum, bedrock)
 end
 
 Base.length(strat::SoilStratigraphy) = length(strat.horizons)

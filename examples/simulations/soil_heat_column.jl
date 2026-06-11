@@ -125,7 +125,7 @@ grid = ColumnGrid(CPU(), Float64, ExponentialSpacing(Δz_min = 0.02, N = 50))
 
 biogeochem = ConstantSoilCarbonDensity(eltype(grid), ρ_soc = 0.0);
 soil_porosity = ConstantSoilPorosity(eltype(grid), mineral_porosity = 0.0);
-strat = SoilStratigraphy(eltype(grid); porosity = soil_porosity);
+strat = HomogeneousSoilStratigraphy(eltype(grid); porosity = soil_porosity);
 thermal_properties = SoilThermalProperties(
     eltype(grid);
     conductivities = SoilThermalConductivities(eltype(grid), mineral = k),

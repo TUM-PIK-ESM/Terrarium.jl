@@ -182,6 +182,8 @@ struct InputVariable{
     desc::String
 end
 
+Adapt.adapt_structure(to, var::InputVariable) = var.var
+
 """
     $TYPEDEF
 

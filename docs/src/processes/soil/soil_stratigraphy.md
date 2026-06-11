@@ -45,10 +45,8 @@ The total water/ice content is defined is $\theta = \theta_{\text{liq}} + \theta
 
 ## Stratigraphy types
 
-### Homogeneous stratigraphy
-
 ```@docs; canonical = false
-HomogeneousStratigraphy
+SoilStratigraphy
 ```
 
 ## Soil texture

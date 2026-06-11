@@ -29,7 +29,7 @@ export SoilVolume, MineralOrganic, volumetric_fractions
 include("soil/stratigraphy/soil_volume.jl")
 export ConstantSoilHorizon, PrescribedSoilHorizon
 include("soil/stratigraphy/soil_horizon.jl")
-export SoilStratigraphy
+export SoilStratigraphy, HomogeneousSoilStratigraphy, OARSoilStratigraphy, OABCRSoilStratigraphy
 include("soil/stratigraphy/soil_stratigraphy.jl")
 
 export ConstantSoilCarbonDensity
