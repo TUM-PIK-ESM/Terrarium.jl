@@ -22,7 +22,6 @@ input_dir = "inputs" #hide
 
 # First we check if GPU is available and choose the architecture correspondingly.
 arch = CUDA.functional() ? GPU() : CPU()
-arch = CPU()
 @info "Setting up simulation on $arch" #hide
 
 ## Temporary compatibility function, should be added to NumericalEarth extension
@@ -66,7 +65,7 @@ heatmap(RingGrids.Field(CPU(), interior(on_architecture(CPU(), soilinputs.source
 
 # Now we create our [`SoilModel`](@ref), this time without a model initializer:
 porosity = SoilPorositySURFEX(eltype(grid))
-strat = SoilStratigraphy(eltype(grid); surface = PrescribedSoilHorizon(porosity))
+strat = SoilStratigraphy(eltype(grid), PrescribedSoilHorizon(:surface, porosity))
 soil = SoilEnergyWaterCarbon(eltype(grid); strat)
 model = SoilModel(grid; soil)
 
