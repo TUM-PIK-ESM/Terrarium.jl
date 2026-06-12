@@ -98,4 +98,11 @@ end
     horizon = Terrarium.soil_horizon(1, 1, 5, grid, fields, strat)
     texture = Terrarium.soil_texture(1, 1, grid, fields, horizon)
     @test texture == horizon2.texture
+
+    # Type stability of kernel functions with heterogeneous horizon types;
+    # this is required for GPU compatibility.
+    @test @inferred(Terrarium.soil_texture(1, 1, 10, grid, fields, strat)) == h1_texture
+    @test @inferred(Terrarium.soil_texture(1, 1, 5, grid, fields, strat)) == horizon2.texture
+    @test @inferred(Terrarium.with_soil_horizon(Terrarium.soil_thickness, 1, 1, 10, grid, fields, strat)) == 0.5
+    @test @inferred(Terrarium.with_soil_horizon(Terrarium.soil_thickness, 1, 1, 5, grid, fields, strat)) == Inf
 end

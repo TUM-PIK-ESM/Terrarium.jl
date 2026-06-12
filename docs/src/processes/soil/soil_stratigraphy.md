@@ -80,6 +80,10 @@ MineralOrganic
 ## Kernel functions
 
 ```@docs; canonical = false
+with_soil_horizon
+```
+
+```@docs; canonical = false
 soil_texture
 ```
 

@@ -79,27 +79,57 @@ end
 
 # Kernel functions
 
-@inline function soil_horizon(i, j, k, grid, fields, strat::SoilStratigraphy{NF}) where {NF}
+"""
+    $TYPEDSIGNATURES
+
+Apply `f(i, j, grid, horizon_fields, horizon)` to the soil horizon containing the grid cell
+at index `i, j, k`, where `horizon_fields` is the state variable namespace associated with
+that horizon. The horizon stack is unrolled at compile time, so the call is type stable
+(and thus GPU compatible) as long as `f` returns a value of the same type for every horizon.
+"""
+@inline function with_soil_horizon(f::F, i, j, k, grid, fields, strat::SoilStratigraphy) where {F}
     fgrid = get_field_grid(grid)
     # get midpoint of current node at k
     zₖ = znode(i, j, k, fgrid, Center(), Center(), Center())
     # initially set z to uppermost layer boundary
     z = znode(i, j, fgrid.Nz + 1, fgrid, Center(), Center(), Face())
-    iₖ = 1
-    for (l, name) in enumerate(keys(strat.horizons))
-        horizon = strat.horizons[name]
-        horizon_fields = fields.namespaces[name]
-        iₖ = ifelse(zₖ <= z, l, iₖ)
-        Δzₗ = soil_thickness(i, j, grid, horizon_fields, horizon)
-        z -= Δzₗ
-    end
-    return strat.horizons[iₖ]
+    return _with_soil_horizon(f, i, j, zₖ, z, grid, fields, strat.horizons)
 end
 
-@inline function soil_texture(i, j, k, grid, fields, strat::SoilStratigraphy{NF}) where {NF}
-    horizon = soil_horizon(i, j, k, grid, fields, strat)
-    texture = soil_texture(i, j, grid, fields, horizon)
-    return texture
+# Base case: the bottommost horizon contains all remaining nodes.
+@inline function _with_soil_horizon(f::F, i, j, zₖ, z, grid, fields, horizons::NamedTuple{names, <:Tuple{Any}}) where {F, names}
+    horizon_fields = getproperty(fields.namespaces, first(names))
+    return f(i, j, grid, horizon_fields, first(horizons))
+end
+
+# Recursive case: apply f if zₖ lies above the lower boundary of the current horizon,
+# otherwise recurse into the remaining horizons. Since the horizon names are encoded in
+# the type, the recursion is fully unrolled by the compiler.
+@inline function _with_soil_horizon(f::F, i, j, zₖ, z, grid, fields, horizons::NamedTuple{names}) where {F, names}
+    horizon = first(horizons)
+    horizon_fields = getproperty(fields.namespaces, first(names))
+    Δz = soil_thickness(i, j, grid, horizon_fields, horizon)
+    if zₖ > z - Δz
+        return f(i, j, grid, horizon_fields, horizon)
+    else
+        return _with_soil_horizon(f, i, j, zₖ, z - Δz, grid, fields, Base.tail(horizons))
+    end
+end
+
+"""
+    $TYPEDSIGNATURES
+
+Return the soil horizon containing the grid cell at index `i, j, k`. Note that when the
+stratigraphy contains horizons of heterogeneous types, the return type depends on runtime
+state, which makes this function unsuitable for use in GPU kernels; use
+[`with_soil_horizon`](@ref) instead.
+"""
+@inline function soil_horizon(i, j, k, grid, fields, strat::SoilStratigraphy)
+    return with_soil_horizon((i, j, grid, hfields, horizon) -> horizon, i, j, k, grid, fields, strat)
+end
+
+@inline function soil_texture(i, j, k, grid, fields, strat::SoilStratigraphy)
+    return with_soil_horizon(soil_texture, i, j, k, grid, fields, strat)
 end
 
 """
@@ -114,8 +144,10 @@ Compute the organic fraction of solid material in the soil volume at index `i, j
     )
     ρ_soc = density_soc(i, j, k, grid, fields, bgc)
     ρ_org = density_pure_soc(bgc)
-    horizon = soil_horizon(i, j, k, grid, fields, strat)
-    por = organic_porosity(i, j, k, grid, fields, horizon.porosity, horizon.texture)
+    por = with_soil_horizon(i, j, k, grid, fields, strat) do i, j, grid, horizon_fields, horizon
+        texture = soil_texture(i, j, grid, horizon_fields, horizon)
+        organic_porosity(i, j, k, grid, horizon_fields, horizon.porosity, texture)
+    end
     organic = ρ_soc / ((1 - por) * ρ_org)
     return organic
 end
@@ -131,10 +163,12 @@ Compute the porosity of the soil volume at the given indices.
         bgc::AbstractSoilBiogeochemistry
     )
     organic = organic_fraction(i, j, k, grid, fields, strat, bgc)
-    horizon = soil_horizon(i, j, k, grid, fields, strat)
-    por_m = mineral_porosity(i, j, k, grid, fields, horizon.porosity, horizon.texture)
-    por_o = organic_porosity(i, j, k, grid, fields, horizon.porosity, horizon.texture)
-    return (1 - organic) * por_m + organic * por_o
+    return with_soil_horizon(i, j, k, grid, fields, strat) do i, j, grid, horizon_fields, horizon
+        texture = soil_texture(i, j, grid, horizon_fields, horizon)
+        por_m = mineral_porosity(i, j, k, grid, horizon_fields, horizon.porosity, texture)
+        por_o = organic_porosity(i, j, k, grid, horizon_fields, horizon.porosity, texture)
+        (1 - organic) * por_m + organic * por_o
+    end
 end
 
 """
