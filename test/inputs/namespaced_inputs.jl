@@ -103,7 +103,7 @@ end
     silt = Field(grid, XY())
     clay = Field(grid, XY())
     sand .= 0.25f0
-    silt .= 0.50f0
+    silt .= 0.5f0
     clay .= 0.25f0
     inputs = InputSources(
         InputSource(grid, sand; name = :organic => :sand),
@@ -115,7 +115,7 @@ end
     @test Terrarium.namespace_names(state) == (:organic, :surface, :bedrock)
     ## inputs land only in the organic horizon namespace
     @test all(interior(state.namespaces.organic.sand) .== 0.25f0)
-    @test all(interior(state.namespaces.organic.silt) .== 0.50f0)
+    @test all(interior(state.namespaces.organic.silt) .== 0.5f0)
     @test all(interior(state.namespaces.organic.clay) .== 0.25f0)
     ## sibling horizons keep their defaults (sand defaults to one)
     @test all(interior(state.namespaces.surface.sand) .== 1.0f0)
