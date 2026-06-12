@@ -27,3 +27,7 @@ SpeedyWeather = "0.20.2"
 
 [sources.Terrarium]
 path = ".."
+
+[sources.NumericalEarth]
+url = "https://github.com/NumericalEarth/NumericalEarth.jl.git"
+rev = "main"

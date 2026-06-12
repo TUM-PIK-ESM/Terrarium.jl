@@ -58,28 +58,44 @@ sand3d = Field(Metadatum(:sand_fraction, dataset = soilgrids))
 silt3d = Field(Metadatum(:silt_fraction, dataset = soilgrids))
 clay3d = Field(Metadatum(:clay_fraction, dataset = soilgrids))
 
-# The SoilGrids data is provided on a full Clenshaw-Curtis grid, so we can wrap it directly
-# as a `RingGrids.Field` and interpolate it onto the rings of our (coarser) model grid.
-# Note that NumericalEarth normalizes the latitude axis to run from south to north, whereas
-# RingGrids orders rings from north to south, so we flip the latitude dimension.
-function to_model_grid(field3d, k, target_grid)
+# We regrid the SoilGrids data onto our (much coarser) model grid by nearest-neighbor
+# sampling at each ring point. The SoilGrids data array is indexed `[lon, lat, depth]` with
+# longitude starting at the prime meridian (0°E) and latitude running south to north. We
+# build a sampler closure for a given depth layer `k` and then evaluate it at the longitude
+# and latitude (in degrees) of every column in the model grid.
+function soilgrids_sampler(field3d, k)
     data = Array(interior(field3d, :, :, k))
-    ring_field = RingGrids.FullClenshawField(reverse(data, dims = 2), input_as = Matrix)
-    return RingGrids.interpolate(target_grid, ring_field)
+    nlon, nlat = size(data)
+    return function (lon_deg, lat_deg)
+        i = clamp(round(Int, mod(lon_deg, 360) / 360 * nlon), 1, nlon)
+        j = clamp(round(Int, (lat_deg + 90) / 180 * nlat), 1, nlat)
+        return data[i, j]
+    end
+end
+
+function soilgrids_to_ringfield(field3d, k, rings)
+    sample = soilgrids_sampler(field3d, k)
+    londs, latds = RingGrids.get_londlatds(rings) # degrees, lon in [0, 360)
+    out = RingGrids.Field(rings)
+    for idx in eachindex(out)
+        out[idx] = sample(londs[idx], latds[idx])
+    end
+    return out
 end
 
 # We use the topmost layer (0-5 cm) for the organic horizon and the 60-100 cm layer for
 # the mineral surface horizon below it.
 k_top, k_sub = 6, 2
-sand_org, silt_org, clay_org = (to_model_grid(f, k_top, grid.rings) for f in (sand3d, silt3d, clay3d))
-sand_sub, silt_sub, clay_sub = (to_model_grid(f, k_sub, grid.rings) for f in (sand3d, silt3d, clay3d))
+sand_org, silt_org, clay_org = (soilgrids_to_ringfield(f, k_top, grid.rings) for f in (sand3d, silt3d, clay3d))
+sand_sub, silt_sub, clay_sub = (soilgrids_to_ringfield(f, k_sub, grid.rings) for f in (sand3d, silt3d, clay3d))
 
 # The sand, silt, and clay fractions in SoilGrids are predicted independently and thus do
 # not sum exactly to unity, which the [`SoilTexture`](@ref) constructor requires. We therefore
 # normalize the fractions in each grid cell with [`normalize_texture!`](@ref) and fill cells
-# without data (e.g. ocean cells that fall inside the land mask) with a loam-like default texture.
-normalize_texture!(sand_org, silt_org, clay_org)
-normalize_texture!(sand_sub, silt_sub, clay_sub)
+# without data (e.g. ocean cells that fall inside the land mask) with a loam-like default
+# texture. The data of a `RingGrids.Field` is a plain vector, which we pass in directly.
+normalize_texture!(sand_org.data, silt_org.data, clay_org.data)
+normalize_texture!(sand_sub.data, silt_sub.data, clay_sub.data)
 
 fig = heatmap(sand_org, title = "SoilGrids 2.0 sand fraction (0-5 cm) on the model grid")
 DisplayAs.PNG(fig) #hide
