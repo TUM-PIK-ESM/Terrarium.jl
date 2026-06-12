@@ -218,15 +218,45 @@ Retrieves the `Field` from `state` matching the `name` of the given variable.
 """
     $TYPEDSIGNATURES
 
-Retrieves all `Field`s from `state` matching the names of the given variables.
+Retrieves all `Field`s from `state` matching the names of the given variables. Any `Namespace`s
+in `vars` are resolved recursively and their fields are stored as nested `NamedTuple`s under the
+`namespaces` key, as in `StateVariables`.
 """
-@inline function get_fields(state, vars::Tuple{Vararg{AbstractVariable}})
+@inline function get_fields(state, vars::Tuple{Vararg{Union{AbstractVariable, Namespace}}})
     vars = deduplicate_vars(vars)
-    matched_fields = fastmap(vars) do var
+    plainvars = filter(var -> isa(var, AbstractVariable), vars)
+    matched_fields = fastmap(plainvars) do var
         get_field(state, var)
     end
-    names = map(varname, vars)
-    return NamedTuple{names}(matched_fields)
+    names = map(varname, plainvars)
+    fields = NamedTuple{names}(matched_fields)
+    namespaces = filter(var -> isa(var, Namespace), vars)
+    return if isempty(namespaces)
+        fields
+    else
+        ns_names = map(varname, namespaces)
+        ns_fields = fastmap(namespaces) do ns
+            get_fields(getproperty(state, varname(ns)), ns)
+        end
+        merge(fields, (; namespaces = NamedTuple{ns_names}(ns_fields)))
+    end
+end
+
+"""
+    $TYPEDSIGNATURES
+
+Retrieves all `Field`s declared by the given `Namespace` from `state`, where `state` is assumed
+to correspond to the (nested) `StateVariables` of the namespace itself.
+"""
+@inline function get_fields(state, ns::Namespace)
+    vars = ns.vars
+    allvars = tuplejoin(
+        values(vars.prognostic),
+        values(vars.auxiliary),
+        values(vars.inputs),
+        values(vars.namespaces),
+    )
+    return get_fields(state, allvars)
 end
 
 """
