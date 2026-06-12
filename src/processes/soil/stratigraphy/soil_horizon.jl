@@ -4,7 +4,7 @@
 Represents an arbitrary soil horizon whose properties (texture and porosity) are assumed to
 be constant across both space and time.
 """
-@parameterized struct ConstantSoilHorizon{NF, Porosity <: AbstractSoilPorosity{NF}} <: AbstractSoilHorizon{NF}
+@parameterized @kwdef struct ConstantSoilHorizon{NF, Porosity <: AbstractSoilPorosity{NF}} <: AbstractSoilHorizon{NF}
     "Material composition of mineral soil component"
     @component texture::SoilTexture{NF}
 
@@ -34,7 +34,7 @@ end
 Represents an arbitrary soil horizon whose properties (texture and porosity) are prescribed
 via input `Field`s and can therefore vary across space and (less commonly) time.
 """
-@parameterized struct PrescribedSoilHorizon{NF, Porosity <: AbstractSoilPorosity{NF}} <: AbstractSoilHorizon{NF}
+@parameterized @kwdef struct PrescribedSoilHorizon{NF, Porosity <: AbstractSoilPorosity{NF}} <: AbstractSoilHorizon{NF}
     "Parameterization of soil porosity"
     @component porosity::Porosity
 end

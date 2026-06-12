@@ -55,7 +55,7 @@ abstract type AbstractSoilHorizon{NF} end
 
 Base type for soil stratigraphy parameterizations.
 """
-abstract type AbstractStratigraphy{NF} end
+abstract type AbstractStratigraphy{NF} <: AbstractProcess{NF} end
 
 # Kernel functions
 
