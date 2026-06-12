@@ -51,11 +51,18 @@ properties.
 abstract type AbstractSoilHorizon{NF} end
 
 """
+    $TYPEDSIGNATURES
+
+Return the porosity parameterization for the given soil horizon.
+"""
+porosity(horizon::AbstractSoilHorizon) = horizon.porosity
+
+"""
     $TYPEDEF
 
 Base type for soil stratigraphy parameterizations.
 """
-abstract type AbstractStratigraphy{NF} end
+abstract type AbstractStratigraphy{NF} <: AbstractProcess{NF} end
 
 # Kernel functions
 

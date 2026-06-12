@@ -77,28 +77,50 @@ function variables(strat::SoilStratigraphy)
     return namespaces(horizon_vars)
 end
 
+# Process methods
+
+compute_auxiliary!(state, grid, ::SoilStratigraphy, args...) = nothing
+
+compute_tendencies!(state, grid, ::SoilStratigraphy, args...) = nothing
+
 # Kernel functions
 
-@inline function soil_horizon(i, j, k, grid, fields, strat::SoilStratigraphy{NF}) where {NF}
+"""
+    $TYPEDSIGNATURES
+
+Apply `func(i, j, grid, fields, horizon, args...)` at volume `i, j, k` on `grid` where
+horizon is the soil horizon to which the volume at vertical layer `k` belongs. This pattern
+is admittedly a bit unintuitive but avoids type instability in determining the type of soil
+horizon via the function barrier `func`.
+"""
+@inline function on_soil_horizon(
+        func, i, j, k, grid, fields,
+        strat::SoilStratigraphy{NF, Horizons},
+        args...
+    ) where {NF, names, Horizons <: NamedTuple{names}}
     fgrid = get_field_grid(grid)
     # get midpoint of current node at k
     zₖ = znode(i, j, k, fgrid, Center(), Center(), Center())
     # initially set z to uppermost layer boundary
     z = znode(i, j, fgrid.Nz + 1, fgrid, Center(), Center(), Face())
-    iₖ = 1
-    for (l, name) in enumerate(keys(strat.horizons))
-        horizon = strat.horizons[name]
-        horizon_fields = fields.namespaces[name]
-        iₖ = ifelse(zₖ <= z, l, iₖ)
+    # initialize result to first horizon (will be updated in loop)
+    matched = first(strat.horizons)
+    matched_name = first(names)
+    # use compile-time names to extract corresponding values (GPU-friendly)
+    horizon_tuple = map(name -> getproperty(strat.horizons, name), names)
+    field_tuple = map(name -> getproperty(fields, name), names)
+    for (name, horizon, horizon_fields) in zip(names, horizon_tuple, field_tuple)
+        # update result when zₖ is within this horizon's depth range
+        matched = ifelse(zₖ <= z, horizon, matched)
+        matched_name = ifelse(zₖ <= z, name, matched_name)
         Δzₗ = soil_thickness(i, j, grid, horizon_fields, horizon)
         z -= Δzₗ
     end
-    return strat.horizons[iₖ]
+    return func(i, j, grid, getfield(fields, matched_name), matched, args...)
 end
 
 @inline function soil_texture(i, j, k, grid, fields, strat::SoilStratigraphy{NF}) where {NF}
-    horizon = soil_horizon(i, j, k, grid, fields, strat)
-    texture = soil_texture(i, j, grid, fields, horizon)
+    texture = on_soil_horizon(soil_texture, i, j, k, grid, fields, strat)
     return texture
 end
 
@@ -114,8 +136,7 @@ Compute the organic fraction of solid material in the soil volume at index `i, j
     )
     ρ_soc = density_soc(i, j, k, grid, fields, bgc)
     ρ_org = density_pure_soc(bgc)
-    horizon = soil_horizon(i, j, k, grid, fields, strat)
-    por = organic_porosity(i, j, k, grid, fields, horizon.porosity, horizon.texture)
+    por = on_soil_horizon(organic_porosity, i, j, k, grid, fields, strat)
     organic = ρ_soc / ((1 - por) * ρ_org)
     return organic
 end
@@ -131,9 +152,8 @@ Compute the porosity of the soil volume at the given indices.
         bgc::AbstractSoilBiogeochemistry
     )
     organic = organic_fraction(i, j, k, grid, fields, strat, bgc)
-    horizon = soil_horizon(i, j, k, grid, fields, strat)
-    por_m = mineral_porosity(i, j, k, grid, fields, horizon.porosity, horizon.texture)
-    por_o = organic_porosity(i, j, k, grid, fields, horizon.porosity, horizon.texture)
+    por_m = on_soil_horizon(mineral_porosity, i, j, k, grid, fields, strat)
+    por_o = on_soil_horizon(organic_porosity, i, j, k, grid, fields, strat)
     return (1 - organic) * por_m + organic * por_o
 end
 

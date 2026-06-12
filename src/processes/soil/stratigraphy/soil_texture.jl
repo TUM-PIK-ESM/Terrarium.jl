@@ -27,9 +27,9 @@ SoilTexture(::Type{NF}; kwargs...) where {NF} = SoilTexture{NF}(; kwargs...)
 
 # Convenience Field setter
 function Oceananigans.Fields.set!(fields, texture::SoilTexture)
-    set!(fields.sand, texture.sand)
-    set!(fields.clay, texture.clay)
-    set!(fields.silt, texture.silt)
+    set!(fields.sand_fraction, texture.sand)
+    set!(fields.clay_fraction, texture.clay)
+    set!(fields.silt_fraction, texture.silt)
     return nothing
 end
 
