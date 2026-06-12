@@ -43,11 +43,16 @@ grid = ColumnRingGrid(arch, NF, ExponentialSpacing(N = 30), land_mask.grid, land
 grid_lon, grid_lat = RingGrids.get_lonlats(grid.rings) # in radians
 
 # ## Loading soil texture from SoilGrids 2.0
-# SoilGrids 2.0 provides global predictions of soil properties on a ~10 km grid for six
-# depth intervals (0-5, 5-15, 15-30, 30-60, 60-100, and 100-200 cm). NumericalEarth.jl
-# downloads the data on first use (~several hundred MB, cached afterwards) and returns
-# Oceananigans `Field`s with the vertical axis ordered from the deepest layer (k=1,
-# 100-200 cm) to the surface layer (k=6, 0-5 cm).
+# SoilGrids 2.0 provides global predictions of soil properties on a ~10 km grid for the six
+# standard [GlobalSoilMap](https://www.isric.org/projects/globalsoilmap) depth intervals
+# (0-5, 5-15, 15-30, 30-60, 60-100, and 100-200 cm). Sand, silt, and clay are mass fractions
+# of the fine earth (< 2 mm) component reported in g/kg following the USDA particle-size
+# classification (clay < 2 µm, silt 2-50 µm, sand 50-2000 µm); see the
+# [GlobalSoilMap specifications (2015)](https://www.isric.org/sites/default/files/GlobalSoilMap_specifications_december_2015_2.pdf)
+# for the full reference. NumericalEarth.jl downloads the data on first use (~several hundred
+# MB, cached afterwards), converts the fractions to the unit interval, and returns Oceananigans
+# `Field`s with the vertical axis ordered from the deepest layer (k=1, 100-200 cm) to the
+# surface layer (k=6, 0-5 cm).
 soilgrids = SoilGrids2()
 sand3d = Field(Metadatum(:sand_fraction, dataset = soilgrids))
 silt3d = Field(Metadatum(:silt_fraction, dataset = soilgrids))
@@ -69,24 +74,10 @@ k_top, k_sub = 6, 2
 sand_org, silt_org, clay_org = (to_model_grid(f, k_top, grid.rings) for f in (sand3d, silt3d, clay3d))
 sand_sub, silt_sub, clay_sub = (to_model_grid(f, k_sub, grid.rings) for f in (sand3d, silt3d, clay3d))
 
-# TODO: maybe move this into the package?
 # The sand, silt, and clay fractions in SoilGrids are predicted independently and thus do
 # not sum exactly to unity, which the [`SoilTexture`](@ref) constructor requires. We therefore
-# normalize the fractions in each grid cell and fill cells without data (e.g. ocean cells
-# that fall inside the land mask) with a loam-like default texture.
-function normalize_texture!(sand, silt, clay; defaults = (0.4, 0.4, 0.2))
-    total = sand .+ silt .+ clay
-    for i in eachindex(total)
-        if isnan(total[i]) || total[i] <= 0
-            sand[i], silt[i], clay[i] = defaults
-        else
-            sand[i] /= total[i]
-            silt[i] /= total[i]
-            clay[i] /= total[i]
-        end
-    end
-    return sand, silt, clay
-end
+# normalize the fractions in each grid cell with [`normalize_texture!`](@ref) and fill cells
+# without data (e.g. ocean cells that fall inside the land mask) with a loam-like default texture.
 normalize_texture!(sand_org, silt_org, clay_org)
 normalize_texture!(sand_sub, silt_sub, clay_sub)
 

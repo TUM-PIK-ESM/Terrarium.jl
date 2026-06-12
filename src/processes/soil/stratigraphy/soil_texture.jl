@@ -33,6 +33,29 @@ function Oceananigans.Fields.set!(fields, texture::SoilTexture)
     return nothing
 end
 
+"""
+    $SIGNATURES
+
+Normalize the given `sand`, `silt`, and `clay` fraction arrays (or `Field`s) in place such that
+the fractions sum to unity in each element, as required by the `SoilTexture` constructor. Elements
+without valid data (`NaN` or non-positive total) are filled with the `defaults`. This is useful
+for preprocessing soil texture data from external sources (e.g. SoilGrids) where the fractions
+are predicted independently and thus do not sum exactly to unity.
+"""
+function normalize_texture!(sand, silt, clay; defaults = (0.4, 0.4, 0.2))
+    for i in eachindex(sand, silt, clay)
+        total = sand[i] + silt[i] + clay[i]
+        if isnan(total) || total <= 0
+            sand[i], silt[i], clay[i] = defaults
+        else
+            sand[i] /= total
+            silt[i] /= total
+            clay[i] /= total
+        end
+    end
+    return sand, silt, clay
+end
+
 Base.eltype(::SoilTexture{NF}) where {NF} = NF
 
 @inline @propagate_inbounds function Base.getindex(texture::SoilTexture{<:AbstractArray}, idx...)
