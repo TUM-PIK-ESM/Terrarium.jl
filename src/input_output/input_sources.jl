@@ -133,7 +133,7 @@ struct FieldInputSource{NF, name, VD <: VarDims, FS <: AnyField{NF}, UT} <: Inpu
     field::FS
 end
 
-function initialize!(fields, source::FieldInputSource, clock = nothing, scope::InputPath = ())
+function initialize!(fields, source::FieldInputSource, clock::Clock = Clock(time = 0.0), scope::InputPath = ())
     name = varname(source)
     if matches_scope(source, scope) && hasproperty(fields, name)
         field = getproperty(fields, name)
