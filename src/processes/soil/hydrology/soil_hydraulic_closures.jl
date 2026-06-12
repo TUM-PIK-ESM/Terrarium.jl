@@ -35,7 +35,7 @@ function closure!(
     strat = get_stratigraphy(soil)
     bgc = get_biogeochemistry(soil)
     out = (pressure_head = state.pressure_head,)
-    fields = get_fields(state, hydrology, bgc; except = out)
+    fields = get_fields(state, hydrology, strat, bgc; except = out)
     launch!(
         grid, XYZ, saturation_to_pressure_kernel!,
         out, fields, closure, hydrology, strat, bgc
@@ -58,7 +58,7 @@ function invclosure!(
     strat = get_stratigraphy(soil)
     bgc = get_biogeochemistry(soil)
     out = (saturation_water_ice = state.saturation_water_ice,)
-    fields = get_fields(state, hydrology, bgc; except = out)
+    fields = get_fields(state, hydrology, strat, bgc; except = out)
     # determine saturation from pressure
     launch!(
         grid, XYZ, pressure_to_saturation_kernel!,

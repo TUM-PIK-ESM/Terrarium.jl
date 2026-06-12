@@ -56,7 +56,7 @@ function compute_auxiliary!(
     strat = get_stratigraphy(soil)
     bgc = get_biogeochemistry(soil)
     out = auxiliary_fields(state, hydrology)
-    fields = get_fields(state, hydrology, bgc; except = out)
+    fields = get_fields(state, hydrology, strat, bgc; except = out)
     launch!(grid, XYZ, compute_hydraulics_kernel!, out, fields, hydrology, strat, bgc)
     return nothing
 end
@@ -74,7 +74,7 @@ function compute_tendencies!(
     strat = get_stratigraphy(soil)
     bgc = get_biogeochemistry(soil)
     tendencies = tendency_fields(state, hydrology)
-    fields = get_fields(state, hydrology, bgc, evtr)
+    fields = get_fields(state, hydrology, strat, bgc, evtr)
     clock = state.clock
     launch!(
         grid, XYZ, compute_tendencies_kernel!,
