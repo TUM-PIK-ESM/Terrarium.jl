@@ -248,7 +248,8 @@ struct Namespace{name, Vars}
     Namespace(name::Symbol, vars::Variables) = new{name, typeof(vars)}(vars)
 end
 
-@inline varname(::Namespace{name}) where {name} = name
+@inline varname(ns::Namespace{name}) where {name} = varname(typeof(ns))
+@inline varname(::Type{<:Namespace{name}}) where {name} = name
 
 Variables(obj) = Variables(variables(obj))
 Variables(vars::Union{AbstractProcessVariable, Namespace}...) = Variables(vars)
@@ -290,11 +291,11 @@ function Variables(@nospecialize(vars::Tuple{Vararg{Union{AbstractProcessVariabl
 end
 
 """
-    deduplicate_vars(vars::Tuple{Vararg{AbstractVariable}})
+    deduplicate_vars(vars::Tuple{Vararg{Union{AbstractVariable, Namespace}}})
 
 Type-stable equivalent of [`deduplicate`](@ref) for tuples of `AbstractVariable`s.
 """
-@generated function deduplicate_vars(vars::Tuple{Vararg{AbstractVariable}})
+@generated function deduplicate_vars(vars::Tuple{Vararg{Union{AbstractVariable, Namespace}}})
     names = map(varname, vars.parameters)
     unique_idx = unique(i -> names[i], eachindex(vars.parameters))
     accessors = map(i -> :(vars[$i]), unique_idx)

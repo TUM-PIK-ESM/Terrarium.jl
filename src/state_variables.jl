@@ -209,14 +209,14 @@ end
 
 Retrieves the `Field` from `state` matching the `name` of the given variable.
 """
-@inline get_field(state, var::AbstractVariable{name}) where {name} = getproperty(state, name)
+@inline get_field(state, var::Union{AbstractVariable{name}, Namespace{name}}) where {name} = getproperty(state, name)
 
 """
     $TYPEDSIGNATURES
 
 Retrieves all `Field`s from `state` matching the names of the given variables.
 """
-@inline function get_fields(state, vars::Tuple{Vararg{AbstractVariable}})
+@inline function get_fields(state, vars::Tuple{Vararg{Union{AbstractVariable, Namespace}}})
     vars = deduplicate_vars(vars)
     matched_fields = fastmap(vars) do var
         get_field(state, var)
