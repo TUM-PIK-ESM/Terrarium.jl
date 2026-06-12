@@ -47,16 +47,16 @@ function PrescribedSoilHorizon(
 end
 
 variables(horizon::PrescribedSoilHorizon{NF}) where {NF} = (
-    input(:sand, XY(), default = one(NF), bounds = UnitInterval, desc = "Mass fraction of sand in soil matrix"),
-    input(:silt, XY(), bounds = UnitInterval, desc = "Mass fraction of silt in soil matrix"),
-    input(:clay, XY(), bounds = UnitInterval, desc = "Mass fraction of clay in soil matrix"),
+    input(:sand_fraction, XY(), default = one(NF), bounds = UnitInterval, desc = "Mass fraction of sand in soil matrix"),
+    input(:silt_fraction, XY(), bounds = UnitInterval, desc = "Mass fraction of silt in soil matrix"),
+    input(:clay_fraction, XY(), bounds = UnitInterval, desc = "Mass fraction of clay in soil matrix"),
     input(:thickness, XY(), default = NF(Inf), bounds = Nonnegative, desc = "Thickness of soil horizon"),
 )
 
 @inline function soil_texture(i, j, grid, fields, horizon::PrescribedSoilHorizon{NF}) where {NF}
-    sand = fields.sand[i, j]
-    silt = fields.silt[i, j]
-    clay = fields.clay[i, j]
+    sand = fields.sand_fraction[i, j]
+    silt = fields.silt_fraction[i, j]
+    clay = fields.clay_fraction[i, j]
     return SoilTexture(NF; sand, silt, clay)
 end
 
