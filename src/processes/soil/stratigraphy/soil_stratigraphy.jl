@@ -79,7 +79,12 @@ end
 
 # Kernel functions
 
-@inline function soil_horizon(i, j, k, grid, fields, strat::SoilStratigraphy{NF}) where {NF}
+"""
+    $TYPEDSIGNATURES
+
+Determine the index of the soil horizon in `strat` which contains the grid cell at index `i, j, k`.
+"""
+@inline function soil_horizon_index(i, j, k, grid, fields, strat::SoilStratigraphy)
     fgrid = get_field_grid(grid)
     # get midpoint of current node at k
     zₖ = znode(i, j, k, fgrid, Center(), Center(), Center())
@@ -88,17 +93,30 @@ end
     iₖ = 1
     for (l, name) in enumerate(keys(strat.horizons))
         horizon = strat.horizons[name]
-        horizon_fields = fields.namespaces[name]
+        hfields = horizon_fields(fields, strat, l)
         iₖ = ifelse(zₖ <= z, l, iₖ)
-        Δzₗ = soil_thickness(i, j, grid, horizon_fields, horizon)
+        Δzₗ = soil_thickness(i, j, grid, hfields, horizon)
         z -= Δzₗ
     end
-    return strat.horizons[iₖ]
+    return iₖ
 end
 
-@inline function soil_texture(i, j, k, grid, fields, strat::SoilStratigraphy{NF}) where {NF}
-    horizon = soil_horizon(i, j, k, grid, fields, strat)
-    texture = soil_texture(i, j, grid, fields, horizon)
+"""
+    $SIGNATURES
+
+Retrieve the namespaced fields belonging to the `l`-th horizon of `strat` from `fields`.
+"""
+@inline horizon_fields(fields, strat::SoilStratigraphy, l::Integer) = fields.namespaces[keys(strat.horizons)[l]]
+
+@inline function soil_horizon(i, j, k, grid, fields, strat::SoilStratigraphy)
+    l = soil_horizon_index(i, j, k, grid, fields, strat)
+    return strat.horizons[l]
+end
+
+@inline function soil_texture(i, j, k, grid, fields, strat::SoilStratigraphy)
+    l = soil_horizon_index(i, j, k, grid, fields, strat)
+    horizon = strat.horizons[l]
+    texture = soil_texture(i, j, grid, horizon_fields(fields, strat, l), horizon)
     return texture
 end
 
@@ -114,8 +132,10 @@ Compute the organic fraction of solid material in the soil volume at index `i, j
     )
     ρ_soc = density_soc(i, j, k, grid, fields, bgc)
     ρ_org = density_pure_soc(bgc)
-    horizon = soil_horizon(i, j, k, grid, fields, strat)
-    por = organic_porosity(i, j, k, grid, fields, horizon.porosity, horizon.texture)
+    l = soil_horizon_index(i, j, k, grid, fields, strat)
+    horizon = strat.horizons[l]
+    texture = soil_texture(i, j, grid, horizon_fields(fields, strat, l), horizon)
+    por = organic_porosity(i, j, k, grid, fields, horizon.porosity, texture)
     organic = ρ_soc / ((1 - por) * ρ_org)
     return organic
 end
@@ -131,9 +151,11 @@ Compute the porosity of the soil volume at the given indices.
         bgc::AbstractSoilBiogeochemistry
     )
     organic = organic_fraction(i, j, k, grid, fields, strat, bgc)
-    horizon = soil_horizon(i, j, k, grid, fields, strat)
-    por_m = mineral_porosity(i, j, k, grid, fields, horizon.porosity, horizon.texture)
-    por_o = organic_porosity(i, j, k, grid, fields, horizon.porosity, horizon.texture)
+    l = soil_horizon_index(i, j, k, grid, fields, strat)
+    horizon = strat.horizons[l]
+    texture = soil_texture(i, j, grid, horizon_fields(fields, strat, l), horizon)
+    por_m = mineral_porosity(i, j, k, grid, fields, horizon.porosity, texture)
+    por_o = organic_porosity(i, j, k, grid, fields, horizon.porosity, texture)
     return (1 - organic) * por_m + organic * por_o
 end
 
