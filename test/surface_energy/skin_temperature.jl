@@ -22,8 +22,9 @@ end
     state = initialize(model)
     @test !hasproperty(state.inputs, :skin_temperature)
     @test hasproperty(state.inputs, :ground_temperature)
+    # Sunny and dry
     set!(state.surface_shortwave_down, 300.0) # sunny conditions
-    set!(state.surface_longwave_down, 50.0)
+    set!(state.surface_longwave_down, 200.0)
     set!(state.specific_humidity, 0.002) # dry conditions
     set!(state.air_pressure, 101_325) # standard pressure
     set!(state.air_temperature, 10.0) # 10 °C
@@ -32,6 +33,8 @@ end
     compute_auxiliary!(state, model)
     @test all(isfinite.(state.skin_temperature))
     @test all(state.sensible_heat_flux .< 0)
+    @test all(state.ground_heat_flux .< 0)
+    @test all(state.surface_net_radiation .< 0)
     # check that skin temperature converges for a large number of iterations
     Tskin_old = deepcopy(state.skin_temperature)
     resid = nothing
@@ -44,14 +47,14 @@ end
         resid = maximum(abs.(state.skin_temperature - Tskin_old))
         balance = state.surface_net_radiation + state.latent_heat_flux + state.sensible_heat_flux - state.ground_heat_flux
         Tskin_old = deepcopy(state.skin_temperature)
-        println("skin temperature at iteration $i: $(state.skin_temperature[1, 1])  residual: $resid  energy balance: $(balance[1, 1, 1])")
+        println("skin temperature at iteration $i: $(state.skin_temperature[1, 1])  residual: $resid  energy balance: $(balance[1, 1, 1]) net radiation: $(state.surface_net_radiation[1, 1]) Hₗ: $(state.latent_heat_flux[1, 1]) Hₛ: $(state.sensible_heat_flux[1, 1]) G: $(state.ground_heat_flux[1, 1])")
     end
     @test all(resid .< sqrt(eps()))
     @test all(abs.(balance) .< sqrt(eps()))
     # Cloudy and wet
     set!(state.surface_shortwave_down, 150.0)
-    set!(state.surface_longwave_down, 50.0)
-    set!(state.specific_humidity, 0.01)
+    set!(state.surface_longwave_down, 200.0)
+    set!(state.specific_humidity, 0.001)
     set!(state.air_pressure, 101_325) # standard pressure
     set!(state.air_temperature, 5.0) # 5 °C
     set!(state.ground_temperature, 10.0) # 10 °C
@@ -60,6 +63,8 @@ end
     compute_auxiliary!(state, model)
     @test all(isfinite.(state.skin_temperature))
     @test all(state.sensible_heat_flux .> 0)
+    @test all(state.ground_heat_flux .> 0)
+    @test all(state.surface_net_radiation .> 0)
     # check that skin temperature converges for a large number of iterations
     Tskin_old = deepcopy(state.skin_temperature)
     for i in 1:20
@@ -70,7 +75,7 @@ end
         resid = maximum(abs.(state.skin_temperature - Tskin_old))
         balance = state.surface_net_radiation + state.latent_heat_flux + state.sensible_heat_flux - state.ground_heat_flux
         Tskin_old = deepcopy(state.skin_temperature)
-        println("skin temperature at iteration $i: $(state.skin_temperature[1, 1])  residual: $resid  energy balance: $(balance[1, 1, 1])")
+        println("skin temperature at iteration $i: $(state.skin_temperature[1, 1])  residual: $resid  energy balance: $(balance[1, 1, 1]) net radiation: $(state.surface_net_radiation[1, 1]) Hₗ: $(state.latent_heat_flux[1, 1]) Hₛ: $(state.sensible_heat_flux[1, 1]) G: $(state.ground_heat_flux[1, 1])")
     end
     @test all(resid .< sqrt(eps()))
     @test all(abs.(balance) .< sqrt(eps()))
