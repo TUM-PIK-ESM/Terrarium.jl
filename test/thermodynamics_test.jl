@@ -1,6 +1,27 @@
 using Terrarium
+using ClimaParams
+using Thermodynamics
 using Test
 
+
+@testset "Equivalence test with Clima" begin
+    FT = Float64
+    air_temperature = 10.0 # 10 °C
+    air_density = 1.225 # kg/m³
+    air_pressure = 101_325 # Pa
+    air_temperature_K = air_temperature + 273.15 # Convert to Kelvin
+    # Clima
+    params_clima = Thermodynamics.Parameters.ThermodynamicsParameters(FT)
+    e_sat_clima = Thermodynamics.saturation_vapor_pressure(params_clima, air_temperature_K)
+    q_sat_clima = Thermodynamics.q_vap_saturation(params_clima, air_temperature_K, air_pressure)
+    # Terrarium
+    thermodyn_constants = Terrarium.ThermodynamicConstants(FT)
+    e_sat_terrarium = Terrarium.saturation_vapor_pressure(thermodyn_constants, air_temperature)
+    q_sat_terrarium = Terrarium.saturation_specific_humidity_vapor(thermodyn_constants, air_temperature_K, air_pressure)
+    # Compare
+    @test e_sat_clima ≈ e_sat_terrarium
+    @test q_sat_clima ≈ q_sat_terrarium
+end
 
 @testset "Saturated conditions" begin
     air_temperature = 10.0 # 10 °C
