@@ -10,7 +10,7 @@ $FIELDS
 """
 @parameterized @kwdef struct PrescribedSkinTemperature{NF} <: AbstractSkinTemperature{NF}
     "Assumed thermal conductivity at the surface"
-    @param κₛ::NF = 2.0 (units = u"W/m/K", bounds = Positive)
+    @param κₛ::NF = 1.0 (units = u"W/m/K", bounds = Positive)
 end
 
 PrescribedSkinTemperature(::Type{NF}; kwargs...) where {NF} = PrescribedSkinTemperature{NF}(; kwargs...)
@@ -48,7 +48,10 @@ $FIELDS
 """
 @parameterized @kwdef struct ImplicitSkinTemperature{NF} <: AbstractSkinTemperature{NF}
     "Assumed thermal conductivity at the surface"
-    @param κₛ::NF = 2.0 (units = u"W/m/K", bounds = Positive)
+    @param κₛ::NF = 1.0 (units = u"W/m/K", bounds = Positive)
+
+    "Under-relaxation factor ω ∈ (0, 1] for the skin temperature fixed-point update"
+    ω::NF = 0.5
 end
 
 ImplicitSkinTemperature(::Type{NF}; kwargs...) where {NF} = ImplicitSkinTemperature{NF}(; kwargs...)
@@ -65,6 +68,23 @@ Compute the implicit update of the skin temperature from the given ground surfac
     κₛ = skinT.κₛ
     Ts = Tg - G * Δz / (2 * κₛ)
     return Ts
+end
+
+"""
+    $TYPEDSIGNATURES
+
+Apply the under-relaxed fixed-point update to the skin temperature. The fixed point iteration
+``T_s \\leftarrow T_g - G(T_s)\\,Δz / (2κₛ)`` is only conditionally stable: its multiplier is
+proportional to ``(Δz / 2κₛ)\\,∂G/∂T_s``, so small `κₛ`, a thick uppermost ground cell, or a
+large flux sensitivity can push it past unity and the iteration diverges. Under-relaxing with
+`ω = skinT.ω ∈ (0, 1]` extends the stable range, and the result is clamped to a physically
+admissible range to keep the surface thermodynamics (e.g. saturation vapor pressure) in their
+domain of validity even if a step would otherwise overshoot.
+"""
+@inline function relax_skin_temperature(skinT::ImplicitSkinTemperature{NF}, Ts_prev, Ts_target) where {NF}
+    ω = skinT.ω
+    Ts = (1 - ω) * Ts_prev + ω * Ts_target
+    return clamp(Ts, oftype(Ts, -100), oftype(Ts, 100))
 end
 
 """
@@ -113,7 +133,7 @@ end
 """
     $TYPEDSIGNATURES
 
-Compute `ground_heat_flux` as the residual ``R_\\text{net} - H_s - H_l``.
+Compute `ground_heat_flux` as the residual ``R_\\text{net} + H_s + H_l`` (all fluxes positive upward).
 """
 function compute_ground_heat_flux!(
         state, grid,
@@ -175,8 +195,10 @@ end
 @kernel function compute_skin_temperature_kernel!(out, grid, fields, skinT::ImplicitSkinTemperature, args...)
     i, j = @index(Global, NTuple)
 
-    # Compute and store skin temperature
-    out.skin_temperature[i, j, 1] = compute_skin_temperature(i, j, grid, fields, skinT, args...)
+    # Under-relaxed update of the skin temperature from its previous value
+    Ts_prev = out.skin_temperature[i, j, 1]
+    Ts_target = compute_skin_temperature(i, j, grid, fields, skinT, args...)
+    out.skin_temperature[i, j, 1] = relax_skin_temperature(skinT, Ts_prev, Ts_target)
 end
 
 @kernel function compute_ground_heat_flux_kernel!(out, grid, fields, skinT::AbstractSkinTemperature, args...)

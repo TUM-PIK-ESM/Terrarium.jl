@@ -103,8 +103,10 @@ end
 
     # Compute fluxes based on current skin temperature
     compute_surface_energy_fluxes!(out, i, j, grid, fields, seb, constants, atmos, args...)
-    # Update skin temperature
-    out.skin_temperature[i, j, 1] = compute_skin_temperature(i, j, grid, fields, seb.skin_temperature)
+    # Under-relaxed update of the skin temperature from its previous value
+    Ts_prev = fields.skin_temperature[i, j]
+    Ts_target = compute_skin_temperature(i, j, grid, fields, seb.skin_temperature)
+    out.skin_temperature[i, j, 1] = relax_skin_temperature(seb.skin_temperature, Ts_prev, Ts_target)
     # Recompute fluxes from updated skin temperature
     compute_surface_energy_fluxes!(out, i, j, grid, fields, seb, constants, atmos, args...)
 end
