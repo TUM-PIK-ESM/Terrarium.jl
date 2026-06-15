@@ -45,7 +45,7 @@ end
     @test all(state.surface_net_radiation .< 0)
     # check that skin temperature converges for a large number of iterations
     Tskin_old = deepcopy(state.skin_temperature)
-    println("skin temperature at iteration 0 (default Terrarium): $(state.skin_temperature[1, 1])")
+    println("skin temperature at iteration 0 (default Terrarium): $(state.skin_temperature[1, 1]) residual: $resid  energy balance: $(balance[1, 1, 1]) net radiation: $(state.surface_net_radiation[1, 1]) Hₗ: $(state.latent_heat_flux[1, 1]) Hₛ: $(state.sensible_heat_flux[1, 1]) G: $(state.ground_heat_flux[1, 1])")
     resid = nothing
     balance = nothing
     for i in 1:20
