@@ -33,6 +33,10 @@ if MAIN_TESTS
         include("timestepping/heun.jl")
     end
 
+    @testset "Thermodynamics" begin
+        include("thermodynamics_test.jl")
+    end
+
     @testset "Soil model and processes" begin
         include("soil/soil_model_tests.jl")
     end
