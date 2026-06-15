@@ -1,4 +1,5 @@
 using Terrarium
+using Thermodynamics
 using Test
 
 @testset "Prescribed skin temperature" begin
@@ -22,21 +23,29 @@ end
     state = initialize(model)
     @test !hasproperty(state.inputs, :skin_temperature)
     @test hasproperty(state.inputs, :ground_temperature)
-    # Sunny and dry
-    set!(state.surface_shortwave_down, 300.0) # sunny conditions
-    set!(state.surface_longwave_down, 200.0)
-    set!(state.specific_humidity, 0.002) # dry conditions
-    set!(state.air_pressure, 101_325) # standard pressure
-    set!(state.air_temperature, 10.0) # 10 °C
-    set!(state.ground_temperature, 5.0) # 5 °C
-    set!(state.windspeed, 1.0) # 1 m/s
+    # Sunny and dry in Bergen Norway (Figure 5.11, Shuttleworth 2012)
+    set!(state.surface_shortwave_down, 600.0) # sunny conditions
+    set!(state.surface_longwave_down, 300.0)
+    air_pressure = 101_325 # standard pressure
+    set!(state.air_pressure, air_pressure) # standard pressure
+    air_temperature = 10.0 # 10 °C
+    set!(state.air_temperature, air_temperature)
+    thermodyn_constants = model.constants.thermodynamics
+    air_density = Thermodynamics.air_density(thermodyn_constants, air_temperature + 273.15, air_pressure)
+    specific_humidity_saturation = Terrarium.saturation_specific_humidity_vapor(thermodyn_constants, air_temperature, air_density)
+    relative_humidity = 0.75 # https://en.wikipedia.org/wiki/Climate_of_Norway
+    specific_humidity = relative_humidity * specific_humidity_saturation
+    set!(state.specific_humidity, specific_humidity)
+    set!(state.ground_temperature, 13.0) # 13 °C
+    set!(state.windspeed, 5.0) # 5 m/s
     compute_auxiliary!(state, model)
     @test all(isfinite.(state.skin_temperature))
-    @test all(state.sensible_heat_flux .< 0)
+    @test all(state.sensible_heat_flux .> 0)
     @test all(state.ground_heat_flux .< 0)
     @test all(state.surface_net_radiation .< 0)
     # check that skin temperature converges for a large number of iterations
     Tskin_old = deepcopy(state.skin_temperature)
+    println("skin temperature at iteration 0 (default Terrarium): $(state.skin_temperature[1, 1])")
     resid = nothing
     balance = nothing
     for i in 1:20
