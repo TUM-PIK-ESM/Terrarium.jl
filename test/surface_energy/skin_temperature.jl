@@ -19,8 +19,10 @@ end
     grid = ColumnGrid(CPU(), Float64, ExponentialSpacing(N = 10))
     clock = Clock(time = 0.0)
     skin_temperature = ImplicitSkinTemperature(κₛ = 0.5)
+    aerodynamics = Terrarium.ConstantAerodynamics(Cₕ = 2.0e-3)
+    atmosphere = Terrarium.PrescribedAtmosphere(Float64; aerodynamics = aerodynamics)
     seb = SurfaceEnergyBalance(Float64; skin_temperature)
-    model = SurfaceEnergyModel(grid, surface_energy_balance = seb)
+    model = SurfaceEnergyModel(grid, surface_energy_balance = seb, atmosphere = atmosphere)
     state = initialize(model)
     @test !hasproperty(state.inputs, :skin_temperature)
     @test hasproperty(state.inputs, :ground_temperature)
@@ -46,7 +48,7 @@ end
     Tskin_old = deepcopy(state.skin_temperature)
     println("skin temperature at iteration 0 (default Terrarium): $(state.skin_temperature[1, 1]) net radiation: $(state.surface_net_radiation[1, 1]) Hₗ: $(state.latent_heat_flux[1, 1]) Hₛ: $(state.sensible_heat_flux[1, 1]) G: $(state.ground_heat_flux[1, 1])")
     resid = nothing
-    for i in 1:10
+    for i in 1:20
         # compute fluxes
         Terrarium.compute_surface_energy_fluxes!(state, grid, seb, model.constants, model.atmosphere)
         # diagnose skin temperature
