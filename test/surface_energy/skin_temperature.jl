@@ -63,7 +63,7 @@ end
     field_grid = get_field_grid(grid)
     Δz = Oceananigans.Δzᵃᵃᶜ(1, 1, field_grid.Nz, field_grid)
     thermal_conductivity = model.surface_energy_balance.skin_temperature.κₛ
-    G_gradient = (state.ground_temperature[1, 1] - state.skin_temperature[1, 1]) / (Δz / 2 * thermal_conductivity)
+    G_gradient = thermal_conductivity * (state.ground_temperature[1, 1] - state.skin_temperature[1, 1]) / (Δz / 2)
     @test G_gradient ≈ state.ground_heat_flux[1, 1]
 
     # Cloudy and wet
