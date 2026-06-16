@@ -25,7 +25,7 @@ $FIELDS
     "Specific latent heat of fusion of water in J/kg at 0°C"
     latent_heat_fusion::NF = 3.34e5
     "Specific latent heat of vaporization of water in J/kg at 0°C"
-    latent_heat_vaporization::NF = 2.257e6
+    latent_heat_vaporization::NF = 2.5008e6
     "Specific latent heat of sublimation of water in J/kg at 0°C"
     latent_heat_sublimation::NF = 2.834e6
     "Reference temperature (0°C in Kelvin)"
