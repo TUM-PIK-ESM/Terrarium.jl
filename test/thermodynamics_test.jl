@@ -1,5 +1,3 @@
-using Pkg
-Pkg.activate("test/.")
 using Terrarium
 using ClimaParams
 using Thermodynamics
@@ -36,7 +34,7 @@ end
     # Using Terrarium function
     e_sat = Terrarium.saturation_vapor_pressure(thermodyn_constants, air_temperature)
     q_sat = Terrarium.saturation_specific_humidity_vapor(thermodyn_constants, air_temperature, air_density)
-    # Compare with 10% tolerance
-    @test isapprox(e_sat, e_sat_tetens; rtol = 0.1)
-    @test isapprox(q_sat, q_sat_tetens; rtol = 0.1)
+    # Compare with 5% tolerance
+    @test isapprox(e_sat, e_sat_tetens; rtol = 0.05)
+    @test isapprox(q_sat, q_sat_tetens; rtol = 0.05)
 end
