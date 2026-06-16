@@ -37,11 +37,13 @@ variables(::PrescribedSkinTemperature) = (
 
 Scheme for an implicit skin temperature ``T_s`` satisfying:
 ```math
-R_{\\text{net}}(T_s) = H_s(T_s) + H_l(T_s) + G(T_s, T_g)
+R_{\\text{net}}(T_s) + H_s(T_s) + H_l(T_s) - G(T_s, T_g) = 0 
 ```
 where ``R_{\\text{net}}`` is the net radiation budget, ``H_s`` is the sensible heat flux, ``H_l`` is the latent
 heat flux from sublimation and evapotranspiration, ``G`` is the ground heat flux, and ``T_g`` is the ground
-temperature, or temperature of the uppermost subsurface (soil or snow) layer.
+temperature, or temperature of the uppermost subsurface (soil or snow) layer. All fluxes follow the positive upwards 
+convention. For ``G``, this means from the deeper soil towards the surface is positive. For the other fluxes, this 
+means from the surface towards the atmosphere is positive. 
 
 Properties:
 $FIELDS
