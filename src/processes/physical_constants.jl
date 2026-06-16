@@ -7,7 +7,7 @@ so that it integrates directly with [Thermodynamics.jl](https://github.com/CliMA
 
 ```jldoctest
 julia> show(ThermodynamicConstants(Float64))
-ThermodynamicConstants{Float64}(1004.5, 2070.0, 4186.0, 1846.0, 334000.0, 2.257e6, 2.834e6, 273.16, 273.16, 273.16, 611.657, 287.058, 461.5)
+ThermodynamicConstants{Float64}(1004.5, 2070.0, 4186.0, 1846.0, 334000.0, 2.5008e6, 2.834e6, 273.16, 273.16, 273.16, 611.657, 287.058, 461.5)
 ```
 
 Properties:
@@ -109,7 +109,7 @@ sub-structs by category:
 
 ```jldoctest
 julia> show(PhysicalConstants())
-PhysicalConstants{Float64}(ThermodynamicConstants{Float64}(1004.5, 2070.0, 4186.0, 1846.0, 334000.0, 2.257e6, 2.834e6, 273.16, 273.16, 273.16, 611.657, 287.058, 461.5), MaterialConstants{Float64}(1000.0, 916.7, 12.0), UniversalConstants{Float64}(9.80665, 5.6704e-8, 0.4))
+PhysicalConstants{Float64}(ThermodynamicConstants{Float64}(1004.5, 2070.0, 4186.0, 1846.0, 334000.0, 2.5008e6, 2.834e6, 273.16, 273.16, 273.16, 611.657, 287.058, 461.5), MaterialConstants{Float64}(1000.0, 916.7, 12.0), UniversalConstants{Float64}(9.80665, 5.6704e-8, 0.4))
 ```
 
 To override individual constants, pass a customised sub-struct:
