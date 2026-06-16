@@ -1,5 +1,6 @@
 using Terrarium
 using Thermodynamics
+using Oceananigans
 using Test
 
 @testset "Prescribed skin temperature" begin
@@ -23,6 +24,7 @@ end
     state = initialize(model)
     @test !hasproperty(state.inputs, :skin_temperature)
     @test hasproperty(state.inputs, :ground_temperature)
+
     # Sunny and dry in Bergen Norway (Figure 5.11, Shuttleworth 2012)
     set!(state.surface_shortwave_down, 600.0) # sunny conditions
     set!(state.surface_longwave_down, 300.0)
@@ -57,6 +59,13 @@ end
     @test all(state.ground_heat_flux .< 0)
     @test all(state.surface_net_radiation .< 0)
     @test all(resid .< sqrt(eps()))
+    # Check if ground heat flux converged to gradient flux
+    field_grid = get_field_grid(grid)
+    Δz = Oceananigans.Δzᵃᵃᶜ(1, 1, field_grid.Nz, field_grid)
+    thermal_conductivity = model.surface_energy_balance.skin_temperature.κₛ
+    G_gradient = (state.ground_temperature[1, 1] - state.skin_temperature[1, 1]) / (Δz / 2 * thermal_conductivity)
+    @test G_gradient ≈ state.ground_heat_flux[1, 1]
+
     # Cloudy and wet
     set!(state.surface_shortwave_down, 150.0)
     set!(state.surface_longwave_down, 200.0)
