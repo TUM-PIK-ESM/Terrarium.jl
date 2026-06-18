@@ -83,6 +83,10 @@ function compute_auxiliary!(state, model::LandModel)
     compute_auxiliary!(state, grid, model.vegetation, model.constants, model.atmosphere, model.soil)
     compute_auxiliary!(state, grid, model.surface_hydrology, model.constants, model.atmosphere, model.soil, model.vegetation)
     compute_auxiliary!(state, grid, model.surface_energy_balance, model.constants, model.atmosphere, model.surface_hydrology)
+    # Recompute ET fluxes from the converged skin temperature so the partitioned fluxes consumed by
+    # soil hydrology, canopy interception, and diagnostics are consistent with the SEB solution.
+    # (The SEB itself consumes the humidity flux lazily during its solve.)
+    compute_evapotranspiration!(state, grid, model.surface_hydrology, model.constants, model.atmosphere, model.soil, model.vegetation)
     return nothing
 end
 

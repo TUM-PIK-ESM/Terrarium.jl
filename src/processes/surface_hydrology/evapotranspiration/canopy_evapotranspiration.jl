@@ -46,14 +46,32 @@ end
 """
     $TYPEDSIGNATURES
 
+Compute the transpiration vapor conductance [m/s] from aerodynamic resistance `rₐ` and stomatal
+conductance `gw_can`. The transpiration flux is this conductance times the humidity gradient.
+"""
+@inline function transpiration_conductance(::PALADYNCanopyEvapotranspiration{NF}, rₐ, gw_can) where {NF}
+    rₛ = 1 / max(gw_can, sqrt(eps(NF)))  # stomatal resistance as reciprocal of conductance
+    return 1 / (rₐ + rₛ)
+end
+
+"""
+    $TYPEDSIGNATURES
+
+Compute the canopy evaporation vapor conductance [m/s] from canopy saturation fraction `f_can`
+and aerodynamic resistance `rₐ`. The canopy evaporation flux is this conductance times the
+humidity gradient.
+"""
+@inline canopy_evaporation_conductance(::PALADYNCanopyEvapotranspiration, f_can, rₐ) = f_can / rₐ
+
+"""
+    $TYPEDSIGNATURES
+
 Compute transpiration from the given humidity gradient, aerodynamic resistance `rₐ` and stomatal conductance `gw_can`.
 """
-@inline function compute_transpiration(::PALADYNCanopyEvapotranspiration{NF}, Δq, rₐ, gw_can) where {NF}
-    let rₛ = 1 / max(gw_can, sqrt(eps(NF)))  # stomatal resistance as reciprocal of conductance
-        # Calculate transpriation flux in m/s (positive upwards)
-        E_trp = Δq / (rₐ + rₛ)
-        return E_trp
-    end
+@inline function compute_transpiration(evtr::PALADYNCanopyEvapotranspiration, Δq, rₐ, gw_can)
+    # Calculate transpiration flux in m/s (positive upwards)
+    E_trp = transpiration_conductance(evtr, rₐ, gw_can) * Δq
+    return E_trp
 end
 
 """
@@ -78,15 +96,19 @@ end
 Compute evaporation of water intercepted by the canopy from humidity gradient `Δq`, canopy saturation fraction
 `f_can`, and aerodynamic resistance `rₐ`.
 """
-@inline function compute_evaporation_canopy(::PALADYNCanopyEvapotranspiration, Δq, f_can, rₐ)
+@inline function compute_evaporation_canopy(evtr::PALADYNCanopyEvapotranspiration, Δq, f_can, rₐ)
     # Calculate canopy evaporation flux in m/s (positive upwards)
-    E_can = f_can * Δq / rₐ
+    E_can = canopy_evaporation_conductance(evtr, f_can, rₐ) * Δq
     return E_can
 end
 
 # Top-level interface methods
 
 variables(::PALADYNCanopyEvapotranspiration{NF}) where {NF} = (
+    # Skin-driven vapor conductances (independent of skin temperature; held fixed during the SEB solve)
+    auxiliary(:canopy_evaporation_conductance, XY(); units = u"m/s", desc = "Canopy evaporation vapor conductance"),
+    auxiliary(:transpiration_conductance, XY(); units = u"m/s", desc = "Transpiration vapor conductance"),
+    # Partitioned humidity fluxes (skin-driven terms refreshed from the converged skin temperature by the finalize pass)
     auxiliary(:evaporation_canopy, XY(); desc = "Canopy evaporation contribution to surface humidity flux", units = u"m/s"),
     auxiliary(:evaporation_ground, XY(), units = u"m/s", desc = "Ground evaporation contribution to surface humidity flux"),
     auxiliary(:transpiration, XY(), units = u"m/s", desc = "Transpiration contribution to surface humidity flux"),
@@ -99,6 +121,30 @@ variables(::PALADYNCanopyEvapotranspiration{NF}) where {NF} = (
     E_can = fields.evaporation_canopy[i, j]
     T_can = fields.transpiration[i, j]
     return E_gnd + E_can + T_can
+end
+
+"""
+    $TYPEDSIGNATURES
+
+Evaluate the surface humidity flux [m/s] from the skin temperature read live from `fields`,
+reusing the precomputed vapor conductances. The skin-driven terms (canopy evaporation and
+transpiration) are recomputed from `Δq(Tₛ)`; the ground evaporation term is held fixed since it
+is driven by the ground temperature, not the skin temperature. This method is used by the SEB
+during the implicit skin-temperature solve, where `fields.skin_temperature` is the current
+iterate, so the latent heat flux responds to the skin temperature.
+"""
+@propagate_inbounds function surface_humidity_flux(
+        i, j, grid, fields,
+        ::PALADYNCanopyEvapotranspiration,
+        atmos::AbstractAtmosphere,
+        constants::PhysicalConstants,
+    )
+    Ts = fields.skin_temperature[i, j]
+    g_can = fields.canopy_evaporation_conductance[i, j]
+    g_trp = fields.transpiration_conductance[i, j]
+    E_gnd = fields.evaporation_ground[i, j]
+    Δqs = compute_specific_humidity_difference(i, j, grid, fields, atmos, constants, Ts)
+    return (g_can + g_trp) * Δqs + E_gnd
 end
 
 """ $TYPEDSIGNATURES """
@@ -149,9 +195,18 @@ for the given scheme `evapotranspiration` and process dependencies.
     f_can = saturation_canopy_water(i, j, grid, fields, canopy_interception)
     β = ground_evaporation_resistance_factor(i, j, grid, fields, evapotranspiration.ground_resistance, soil)
 
-    # Compute and store ET fluxes
-    out.transpiration[i, j, 1] = compute_transpiration(evapotranspiration, Δqs, rₐ, gw_can)
+    # Store skin-driven vapor conductances (independent of skin temperature). These are the
+    # source of truth from which the SEB derives the latent heat flux lazily during the skin
+    # temperature solve (see the lazy `surface_humidity_flux` method below).
+    out.canopy_evaporation_conductance[i, j, 1] = canopy_evaporation_conductance(evapotranspiration, f_can, rₐ)
+    out.transpiration_conductance[i, j, 1] = transpiration_conductance(evapotranspiration, rₐ, gw_can)
+
+    # Compute and store the partitioned ET fluxes from the current skin temperature. The ground
+    # evaporation is driven by the ground temperature; the canopy evaporation and transpiration are
+    # skin-driven. Re-running this kernel after the SEB solve (see `LandModel`) refreshes the
+    # skin-driven fluxes so they are consistent with the converged skin temperature.
     out.evaporation_ground[i, j, 1] = compute_evaporation_ground(evapotranspiration, Δqg, β, rₐ, rₑ)
+    out.transpiration[i, j, 1] = compute_transpiration(evapotranspiration, Δqs, rₐ, gw_can)
     out.evaporation_canopy[i, j, 1] = compute_evaporation_canopy(evapotranspiration, Δqs, f_can, rₐ)
     return out
 end

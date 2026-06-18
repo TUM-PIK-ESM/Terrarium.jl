@@ -48,15 +48,15 @@ means from the surface towards the atmosphere is positive.
 Properties:
 $FIELDS
 """
-@parameterized @kwdef struct ImplicitSkinTemperature{NF, Solver} <: AbstractSkinTemperature{NF}
+@parameterized struct ImplicitSkinTemperature{NF, Solver} <: AbstractSkinTemperature{NF}
     "Assumed thermal conductivity at the surface"
-    @param κₛ::NF = 1.0 (units = u"W/m/K", bounds = Positive)
+    @param κₛ::NF (units = u"W/m/K", bounds = Positive)
 
     "Numerical solver for the implicit skin temperature"
-    solver::Solver = default_skin_temperature_solver(typeof(κₛ))
+    solver::Solver
 end
 
-ImplicitSkinTemperature(::Type{NF}; κₛ::NF = 1.0, solver = default_skin_temperature_solver(NF)) where {NF} = ImplicitSkinTemperature{NF, typeof(solver)}(; κₛ, solver)
+ImplicitSkinTemperature(::Type{NF}; κₛ::NF = NF(1.0), solver = default_skin_temperature_solver(NF)) where {NF} = ImplicitSkinTemperature{NF, typeof(solver)}(κₛ, solver)
 
 function default_skin_temperature_solver(::Type{NF}) where {NF}
     # Default to Newton-Raphson without relaxation (factor = 1) but clamping values to realistic limits

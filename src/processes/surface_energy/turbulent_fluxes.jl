@@ -207,7 +207,7 @@ defined by `evtr` which is assumed to be already computed.
     q_air = specific_humidity(i, j, grid, fields, atmos)
     # TODO: density should be evaluated at surface temperature for better accuracy
     ρₐ = Thermodynamics.air_density(constants.thermodynamics, celsius_to_kelvin(constants.thermodynamics, Tₐ), pres, q_air)
-    Q_h = surface_humidity_flux(i, j, grid, fields, evtr)   # humidity flux
+    Q_h = surface_humidity_flux(i, j, grid, fields, evtr, atmos, constants)   # humidity flux at the live skin temperature
     # Calculate latent heat flux (positive upwards)
     Hₗ = compute_latent_heat_flux(tur, Q_h, ρₐ, L)
     return Hₗ
