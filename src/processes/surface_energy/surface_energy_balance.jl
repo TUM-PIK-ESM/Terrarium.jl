@@ -52,7 +52,28 @@ variables(seb::SurfaceEnergyBalance) = tuplejoin(
         hydrology::Optional{AbstractSurfaceHydrology} = nothing,
         args...
     )
-    compute_surface_energy_fluxes!(state, grid, seb, constants, atmos, hydrology, args...)
+    solve_surface_energy_balance!(state, grid, seb, constants, atmos, hydrology)
+    return nothing
+end
+
+"""
+    $TYPEDSIGNATURES
+
+Compute the surface energy fluxes on `grid` based on the current atmospheric state.
+"""
+function solve_surface_energy_balance!(
+        state, grid,
+        seb::SurfaceEnergyBalance,
+        constants::PhysicalConstants,
+        atmos::AbstractAtmosphere,
+        hydrology::Optional{AbstractSurfaceHydrology} = nothing,
+        args...
+    )
+    evtr = isnothing(hydrology) ? nothing : get_evapotranspiration(hydrology)
+    # Construct outputs as auxiliaries + skin temperature (which is prognostic)
+    out = (skin_temperature = state.skin_temperature, auxiliary_fields(state, seb)...)
+    fields = get_fields(state, seb, atmos, evtr)
+    launch!(grid, XY, solve_surface_energy_balance_kernel!, out, fields, seb, constants, atmos, evtr, args...)
     return nothing
 end
 
@@ -75,40 +96,6 @@ function compute_surface_energy_fluxes!(
     fields = get_fields(state, seb, atmos, evtr)
     launch!(grid, XY, compute_surface_energy_fluxes_kernel!, out, fields, seb, constants, atmos, evtr, args...)
     return nothing
-end
-
-# Kernels (fused)
-
-@kernel inbounds = true function compute_surface_energy_fluxes_kernel!(
-        out, grid, fields,
-        seb::SurfaceEnergyBalance,
-        constants::PhysicalConstants,
-        atmos::AbstractAtmosphere,
-        args...
-    )
-    i, j = @index(Global, NTuple)
-
-    # Compute fluxes based on current skin temperature
-    compute_surface_energy_fluxes!(out, i, j, grid, fields, seb, constants, atmos, args...)
-end
-
-@kernel inbounds = true function compute_surface_energy_fluxes_kernel!(
-        out, grid, fields,
-        seb::SurfaceEnergyBalance{NF, <:ImplicitSkinTemperature},
-        constants::PhysicalConstants,
-        atmos::AbstractAtmosphere,
-        args...
-    ) where {NF}
-    i, j = @index(Global, NTuple)
-
-    # Compute fluxes based on current skin temperature
-    compute_surface_energy_fluxes!(out, i, j, grid, fields, seb, constants, atmos, args...)
-    # Under-relaxed update of the skin temperature from its previous value
-    Ts_prev = fields.skin_temperature[i, j]
-    Ts_target = compute_skin_temperature(i, j, grid, fields, seb.skin_temperature)
-    out.skin_temperature[i, j, 1] = relax_skin_temperature(seb.skin_temperature, Ts_prev, Ts_target)
-    # Recompute fluxes from updated skin temperature
-    compute_surface_energy_fluxes!(out, i, j, grid, fields, seb, constants, atmos, args...)
 end
 
 # Kernel functions
@@ -141,6 +128,36 @@ Fused kernel function that computes the radiative and turbulent fluxes, as well 
         out.latent_heat_flux[i, j, 1] = compute_latent_heat_flux(i, j, grid, fields, seb.turbulent_fluxes, evtr, constants, atmos)
     end
     # Compute ground heat flux
-    out.ground_heat_flux[i, j, 1] = compute_ground_heat_flux(i, j, grid, fields, seb.skin_temperature, seb.radiative_fluxes, seb.turbulent_fluxes)
+    out.ground_heat_flux[i, j, 1] = compute_ground_heat_flux(i, j, grid, fields, seb.skin_temperature, seb)
     return nothing
+end
+
+# Kernels (fused)
+
+@kernel inbounds = true function solve_surface_energy_balance_kernel!(
+        out, grid, fields,
+        seb::SurfaceEnergyBalance,
+        constants::PhysicalConstants,
+        atmos::AbstractAtmosphere,
+        args...
+    )
+    i, j = @index(Global, NTuple)
+
+    # Compute fluxes based on current skin temperature
+    solve_skin_temperature!(out, i, j, grid, fields, seb.skin_temperature, seb, constants, atmos, args...)
+    # Recompute fluxes from final skin temperature
+    compute_surface_energy_fluxes!(out, i, j, grid, fields, seb, constants, atmos, args...)
+end
+
+@kernel inbounds = true function compute_surface_energy_fluxes_kernel!(
+        out, grid, fields,
+        seb::SurfaceEnergyBalance,
+        constants::PhysicalConstants,
+        atmos::AbstractAtmosphere,
+        args...
+    )
+    i, j = @index(Global, NTuple)
+
+    # Compute fluxes based on current skin temperature
+    compute_surface_energy_fluxes!(out, i, j, grid, fields, seb, constants, atmos, args...)
 end

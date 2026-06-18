@@ -41,9 +41,7 @@ function test_skin_temperature_solve!(
         air_temperature,
         relative_humidity,
         ground_temperature,
-        windspeed,
-        max_iterations = 20,
-        tolerance = sqrt(eps()),
+        windspeed
     )
     set!(state.surface_shortwave_down, surface_shortwave_down)
     set!(state.surface_longwave_down, surface_longwave_down)
@@ -59,24 +57,21 @@ function test_skin_temperature_solve!(
     compute_auxiliary!(state, model)
     @test all(isfinite.(state.skin_temperature))
 
-    Tskin_old = deepcopy(state.skin_temperature)
-    residual = zero(Tskin_old[1])
-    for i in 1:max_iterations
-        Terrarium.compute_surface_energy_fluxes!(state, grid, seb, model.constants, model.atmosphere)
-        Terrarium.update_skin_temperature!(state, grid, seb.skin_temperature)
-        residual = maximum(abs.(state.skin_temperature - Tskin_old))
-        Tskin_old = deepcopy(state.skin_temperature)
-        residual < tolerance && break
-    end
-
-    @test all(residual .< sqrt(eps()))
-
     # Check if ground heat flux converged to gradient flux
     field_grid = get_field_grid(grid)
     Δz = Oceananigans.Δzᵃᵃᶜ(1, 1, field_grid.Nz, field_grid)
-    thermal_conductivity = model.surface_energy_balance.skin_temperature.κₛ
-    G_gradient = thermal_conductivity * (state.ground_temperature[1, 1] - state.skin_temperature[1, 1]) / (Δz / 2)
-    @test G_gradient ≈ state.ground_heat_flux[1, 1]
+    κₛ = model.surface_energy_balance.skin_temperature.κₛ
+    Ts = state.skin_temperature[1, 1]
+    Tg = state.ground_temperature[1, 1]
+    G = state.ground_heat_flux[1, 1]
+    G_gradient = -κₛ * (Ts - Tg) / (Δz / 2)
+    Ts_implicit = Tg - G * Δz / (2 * κₛ)
+    residual = Ts - Ts_implicit
+
+    @test G_gradient ≈ G
+    @test abs(residual) < sqrt(eps())
+
+    @info "skin temperature: $Ts residual: $residual R: $(state.surface_net_radiation[1, 1]) Hₛ: $(state.sensible_heat_flux[1, 1]) Hₗ: $(state.latent_heat_flux[1, 1]) G: $G"
 
     return (
         skin_temperature = state.skin_temperature,
@@ -102,8 +97,10 @@ end
 
 @testset "Implicit skin temperature" begin
     grid = ColumnGrid(CPU(), Float64, ExponentialSpacing(N = 10))
-    skin_temperature = ImplicitSkinTemperature(κₛ = 0.5)
-    aerodynamics = Terrarium.ConstantAerodynamics(Cₕ = 1.0e-3)
+    solver = Terrarium.NewtonRaphsonSolver(eltype(grid), max_iterations = 5)
+    # solver = Terrarium.FixedPointSolver(eltype(grid), relax = Terrarium.RelaxationFactor(factor = 0.5), max_iterations = 100)
+    skin_temperature = ImplicitSkinTemperature(eltype(grid); κₛ = 0.5, solver)
+    aerodynamics = Terrarium.ConstantAerodynamics(Cₕ = 2.0e-3)
     atmosphere = Terrarium.PrescribedAtmosphere(Float64; aerodynamics = aerodynamics)
     seb = SurfaceEnergyBalance(Float64; skin_temperature)
     model = SurfaceEnergyModel(grid, surface_energy_balance = seb, atmosphere = atmosphere)
@@ -120,6 +117,10 @@ end
         ground_temperature = 13.0,
         windspeed = 5.0,
     )
+    @test all(results.sensible_heat_flux .> 0)
+    @test all(results.latent_heat_flux .> 0)
+    @test all(results.ground_heat_flux .< 0)
+    @test all(results.surface_net_radiation .< 0)
 
     # Sunny and humid
     state = initialize(model)
@@ -133,6 +134,10 @@ end
         ground_temperature = 13.0,
         windspeed = 5.0,
     )
+    @test all(results.sensible_heat_flux .> 0)
+    @test all(results.latent_heat_flux .> 0)
+    @test all(results.ground_heat_flux .< 0)
+    @test all(results.surface_net_radiation .< 0)
 
     # Cloudy and dry
     state = initialize(model)
@@ -144,10 +149,9 @@ end
         air_temperature = 5.0,
         relative_humidity = 0.6,
         ground_temperature = 10.0,
-        windspeed = 10.0,
-        max_iterations = 10,
+        windspeed = 10.0
     )
-    @test all(results.sensible_heat_flux .> 0)
+    @test all(results.sensible_heat_flux .< 0)
     @test all(results.latent_heat_flux .> 0)
     @test all(results.ground_heat_flux .> 0)
     @test all(results.surface_net_radiation .> 0)
@@ -162,8 +166,7 @@ end
         air_temperature = 5.0,
         relative_humidity = 0.9,
         ground_temperature = 10.0,
-        windspeed = 10.0,
-        max_iterations = 10,
+        windspeed = 10.0
     )
     @test all(results.sensible_heat_flux .> 0)
     @test all(results.latent_heat_flux .> 0)

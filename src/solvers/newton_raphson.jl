@@ -3,7 +3,7 @@ struct NewtonRaphsonSolver{NF, R}
     tolerance::NF
 
     "Finite difference step size used to approximate the derivative"
-    fd_step::NF
+    epsilon::NF
 
     "Relaxation scheme"
     relax::R
@@ -15,11 +15,11 @@ end
 function NewtonRaphsonSolver(
         ::Type{NF};
         tolerance::NF = sqrt(eps(NF)),
-        fd_step::NF = cbrt(eps(NF)),
+        epsilon::NF = cbrt(eps(NF)),
         relax::R = nothing, # default to no relaxation
         max_iterations::Int = 100
     ) where {NF, R}
-    return NewtonRaphsonSolver{NF, R}(tolerance, fd_step, relax, max_iterations)
+    return NewtonRaphsonSolver{NF, R}(tolerance, epsilon, relax, max_iterations)
 end
 
 # Evaluate the fixed-point residual F(x) = g(x) - x, where g(x) is the value of
@@ -48,7 +48,7 @@ end
     iteration = 1
     while abs(F) > solver.tolerance && iteration <= solver.max_iterations
         # Approximate the derivative F'(x) with a forward finite difference
-        h = solver.fd_step * (1 + abs(x))
+        h = solver.epsilon * (1 + abs(x))
         F_h = _residual!(out, indices, grid, fields, step_func!, target_field, x + h, func_args...; func_kwargs...)
         dF = (F_h - F) / h
         # Newton update; fall back to the perturbed point if the derivative vanishes

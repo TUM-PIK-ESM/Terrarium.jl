@@ -83,7 +83,6 @@ function compute_auxiliary!(state, model::LandModel)
     compute_auxiliary!(state, grid, model.vegetation, model.constants, model.atmosphere, model.soil)
     compute_auxiliary!(state, grid, model.surface_hydrology, model.constants, model.atmosphere, model.soil, model.vegetation)
     compute_auxiliary!(state, grid, model.surface_energy_balance, model.constants, model.atmosphere, model.surface_hydrology)
-    compute_surface_energy_fluxes!(state, grid, model.surface_energy_balance, model.constants, model.atmosphere, model.surface_hydrology)
     return nothing
 end
 
