@@ -57,6 +57,13 @@ for NF in (Float32, Float64)
             _, iters = run_solver(limited, x -> NF(2) * x, NF(1.0))
             @test iters > limited.max_iterations
         end
+
+        @testset "Type stability" begin
+            # Type stability of the full solve path is required for GPU kernels:
+            # the result must infer to a concrete (NF, Int) tuple with no boxing.
+            result = @inferred run_solver(solver, x -> x / NF(2) + NF(1), NF(0.0))
+            @test result isa Tuple{NF, Int}
+        end
     end
 
     @testset "NewtonRaphsonSolver ($NF)" begin
@@ -97,6 +104,17 @@ for NF in (Float32, Float64)
             limited = NewtonRaphsonSolver(NF; tolerance = tol, max_iterations = 5)
             _, iters = run_solver(limited, x -> x + NF(1), NF(0.0))
             @test iters > limited.max_iterations
+        end
+
+        @testset "Type stability" begin
+            # Type stability of the full solve path is required for GPU kernels:
+            # the result must infer to a concrete (NF, Int) tuple with no boxing.
+            result = @inferred run_solver(solver, x -> x / NF(2) + NF(1), NF(0.0))
+            @test result isa Tuple{NF, Int}
+            # The finite-difference derivative must not silently widen the type
+            # (e.g. via the fd_step or the (1 + abs(x)) term promoting to Float64).
+            nonlinear = @inferred run_solver(solver, x -> x^2 + x - NF(2), NF(1.0))
+            @test nonlinear isa Tuple{NF, Int}
         end
     end
 end
