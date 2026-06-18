@@ -137,6 +137,9 @@ include("timesteppers/abstract_timestepper.jl")
 # abstract model types
 include("models/abstract_types.jl")
 
+# numerical solvers
+include("solvers/solvers.jl")
+
 # physical processes
 include("processes/processes.jl")
 
