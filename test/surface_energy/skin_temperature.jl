@@ -97,8 +97,7 @@ end
 
 @testset "Implicit skin temperature" begin
     grid = ColumnGrid(CPU(), Float64, ExponentialSpacing(N = 10))
-    solver = Terrarium.NewtonRaphsonSolver(eltype(grid), max_iterations = 5)
-    # solver = Terrarium.FixedPointSolver(eltype(grid), relax = Terrarium.RelaxationFactor(factor = 0.5), max_iterations = 100)
+    solver = Terrarium.default_skin_temperature_solver(eltype(grid))
     skin_temperature = ImplicitSkinTemperature(eltype(grid); κₛ = 0.5, solver)
     aerodynamics = Terrarium.ConstantAerodynamics(Cₕ = 2.0e-3)
     atmosphere = Terrarium.PrescribedAtmosphere(Float64; aerodynamics = aerodynamics)

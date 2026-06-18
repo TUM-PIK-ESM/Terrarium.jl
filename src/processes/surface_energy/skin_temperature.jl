@@ -59,14 +59,9 @@ end
 ImplicitSkinTemperature(::Type{NF}; κₛ::NF = 1.0, solver = default_skin_temperature_solver(NF)) where {NF} = ImplicitSkinTemperature{NF, typeof(solver)}(; κₛ, solver)
 
 function default_skin_temperature_solver(::Type{NF}) where {NF}
-    # The fixed point iteration ``T_s ← T_g - G(T_s) Δz / 2κₛ`` is only conditionally stable:
-    # its multiplier is proportional to ``(Δz / 2κₛ) ∂G/∂T_s``, so small `κₛ`, a thick uppermost ground cell,
-    # or a large flux sensitivity can push it past unity and the iteration diverges. Under-relaxing with
-    # `ω ∈ (0, 1]` extends the stability region, and the result is clamped to a physically
-    # admissible range to keep the surface thermodynamics (e.g. saturation vapor pressure) in their
-    # domain of validity even if a step would otherwise overshoot.
-    relax = RelaxationFactor(factor = NF(0.5), upper_limit = NF(100), lower_limit = NF(-100))
-    return FixedPointSolver(NF, max_iterations = 5, relax = relax)
+    # Default to Newton-Raphson without relaxation (factor = 1) but clamping values to realistic limits
+    relax = RelaxationFactor(factor = NF(1.0), upper_limit = NF(80), lower_limit = NF(-80))
+    return NewtonRaphsonSolver(NF, max_iterations = 5, relax = relax)
 end
 
 """
