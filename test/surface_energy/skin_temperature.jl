@@ -54,7 +54,7 @@ function test_skin_temperature_solve!(
     set!(state.ground_temperature, ground_temperature)
     set!(state.windspeed, windspeed)
 
-    compute_auxiliary!(state, model)
+    @time compute_auxiliary!(state, model)
     @test all(isfinite.(state.skin_temperature))
 
     # Check if ground heat flux converged to gradient flux
@@ -98,6 +98,7 @@ end
 @testset "Implicit skin temperature" begin
     grid = ColumnGrid(CPU(), Float64, ExponentialSpacing(N = 10))
     solver = Terrarium.default_skin_temperature_solver(eltype(grid))
+    # solver = Terrarium.RootSolver(eltype(grid)) # using RootSolvers.jl
     skin_temperature = ImplicitSkinTemperature(eltype(grid); κₛ = 0.5, solver)
     aerodynamics = Terrarium.ConstantAerodynamics(Cₕ = 2.0e-3)
     atmosphere = Terrarium.PrescribedAtmosphere(Float64; aerodynamics = aerodynamics)

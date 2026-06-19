@@ -204,8 +204,7 @@ end
     )
     objective = ObjectiveFunction(update_skin_temperature!, :skin_temperature)
     indices = (i, j)
-    solve!(out, indices, grid, fields, objective, skinT.solver, skinT, seb, seb_args...)
-    return nothing
+    return solve!(out, indices, grid, fields, objective, skinT.solver, skinT, seb, seb_args...)
 end
 
 # Kernels
