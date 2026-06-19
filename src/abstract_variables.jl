@@ -263,7 +263,7 @@ function Variables(@nospecialize(vars::Tuple{Vararg{Union{AbstractProcessVariabl
     prognostic_vars = deduplicate(varinfo, filter(var -> isa(var, PrognosticVariable), vars))
     auxiliary_vars = deduplicate(varinfo, filter(var -> isa(var, AuxiliaryVariable), vars))
     input_vars = deduplicate(varinfo, filter(var -> isa(var, InputVariable), vars))
-    namespaces = deduplicate(varinfo, filter(var -> isa(var, Namespace), vars))
+    namespaces = merge_namespaces(filter(var -> isa(var, Namespace), vars))
     # get tendencies from prognostic variables
     tendency_vars = map(var -> var.tendency, prognostic_vars)
     # create closure variables and prepend to tuple of auxiliary variables;
@@ -293,7 +293,7 @@ end
 """
     deduplicate_vars(vars::Tuple{Vararg{Union{AbstractVariable, Namespace}}})
 
-Type-stable equivalent of [`deduplicate`](@ref) for tuples of `AbstractVariable`s.
+Type-stable equivalent of [`deduplicate`](@ref) for tuples of `AbstractVariable`s and `Namespace`s.
 """
 @generated function deduplicate_vars(vars::Tuple{Vararg{Union{AbstractVariable, Namespace}}})
     names = map(varname, vars.parameters)
@@ -314,6 +314,23 @@ function check_duplicates(vars::Union{AbstractVariable, Namespace}...)
         end
     end
     return
+end
+
+"""
+    $SIGNATURES
+
+Merge all `Namespace`s with matching names into a single `Namespace` containing the union
+of their variables. Namespaces with unique names are passed through unchanged. Note that,
+like `Variables`, this method is not type-stable and should not be used in performance
+critical code.
+"""
+function merge_namespaces(namespaces::Tuple{Vararg{Namespace}})
+    names = unique(map(varname, namespaces))
+    merged = map(names) do name
+        group = filter(ns -> varname(ns) == name, namespaces)
+        length(group) == 1 ? group[1] : Namespace(name, merge(map(ns -> ns.vars, group)...))
+    end
+    return Tuple(merged)
 end
 
 """

@@ -21,7 +21,7 @@ include("atmosphere/prescribed_atmosphere.jl")
 
 # Soil
 
-export SoilTexture
+export SoilTexture, normalize_texture!
 include("soil/stratigraphy/soil_texture.jl")
 export ConstantSoilPorosity, SoilPorositySURFEX
 include("soil/stratigraphy/soil_porosity.jl")

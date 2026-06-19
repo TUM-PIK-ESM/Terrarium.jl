@@ -68,6 +68,20 @@ using Test
     end
 end
 
+@testset "Texture normalization" begin
+    sand = [0.5, NaN, 0.2]
+    silt = [0.3, 1.0, 0.2]
+    clay = [0.3, 0.0, 0.1]
+    normalize_texture!(sand, silt, clay)
+    # all entries sum to unity and construct valid SoilTextures
+    for i in eachindex(sand)
+        @test sand[i] + silt[i] + clay[i] ≈ 1.0
+        @test isa(SoilTexture(sand = sand[i], silt = silt[i], clay = clay[i]), SoilTexture)
+    end
+    # entries without valid data are filled with the defaults
+    @test (sand[2], silt[2], clay[2]) == (0.4, 0.4, 0.2)
+end
+
 @testset "Soil horizons" begin
     # Constant horizon
     texture = SoilTexture(Float64)

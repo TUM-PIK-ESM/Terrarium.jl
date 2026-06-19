@@ -143,27 +143,31 @@ function reset_tendencies!(state::StateVariables)
 end
 
 """
-Initialize input variables from the given input `sources`.
+Initialize input variables from the given input `sources`. The `scope` corresponds to the
+path of namespace names from the root namespace to `state` and is used to match namespaced
+input sources to their target variables; see [`inputpath`](@ref).
 """
-function initialize!(state::StateVariables, sources::InputSources)
+function initialize!(state::StateVariables, sources::InputSources, scope::Tuple{Vararg{Symbol}} = ())
     # initialize inputs in current namespace
-    initialize!(state.inputs, sources, state.clock)
+    initialize!(state.inputs, sources, state.clock, scope)
     # recursively initialize namespaces
-    for ns in state.namespaces
-        initialize!(ns, sources)
+    fastiterate(namespace_names(state)) do nsname
+        initialize!(getproperty(getfield(state, :namespaces), nsname), sources, (scope..., nsname))
     end
     return nothing
 end
 
 """
-Update input variables from the given input `sources`.
+Update input variables from the given input `sources`. The `scope` corresponds to the
+path of namespace names from the root namespace to `state` and is used to match namespaced
+input sources to their target variables; see [`inputpath`](@ref).
 """
-function update_inputs!(state::StateVariables, sources::InputSources)
+function update_inputs!(state::StateVariables, sources::InputSources, scope::Tuple{Vararg{Symbol}} = ())
     # update inputs in current namespace
-    update_inputs!(state.inputs, sources, state.clock)
+    update_inputs!(state.inputs, sources, state.clock, scope)
     # recursively update namespaces
-    for ns in state.namespaces
-        update_inputs!(ns, sources)
+    fastiterate(namespace_names(state)) do nsname
+        update_inputs!(getproperty(getfield(state, :namespaces), nsname), sources, (scope..., nsname))
     end
     return
 end
@@ -214,15 +218,45 @@ Retrieves the `Field` from `state` matching the `name` of the given variable.
 """
     $TYPEDSIGNATURES
 
-Retrieves all `Field`s from `state` matching the names of the given variables.
+Retrieves all `Field`s from `state` matching the names of the given variables. Any `Namespace`s
+in `vars` are resolved recursively and their fields are stored as nested `NamedTuple`s under the
+`namespaces` key, as in `StateVariables`.
 """
 @inline function get_fields(state, vars::Tuple{Vararg{Union{AbstractVariable, Namespace}}})
     vars = deduplicate_vars(vars)
-    matched_fields = fastmap(vars) do var
+    plainvars = filter(var -> isa(var, AbstractVariable), vars)
+    matched_fields = fastmap(plainvars) do var
         get_field(state, var)
     end
-    names = map(varname, vars)
-    return NamedTuple{names}(matched_fields)
+    names = map(varname, plainvars)
+    fields = NamedTuple{names}(matched_fields)
+    namespaces = filter(var -> isa(var, Namespace), vars)
+    return if isempty(namespaces)
+        fields
+    else
+        ns_names = map(varname, namespaces)
+        ns_fields = fastmap(namespaces) do ns
+            get_fields(getproperty(state, varname(ns)), ns)
+        end
+        merge(fields, (; namespaces = NamedTuple{ns_names}(ns_fields)))
+    end
+end
+
+"""
+    $TYPEDSIGNATURES
+
+Retrieves all `Field`s declared by the given `Namespace` from `state`, where `state` is assumed
+to correspond to the (nested) `StateVariables` of the namespace itself.
+"""
+@inline function get_fields(state, ns::Namespace)
+    vars = ns.vars
+    allvars = tuplejoin(
+        values(vars.prognostic),
+        values(vars.auxiliary),
+        values(vars.inputs),
+        values(vars.namespaces),
+    )
+    return get_fields(state, allvars)
 end
 
 """
