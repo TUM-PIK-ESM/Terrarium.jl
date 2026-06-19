@@ -1,5 +1,4 @@
 import RootSolvers
-import FiniteDifferences
 
 """
     $TYPEDEF
@@ -105,6 +104,12 @@ end
         return gx - x
     end
 
-    fd = FiniteDifferences.central_fdm(2, 1)
-    return x -> (residual!(x), fd(residual!, x)::NF)
+    function residual_with_derivative!(x)
+        h = cbrt(eps(NF)) * (1 + abs(x))
+        r = residual!(x)
+        drdx = (residual!(x + h) - r) / h
+        return r, drdx
+    end
+
+    return residual_with_derivative!
 end
