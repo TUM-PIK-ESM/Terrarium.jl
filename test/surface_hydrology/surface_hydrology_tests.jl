@@ -5,8 +5,8 @@ using Test
     include("canopy_interception_tests.jl")
 end
 
-@testset "Canopy ET" begin
-    include("canopy_evapotranspiration_tests.jl")
+@testset "Evapotranspiration" begin
+    include("evapotranspiration_tests.jl")
 end
 
 @testset "Surface runoff" begin

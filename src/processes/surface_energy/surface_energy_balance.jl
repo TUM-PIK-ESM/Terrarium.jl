@@ -120,13 +120,7 @@ Fused kernel function that computes the radiative and turbulent fluxes, as well 
     out.surface_net_radiation[i, j, 1] = compute_surface_net_radiation(i, j, grid, fields, seb.radiative_fluxes, atmos)
     # Compute turbulent fluxes
     out.sensible_heat_flux[i, j, 1] = compute_sensible_heat_flux(i, j, grid, fields, seb.turbulent_fluxes, seb.skin_temperature, constants, atmos)
-    if isnothing(evtr)
-        # Bare ground evaporation, no coupling with ET
-        out.latent_heat_flux[i, j, 1] = compute_latent_heat_flux(i, j, grid, fields, seb.turbulent_fluxes, seb.skin_temperature, constants, atmos)
-    else
-        # Coupling with surface hydrology ET scheme
-        out.latent_heat_flux[i, j, 1] = compute_latent_heat_flux(i, j, grid, fields, seb.turbulent_fluxes, evtr, constants, atmos)
-    end
+    out.latent_heat_flux[i, j, 1] = compute_latent_heat_flux(i, j, grid, fields, seb.turbulent_fluxes, seb.skin_temperature, constants, atmos, evtr)
     # Compute ground heat flux
     out.ground_heat_flux[i, j, 1] = compute_ground_heat_flux(i, j, grid, fields, seb.skin_temperature, seb)
     return nothing
@@ -139,12 +133,18 @@ end
         seb::SurfaceEnergyBalance,
         constants::PhysicalConstants,
         atmos::AbstractAtmosphere,
+        evtr::Optional{AbstractEvapotranspiration} = nothing,
         args...
     )
     i, j = @index(Global, NTuple)
 
     # Compute fluxes based on current skin temperature
     solve_skin_temperature!(out, i, j, grid, fields, seb.skin_temperature, seb, constants, atmos, args...)
+    if !isnothing(evtr)
+        # Recompute evaporation component fluxes from final skin temperature
+        out_ET = auxiliary_fields(fields, evtr)
+        compute_evapotranspiration_fluxes!(out_ET, i, j, grid, fields, evtr, constants, atmos, args...)
+    end
     # Recompute fluxes from final skin temperature
     compute_surface_energy_fluxes!(out, i, j, grid, fields, seb, constants, atmos, args...)
 end

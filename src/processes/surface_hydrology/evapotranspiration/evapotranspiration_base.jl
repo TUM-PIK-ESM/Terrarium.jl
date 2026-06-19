@@ -1,3 +1,13 @@
+"""
+    $TYPEDSIGNATURES
+
+Compute an evapotranspiration flux [m/s] (positive upwards) as the product of a vapor
+conductance `g` and a specific humidity difference `Δq`. All evapotranspiration components
+— ground/canopy evaporation and transpiration — share the functional form ``E = Δq · g``,
+differing only in which conductance and humidity difference are supplied.
+"""
+@inline compute_evaporation_flux(::AbstractEvapotranspiration, Δq, g) = Δq * g
+
 # Forcing interface for soil hydrology
 
 """
@@ -12,11 +22,4 @@ The ET forcing is just the `surface_humidity_flux` rescaled by the thickness of 
         ∂θ∂t = -Qh / Δz # rescale by layer thickness to get water content flux
         return ∂θ∂t * (k == grid.Nz)
     end
-end
-
-# Kernels
-
-@kernel inbounds = true function compute_auxiliary_kernel!(out, grid, fields, evapotranspiration::AbstractEvapotranspiration, args...)
-    i, j = @index(Global, NTuple)
-    compute_evapotranspiration!(out, i, j, grid, fields, evapotranspiration, args...)
 end

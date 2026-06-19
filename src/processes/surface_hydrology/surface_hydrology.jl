@@ -48,29 +48,6 @@ function compute_auxiliary!(
     return nothing
 end
 
-"""
-    $TYPEDSIGNATURES
-
-Recompute the evapotranspiration fluxes for `hydrology` from the current skin temperature by
-re-running the ET auxiliary computation. Intended to be called after the surface energy balance
-solve so that the partitioned ET fluxes (consumed by the soil-moisture forcing, canopy-water
-tendency, and diagnostic output) are consistent with the converged skin temperature. The fluxes
-the SEB itself consumes are evaluated lazily during the solve via `surface_humidity_flux` and do
-not depend on this call.
-"""
-function compute_evapotranspiration!(
-        state, grid,
-        hydrology::SurfaceHydrology,
-        constants::PhysicalConstants,
-        atmos::AbstractAtmosphere,
-        soil::Optional{AbstractSoil} = nothing,
-        vegetation::Optional{AbstractVegetation} = nothing,
-        args...
-    )
-    compute_auxiliary!(state, grid, hydrology.evapotranspiration, hydrology.canopy_interception, constants, atmos, soil, vegetation)
-    return nothing
-end
-
 """ $TYPEDSIGNATURES """
 function compute_tendencies!(
         state, grid,

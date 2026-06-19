@@ -170,7 +170,8 @@ to the latent heat flux.
         tur::DiagnosedTurbulentFluxes,
         skinT::AbstractSkinTemperature,
         constants::PhysicalConstants,
-        atmos::AbstractAtmosphere
+        atmos::AbstractAtmosphere,
+        args...
     )
     L = constants.thermodynamics.latent_heat_vaporization
     Tₛ = skin_temperature(i, j, grid, fields, skinT)
@@ -191,15 +192,17 @@ end
     $TYPEDSIGNATURES
 
 Compute the latent heat flux at `i, j` based on the given evapotranspiration scheme.
-This implementation derives the latent heat flux from the [`surface_humidity_flux`](@ref)
-defined by `evtr` which is assumed to be already computed.
+This implementation derives the latent heat flux from the [`compute_surface_humidity_flux`](@ref)
+defined by `evtr` which assumes its auxiliaries to have been already computed.
 """
 @inline function compute_latent_heat_flux(
         i, j, grid, fields,
         tur::DiagnosedTurbulentFluxes,
-        evtr::AbstractEvapotranspiration,
+        skinT::AbstractSkinTemperature,
         constants::PhysicalConstants,
-        atmos::AbstractAtmosphere
+        atmos::AbstractAtmosphere,
+        evtr::AbstractEvapotranspiration,
+        args...
     )
     L = constants.thermodynamics.latent_heat_vaporization
     Tₐ = air_temperature(i, j, grid, fields, atmos) # air temperature
@@ -207,7 +210,8 @@ defined by `evtr` which is assumed to be already computed.
     q_air = specific_humidity(i, j, grid, fields, atmos)
     # TODO: density should be evaluated at surface temperature for better accuracy
     ρₐ = Thermodynamics.air_density(constants.thermodynamics, celsius_to_kelvin(constants.thermodynamics, Tₐ), pres, q_air)
-    Q_h = surface_humidity_flux(i, j, grid, fields, evtr, atmos, constants)   # humidity flux at the live skin temperature
+    # Recompute surface humidity flux from current skin temperature and evaporative conductances
+    Q_h = compute_surface_humidity_flux(i, j, grid, fields, evtr, atmos, constants)
     # Calculate latent heat flux (positive upwards)
     Hₗ = compute_latent_heat_flux(tur, Q_h, ρₐ, L)
     return Hₗ
