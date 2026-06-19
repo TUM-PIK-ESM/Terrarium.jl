@@ -248,7 +248,7 @@ struct Namespace{name, Vars}
     Namespace(name::Symbol, vars::Variables) = new{name, typeof(vars)}(vars)
 end
 
-@inline varname(::Namespace{name}) where {name} = name
+@inline varname(ns::Namespace{name}) where {name} = varname(typeof(ns))
 @inline varname(::Type{<:Namespace{name}}) where {name} = name
 
 Variables(obj) = Variables(variables(obj))

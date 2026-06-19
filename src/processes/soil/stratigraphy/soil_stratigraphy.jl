@@ -8,15 +8,14 @@ respective names are defined by the user.
 Properties:
 $TYPEDFIELDS
 """
-struct SoilStratigraphy{NF, Horizons <: NamedTuple} <: AbstractStratigraphy{NF}
+struct SoilStratigraphy{NF, N, Horizons <: Tuple{Vararg{AbstractSoilHorizon{NF}, N}}} <: AbstractStratigraphy{NF}
     "Named tuple of soil horizons ordered from top to bottom"
     horizons::Horizons
 end
 
-function SoilStratigraphy(::Type{NF}; horizons...) where {NF}
+function SoilStratigraphy(::Type{NF}, horizons::AbstractSoilHorizon...) where {NF}
     @assert length(horizons) > 0 "At least one soil horizon must be specified; for simple configurations, consider using HomogeneousSoilStratigraphy."
-    horizon_nt = (; horizons...)
-    return SoilStratigraphy{NF, typeof(horizon_nt)}(horizon_nt)
+    return SoilStratigraphy(horizons)
 end
 
 # Convenience constructors
@@ -31,39 +30,7 @@ function HomogeneousSoilStratigraphy(
         texture::SoilTexture = SoilTexture(NF),
         porosity::AbstractSoilPorosity = ConstantSoilPorosity(NF)
     ) where {NF}
-    return SoilStratigraphy(NF, horizon = ConstantSoilHorizon(NF; texture, porosity))
-end
-
-"""
-    $TYPEDSIGNATURES
-
-Convenience constructor that creates a three-layer `SoilStratigraphy` with spatially varying
-organic (O), surface (A), and bedrock (R) horizons.
-"""
-function OARSoilStratigraphy(
-        ::Type{NF};
-        organic::AbstractSoilHorizon = PrescribedSoilHorizon(NF),
-        surface::AbstractSoilHorizon = PrescribedSoilHorizon(NF),
-        bedrock::AbstractSoilHorizon = PrescribedSoilHorizon(NF)
-    ) where {NF}
-    return SoilStratigraphy(NF; organic, surface, bedrock)
-end
-
-"""
-    $TYPEDSIGNATURES
-
-Convenience constructor that creates a three-layer `SoilStratigraphy` with spatially varying
-organic (O), surface (A), subsoil (B), substratum (C), and bedrock (R) horizons.
-"""
-function OABCRSoilStratigraphy(
-        ::Type{NF};
-        organic::AbstractSoilHorizon = PrescribedSoilHorizon(NF),
-        surface::AbstractSoilHorizon = PrescribedSoilHorizon(NF),
-        subsoil::AbstractSoilHorizon = PrescribedSoilHorizon(NF),
-        substratum::AbstractSoilHorizon = PrescribedSoilHorizon(NF),
-        bedrock::AbstractSoilHorizon = PrescribedSoilHorizon(NF)
-    ) where {NF}
-    return SoilStratigraphy(NF; organic, surface, subsoil, substratum, bedrock)
+    return SoilStratigraphy(NF, ConstantSoilHorizon(NF, :soil; texture, porosity))
 end
 
 Base.length(strat::SoilStratigraphy) = length(strat.horizons)
@@ -73,50 +40,73 @@ Base.iterate(strat::SoilStratigraphy, iter) = Base.iterate(strat.horizons, iter)
 # Variables
 
 function variables(strat::SoilStratigraphy)
-    horizon_vars = map(variables, strat.horizons)
-    return namespaces(horizon_vars)
+    return map(strat.horizons) do horizon
+        namespace(nameof(horizon), variables(horizon))
+    end
 end
+
+# Process methods
+
+compute_auxiliary!(state, grid, ::SoilStratigraphy, args...) = nothing
+
+compute_tendencies!(state, grid, ::SoilStratigraphy, args...) = nothing
 
 # Kernel functions
 
 """
     $TYPEDSIGNATURES
 
-Determine the index of the soil horizon in `strat` which contains the grid cell at index `i, j, k`.
+Retrieve the soil horizon for the soil volume at index `i, j, k`. The last
+soil horizon in `strat` is assumed to extend to the bottom of the vertical
+column regardless of its associated `thickness`. Note that, since `SoilStratigraphy`
+uses namespaces for the state variables of each horizon, any methods defined on
+`AbstractSoilHorizon` types should be passed the namespace, e.g:
+```julia
+horizon = soil_horizon(i, j, k, grid, fields, strat)
+texture = soil_texture(i, j, grid, getproperty(fields, nameof(horizon)), horizon)
+```
 """
-@inline function soil_horizon_index(i, j, k, grid, fields, strat::SoilStratigraphy)
+@inline function soil_horizon(i, j, k, grid, fields, strat::SoilStratigraphy{NF}) where {NF}
     fgrid = get_field_grid(grid)
     # get midpoint of current node at k
     zₖ = znode(i, j, k, fgrid, Center(), Center(), Center())
     # initially set z to uppermost layer boundary
     z = znode(i, j, fgrid.Nz + 1, fgrid, Center(), Center(), Face())
-    iₖ = 1
-    for (l, name) in enumerate(keys(strat.horizons))
-        horizon = strat.horizons[name]
-        hfields = horizon_fields(fields, strat, l)
-        iₖ = ifelse(zₖ <= z, l, iₖ)
-        Δzₗ = soil_thickness(i, j, grid, hfields, horizon)
+    # initialize result to first horizon (will be updated in loop)
+    horizon = first(strat.horizons)
+    for next in strat.horizons
+        # update result when zₖ is within this horizon's depth range
+        horizon = ifelse(zₖ <= z, next, horizon)
+        Δzₗ = soil_thickness(i, j, grid, getproperty(fields, nameof(next)), next)
         z -= Δzₗ
     end
-    return iₖ
+    return horizon
 end
 
 """
-    $SIGNATURES
+    $TYPEDSIGNATURES
 
-Retrieve the namespaced fields belonging to the `l`-th horizon of `strat` from `fields`.
+Convenience method that invokes `func(i, j, grid, horizon_fields, horizon, args...; kwargs...)`
+where `horizon` is the soil horizon returned by [`soil_horizon`](@ref) and `horizon_fields`
+is `getproperty(fields, nameof(horizon))`.
 """
-@inline horizon_fields(fields, strat::SoilStratigraphy, l::Integer) = fields.namespaces[keys(strat.horizons)[l]]
-
-@inline function soil_horizon(i, j, k, grid, fields, strat::SoilStratigraphy)
-    l = soil_horizon_index(i, j, k, grid, fields, strat)
-    return strat.horizons[l]
+@inline function with_soil_horizon(
+        func, i, j, k, grid, fields,
+        strat::SoilStratigraphy,
+        args...;
+        kwargs...
+    )
+    horizon = soil_horizon(i, j, k, grid, fields, strat)
+    return func(i, j, grid, getproperty(fields, nameof(horizon)), horizon, args...; kwargs...)
 end
 
-@inline function soil_texture(i, j, k, grid, fields, strat::SoilStratigraphy)
-    l = soil_horizon_index(i, j, k, grid, fields, strat)
-    horizon = strat.horizons[l]
-    texture = soil_texture(i, j, grid, horizon_fields(fields, strat, l), horizon)
+"""
+    $TYPEDSIGNATURES
+
+Retrieve the soil texture of the soil volume at index `i, j, k` in the given stratigraphy `strat`.
+"""
+@inline function soil_texture(i, j, k, grid, fields, strat::SoilStratigraphy{NF}) where {NF}
+    texture = with_soil_horizon(soil_texture, i, j, k, grid, fields, strat)
     return texture
 end
 
@@ -132,10 +122,7 @@ Compute the organic fraction of solid material in the soil volume at index `i, j
     )
     ρ_soc = density_soc(i, j, k, grid, fields, bgc)
     ρ_org = density_pure_soc(bgc)
-    l = soil_horizon_index(i, j, k, grid, fields, strat)
-    horizon = strat.horizons[l]
-    texture = soil_texture(i, j, grid, horizon_fields(fields, strat, l), horizon)
-    por = organic_porosity(i, j, k, grid, fields, horizon.porosity, texture)
+    por = with_soil_horizon(organic_porosity, i, j, k, grid, fields, strat)
     organic = ρ_soc / ((1 - por) * ρ_org)
     return organic
 end
@@ -151,11 +138,8 @@ Compute the porosity of the soil volume at the given indices.
         bgc::AbstractSoilBiogeochemistry
     )
     organic = organic_fraction(i, j, k, grid, fields, strat, bgc)
-    l = soil_horizon_index(i, j, k, grid, fields, strat)
-    horizon = strat.horizons[l]
-    texture = soil_texture(i, j, grid, horizon_fields(fields, strat, l), horizon)
-    por_m = mineral_porosity(i, j, k, grid, fields, horizon.porosity, texture)
-    por_o = organic_porosity(i, j, k, grid, fields, horizon.porosity, texture)
+    por_m = with_soil_horizon(mineral_porosity, i, j, k, grid, fields, strat)
+    por_o = with_soil_horizon(organic_porosity, i, j, k, grid, fields, strat)
     return (1 - organic) * por_m + organic * por_o
 end
 

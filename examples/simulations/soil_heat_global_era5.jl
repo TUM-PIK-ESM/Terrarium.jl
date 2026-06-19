@@ -14,7 +14,7 @@ arch = CUDA.functional() ? GPU() : CPU()
 ring_grid = RingGrids.FullGaussianGrid(72)
 lon, lat = RingGrids.get_londlatds(ring_grid)
 
-soildata = RasterStack("data/land/soilgrids/soilgrids2_clenshaw_10km.nc")
+soildata = RasterStack("data/land/soilgrids/soilgrids2_clenshaw989_10km.nc")
 soildata_mean = soildata[stat = (At("mean"))]
 # Plot global sand at uppermost soil layer
 heatmap(RingGrids.FullClenshawField(replace(soildata_mean[:sand].data[:, 2:(end - 1), 1], missing => NaN), input_as = Matrix))

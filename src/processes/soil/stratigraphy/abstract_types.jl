@@ -46,9 +46,21 @@ function organic_porosity end
     $TYPEDEF
 
 Base type for soil "horizons", i.e. vertical segments of soil with homogeneous soil
-properties.
+properties and a user-defined `name`.
 """
-abstract type AbstractSoilHorizon{NF} end
+abstract type AbstractSoilHorizon{NF, name} end
+
+Base.nameof(::AbstractSoilHorizon{NF, name}) where {NF, name} = name
+
+# Assumes all subtypes have a constructor HorizonType(name::Symbol, args...)
+ConstructionBase.constructorof(HT::Type{<:AbstractSoilHorizon{NF, name}}) where {NF, name} = (args...) -> HT(name, args...)
+
+"""
+    $TYPEDSIGNATURES
+
+Return the porosity parameterization for the given soil horizon.
+"""
+porosity(horizon::AbstractSoilHorizon) = horizon.porosity
 
 """
     $TYPEDEF

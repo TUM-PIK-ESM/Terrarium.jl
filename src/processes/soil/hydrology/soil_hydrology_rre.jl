@@ -160,12 +160,12 @@ Computes the unsaturated hydraulic conductivity for `RichardsEq` configurations 
     fgrid = get_field_grid(grid)
     # compute hydraulic conductivity
     @inbounds if k <= 1
-        out.hydraulic_conductivity[i, j, k] = hydraulic_conductivity(i, j, 1, fgrid, fields, hydrology, strat, bgc)
+        out.hydraulic_conductivity[i, j, k] = hydraulic_conductivity(i, j, 1, grid, fields, hydrology, strat, bgc)
     elseif k >= fgrid.Nz
-        out.hydraulic_conductivity[i, j, k] = hydraulic_conductivity(i, j, fgrid.Nz, fgrid, fields, hydrology, strat, bgc)
+        out.hydraulic_conductivity[i, j, k] = hydraulic_conductivity(i, j, fgrid.Nz, grid, fields, hydrology, strat, bgc)
         out.hydraulic_conductivity[i, j, k + 1] = out.hydraulic_conductivity[i, j, k]
     else
-        out.hydraulic_conductivity[i, j, k] = min_zᵃᵃᶠ(i, j, k, fgrid, hydraulic_conductivity, fields, hydrology, strat, bgc)
+        out.hydraulic_conductivity[i, j, k] = min_zᵃᵃᶠ(i, j, k, grid, hydraulic_conductivity, fields, hydrology, strat, bgc)
     end
     return nothing
 end
