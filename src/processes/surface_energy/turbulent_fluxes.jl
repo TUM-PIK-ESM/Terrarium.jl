@@ -161,9 +161,8 @@ end
 """
     $TYPEDSIGNATURES
 
-Compute the bare ground latent heat flux at `i, j` based on the current skin temperature
-and atmospheric conditions. This implementation assumes that evaporation is the only contributor
-to the latent heat flux.
+Compute the latent heat flux at `i, j` based on the current skin temperature and atmospheric conditions.
+When an evapotranspiration scheme is provided, uses the ET-aware humidity flux; otherwise uses bare ground evaporation.
 """
 @inline function compute_latent_heat_flux(
         i, j, grid, fields,
@@ -171,47 +170,27 @@ to the latent heat flux.
         skinT::AbstractSkinTemperature,
         constants::PhysicalConstants,
         atmos::AbstractAtmosphere,
-        args...
+        evtr::Optional{AbstractEvapotranspiration} = nothing
     )
-    L = constants.thermodynamics.latent_heat_vaporization
-    Tₛ = skin_temperature(i, j, grid, fields, skinT)
-    Tₐ = air_temperature(i, j, grid, fields, atmos) # air temperature
+    Q_h = if isnothing(evtr)
+        # Direct calculation of evaporative flux without ET coupling
+        Tₛ = skin_temperature(i, j, grid, fields, skinT)
+        rₐ = aerodynamic_resistance(i, j, grid, fields, atmos) # aerodynamic resistance
+        Δq = compute_specific_humidity_difference(i, j, grid, fields, atmos, constants, Tₛ)
+        Δq / rₐ  # humidity flux
+    else
+        # Compute humidity flux using the given ET scheme
+        compute_surface_humidity_flux(i, j, grid, fields, evtr, atmos, constants)
+    end
+
+    # Get air density (same for both cases)
+    Tₐ = air_temperature(i, j, grid, fields, atmos)
     pres = air_pressure(i, j, grid, fields, atmos)
     q_air = specific_humidity(i, j, grid, fields, atmos)
     # TODO: density should be evaluated at surface temperature for better accuracy
     ρₐ = Thermodynamics.air_density(constants.thermodynamics, celsius_to_kelvin(constants.thermodynamics, Tₐ), pres, q_air)
-    rₐ = aerodynamic_resistance(i, j, grid, fields, atmos) # aerodynamic resistance
-    Δq = compute_specific_humidity_difference(i, j, grid, fields, atmos, constants, Tₛ)
-    Q_h = Δq / rₐ  # humidity flux
-    # Calculate latent heat flux (positive upwards)
-    Hₗ = compute_latent_heat_flux(tur, Q_h, ρₐ, L)
-    return Hₗ
-end
-
-"""
-    $TYPEDSIGNATURES
-
-Compute the latent heat flux at `i, j` based on the given evapotranspiration scheme.
-This implementation derives the latent heat flux from the [`compute_surface_humidity_flux`](@ref)
-defined by `evtr` which assumes its auxiliaries to have been already computed.
-"""
-@inline function compute_latent_heat_flux(
-        i, j, grid, fields,
-        tur::DiagnosedTurbulentFluxes,
-        skinT::AbstractSkinTemperature,
-        constants::PhysicalConstants,
-        atmos::AbstractAtmosphere,
-        evtr::AbstractEvapotranspiration,
-        args...
-    )
     L = constants.thermodynamics.latent_heat_vaporization
-    Tₐ = air_temperature(i, j, grid, fields, atmos) # air temperature
-    pres = air_pressure(i, j, grid, fields, atmos)
-    q_air = specific_humidity(i, j, grid, fields, atmos)
-    # TODO: density should be evaluated at surface temperature for better accuracy
-    ρₐ = Thermodynamics.air_density(constants.thermodynamics, celsius_to_kelvin(constants.thermodynamics, Tₐ), pres, q_air)
-    # Recompute surface humidity flux from current skin temperature and evaporative conductances
-    Q_h = compute_surface_humidity_flux(i, j, grid, fields, evtr, atmos, constants)
+
     # Calculate latent heat flux (positive upwards)
     Hₗ = compute_latent_heat_flux(tur, Q_h, ρₐ, L)
     return Hₗ
@@ -223,6 +202,6 @@ end
     i, j = @index(Global, NTuple)
     # compute sensible heat flux
     out.sensible_heat_flux[i, j, 1] = compute_sensible_heat_flux(i, j, grid, fields, tur, args...)
-    # compute latent heat flux
+    # compute latent heat flux - pass all args to allow dispatch on evtr presence
     out.latent_heat_flux[i, j, 1] = compute_latent_heat_flux(i, j, grid, fields, tur, args...)
 end

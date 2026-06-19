@@ -59,16 +59,17 @@ end
 """
     $TYPEDSIGNATURES
 
-Compute the surface energy fluxes on `grid` based on the current atmospheric state.
+Solve the surface energy balance for skin temperature on `grid` based on the current atmospheric
+and surface hydrology state.
 """
 function solve_surface_energy_balance!(
         state, grid,
-        seb::SurfaceEnergyBalance,
+        seb::SurfaceEnergyBalance{NF, <:ImplicitSkinTemperature},
         constants::PhysicalConstants,
         atmos::AbstractAtmosphere,
         hydrology::Optional{AbstractSurfaceHydrology} = nothing,
         args...
-    )
+    ) where {NF}
     evtr = isnothing(hydrology) ? nothing : get_evapotranspiration(hydrology)
     # Construct outputs as auxiliaries + skin temperature (which is prognostic)
     out = (skin_temperature = state.skin_temperature, auxiliary_fields(state, seb)...)
@@ -103,7 +104,8 @@ end
 """
     $TYPEDSIGNATURES
 
-Fused kernel function that computes the radiative and turbulent fluxes, as well as the ground heat flux.
+Fused kernel function that computes the radiative and turbulent fluxes, as well as the ground heat flux based on the current
+skin temperature and humidity fluxes.
 """
 @propagate_inbounds function compute_surface_energy_fluxes!(
         out, i, j, grid, fields,

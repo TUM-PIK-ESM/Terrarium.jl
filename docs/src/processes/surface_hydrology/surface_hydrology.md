@@ -24,7 +24,7 @@ SurfaceHydrology
 ## Process interface
 
 ```@docs; canonical = false
-compute_auxiliary!(state, grid, hydrology::SurfaceHydrology, constants::PhysicalConstants, atmos::AbstractAtmosphere, soil::AbstractSoil)
+compute_auxiliary!(state, grid, hydrology::SurfaceHydrology, constants::PhysicalConstants, atmos::AbstractAtmosphere, soil::Optional{AbstractSoil}, vegetation::Optional{AbstractVegetation}, args...)
 ```
 
 ```@docs; canonical = false

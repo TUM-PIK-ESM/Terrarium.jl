@@ -64,6 +64,14 @@ where $f_{\text{can}}$ is the canopy saturation fraction (0 = dry, 1 = saturated
 
 When $f_{\text{can}} = 0$ (completely dry canopy), $E_{\text{can}} = 0$. When $f_{\text{can}} = 1$ (wet canopy), evaporation proceeds at the potential rate.
 
+The canopy evaporation vapor conductance is computed as
+```math
+\begin{equation}
+g_{\text{can}} = \frac{f_{\text{can}}}{r_a}\,,
+\end{equation}
+```
+and the flux is $E_{\text{can}} = g_{\text{can}} \cdot \Delta q$.
+
 ### Ground evaporation
 
 Evaporation from exposed soil or under-canopy surfaces $E_{\text{ground}}$ (m/s) is limited by soil water availability,
@@ -73,6 +81,14 @@ E_{\text{ground}} = \beta \frac{\Delta q}{r_a + r_e}\,,
 \end{equation}
 ```
 where $\beta$ is the ground evaporation resistance factor (0 to 1) (-) and $r_e$ is the aerodynamic resistance between ground and canopy (s/m).
+
+The ground evaporation vapor conductance is computed as
+```math
+\begin{equation}
+g_{\text{ground}} = \frac{\beta}{r_a + r_e}\,,
+\end{equation}
+```
+and the flux is $E_{\text{ground}} = g_{\text{ground}} \cdot \Delta q$.
 
 The resistance factor $\beta$ is computed from soil moisture in the upper layer: $\beta = 1$ when soil is wet (at field capacity) and $\beta \to 0$ as soil dries.
 
@@ -86,6 +102,14 @@ T_{\text{can}} = \frac{\Delta q}{r_a + r_s}\,,
 ```
 where $r_s = 1 / g_w$ is the stomatal resistance (s/m) and $g_w$ is the stomatal conductance (m/s) (computed from photosynthesis; see [Stomatal conductance](@ref)).
 
+The transpiration vapor conductance is computed as
+```math
+\begin{equation}
+g_{\text{trp}} = \frac{1}{r_a + r_s}\,,
+\end{equation}
+```
+and the flux is $T_{\text{can}} = g_{\text{trp}} \cdot \Delta q$.
+
 High stomatal conductance (when photosynthetically active) leads to low stomatal resistance and high transpiration. This creates a strong coupling between carbon uptake (photosynthesis) and water loss (transpiration).
 
 ### Total evapotranspiration
@@ -98,6 +122,58 @@ The PALADYN approach combines all three pathways in parallel,
 ```
 to obtain a total surface humidity flux $\text{ET}$ (m/s) that can be converted into the [latent heat flux][@ref "Turbulent fluxes"] expressed in W/m² for use in the [surface energy balance](@ref surface_energy_balance_docs).
 
+## Evaporation flux computation
+
+All evapotranspiration pathways share a unified functional form:
+```math
+\begin{equation}
+E = \Delta q \cdot g\,,
+\end{equation}
+```
+where $g$ is the vapor conductance (m/s) specific to each pathway. The unified function `compute_evaporation_flux` handles all three pathways:
+
+```@docs; canonical = false
+compute_evaporation_flux
+```
+
+## Conductance functions
+
+The vapor conductances for each pathway are computed separately and stored as auxiliary fields during the `compute_auxiliary!` pass. These conductances are skin-temperature-independent (held fixed during the surface energy balance solve).
+
+### Transpiration conductance
+
+```@docs; canonical = false
+transpiration_conductance
+```
+
+### Canopy evaporation conductance
+
+```@docs; canonical = false
+canopy_evaporation_conductance
+```
+
+### Ground evaporation conductance
+
+```@docs; canonical = false
+ground_evaporation_conductance
+```
+
+## Ground resistance parameterizations
+
+The ground evaporation resistance factor $\beta$ is computed from soil moisture using parameterizations of `AbstractGroundEvaporationResistanceFactor`:
+
+```@docs; canonical = false
+ConstantEvaporationResistanceFactor
+```
+
+```@docs; canonical = false
+SoilMoistureResistanceFactor
+```
+
+```@docs; canonical = false
+ground_evaporation_resistance_factor
+```
+
 ## Process interface
 
 ```@docs; canonical = false
@@ -106,16 +182,6 @@ compute_auxiliary!(state, grid, ::BareGroundEvaporation, ::NoCanopyInterception,
 
 ```@docs; canonical = false
 compute_auxiliary!(state, grid, ::PALADYNCanopyEvapotranspiration, ::AbstractCanopyInterception, ::PhysicalConstants, ::AbstractAtmosphere, ::AbstractSoil, ::AbstractVegetation, args...)
-```
-
-## Ground resistance parameterizations
-
-```@docs; canonical = false
-ConstantEvaporationResistanceFactor
-```
-
-```@docs; canonical = false
-SoilMoistureResistanceFactor
 ```
 
 ## Coupling to soil hydrology
@@ -130,22 +196,16 @@ forcing(i, j, k, grid, clock, fields, evapotranspiration::AbstractEvapotranspira
 
 ## Kernel functions
 
+The following kernel functions are used internally during the `compute_auxiliary!` pass:
+
 ```@docs; canonical = false
 surface_humidity_flux
 ```
 
 ```@docs; canonical = false
-compute_transpiration
+compute_evapotranspiration_conductance!
 ```
 
 ```@docs; canonical = false
-compute_evaporation_ground
-```
-
-```@docs; canonical = false
-compute_evaporation_canopy
-```
-
-```@docs; canonical = false
-ground_evaporation_resistance_factor
+compute_evapotranspiration_fluxes!
 ```
