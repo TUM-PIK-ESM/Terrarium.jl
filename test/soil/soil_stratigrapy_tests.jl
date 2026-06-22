@@ -167,4 +167,11 @@ end
     # Organic fraction
     bgc = ConstantSoilCarbonDensity(eltype(grid), ρ_soc = 50.0)
     @test Terrarium.organic_fraction(1, 1, 10, grid, fields, strat, bgc) > 0
+
+    # Type stability of kernel functions with heterogeneous horizon types;
+    # this is required for GPU compatibility.
+    @test @inferred(Terrarium.soil_texture(1, 1, 10, grid, fields, strat)) == h1_texture
+    @test @inferred(Terrarium.soil_texture(1, 1, 5, grid, fields, strat)) == horizon2.texture
+    @test @inferred(Terrarium.with_soil_horizon(Terrarium.soil_thickness, 1, 1, 10, grid, fields, strat)) == 0.5
+    @test @inferred(Terrarium.with_soil_horizon(Terrarium.soil_thickness, 1, 1, 5, grid, fields, strat)) == Inf
 end
