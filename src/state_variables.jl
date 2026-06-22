@@ -145,7 +145,7 @@ end
 """
 Initialize input variables from the given input `sources`. The `scope` corresponds to the
 path of namespace names from the root namespace to `state` and is used to match namespaced
-input sources to their target variables; see [`inputpath`](@ref).
+input sources to their target variables; see [`varpath`](@ref).
 """
 function initialize!(state::StateVariables, sources::InputSources, scope::Tuple{Vararg{Symbol}} = ())
     # initialize inputs in current namespace
@@ -160,7 +160,7 @@ end
 """
 Update input variables from the given input `sources`. The `scope` corresponds to the
 path of namespace names from the root namespace to `state` and is used to match namespaced
-input sources to their target variables; see [`inputpath`](@ref).
+input sources to their target variables; see [`varpath`](@ref).
 """
 function update_inputs!(state::StateVariables, sources::InputSources, scope::Tuple{Vararg{Symbol}} = ())
     # update inputs in current namespace

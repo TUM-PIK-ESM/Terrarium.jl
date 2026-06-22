@@ -132,10 +132,10 @@ inputs = InputSources(
 
 A plain `Symbol` name always refers to the root namespace; a source named `:sand` will *not* write
 into `organic.sand` and vice versa. Internally, names are normalized to a tuple of `Symbol`s via
-[`inputpath`](@ref):
+[`varpath`](@ref):
 
 ```@docs; canonical = false
-inputpath
+varpath
 ```
 
 ## Using inputs inside process kernels

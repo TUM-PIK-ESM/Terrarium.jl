@@ -251,6 +251,36 @@ end
 @inline varname(ns::Namespace{name}) where {name} = varname(typeof(ns))
 @inline varname(::Type{<:Namespace{name}}) where {name} = name
 
+"""
+    VarPath
+
+Type alias for namespaced variable paths of the form `(namespace_1, ..., namespace_N, varname)`.
+Used to specify the location of variables in nested namespaces.
+"""
+const VarPath = Tuple{Vararg{Symbol}}
+
+"""
+    varpath(name::Symbol)
+    varpath(path::Pair)
+    varpath(path::Tuple{Vararg{Symbol}})
+
+Normalize the given variable name into a path of the form `(namespace_1, ..., namespace_N, varname)`.
+Plain `Symbol` names correspond to variables in the root namespace, i.e. the path `(varname,)`. Namespaced
+variables can be specified either as `Pair`s, e.g. `:ns1 => :ns2 => :varname`, or directly as a tuple of
+`Symbol`s, e.g. `(:ns1, :ns2, :varname)`.
+"""
+varpath(name::Symbol) = (name,)
+varpath(path::VarPath) = path
+varpath(path::Pair) = (Symbol(first(path)), varpath(last(path))...)
+
+"""
+    $SIGNATURES
+
+Wrap the given variable `var` in nested `Namespace`s according to the `path`, where the last element of `path` is the variable name.
+"""
+with_scope(path::VarPath, var::AbstractVariable) =
+    length(path) == 1 ? (var,) : (namespace(first(path), with_scope(Base.tail(path), var)),)
+
 Variables(obj) = Variables(variables(obj))
 Variables(vars::Union{AbstractProcessVariable, Namespace}...) = Variables(vars)
 function Variables(@nospecialize(vars::Tuple{Vararg{Union{AbstractProcessVariable, Namespace}}}))

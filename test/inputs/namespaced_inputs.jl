@@ -1,13 +1,6 @@
 using Terrarium
-using Terrarium: Variables, Namespace, initialize!, interior, varname, matches_scope, namespaced_variables
+using Terrarium: Variables, Namespace, initialize!, interior, varname, matches_scope, with_scope
 using Test
-
-@testset "inputpath" begin
-    @test inputpath(:x) == (:x,)
-    @test inputpath(:ns => :x) == (:ns, :x)
-    @test inputpath(:a => :b => :c) == (:a, :b, :c)
-    @test inputpath((:ns, :x)) == (:ns, :x)
-end
 
 @testset "Namespaced input sources" begin
     grid = ColumnGrid(ExponentialSpacing())
@@ -16,7 +9,7 @@ end
     X1 = Field(grid, XY())
     src = InputSource(grid, X1; name = :ns1 => :x)
     @test varname(src) == :x
-    @test inputpath(src) == (:ns1, :x)
+    @test varpath(src) == (:ns1, :x)
     @test matches_scope(src, (:ns1,))
     @test !matches_scope(src, ())
     @test !matches_scope(src, (:ns2,))
@@ -62,7 +55,7 @@ end
         S[i] .= Float32(t)
     end
     fts_src = InputSource(S; name = :ns2 => :x)
-    @test inputpath(fts_src) == (:ns2, :x)
+    @test varpath(fts_src) == (:ns2, :x)
     update_inputs!(state, InputSources(fts_src))
     @test all(interior(state.namespaces.ns2.x) .== 0.0f0)
     Terrarium.tick!(state.clock, 1.0)
@@ -94,7 +87,7 @@ end
 @testset "Namespaced inputs with SoilModel" begin
     NF = Float32
     grid = ColumnGrid(CPU(), NF, ExponentialSpacing())
-    soil = Terrarium.SoilEnergyWaterCarbon(NF; strat = OARSoilStratigraphy(NF))
+    soil = Terrarium.SoilEnergyWaterCarbon(NF; strat = SoilGridsStratigraphy(NF))
     model = SoilModel(grid; soil)
 
     # prescribe texture for the organic horizon only; note that the fractions

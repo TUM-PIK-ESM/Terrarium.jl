@@ -20,33 +20,14 @@ Returns a tuple of `Symbol`s corresponding to variable names supported by this `
 """
 variables(::InputSource) = ()
 
-"""
-Type alias for namespaced input variable paths of the form `(namespace_1, ..., namespace_N, varname)`.
-"""
-const InputPath = Tuple{Vararg{Symbol}}
-
-"""
-    inputpath(name::Symbol)
-    inputpath(path::Pair)
-    inputpath(path::Tuple{Vararg{Symbol}})
-    inputpath(source::InputSource)
-
-Normalize the given input variable name into a path of the form `(namespace_1, ..., namespace_N, varname)`.
-Plain `Symbol` names correspond to variables in the root namespace, i.e. the path `(varname,)`. Namespaced
-variables can be specified either as `Pair`s, e.g. `:ns1 => :ns2 => :varname`, or directly as a tuple of
-`Symbol`s, e.g. `(:ns1, :ns2, :varname)`.
-"""
-inputpath(name::Symbol) = (name,)
-inputpath(path::InputPath) = path
-inputpath(path::Pair) = (Symbol(first(path)), inputpath(last(path))...)
-inputpath(::InputSource{NF, name}) where {NF, name} = inputpath(name)
+varpath(::InputSource{NF, name}) where {NF, name} = varpath(name)
 
 """
     $TYPEDSIGNATURES
 
-Returns the name of the input variable provided by this source, i.e. the last entry of its [`inputpath`](@ref).
+Returns the name of the input variable provided by this source, i.e. the last entry of its [`varpath`](@ref).
 """
-varname(source::InputSource) = last(inputpath(source))
+varname(source::InputSource) = last(varpath(source))
 
 """
     $TYPEDSIGNATURES
@@ -55,15 +36,7 @@ Determine whether the given `source` provides an input variable for the namespac
 `scope`, where `scope` is the path of namespace names from the root namespace, i.e. `()` for the
 root namespace itself, `(:ns1,)` for its child namespace `ns1`, and so on.
 """
-matches_scope(source::InputSource, scope::InputPath) = Base.front(inputpath(source)) == scope
-
-"""
-    $SIGNATURES
-
-Wrap the given variable `var` in nested `Namespace`s according to the `path`, where the last element of `path` is the variable name.
-"""
-namespaced_variables(path::InputPath, var::AbstractVariable) =
-    length(path) == 1 ? (var,) : (namespace(first(path), namespaced_variables(Base.tail(path), var)),)
+matches_scope(source::InputSource, scope::VarPath) = Base.front(varpath(source)) == scope
 
 """
     $TYPEDSIGNATURES
@@ -71,7 +44,7 @@ namespaced_variables(path::InputPath, var::AbstractVariable) =
 Initializes the input source. The `scope` corresponds to the namespace path (relative to the root namespace)
 of the input variables in `fields`. Default implementation does nothing.
 """
-initialize!(fields, ::InputSource, clock, scope::InputPath = ()) = nothing
+initialize!(fields, ::InputSource, clock, scope::VarPath = ()) = nothing
 
 """
     $TYPEDSIGNATURES
@@ -80,7 +53,7 @@ Updates the values of input variables stored in `fields` from the given input `s
 corresponds to the namespace path (relative to the root namespace) of the input variables in `fields`.
 Default implementation simply returns `nothing`.
 """
-update_inputs!(fields, ::InputSource, ::Clock, scope::InputPath = ()) = nothing
+update_inputs!(fields, ::InputSource, ::Clock, scope::VarPath = ()) = nothing
 
 """
 Type alias for an `AbstractField` with any X, Y, Z location or grid.
@@ -102,14 +75,14 @@ variables(sources::InputSources) = tuplejoin(map(variables, sources.sources)...)
 
 varname(::InputSources) = nothing
 
-function initialize!(fields, input::InputSources, clock::Clock, scope::InputPath = ())
+function initialize!(fields, input::InputSources, clock::Clock, scope::VarPath = ())
     for source in input.sources
         initialize!(fields, source, clock, scope)
     end
     return nothing
 end
 
-function update_inputs!(fields, input::InputSources, clock::Clock, scope::InputPath = ())
+function update_inputs!(fields, input::InputSources, clock::Clock, scope::VarPath = ())
     for source in input.sources
         update_inputs!(fields, source, clock, scope)
     end
@@ -133,7 +106,7 @@ struct FieldInputSource{NF, name, VD <: VarDims, FS <: AnyField{NF}, UT} <: Inpu
     field::FS
 end
 
-function initialize!(fields, source::FieldInputSource, clock::Clock = Clock(time = 0.0), scope::InputPath = ())
+function initialize!(fields, source::FieldInputSource, clock::Clock = Clock(time = 0.0), scope::VarPath = ())
     name = varname(source)
     if matches_scope(source, scope) && hasproperty(fields, name)
         field = getproperty(fields, name)
@@ -146,7 +119,7 @@ end
     $TYPEDSIGNATURES
 
 Create a `FieldInputSource` with the given grid and input variable `fields`. Use it for static input fields.
-The `name` can either be a plain `Symbol` or a namespaced path; see [`inputpath`](@ref).
+The `name` can either be a plain `Symbol` or a namespaced path; see [`varpath`](@ref).
 """
 function InputSource(grid::AbstractLandGrid{NF}, field::FS; name, units = NoUnits) where {NF, FS <: AnyField{NF}}
     # ensure fields are on the same architecture as the grid
@@ -158,7 +131,7 @@ function InputSource(grid::AbstractLandGrid{NF}, field::FS; name, units = NoUnit
     # infer the VarDims and subsequently the Field location from the data dimensions
     dims = Terrarium.vardims(field)
 
-    path = inputpath(name)
+    path = varpath(name)
     return FieldInputSource{NF, path, typeof(dims), typeof(field), typeof(units)}(dims, units, field)
 end
 
@@ -171,11 +144,11 @@ Converts the RingGrids field to an Oceananigans field and then creates the input
 function InputSource(grid::ColumnRingGrid{NF}, ring_field::RingGrids.AbstractField; name, units = NoUnits) where {NF}
     oceananigans_field = Field(ring_field, grid)
     dims = Terrarium.vardims(oceananigans_field)
-    path = inputpath(name)
+    path = varpath(name)
     return FieldInputSource{NF, path, typeof(dims), typeof(oceananigans_field), typeof(units)}(dims, units, oceananigans_field)
 end
 
-variables(source::FieldInputSource) = namespaced_variables(inputpath(source), input(varname(source), source.dims; units = source.units))
+variables(source::FieldInputSource) = with_scope(varpath(source), input(varname(source), source.dims; units = source.units))
 
 """
 Type alias for a `FieldTimeSeries` with any X, Y, Z location or grid.
@@ -200,18 +173,18 @@ end
 
 function InputSource(fts::AnyFieldTimeSeries{NF}; name, units = NoUnits) where {NF}
     dims = vardims(fts)
-    path = inputpath(name)
+    path = varpath(name)
     return FieldTimeSeriesInputSource{NF, path, typeof(dims), typeof(fts), typeof(units)}(dims, units, fts)
 end
 
-variables(source::FieldTimeSeriesInputSource) = namespaced_variables(inputpath(source), input(varname(source), source.dims; units = source.units))
+variables(source::FieldTimeSeriesInputSource) = with_scope(varpath(source), input(varname(source), source.dims; units = source.units))
 
 # to initialize just update the state once at the start time
-function initialize!(fields, source::FieldTimeSeriesInputSource, clock::Clock, scope::InputPath = ())
+function initialize!(fields, source::FieldTimeSeriesInputSource, clock::Clock, scope::VarPath = ())
     return update_inputs!(fields, source, clock, scope)
 end
 
-function update_inputs!(fields, source::FieldTimeSeriesInputSource, clock::Clock, scope::InputPath = ())
+function update_inputs!(fields, source::FieldTimeSeriesInputSource, clock::Clock, scope::VarPath = ())
     name = varname(source)
     if matches_scope(source, scope) && hasproperty(fields, name)
         field_t = getproperty(fields, name)
