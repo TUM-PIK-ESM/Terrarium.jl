@@ -39,7 +39,7 @@ end
     InputSource(data::Raster, grid::ColumnRingGrid; name = data.name)
 
 Creates a new `RasterInputSource` from the given `Raster` data and `grid`. The `name` can either
-be a plain `Symbol` or a namespaced path; see [`Terrarium.inputpath`](@ref).
+be a plain `Symbol` or a namespaced path; see [`Terrarium.varpath`](@ref).
 """
 function Terrarium.InputSource(grid::ColumnRingGrid{NF}, raster::AbstractRaster{NF}; name = raster.name, units = NoUnits, reftime = nothing) where {NF}
     # get indices from grid mask
@@ -48,16 +48,16 @@ function Terrarium.InputSource(grid::ColumnRingGrid{NF}, raster::AbstractRaster{
     vd = Terrarium.vardims(raster)
     # infer reference time
     reftime = default_reftime(raster, reftime)
-    path = Terrarium.inputpath(name)
+    path = Terrarium.varpath(name)
     return RasterInputSource{NF, path, typeof(vd), typeof(reftime), typeof(idxmap), typeof(raster), typeof(units)}(vd, units, idxmap, reftime, raster)
 end
 
-Terrarium.variables(source::RasterInputSource) = Terrarium.namespaced_variables(
-    Terrarium.inputpath(source),
+Terrarium.variables(source::RasterInputSource) = Terrarium.with_scope(
+    Terrarium.varpath(source),
     Terrarium.input(Terrarium.varname(source), source.dims; units = source.units)
 )
 
-function Terrarium.initialize!(fields, source::RasterInputSource, clock::Clock, scope::Terrarium.InputPath = ())
+function Terrarium.initialize!(fields, source::RasterInputSource, clock::Clock, scope::Terrarium.VarPath = ())
     name = Terrarium.varname(source)
     if Terrarium.matches_scope(source, scope) && hasproperty(fields, name)
         field = getproperty(fields, name)
@@ -77,7 +77,7 @@ end
 # for time-varying rasters this just updates once at the start time
 initialize_from_raster!(field, raster, idxmap, timedim, current_time) = update_from_raster!(field, raster, idxmap, timedim, current_time)
 
-function Terrarium.update_inputs!(fields, source::RasterInputSource, clock::Clock, scope::Terrarium.InputPath = ())
+function Terrarium.update_inputs!(fields, source::RasterInputSource, clock::Clock, scope::Terrarium.VarPath = ())
     name = Terrarium.varname(source)
     if Terrarium.matches_scope(source, scope) && hasproperty(fields, name)
         field = getproperty(fields, name)
