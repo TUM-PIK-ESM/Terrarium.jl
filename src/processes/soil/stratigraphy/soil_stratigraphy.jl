@@ -37,16 +37,19 @@ end
     $TYPEDSIGNATURES
 
 Convenience constructor that creates a `SoilStratigraphy` with six horizons corresponding to
-the six depth intervals defined by the SoilGridsV2 dataset.
+the six depth intervals defined by the SoilGridsV2 dataset. The `porosity` parameterization is
+applied to all six default horizons; pass explicit `horizon*` arguments to override individual
+horizons (in which case `porosity` does not apply to those).
 """
 function SoilGridsStratigraphy(
         ::Type{NF};
-        horizon1::AbstractSoilHorizon = PrescribedSoilHorizon(NF, :horizon1, default_thickness = NF(0.05)),
-        horizon2::AbstractSoilHorizon = PrescribedSoilHorizon(NF, :horizon2, default_thickness = NF(0.1)),
-        horizon3::AbstractSoilHorizon = PrescribedSoilHorizon(NF, :horizon3, default_thickness = NF(0.2)),
-        horizon4::AbstractSoilHorizon = PrescribedSoilHorizon(NF, :horizon4, default_thickness = NF(0.3)),
-        horizon5::AbstractSoilHorizon = PrescribedSoilHorizon(NF, :horizon5, default_thickness = NF(0.4)),
-        horizon6::AbstractSoilHorizon = PrescribedSoilHorizon(NF, :horizon6, default_thickness = NF(1.0))
+        porosity::AbstractSoilPorosity = ConstantSoilPorosity(NF),
+        horizon1::AbstractSoilHorizon = PrescribedSoilHorizon(NF, :horizon1; porosity, default_thickness = NF(0.05)),
+        horizon2::AbstractSoilHorizon = PrescribedSoilHorizon(NF, :horizon2; porosity, default_thickness = NF(0.1)),
+        horizon3::AbstractSoilHorizon = PrescribedSoilHorizon(NF, :horizon3; porosity, default_thickness = NF(0.2)),
+        horizon4::AbstractSoilHorizon = PrescribedSoilHorizon(NF, :horizon4; porosity, default_thickness = NF(0.3)),
+        horizon5::AbstractSoilHorizon = PrescribedSoilHorizon(NF, :horizon5; porosity, default_thickness = NF(0.4)),
+        horizon6::AbstractSoilHorizon = PrescribedSoilHorizon(NF, :horizon6; porosity, default_thickness = NF(1.0))
     ) where {NF}
     return SoilStratigraphy((horizon1, horizon2, horizon3, horizon4, horizon5, horizon6))
 end

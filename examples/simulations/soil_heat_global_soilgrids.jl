@@ -63,7 +63,7 @@ function Terrarium.InputSources(dataset::SoilGrids2, grid::ColumnRingGrid, horiz
         for var in soilgrids_vars
             verbose && @info "Loading input data for $var on $horizon"
             var_field = Field(getproperty(metadataset, var))
-            ring_field = RingGrids.on_architecture(arch, RingGrids.FullClenshawField(interior(var_field)[:, (end - 1):-1:2, idx], input_as = Matrix))
+            ring_field = RingGrids.on_architecture(arch, RingGrids.FullClenshawField(interior(var_field)[:, (end - 1):-1:2, end - idx + 1], input_as = Matrix))
             target_field = RingGrids.Field(grid.rings)
             RingGrids.interpolate!(target_field, ring_field)
             layer_inputs[var] = InputSource(grid, Field(target_field, grid); name = horizon => var)
@@ -83,7 +83,7 @@ DisplayAs.PNG(fig) #hide
 # ## Heterogeneous soil stratigraphy
 # We now construct a six-layer `SoilStratigraphy` using the `SoilGridsStratigraphy` convenience constructor.
 porosity = SoilPorositySURFEX(eltype(grid))
-strat = SoilGridsStratigraphy(eltype(grid))
+strat = SoilGridsStratigraphy(eltype(grid); porosity)
 soil = SoilEnergyWaterCarbon(eltype(grid); strat)
 model = SoilModel(grid; soil)
 
@@ -124,14 +124,19 @@ integrator = initialize(model, ForwardEuler(NF); inputs = soilgrids_inputs, boun
 
 # We can verify that the SoilGrids texture has been correctly assigned to the first horizon:
 sand1 = RingGrids.Field(arch, interior(integrator.state.namespaces.horizon1.sand_fraction), grid)
-fig = heatmap(sand1[:, 1, 1], title = "Sand fraction of the organic horizon")
+fig = heatmap(sand1[:, 1, 1], title = "Sand fraction of the uppermost horizon")
 DisplayAs.PNG(fig) #hide
 
-# Now run the simulation for 12 hours:
-timestep!(integrator)
-@time run!(integrator, period = Hour(12), Δt = 600.0)
+# We snapshot the initial soil temperature so we can later plot the change over the simulation.
+T_init = copy(interior(integrator.state.temperature))
 
-# ...and plot the resulting surface temperature:
-T_surface = RingGrids.Field(arch, interior(integrator.state.ground_temperature), grid)
-fig = heatmap(T_surface[:, 1, 1], title = "Temperature of uppermost soil layer", colorrange = (-20, 20))
+# Now run the simulation for 5 days:
+timestep!(integrator)
+@time run!(integrator, period = Day(5), Δt = 300.0)
+
+# ...and plot the change in temperature of the 25 cm soil layer relative to the initial condition
+# on a divergent blue-white-red colormap, which isolates the texture-dependent thermal response:
+ΔT = interior(integrator.state.temperature)[:, :, end - 3] .- T_init[:, :, end - 3]
+ΔT_soil = RingGrids.Field(arch, ΔT, grid)
+fig = heatmap(ΔT_soil[:, 1, 1], title = "Change in 25 cm soil temperature (vs. initial)", colorrange = (-5, 5), colormap = :bwr)
 DisplayAs.PNG(fig) #hide

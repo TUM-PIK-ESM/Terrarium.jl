@@ -21,7 +21,10 @@ import Oceananigans.BoundaryConditions: ValueBoundaryCondition, FluxBoundaryCond
     @test Terrarium.compute_thermal_conductivity(thermal_props, SoilVolume(porosity = 1.0, saturation = 1.0, liquid = 1.0)) ≈ thermal_props.conductivities.water
     @test Terrarium.compute_thermal_conductivity(thermal_props, SoilVolume(porosity = 1.0, saturation = 1.0, liquid = 0.0)) ≈ thermal_props.conductivities.ice
     @test Terrarium.compute_thermal_conductivity(thermal_props, SoilVolume(porosity = 1.0, saturation = 0.0, liquid = 0.0)) ≈ thermal_props.conductivities.air
-    @test Terrarium.compute_thermal_conductivity(thermal_props, SoilVolume(porosity = 0.0, saturation = 0.0)) ≈ thermal_props.conductivities.mineral
+    # pure mineral soil: the bulk mineral conductivity is the quartz-weighted geometric mean of the
+    # quartz and non-quartz endpoints, recovered at the pure-sand and pure-clay limits respectively
+    @test Terrarium.compute_thermal_conductivity(thermal_props, SoilVolume(porosity = 0.0, saturation = 0.0, solid = MineralOrganic(texture = SoilTexture(:sand), organic = 0.0))) ≈ thermal_props.conductivities.quartz
+    @test Terrarium.compute_thermal_conductivity(thermal_props, SoilVolume(porosity = 0.0, saturation = 0.0, solid = MineralOrganic(texture = SoilTexture(:clay), organic = 0.0))) ≈ thermal_props.conductivities.mineral
     @test Terrarium.compute_thermal_conductivity(thermal_props, SoilVolume(porosity = 0.0, saturation = 0.0, solid = MineralOrganic(organic = 1.0))) ≈ thermal_props.conductivities.organic
 end
 
@@ -103,7 +106,9 @@ end
     # set porosity to zero to remove influence of pore space;
     # this is just a hack to configure the model to simulate heat conduction in a fully solid medium
     soil_porosity = ConstantSoilPorosity(mineral_porosity = 0.0)
-    strat = HomogeneousSoilStratigraphy(Float64; porosity = soil_porosity)
+    # use a pure-clay (non-quartz) texture so the bulk solid conductivity equals the `mineral`
+    # endpoint, isolating the analytical conduction comparison from the texture weighting
+    strat = HomogeneousSoilStratigraphy(Float64; texture = SoilTexture(Float64, :clay), porosity = soil_porosity)
     # set thermal properties
     thermal_properties = SoilThermalProperties(
         eltype(grid);
@@ -152,7 +157,9 @@ end
     # set porosity to zero to remove influence of pore space;
     # this is just a hack to configure the model to simulate heat conduction in a fully solid medium
     soil_porosity = ConstantSoilPorosity(mineral_porosity = 0.0)
-    strat = HomogeneousSoilStratigraphy(Float64; porosity = soil_porosity)
+    # use a pure-clay (non-quartz) texture so the bulk solid conductivity equals the `mineral`
+    # endpoint, isolating the analytical conduction comparison from the texture weighting
+    strat = HomogeneousSoilStratigraphy(Float64; texture = SoilTexture(Float64, :clay), porosity = soil_porosity)
     soil = SoilEnergyWaterCarbon(eltype(grid); strat, biogeochem)
     model = SoilModel(grid; soil, initializer)
     # constant upper boundary temperature set to T₁
