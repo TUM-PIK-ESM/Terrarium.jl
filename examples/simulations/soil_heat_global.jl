@@ -24,21 +24,6 @@ input_dir = "inputs" #hide
 arch = CUDA.functional() ? GPU() : CPU()
 @info "Setting up simulation on $arch" #hide
 
-## Temporary compatibility function, should be added to NumericalEarth extension
-function Terrarium.InputSources(dataset::SoilGrids2, grid::ColumnRingGrid; depth_layer = 1)
-    soilgrids_vars = (:sand_fraction, :silt_fraction, :clay_fraction, :bulk_density)
-    metadataset = MetadataSet(soilgrids_vars...; dataset)
-    arch = RingGrids.architecture(grid.rings)
-    soilgrids_fields = map(soilgrids_vars) do var
-        var_field = Field(getproperty(metadataset, var))
-        ring_field = RingGrids.on_architecture(arch, RingGrids.FullClenshawField(interior(var_field)[:, (end - 1):-1:2, depth_layer], input_as = Matrix))
-        target_field = RingGrids.Field(grid.rings)
-        RingGrids.interpolate!(target_field, ring_field)
-        InputSource(grid, Field(target_field, grid); name = var)
-    end
-    return InputSources(soilgrids_fields...)
-end # hide
-
 # Next, we load a land-sea mask at ~1° resolution. The mask is a full Gaussian grid, as defined by the
 # [FullGaussianGrid](@extref RingGrids.FullGaussianGrid) from RingGrids.jl. Irrespective of the architecture
 # used for simulation, the land-sea mask is kept on the CPU for easy scalar indexing, which is by default not
@@ -55,19 +40,12 @@ land_mask = land_sea_frac_field .> 0.5
 grid = ColumnRingGrid(arch, NF, ExponentialSpacing(N = 30), land_mask.grid, land_mask)
 grid_lon, grid_lat = RingGrids.get_lonlats(grid.rings) # in radians
 
-# Here we load soil data for the model:
-soilinputs = InputSources(SoilGrids2(), grid)
-heatmap(RingGrids.Field(CPU(), interior(on_architecture(CPU(), soilinputs.sources[1].field))[:, 1, 1], grid))
-
 # Remember from the documentation section on [grids](@ref Grids), that the `x`-axis of the Oceananigans [`RectilinearGrid`](@extref Oceananigans.Grids.RectilinearGrid)
 # corresponds to a single index following the ring order (for more details, see the [corresponding section in the
 # RingGrids.jl documentation](https://speedyweather.github.io/SpeedyWeatherDocumentation/stable/ringgrids/#Indexing-Fields)).
 
 # Now we create our [`SoilModel`](@ref), this time without a model initializer:
-porosity = SoilPorositySURFEX(eltype(grid))
-strat = SoilStratigraphy(eltype(grid), PrescribedSoilHorizon(:surface, porosity))
-soil = SoilEnergyWaterCarbon(eltype(grid); strat)
-model = SoilModel(grid; soil)
+model = SoilModel(grid)
 
 # To make the simulation a bit more interesting, we will use spatially periodic initial and boundary conditions.
 # The climatology will be determined by latitude with a maximum of 20 °C at the equator and minimum of -20°C at
@@ -115,7 +93,6 @@ end
 lon_masked = grid_lon[land_mask]
 lat_masked = grid_lat[land_mask] # mask out non-land points
 bc = PrescribedSurfaceTemperature(:T_ub, get_temperature_bc(lon_masked, lat_masked))
-
 inits = (temperature = initial_soil_temperature,)
 
 # We are finally ready to initialize our model with the above initial and boundary conditions:
