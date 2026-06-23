@@ -117,14 +117,15 @@ Internally, `InputSources` will iterate over each source in order when calling `
 
 ## Namespaced input variables
 
-Model components may declare their input variables inside a variable [`Namespace`](@ref), e.g. the
-[`SoilStratigraphy`](@ref) declares separate `sand`, `silt`, `clay`, and `thickness` inputs for each of
-its soil horizons. Input sources can target such variables by passing a namespaced path as the `name`:
+Model components may declare their input variables inside a variable [`Namespace`](@ref). For example, a
+[`SoilStratigraphy`](@ref) wraps the variables of each soil horizon in a namespace named after that horizon,
+and every [`PrescribedSoilHorizon`](@ref) declares separate `sand_fraction`, `silt_fraction`, `clay_fraction`,
+and `thickness` inputs. Input sources can target such variables by passing a namespaced path as the `name`:
 
 ```julia
 inputs = InputSources(
-    ## targets the `sand` input variable in the `organic` namespace
-    InputSource(grid, sand_field; name = :organic => :sand),
+    ## targets the `sand_fraction` input variable in the `organic` horizon namespace
+    InputSource(grid, sand_field; name = :organic => :sand_fraction),
     ## nested namespaces chain as pairs: ns1 => ns2 => varname
     InputSource(grid, other_field; name = :ns1 => :ns2 => :x),
 )

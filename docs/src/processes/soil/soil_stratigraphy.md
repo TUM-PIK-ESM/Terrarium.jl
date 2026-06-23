@@ -43,10 +43,43 @@ The total volumetric fractions of each component can then be trivially derived f
 
 The total water/ice content is defined is $\theta = \theta_{\text{liq}} + \theta_{\text{ice}}$ 
 
+### Horizons and namespaced inputs
+
+A [`SoilStratigraphy`](@ref) is built from a stack of *soil horizons*, ordered from the top of the vertical column
+downwards. Each horizon is assumed to be internally homogeneous and carries its own texture and porosity
+parameterization as well as a thickness. Terrarium currently provides two horizon types:
+
+- [`ConstantSoilHorizon`](@ref), whose texture and porosity are fixed parameters (spatially and temporally invariant), and
+- [`PrescribedSoilHorizon`](@ref), whose texture and thickness are supplied as spatially varying input `Field`s.
+
+The depth range occupied by each horizon is determined by its thickness, and the bottommost horizon always
+extends to the base of the column regardless of its nominal thickness. The horizon containing a given soil
+volume is resolved per grid cell at runtime, so that horizon properties may vary laterally when prescribed
+from data.
+
+Each horizon declares its variables inside a [`Namespace`](@ref) named after the horizon. In particular,
+every [`PrescribedSoilHorizon`](@ref) declares `sand_fraction`, `silt_fraction`, `clay_fraction`, and
+`thickness` input variables, which are matched to [`InputSource`](@ref)s via namespaced names (e.g.
+`:horizon1 => :sand_fraction`). See [Namespaced input variables](@ref) for details.
+
 ## Stratigraphy types
 
 ```@docs; canonical = false
 SoilStratigraphy
+```
+
+For common configurations, two convenience constructors are provided:
+
+```@docs; canonical = false
+HomogeneousSoilStratigraphy
+SoilGridsStratigraphy
+```
+
+## Soil horizons
+
+```@docs; canonical = false
+ConstantSoilHorizon
+PrescribedSoilHorizon
 ```
 
 ## Soil texture

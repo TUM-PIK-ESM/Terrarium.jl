@@ -5,9 +5,9 @@
 # [NumericalEarth.jl](https://github.com/NumericalEarth/NumericalEarth.jl).
 #
 # The key new concept demonstrated here are *namespaced input variables*: each soil horizon of
-# the [`SoilStratigraphy`](@ref) declares its own `sand`, `silt`, `clay`, and `thickness` input
-# variables inside a namespace named after the horizon. Input sources are matched to these
-# variables via namespaced names such as `:organic => :sand`.
+# the [`SoilStratigraphy`](@ref) declares its own `sand_fraction`, `silt_fraction`, `clay_fraction`,
+# and `thickness` input variables inside a namespace named after the horizon. Input sources are matched
+# to these variables via namespaced names such as `:horizon1 => :sand_fraction`.
 
 using Terrarium
 
