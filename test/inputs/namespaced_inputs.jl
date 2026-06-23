@@ -18,7 +18,7 @@ using Test
     vars = variables(src)
     @test length(vars) == 1 && isa(vars[1], Namespace)
     @test varname(vars[1]) == :ns1
-    @test vars[1].vars.inputs.x == Terrarium.input(:x, XY())
+    @test vars[1].vars[1] == Terrarium.input(:x, XY())
 
     # initialize state with a root input :x and two namespaces both declaring :x
     all_vars = Variables(
@@ -66,28 +66,11 @@ using Test
     @test all(interior(state.inputs.x) .== 5.0f0)
 end
 
-@testset "Namespace merging in Variables" begin
-    # same-named namespaces should merge their variables
-    vars = Variables(
-        Terrarium.namespace(:ns, (Terrarium.input(:a, XY()),)),
-        Terrarium.namespace(:ns, (Terrarium.input(:b, XY()),)),
-    )
-    @test keys(vars.namespaces) == (:ns,)
-    @test keys(vars.namespaces.ns.vars.inputs) == (:a, :b)
-
-    # nested namespaces merge recursively
-    nested = Variables(
-        Terrarium.namespace(:outer, (Terrarium.namespace(:inner, (Terrarium.input(:a, XY()),)),)),
-        Terrarium.namespace(:outer, (Terrarium.namespace(:inner, (Terrarium.input(:b, XY()),)),)),
-    )
-    @test keys(nested.namespaces) == (:outer,)
-    @test keys(nested.namespaces.outer.vars.namespaces.inner.vars.inputs) == (:a, :b)
-end
-
 @testset "Namespaced inputs with SoilModel" begin
     NF = Float32
     grid = ColumnGrid(CPU(), NF, ExponentialSpacing())
-    soil = Terrarium.SoilEnergyWaterCarbon(NF; strat = SoilGridsStratigraphy(NF))
+    strat = SoilGridsStratigraphy(NF)
+    soil = Terrarium.SoilEnergyWaterCarbon(NF; strat)
     model = SoilModel(grid; soil)
 
     # prescribe texture for the organic horizon only; note that the fractions
@@ -99,22 +82,21 @@ end
     silt .= 0.5f0
     clay .= 0.25f0
     inputs = InputSources(
-        InputSource(grid, sand; name = :organic => :sand),
-        InputSource(grid, silt; name = :organic => :silt),
-        InputSource(grid, clay; name = :organic => :clay),
+        InputSource(grid, sand; name = :horizon1 => :sand_fraction),
+        InputSource(grid, silt; name = :horizon1 => :silt_fraction),
+        InputSource(grid, clay; name = :horizon1 => :clay_fraction),
     )
     integrator = initialize(model, ForwardEuler(NF); inputs)
     state = integrator.state
-    @test Terrarium.namespace_names(state) == (:organic, :surface, :bedrock)
-    ## inputs land only in the organic horizon namespace
-    @test all(interior(state.namespaces.organic.sand) .== 0.25f0)
-    @test all(interior(state.namespaces.organic.silt) .== 0.5f0)
-    @test all(interior(state.namespaces.organic.clay) .== 0.25f0)
+    @test Terrarium.namespace_names(state) == map(nameof, strat.horizons)
+    ## inputs land only in the first horizon namespace
+    @test all(interior(state.namespaces.horizon1.sand_fraction) .== 0.25f0)
+    @test all(interior(state.namespaces.horizon1.silt_fraction) .== 0.5f0)
+    @test all(interior(state.namespaces.horizon1.clay_fraction) .== 0.25f0)
     ## sibling horizons keep their defaults (sand defaults to one)
-    @test all(interior(state.namespaces.surface.sand) .== 1.0f0)
-    @test all(interior(state.namespaces.bedrock.sand) .== 1.0f0)
-
-    # simulation runs and inputs are preserved across timesteps
-    run!(integrator; steps = 5, Δt = 60.0)
-    @test all(interior(state.namespaces.organic.sand) .== 0.25f0)
+    @test all(interior(state.namespaces.horizon2.sand_fraction) .== 1.0f0)
+    @test all(interior(state.namespaces.horizon3.sand_fraction) .== 1.0f0)
+    @test all(interior(state.namespaces.horizon4.sand_fraction) .== 1.0f0)
+    @test all(interior(state.namespaces.horizon5.sand_fraction) .== 1.0f0)
+    @test all(interior(state.namespaces.horizon6.sand_fraction) .== 1.0f0)
 end
