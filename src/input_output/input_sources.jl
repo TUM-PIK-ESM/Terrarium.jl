@@ -63,13 +63,17 @@ const AnyField{NF} = AbstractField{LX, LY, LZ, G, NF} where {LX, LY, LZ, G}
 """
 Container type for wrapping multiple `InputSource`s.
 """
-struct InputSources{NF, Sources <: Tuple{Vararg{InputSource{NF}}}} <: InputSource{NF, nothing}
+struct InputSources{NF, name, Sources <: Tuple{Vararg{InputSource{NF}}}} <: InputSource{NF, name}
     sources::Sources
 end
 
-InputSources(::Type{NF}) where {NF} = InputSources{NF, Tuple{}}(())
-InputSources(input::InputSource, others::InputSource...) = InputSources(tuple(input, others...))
+InputSources(::Type{NF}, name = nothing) where {NF} = InputSources{NF, name, Tuple{}}(())
 InputSources(input::InputSources) = input
+InputSources(input::InputSource{NF}, others::InputSource{NF}...) where {NF} = InputSources(nothing, input, others...)
+function InputSources(name, input::InputSource{NF}, others::InputSource{NF}...) where {NF}
+    sources = tuple(input, others...)
+    return InputSources{NF, name, typeof(sources)}(sources)
+end
 
 variables(sources::InputSources) = tuplejoin(map(variables, sources.sources)...)
 

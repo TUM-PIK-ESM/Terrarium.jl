@@ -23,7 +23,7 @@ import DisplayAs #hide
 
 # NumericalEarth.jl provides the `SoilGrids2` dataset together with download and
 # preprocessing machinery.
-using NumericalEarth.DataWrangling: Metadatum
+using NumericalEarth.DataWrangling: MetadataSet
 using NumericalEarth.SoilGrids: SoilGrids2
 
 input_dir = "inputs" #hide
@@ -53,81 +53,39 @@ grid_lon, grid_lat = RingGrids.get_lonlats(grid.rings) # in radians
 # MB, cached afterwards), converts the fractions to the unit interval, and returns Oceananigans
 # `Field`s with the vertical axis ordered from the deepest layer (k=1, 100-200 cm) to the
 # surface layer (k=6, 0-5 cm).
-soilgrids = SoilGrids2()
-sand3d = Field(Metadatum(:sand_fraction, dataset = soilgrids))
-silt3d = Field(Metadatum(:silt_fraction, dataset = soilgrids))
-clay3d = Field(Metadatum(:clay_fraction, dataset = soilgrids))
-
-# We regrid the SoilGrids data onto our (much coarser) model grid by nearest-neighbor
-# sampling at each ring point. The SoilGrids data array is indexed `[lon, lat, depth]` with
-# longitude starting at the prime meridian (0°E) and latitude running south to north. We
-# build a sampler closure for a given depth layer `k` and then evaluate it at the longitude
-# and latitude (in degrees) of every column in the model grid.
-function soilgrids_sampler(field3d, k)
-    data = Array(interior(field3d, :, :, k))
-    nlon, nlat = size(data)
-    return function (lon_deg, lat_deg)
-        i = clamp(round(Int, mod(lon_deg, 360) / 360 * nlon), 1, nlon)
-        j = clamp(round(Int, (lat_deg + 90) / 180 * nlat), 1, nlat)
-        return data[i, j]
+function Terrarium.InputSources(dataset::SoilGrids2, grid::ColumnRingGrid, horizons = (Symbol(:horizon, i) for i in 1:6); name = nameof(typeof(dataset)), verbose = true)
+    soilgrids_vars = (:sand_fraction, :silt_fraction, :clay_fraction, :bulk_density)
+    metadataset = MetadataSet(soilgrids_vars...; dataset)
+    arch = RingGrids.architecture(grid.rings)
+    soilgrids_inputs = []
+    for (idx, horizon) in enumerate(horizons)
+        layer_inputs = Dict()
+        for var in soilgrids_vars
+            verbose && @info "Loading input data for $var on $horizon"
+            var_field = Field(getproperty(metadataset, var))
+            ring_field = RingGrids.on_architecture(arch, RingGrids.FullClenshawField(interior(var_field)[:, (end - 1):-1:2, idx], input_as = Matrix))
+            target_field = RingGrids.Field(grid.rings)
+            RingGrids.interpolate!(target_field, ring_field)
+            layer_inputs[var] = InputSource(grid, Field(target_field, grid); name = horizon => var)
+        end
+        # Ensure that mineral texture components sum to unity
+        Terrarium.normalize_texture!(layer_inputs[:sand_fraction].field, layer_inputs[:silt_fraction].field, layer_inputs[:clay_fraction].field)
+        append!(soilgrids_inputs, values(layer_inputs))
     end
+    return InputSources(name, soilgrids_inputs...)
 end
 
-function soilgrids_to_ringfield(field3d, k, rings)
-    sample = soilgrids_sampler(field3d, k)
-    londs, latds = RingGrids.get_londlatds(rings) # degrees, lon in [0, 360)
-    out = RingGrids.Field(rings)
-    for idx in eachindex(out)
-        out[idx] = sample(londs[idx], latds[idx])
-    end
-    return out
-end
+soilgrids_inputs = InputSources(SoilGrids2(), grid)
 
-# We use the topmost layer (0-5 cm) for the organic horizon and the 60-100 cm layer for
-# the mineral surface horizon below it.
-k_top, k_sub = 6, 2
-sand_org, silt_org, clay_org = (soilgrids_to_ringfield(f, k_top, grid.rings) for f in (sand3d, silt3d, clay3d))
-sand_sub, silt_sub, clay_sub = (soilgrids_to_ringfield(f, k_sub, grid.rings) for f in (sand3d, silt3d, clay3d))
-
-# The sand, silt, and clay fractions in SoilGrids are predicted independently and thus do
-# not sum exactly to unity, which the [`SoilTexture`](@ref) constructor requires. We therefore
-# normalize the fractions in each grid cell with [`normalize_texture!`](@ref) and fill cells
-# without data (e.g. ocean cells that fall inside the land mask) with a loam-like default
-# texture. The data of a `RingGrids.Field` is a plain vector, which we pass in directly.
-normalize_texture!(sand_org.data, silt_org.data, clay_org.data)
-normalize_texture!(sand_sub.data, silt_sub.data, clay_sub.data)
-
-fig = heatmap(sand_org, title = "SoilGrids 2.0 sand fraction (0-5 cm) on the model grid")
+fig = heatmap(RingGrids.Field(on_architecture(CPU(), soilgrids_inputs.sources[2].field), grid)[:,1])
 DisplayAs.PNG(fig) #hide
 
 # ## Heterogeneous soil stratigraphy
-# We now construct a three-horizon organic/surface/bedrock (OAR) stratigraphy where the upper
-# two horizons are [`PrescribedSoilHorizon`](@ref)s, i.e. their texture and thickness are
-# provided as (namespaced) input variables.
-strat = OARSoilStratigraphy(NF)
-soil = Terrarium.SoilEnergyWaterCarbon(NF; strat)
+# We now construct a six-layer `SoilStratigraphy` using the `SoilGridsStratigraphy` convenience constructor.
+porosity = SoilPorositySURFEX(eltype(grid))
+strat = SoilGridsStratigraphy(eltype(grid))
+soil = SoilEnergyWaterCarbon(eltype(grid); strat)
 model = SoilModel(grid; soil)
-
-# The horizon thicknesses are also input variables; here we simply prescribe spatially
-# constant values of 0.1 m for the organic horizon and 2 m for the mineral surface horizon.
-# The bedrock horizon extends through the rest of the column.
-organic_thickness = Field(grid, XY())
-surface_thickness = Field(grid, XY())
-set!(organic_thickness, NF(0.1))
-set!(surface_thickness, NF(2.0))
-
-# Each input source is assigned to its soil horizon via the namespaced `name`, e.g.
-# `:organic => :sand` targets the `sand` input variable in the `organic` namespace.
-inputs = InputSources(
-    InputSource(grid, sand_org; name = :organic => :sand),
-    InputSource(grid, silt_org; name = :organic => :silt),
-    InputSource(grid, clay_org; name = :organic => :clay),
-    InputSource(grid, organic_thickness; name = :organic => :thickness),
-    InputSource(grid, sand_sub; name = :surface => :sand),
-    InputSource(grid, silt_sub; name = :surface => :silt),
-    InputSource(grid, clay_sub; name = :surface => :clay),
-    InputSource(grid, surface_thickness; name = :surface => :thickness),
-)
 
 # We reuse the simple latitude-dependent climatology from the [global example](@ref soil_heat_global)
 # for the initial and boundary conditions.
@@ -162,7 +120,7 @@ inits = (temperature = initial_soil_temperature,)
 
 # Initialize the model; the input sources are matched to the namespaced input variables of
 # the prescribed soil horizons.
-integrator = initialize(model, ForwardEuler(NF); inputs, boundary_conditions = bc, initializers = inits)
+integrator = initialize(model, ForwardEuler(NF); inputs = soilgrids_inputs, boundary_conditions = bc, initializers = inits)
 
 # We can verify that the SoilGrids texture has been correctly assigned to the organic horizon:
 organic_sand = RingGrids.Field(arch, interior(integrator.state.namespaces.organic.sand), grid)
