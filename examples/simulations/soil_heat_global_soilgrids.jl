@@ -68,7 +68,7 @@ function Terrarium.InputSources(dataset::SoilGrids2, grid::ColumnRingGrid, horiz
             RingGrids.interpolate!(target_field, ring_field)
             layer_inputs[var] = InputSource(grid, Field(target_field, grid); name = horizon => var)
         end
-        # Ensure that mineral texture components sum to unity
+        # Ensure that mineral texture components with each horizon sum to unity
         Terrarium.normalize_texture!(layer_inputs[:sand_fraction].field, layer_inputs[:silt_fraction].field, layer_inputs[:clay_fraction].field)
         append!(soilgrids_inputs, values(layer_inputs))
     end
@@ -77,7 +77,7 @@ end
 
 soilgrids_inputs = InputSources(SoilGrids2(), grid)
 
-fig = heatmap(RingGrids.Field(on_architecture(CPU(), soilgrids_inputs.sources[2].field), grid)[:,1])
+fig = heatmap(RingGrids.Field(on_architecture(CPU(), soilgrids_inputs.sources[2].field), grid)[:, 1])
 DisplayAs.PNG(fig) #hide
 
 # ## Heterogeneous soil stratigraphy
@@ -122,9 +122,9 @@ inits = (temperature = initial_soil_temperature,)
 # the prescribed soil horizons.
 integrator = initialize(model, ForwardEuler(NF); inputs = soilgrids_inputs, boundary_conditions = bc, initializers = inits)
 
-# We can verify that the SoilGrids texture has been correctly assigned to the organic horizon:
-organic_sand = RingGrids.Field(arch, interior(integrator.state.namespaces.organic.sand), grid)
-fig = heatmap(organic_sand[:, 1, 1], title = "Sand fraction of the organic horizon")
+# We can verify that the SoilGrids texture has been correctly assigned to the first horizon:
+sand1 = RingGrids.Field(arch, interior(integrator.state.namespaces.horizon1.sand_fraction), grid)
+fig = heatmap(sand1[:, 1, 1], title = "Sand fraction of the organic horizon")
 DisplayAs.PNG(fig) #hide
 
 # Now run the simulation for 12 hours:

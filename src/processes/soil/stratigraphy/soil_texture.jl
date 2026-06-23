@@ -41,18 +41,17 @@ end
 """
     $TYPEDSIGNATURES
 
-Normalize the given `sand`, `silt`, and `clay` fraction arrays (or `Field`s) in place such that
-the fractions sum to unity in each element, as required by the `SoilTexture` constructor. Elements
-without valid data (`NaN` or non-positive total) are filled with the `defaults`. This is useful
-for preprocessing soil texture data from external sources (e.g. SoilGrids) where the fractions
-are predicted independently and thus do not sum exactly to unity.
+Normalize the given `sand`, `silt`, and `clay` fraction `Field`s in place such that
+the fractions sum to unity in each element, as required by the `SoilTexture` constructor.
 """
-function normalize_texture!(sand::AbstractField{LX, LY, LZ, G, NF}, silt::AbstractField{LX, LY, LZ, G, NF}, clay::AbstractField{LX, LY, LZ, G, NF}) where {LX, LY, LZ, G, NF}
-    total = Field(sand + silt + clay)
-    compute!(total)
-    set!(sand, sand / total)
-    set!(silt, silt / total)
-    set!(clay, clay / total)
+function normalize_texture!(
+        sand::AbstractField{LX, LY, LZ, G, NF},
+        silt::AbstractField{LX, LY, LZ, G, NF},
+        clay::AbstractField{LX, LY, LZ, G, NF};
+        default = SoilTexture(NF; sand = 1.0, silt = 0.0, clay = 0.0)
+    ) where {LX, LY, LZ, G, NF}
+    grid = sand.grid
+    launch!(architecture(grid), grid, :xy, normalize_texture_kernel!, sand, silt, clay, default)
     return nothing
 end
 
@@ -89,3 +88,11 @@ SoilTexture(::Type{NF}, ::Val{:loam}) where {NF} = SoilTexture(NF, sand = 0.4, s
 SoilTexture(::Type{NF}, ::Val{:sandyloam}) where {NF} = SoilTexture(NF, sand = 0.8, silt = 0.1, clay = 0.1)
 SoilTexture(::Type{NF}, ::Val{:siltyloam}) where {NF} = SoilTexture(NF, sand = 0.1, silt = 0.8, clay = 0.1)
 SoilTexture(::Type{NF}, ::Val{:clayloam}) where {NF} = SoilTexture(NF, sand = 0.3, silt = 0.3, clay = 0.4)
+
+@kernel function normalize_texture_kernel!(sand, silt, clay, default::SoilTexture)
+    i, j = @index(Global, NTuple)
+    total = sand[i, j] + silt[i, j] + clay[i, j]
+    sand[i, j, 1] = ifelse(isnan(total), default.sand, sand[i, j] / total)
+    silt[i, j, 1] = ifelse(isnan(total), default.silt, silt[i, j] / total)
+    clay[i, j, 1] = ifelse(isnan(total), default.clay, clay[i, j] / total)
+end

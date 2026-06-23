@@ -116,8 +116,29 @@ is `getproperty(fields, nameof(horizon))`.
         args...;
         kwargs...
     )
-    horizon = soil_horizon(i, j, k, grid, fields, strat)
-    return func(i, j, grid, getproperty(fields, nameof(horizon)), horizon, args...; kwargs...)
+    fgrid = get_field_grid(grid)
+    # midpoint of the current node at k
+    zₖ = znode(i, j, k, fgrid, Center(), Center(), Center())
+    # uppermost layer boundary
+    z = znode(i, j, fgrid.Nz + 1, fgrid, Center(), Center(), Face())
+    # Evaluate `func` and the thickness for every horizon up front via `fastmap`, which unrolls
+    # the (heterogeneously typed) horizon tuple in a type-stable way. The resulting `(value,
+    # thickness)` tuples are homogeneously typed, so the depth-based selection below is a plain,
+    # GPU-compatible loop. We select on the `func` result rather than returning the matching
+    # horizon, as `soil_horizon` does: the horizon name is a type parameter, so a runtime-
+    # selected horizon would be type-unstable and trigger dynamic dispatch inside GPU kernels.
+    results = fastmap(strat.horizons) do horizon
+        horizon_fields = getproperty(fields, nameof(horizon))
+        value = func(i, j, grid, horizon_fields, horizon, args...; kwargs...)
+        return (value, soil_thickness(i, j, grid, horizon_fields, horizon))
+    end
+    # Walk from the top boundary downward and keep the value of the horizon containing zₖ.
+    selected = first(results)[1]
+    for (value, Δzₗ) in results
+        selected = ifelse(zₖ <= z, value, selected)
+        z -= Δzₗ
+    end
+    return selected
 end
 
 """
