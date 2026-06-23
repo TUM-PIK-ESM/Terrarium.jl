@@ -53,9 +53,9 @@ function Terrarium.InputSource(grid::ColumnRingGrid{NF}, raster::AbstractRaster{
 end
 
 Terrarium.variables(source::RasterInputSource) = Terrarium.with_scope(
-    Terrarium.varpath(source),
+    Base.front(Terrarium.varpath(source)),
     Terrarium.input(Terrarium.varname(source), source.dims; units = source.units)
-)
+) |> tuple
 
 function Terrarium.initialize!(fields, source::RasterInputSource, clock::Clock, scope::Terrarium.VarPath = ())
     name = Terrarium.varname(source)

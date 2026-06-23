@@ -276,7 +276,9 @@ varpath(path::Pair) = (Symbol(first(path)), varpath(last(path))...)
 """
     $SIGNATURES
 
-Wrap the given variable `var` in nested `Namespace`s according to the `path`, where the last element of `path` is the variable name.
+Wrap the given variable `var` in nested `Namespace`s according to the `path`, where `path` is the
+namespace scope (i.e. the sequence of enclosing namespace names, *excluding* the variable's own name).
+An empty `path` returns `var` unwrapped.
 """
 with_scope(path::VarPath, var::AbstractVariable) =
     isempty(path) ? var : namespace(first(path), (with_scope(Base.tail(path), var),))

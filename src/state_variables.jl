@@ -213,7 +213,7 @@ end
 
 Retrieves the `Field` from `state` matching the `name` of the given variable.
 """
-@inline get_field(state, var::Union{AbstractVariable{name}, Namespace{name}}) where {name} = getproperty(state, name)
+@inline get_field(state, ::Union{AbstractVariable{name}, Namespace{name}}) where {name} = getproperty(state, name)
 
 """
     $TYPEDSIGNATURES

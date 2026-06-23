@@ -148,7 +148,7 @@ function InputSource(grid::ColumnRingGrid{NF}, ring_field::RingGrids.AbstractFie
     return FieldInputSource{NF, path, typeof(dims), typeof(oceananigans_field), typeof(units)}(dims, units, oceananigans_field)
 end
 
-variables(source::FieldInputSource) = with_scope(varpath(source), input(varname(source), source.dims; units = source.units))
+variables(source::FieldInputSource) = tuple(with_scope(Base.front(varpath(source)), input(varname(source), source.dims; units = source.units)))
 
 """
 Type alias for a `FieldTimeSeries` with any X, Y, Z location or grid.
@@ -177,7 +177,7 @@ function InputSource(fts::AnyFieldTimeSeries{NF}; name, units = NoUnits) where {
     return FieldTimeSeriesInputSource{NF, path, typeof(dims), typeof(fts), typeof(units)}(dims, units, fts)
 end
 
-variables(source::FieldTimeSeriesInputSource) = with_scope(varpath(source), input(varname(source), source.dims; units = source.units))
+variables(source::FieldTimeSeriesInputSource) = tuple(with_scope(Base.front(varpath(source)), input(varname(source), source.dims; units = source.units)))
 
 # to initialize just update the state once at the start time
 function initialize!(fields, source::FieldTimeSeriesInputSource, clock::Clock, scope::VarPath = ())
