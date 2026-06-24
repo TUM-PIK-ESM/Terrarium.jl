@@ -89,11 +89,11 @@ end
         atmos::AbstractAtmosphere,
     )
     Ts = fields.skin_temperature[i, j]
-    g = fields.ground_evaporation_conductance[i, j]
+    g_gnd = fields.ground_evaporation_conductance[i, j]
     # Evaporation flux at the current skin temperature. Re-running this kernel after the SEB solve
     # (see `LandModel`) refreshes it so it is consistent with the converged skin temperature.
     Δq = compute_specific_humidity_difference(i, j, grid, fields, atmos, constants, Ts)
-    out.evaporation_ground[i, j, 1] = compute_evaporation_flux(evaporation, Δq, g)
+    out.evaporation_ground[i, j, 1] = compute_evaporation_flux(evaporation, Δq, g_gnd)
     return out
 end
 
