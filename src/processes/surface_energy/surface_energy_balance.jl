@@ -146,7 +146,7 @@ end
     # Compute fluxes based on current skin temperature
     solve_skin_temperature!(out, i, j, grid, fields, seb.skin_temperature, seb, constants, atmos, args...)
     if !isnothing(evtr)
-        # Recompute evaporation component fluxes from final skin temperature
+        # Recompute evapotranspiration component fluxes from final skin temperature
         out_ET = auxiliary_fields(fields, evtr)
         compute_evapotranspiration_fluxes!(out_ET, i, j, grid, fields, evtr, constants, atmos, args...)
     end

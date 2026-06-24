@@ -41,11 +41,11 @@ end
     $TYPEDSIGNATURES
 
 Compute the transpiration vapor conductance [m/s] from aerodynamic resistance `rₐ` and stomatal
-conductance `gw_can`. The transpiration flux is this conductance times the humidity gradient.
+conductance `g_stm`. The transpiration flux is this conductance times the humidity gradient.
 """
-@inline function transpiration_conductance(::PALADYNCanopyEvapotranspiration{NF}, rₐ, gw_can) where {NF}
-    rₛ = 1 / max(gw_can, sqrt(eps(NF)))  # stomatal resistance as reciprocal of conductance
-    return 1 / (rₐ + rₛ)
+@inline function transpiration_conductance(::PALADYNCanopyEvapotranspiration{NF}, rₐ, g_stm) where {NF}
+    g_stm = max(g_stm, sqrt(eps(NF))) # clip stomatal conductance
+    return g_stm / rₐ
 end
 
 """
@@ -87,16 +87,13 @@ conductances in `fields`.
 """
 @propagate_inbounds function compute_surface_humidity_flux(
         i, j, grid, fields,
-        ::PALADYNCanopyEvapotranspiration,
-        atmos::AbstractAtmosphere,
+        evtr::PALADYNCanopyEvapotranspiration,
         constants::PhysicalConstants,
+        atmos::AbstractAtmosphere,
+        args...
     )
-    Ts = fields.skin_temperature[i, j]
-    g_can = fields.canopy_evaporation_conductance[i, j]
-    g_trp = fields.transpiration_conductance[i, j]
-    E_gnd = fields.evaporation_ground[i, j]
-    Δqs = compute_specific_humidity_difference(i, j, grid, fields, atmos, constants, Ts)
-    return (g_can + g_trp) * Δqs + E_gnd
+    E_gnd, E_trp, E_can = compute_evapotranspiration_fluxes(i, j, grid, fields, evtr, constants, atmos, args...)
+    return E_gnd + E_trp + E_can
 end
 
 """ $TYPEDSIGNATURES """
@@ -119,13 +116,15 @@ end
 # Kernel functions
 
 """
-    $TYPEDEF
+    $TYPEDSIGNATURES
 
-Compute `transpiration`, `evaporation_ground`, and `evaporation_canopy` fluxes on `grid`
-for the given scheme `evapotranspiration` and process dependencies.
+Compute the skin-driven vapor conductances (`ground_evaporation_conductance`,
+`canopy_evaporation_conductance`, and `transpiration_conductance`) at grid cell `i, j` for the
+given scheme `evapotranspiration` and process dependencies. These conductances are independent
+of the skin temperature.
 """
-@propagate_inbounds function compute_evapotranspiration_conductance!(
-        out, i, j, grid, fields,
+@propagate_inbounds function compute_evapotranspiration_conductances(
+        i, j, grid, fields,
         evapotranspiration::PALADYNCanopyEvapotranspiration,
         canopy_interception::AbstractCanopyInterception,
         constants::PhysicalConstants,
@@ -135,24 +134,46 @@ for the given scheme `evapotranspiration` and process dependencies.
         args...
     )
     # Get inputs
-    Ts = fields.skin_temperature[i, j] # skin temperature (top of canopy)
-    Tg = fields.ground_temperature[i, j] # ground temperature (top snow/soil layer)
-    gw_can = fields.canopy_water_conductance[i, j] # stomatal conductance (assumed to be defined by vegetation)
+    g_stm = fields.canopy_water_conductance[i, j] # stomatal conductance (assumed to be defined by vegetation)
 
-    # Compute VPD and resistance termsrefreshes
-    Δqs = compute_specific_humidity_difference(i, j, grid, fields, atmos, constants, Ts) # humidity difference between canopy and atmosphere
-    Δqg = compute_specific_humidity_difference(i, j, grid, fields, atmos, constants, Tg) # humidity difference between ground and canopy
+    # Compute aerodynamic resistances and resistance factors
     rₐ = aerodynamic_resistance(i, j, grid, fields, atmos) # aerodynamic resistance
     rₑ = aerodynamic_resistance(i, j, grid, fields, atmos, evapotranspiration, vegetation) # aerodynamic resistance between ground and canopy
     f_can = saturation_canopy_water(i, j, grid, fields, canopy_interception)
     β = ground_evaporation_resistance_factor(i, j, grid, fields, evapotranspiration.ground_resistance, soil)
 
-    # Store skin-driven vapor conductances (independent of skin temperature). These are the
+    # Compute skin-driven vapor conductances (independent of skin temperature). These are the
     # source of truth from which the SEB derives the latent heat flux lazily during the skin
-    # temperature solve (see the lazy `surface_humidity_flux` method below).
-    out.ground_evaporation_conductance[i, j, 1] = ground_evaporation_conductance(evapotranspiration, β, rₐ)
-    out.canopy_evaporation_conductance[i, j, 1] = canopy_evaporation_conductance(evapotranspiration, f_can, rₐ)
-    out.transpiration_conductance[i, j, 1] = transpiration_conductance(evapotranspiration, rₐ, gw_can)
+    # temperature solve (see the lazy `surface_humidity_flux` method above).
+    g_gnd = ground_evaporation_conductance(evapotranspiration, β, rₑ)
+    g_can = canopy_evaporation_conductance(evapotranspiration, f_can, rₐ)
+    g_trp = transpiration_conductance(evapotranspiration, rₐ, g_stm)
+    return g_gnd, g_trp, g_can
+end
+
+"""
+    $TYPEDSIGNATURES
+
+Compute and store the skin-driven vapor conductances on `grid` for the given scheme
+`evapotranspiration` and process dependencies.
+"""
+@propagate_inbounds function compute_evapotranspiration_conductances!(
+        out, i, j, grid, fields,
+        evapotranspiration::PALADYNCanopyEvapotranspiration,
+        canopy_interception::AbstractCanopyInterception,
+        constants::PhysicalConstants,
+        atmos::AbstractAtmosphere,
+        soil::AbstractSoil,
+        vegetation::AbstractVegetation,
+        args...
+    )
+    # Compute conductances
+    g_gnd, g_trp, g_can = compute_evapotranspiration_conductances(i, j, grid, fields, evapotranspiration, canopy_interception, constants, atmos, soil, vegetation, args...)
+
+    # Store skin-driven vapor conductances in corresponding output Fields
+    out.ground_evaporation_conductance[i, j, 1] = g_gnd
+    out.canopy_evaporation_conductance[i, j, 1] = g_can
+    out.transpiration_conductance[i, j, 1] = g_trp
     return out
 end
 
@@ -162,8 +183,8 @@ end
 Compute `transpiration`, `evaporation_ground`, and `evaporation_canopy` fluxes on `grid`
 for the given scheme `evapotranspiration` and process dependencies.
 """
-@propagate_inbounds function compute_evapotranspiration_fluxes!(
-        out, i, j, grid, fields,
+@propagate_inbounds function compute_evapotranspiration_fluxes(
+        i, j, grid, fields,
         evapotranspiration::PALADYNCanopyEvapotranspiration,
         constants::PhysicalConstants,
         atmos::AbstractAtmosphere,
@@ -184,9 +205,32 @@ for the given scheme `evapotranspiration` and process dependencies.
     # evaporation is driven by the ground temperature; the canopy evaporation and transpiration are
     # skin-driven. Re-running this kernel after the SEB solve (see `LandModel`) refreshes the
     # skin-driven fluxes so they are consistent with the converged skin temperature.
-    out.evaporation_ground[i, j, 1] = compute_evaporation_flux(evapotranspiration, Δqg, g_gnd)
-    out.transpiration[i, j, 1] = compute_evaporation_flux(evapotranspiration, Δqs, g_trp)
-    out.evaporation_canopy[i, j, 1] = compute_evaporation_flux(evapotranspiration, Δqs, g_can)
+    E_gnd = compute_evaporation_flux(evapotranspiration, Δqg, g_gnd)
+    E_trp = compute_evaporation_flux(evapotranspiration, Δqs, g_trp)
+    E_can = compute_evaporation_flux(evapotranspiration, Δqs, g_can)
+    return E_gnd, E_trp, E_can
+end
+
+"""
+    $TYPEDEF
+
+Compute `transpiration`, `evaporation_ground`, and `evaporation_canopy` fluxes on `grid`
+for the given scheme `evapotranspiration` and process dependencies.
+"""
+@propagate_inbounds function compute_evapotranspiration_fluxes!(
+        out, i, j, grid, fields,
+        evapotranspiration::PALADYNCanopyEvapotranspiration,
+        constants::PhysicalConstants,
+        atmos::AbstractAtmosphere,
+        args...
+    )
+    # Compute ET fluxes
+    E_gnd, E_trp, E_can = compute_evapotranspiration_fluxes(i, j, grid, fields, evapotranspiration, constants, atmos, args...)
+
+    # Store fluxes in corresponding output Fields
+    out.evaporation_ground[i, j, 1] = E_gnd
+    out.transpiration[i, j, 1] = E_trp
+    out.evaporation_canopy[i, j, 1] = E_can
     return out
 end
 
@@ -224,7 +268,7 @@ end
     )
     i, j = @index(Global, NTuple)
     # First compute conductances
-    compute_evapotranspiration_conductance!(out, i, j, grid, fields, evapotranspiration, canopy_interception, constants, atmos, soil, vegetation, args...)
+    compute_evapotranspiration_conductances!(out, i, j, grid, fields, evapotranspiration, canopy_interception, constants, atmos, soil, vegetation, args...)
     # TODO: Annoyingly, we need to explicitly add these to `fields`; need a better solution to this problem
     conductances = (
         ground_evaporation_conductance = out.ground_evaporation_conductance,

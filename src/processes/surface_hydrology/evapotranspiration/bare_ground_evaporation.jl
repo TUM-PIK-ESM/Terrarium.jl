@@ -21,6 +21,7 @@ BareGroundEvaporation(
 
 @propagate_inbounds surface_humidity_flux(i, j, grid, fields, evaporation::BareGroundEvaporation, args...) = fields.evaporation_ground[i, j]
 
+""" $TYPEDSIGNATURES """
 @inline ground_evaporation_conductance(ET::AbstractEvapotranspiration, β, rₐ) = β / rₐ
 
 """
@@ -68,7 +69,7 @@ end
 
 # Kernel functions
 
-@propagate_inbounds function compute_evapotranspiration_conductance!(
+@propagate_inbounds function compute_evapotranspiration_conductances!(
         out, i, j, grid, fields,
         evaporation::BareGroundEvaporation,
         constants::PhysicalConstants,
@@ -109,7 +110,7 @@ end
     i, j = @index(Global, NTuple)
 
     # First compute conductances
-    compute_evapotranspiration_conductance!(out, i, j, grid, fields, evapotranspiration, constants, atmos, soil, args...)
+    compute_evapotranspiration_conductances!(out, i, j, grid, fields, evapotranspiration, constants, atmos, soil, args...)
     # TODO: Annoyingly, we need to explicitly add these to `fields`; need a better solution to this problem
     conductances = (ground_evaporation_conductance = out.ground_evaporation_conductance,)
     fields = merge(fields, conductances)

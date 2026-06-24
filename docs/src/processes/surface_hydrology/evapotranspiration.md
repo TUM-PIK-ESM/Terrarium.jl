@@ -203,7 +203,7 @@ surface_humidity_flux
 ```
 
 ```@docs; canonical = false
-compute_evapotranspiration_conductance!
+compute_evapotranspiration_conductances!
 ```
 
 ```@docs; canonical = false

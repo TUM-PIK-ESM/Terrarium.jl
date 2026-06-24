@@ -42,7 +42,7 @@ Includes minimum conductance and light extinction effects based on LAI, scaled b
 
 * [medlynReconcilingOptimalEmpirical2011](@cite) Medlyn et al., Global Change Biology (2011)
 """
-@inline function compute_gw_can(
+@inline function compute_stomatal_conductance(
         stomcond::MedlynStomatalConductance{NF},
         photo::LUEPhotosynthesis{NF},
         vpd, An, co2, LAI, β
@@ -53,14 +53,14 @@ Includes minimum conductance and light extinction effects based on LAI, scaled b
     @assert isfinite(co2) && co2 > zero(NF) "CO2 must be positive and finite"
     @assert isfinite(LAI) "LAI must be finite"
     @assert isfinite(β) && 0 <= β <= 1 "β must be finite and between 0 and 1"
-    # Compute stomatal conductance gw_can
+    # Compute stomatal conductance g_stm
     let g_min = stomcond.g_min / 1000, # convert mm/s to m/s
             g₁ = stomcond.g₁,
             k_ext = photo.k_ext
 
         g₀ = g_min * (1 - exp(-k_ext * LAI)) * β
-        gw_can = g₀ + NF(1.6) * (1 + g₁ / sqrt(vpd)) * An / co2 * NF(1.0e6)
-        return gw_can
+        g_stm = g₀ + NF(1.6) * (1 + g₁ / sqrt(vpd)) * An / co2 * NF(1.0e6)
+        return g_stm
     end
 end
 
@@ -103,8 +103,8 @@ end
 """
     $TYPEDSIGNATURES
 
-Compute stomatal conductance (gw_can) and leaf-to-air CO₂ ratio (λc) at a grid point.
-Returns tuple (gw_can, λc) for use in photosynthesis and transpiration calculations.
+Compute stomatal conductance (g_stm) and leaf-to-air CO₂ ratio (λc) at a grid point.
+Returns tuple (g_stm, λc) for use in photosynthesis and transpiration calculations.
 """
 @propagate_inbounds function compute_stomatal_conductance(i, j, grid, fields, stomcond::MedlynStomatalConductance{NF}, photo::LUEPhotosynthesis{NF}, constants::PhysicalConstants, atmos::AbstractAtmosphere, args...) where {NF}
     # Get inputs
@@ -116,11 +116,11 @@ Returns tuple (gw_can, λc) for use in photosynthesis and transpiration calculat
     # Compute vpd [Pa]
     vpd = compute_vapor_pressure_deficit(i, j, grid, fields, atmos, constants)
 
-    # Compute conductance gw_can and internal CO2 ratio λc
-    gw_can = compute_gw_can(stomcond, photo, vpd, An, CO2, LAI, β)
+    # Compute conductance g_stm and internal CO2 ratio λc
+    g_stm = compute_stomatal_conductance(stomcond, photo, vpd, An, CO2, LAI, β)
     λc = compute_λc(stomcond, vpd)
 
-    return gw_can, λc
+    return g_stm, λc
 end
 
 """
@@ -129,8 +129,8 @@ end
 Calls [`compute_stomatal_conductance`](@ref) and stores the result in `out`.
 """
 @propagate_inbounds function compute_stomatal_conductance!(out, i, j, grid, fields, stomcond::MedlynStomatalConductance{NF}, photo::LUEPhotosynthesis{NF}, constants::PhysicalConstants, atmos::AbstractAtmosphere, args...) where {NF}
-    gw_can, λc = compute_stomatal_conductance(i, j, grid, fields, stomcond, photo, constants, atmos, args...)
-    out.canopy_water_conductance[i, j, 1] = gw_can
+    g_stm, λc = compute_stomatal_conductance(i, j, grid, fields, stomcond, photo, constants, atmos, args...)
+    out.canopy_water_conductance[i, j, 1] = g_stm
     out.leaf_to_air_co2_ratio[i, j, 1] = λc
     return out
 end

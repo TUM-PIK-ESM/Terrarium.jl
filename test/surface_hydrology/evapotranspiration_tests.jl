@@ -73,11 +73,11 @@ end
 @testset "transpiration_conductance" begin
     canopy_ET = PALADYNCanopyEvapotranspiration(Float64)
 
-    # g_trp = 1 / (rₐ + rₛ) where rₛ = 1/gw_can
+    # g_trp = 1 / (rₐ + rₛ) where rₛ = 1/g_stm
     rₐ = 100.0
-    gw_can = 0.1
-    g_trp = transpiration_conductance(canopy_ET, rₐ, gw_can)
-    @test g_trp ≈ 1 / (rₐ + 1 / gw_can)
+    g_stm = 0.1
+    g_trp = transpiration_conductance(canopy_ET, rₐ, g_stm)
+    @test g_trp ≈ 1 / (rₐ + 1 / g_stm)
 
     # Zero stomatal conductance gives a small but finite value
     g_trp_zero = transpiration_conductance(canopy_ET, rₐ, 0.0)
@@ -88,8 +88,8 @@ end
     @test transpiration_conductance(canopy_ET, rₐ, 1.0e6) ≈ 1 / rₐ
 
     # Decreases with increasing aerodynamic resistance
-    @test transpiration_conductance(canopy_ET, 100.0, gw_can) <
-        transpiration_conductance(canopy_ET, 50.0, gw_can)
+    @test transpiration_conductance(canopy_ET, 100.0, g_stm) <
+        transpiration_conductance(canopy_ET, 50.0, g_stm)
 
     # Increases with increasing stomatal conductance
     @test transpiration_conductance(canopy_ET, rₐ, 0.5) >
@@ -171,14 +171,14 @@ end
     canopy_ET = PALADYNCanopyEvapotranspiration(Float64)
 
     rₐ = 100.0
-    gw_can = 0.1
+    g_stm = 0.1
     f_can = 0.8
     β = 0.7
     Δq_skin = 0.01    # humidity difference at skin temperature
     Δq_ground = 0.005 # humidity difference at ground temperature
 
     # Step 1: conductances
-    g_trp = transpiration_conductance(canopy_ET, rₐ, gw_can)
+    g_trp = transpiration_conductance(canopy_ET, rₐ, g_stm)
     g_can = canopy_evaporation_conductance(canopy_ET, f_can, rₐ)
     g_gnd = β / rₐ
 
