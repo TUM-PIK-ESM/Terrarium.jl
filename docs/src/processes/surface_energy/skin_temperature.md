@@ -44,17 +44,19 @@ compute_auxiliary!(state, grid, skinT::ImplicitSkinTemperature, seb::AbstractSur
 ## Methods
 
 ```@docs; canonical = false
-update_skin_temperature!
-```
-
-```@docs; canonical = false
 compute_skin_temperature
-```
-
-```@docs; canonical = false
-compute_ground_heat_flux!
+compute_skin_temperature!
 ```
 
 ```@docs; canonical = false
 compute_ground_heat_flux
+compute_ground_heat_flux!
+```
+
+```@docs; canonical = false
+compute_skin_temperature_residual!
+```
+
+```@docs; canonical = false
+solve_skin_temperature!
 ```

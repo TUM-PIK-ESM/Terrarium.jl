@@ -1,23 +1,25 @@
 using Terrarium
 using Test
 
-using Terrarium: FixedPointSolver, NewtonRaphsonSolver, RootSolver, RootSolvers, ObjectiveFunction, RelaxationFactor, solve!
+using Terrarium: FixedPointSolver, RootSolver, RootSolvers, ObjectiveFunction, RelaxationFactor, solve!
 
-# Build an objective function from a scalar map g(x). Both solvers treat `step_func!`
-# as writing g(x) into the target field, i.e. they solve the fixed-point equation
-# x = g(x). The `grid` and `fields` arguments are unused for these scalar tests.
-function scalar_objective(g)
-    func = function (out, i, _grid, _fields)
-        out.x[i] = g(out.x[i])
-        return nothing
+# Build an objective function from a scalar map g(x). The solvers now expect the
+# objective to *return* the fixed-point residual F(x) = x - g(x) evaluated at the
+# current value of the target field, rather than writing g(x) into the field; the
+# solver itself owns the field update. Both solver families solve x = g(x).
+# The `grid` and `fields` arguments are unused for these scalar tests.
+function scalar_objective(g, ::Val{target}) where {target}
+    function residual(out, i, _grid, _fields)
+        x = out.x[i]
+        return x - g(x)
     end
-    return ObjectiveFunction(func, :x)
+    return ObjectiveFunction(residual, :x)
 end
 
 # Run a solver on g starting from x0 and return (root, iterations).
 function run_solver(solver, g, x0)
     out = (; x = [x0])
-    objective = scalar_objective(g)
+    objective = scalar_objective(g, Val{:x}())
     return solve!(out, (1,), nothing, nothing, objective, solver)
 end
 
@@ -31,7 +33,7 @@ for NF in (Float32, Float64)
 
         @testset "Linear map" begin
             # g(x) = x/2 + 1 has the unique fixed point x = 2
-            x, iters = run_solver(solver, x -> x / NF(2) + NF(1), NF(0.0))
+            x, iters = run_solver(solver, x -> x / 2 + 1, NF(0.0))
             @test isapprox(x, NF(2.0); atol = tol)
             @test iters <= solver.max_iterations
         end
@@ -45,7 +47,7 @@ for NF in (Float32, Float64)
 
         @testset "Square root (Heron)" begin
             # g(x) = (x + 2/x)/2 has fixed point √2
-            x, iters = run_solver(solver, x -> (x + NF(2) / x) / NF(2), NF(1.0))
+            x, iters = run_solver(solver, x -> (x + 2 / x) / 2, NF(1.0))
             @test isapprox(x, sqrt(NF(2.0)); atol = tol)
             @test iters <= solver.max_iterations
         end
@@ -54,67 +56,15 @@ for NF in (Float32, Float64)
             # g(x) = 2x is non-contractive; the iteration cannot converge and must
             # exhaust the iteration budget.
             limited = FixedPointSolver(NF; tolerance = tol, relax = RelaxationFactor(factor = NF(1.0)), max_iterations = 5)
-            _, iters = run_solver(limited, x -> NF(2) * x, NF(1.0))
+            _, iters = run_solver(limited, x -> 2 * x, NF(1.0))
             @test iters > limited.max_iterations
         end
 
         @testset "Type stability" begin
-            # Type stability of the full solve path is required for GPU kernels:
-            # the result must infer to a concrete (NF, Int) tuple with no boxing.
-            result = @inferred run_solver(solver, x -> x / NF(2) + NF(1), NF(0.0))
+            # The full solve path must infer to a concrete (NF, Int) tuple with no
+            # boxing (see the header note on avoiding `NF` capture in objectives).
+            result = @inferred run_solver(solver, x -> x / 2 + 1, NF(0.0))
             @test result isa Tuple{NF, Int}
-        end
-    end
-
-    @testset "NewtonRaphsonSolver ($NF)" begin
-        solver = NewtonRaphsonSolver(NF; tolerance = tol, max_iterations = 100)
-
-        @testset "Linear map" begin
-            # Same linear fixed point x = 2 as above
-            x, iters = run_solver(solver, x -> x / NF(2) + NF(1), NF(0.0))
-            @test isapprox(x, NF(2.0); atol = tol)
-            @test iters <= solver.max_iterations
-        end
-
-        @testset "Dottie number (cos)" begin
-            x, iters = run_solver(solver, cos, NF(1.0))
-            @test isapprox(x, NF(0.7390851332151607); atol = tol)
-            @test iters <= solver.max_iterations
-        end
-
-        @testset "Square root via x^2 - 2 = 0" begin
-            # The fixed-point form g(x) = x^2 + x - 2 corresponds to the residual
-            # F(x) = g(x) - x = x^2 - 2, whose positive root is √2. The plain
-            # fixed-point iteration on this g diverges, but Newton converges.
-            x, iters = run_solver(solver, x -> x^2 + x - NF(2), NF(1.0))
-            @test isapprox(x, sqrt(NF(2.0)); atol = tol)
-            @test iters <= solver.max_iterations
-        end
-
-        @testset "Fast convergence" begin
-            # Newton's quadratic convergence should reach the root in only a few
-            # iterations for a smooth, well-conditioned problem.
-            _, iters = run_solver(solver, x -> x^2 + x - NF(2), NF(1.0))
-            @test iters <= 10
-        end
-
-        @testset "Iteration limit" begin
-            # F(x) = g(x) - x = 1 has no root, so the derivative vanishes and the
-            # solver can never converge; it must exhaust the iteration budget.
-            limited = NewtonRaphsonSolver(NF; tolerance = tol, max_iterations = 5)
-            _, iters = run_solver(limited, x -> x + NF(1), NF(0.0))
-            @test iters > limited.max_iterations
-        end
-
-        @testset "Type stability" begin
-            # Type stability of the full solve path is required for GPU kernels:
-            # the result must infer to a concrete (NF, Int) tuple with no boxing.
-            result = @inferred run_solver(solver, x -> x / NF(2) + NF(1), NF(0.0))
-            @test result isa Tuple{NF, Int}
-            # The finite-difference derivative must not silently widen the type
-            # (e.g. via the fd_step or the (1 + abs(x)) term promoting to Float64).
-            nonlinear = @inferred run_solver(solver, x -> x^2 + x - NF(2), NF(1.0))
-            @test nonlinear isa Tuple{NF, Int}
         end
     end
 
@@ -123,49 +73,51 @@ for NF in (Float32, Float64)
 
         @testset "Linear map" begin
             # Same linear fixed point x = 2 as above
-            x, iters = run_solver(solver, x -> x / NF(2) + NF(1), NF(0.0))
+            x = run_solver(solver, x -> x / 2 + 1, NF(0.0))
             @test isapprox(x, NF(2.0); atol = tol)
-            @test iters <= solver.max_iterations
         end
 
         @testset "Dottie number (cos)" begin
-            x, iters = run_solver(solver, cos, NF(1.0))
+            x = run_solver(solver, cos, NF(1.0))
             @test isapprox(x, NF(0.7390851332151607); atol = tol)
-            @test iters <= solver.max_iterations
         end
 
         @testset "Square root via x^2 - 2 = 0" begin
             # The fixed-point form g(x) = x^2 + x - 2 corresponds to the residual
-            # F(x) = g(x) - x = x^2 - 2, whose positive root is √2.
-            x, iters = run_solver(solver, x -> x^2 + x - NF(2), NF(1.0))
+            # F(x) = x - g(x) = 2 - x^2, whose positive root is √2.
+            x = run_solver(solver, x -> x^2 + x - 2, NF(1.0))
             @test isapprox(x, sqrt(NF(2.0)); atol = tol)
-            @test iters <= solver.max_iterations
         end
 
         @testset "Iteration limit" begin
-            # F(x) = g(x) - x = 1 has no root, so the solver must exhaust the iteration budget.
-            limited = RootSolver(NF; tolerance = tol, max_iterations = 2)
+            # A stiff, slowly-converging residual paired with a tight iteration budget:
+            # the solver must stop after exactly `max_iterations` steps.
+            limited = RootSolver(NF; tolerance = tol, max_iterations = 2, solution_type = RootSolvers.VerboseSolution())
             _, iters = run_solver(limited, x -> (x - 10)^2 + log(cbrt(x + 2) + exp(x - 1)), NF(0.0))
             @test iters == limited.max_iterations
         end
 
         @testset "Type stability" begin
-            # Type stability of the full solve path is required for GPU kernels:
-            result = @inferred run_solver(solver, x -> x / NF(2) + NF(1), NF(0.0))
-            @test result isa Tuple{NF, Int}
+            # With the default CompactSolution the solve path must infer to a
+            # concrete scalar root of type NF with no boxing.
+            x = @inferred run_solver(solver, x -> x / 2 + 1, NF(0.0))
+            @test x isa NF
+            @test isapprox(x, NF(2.0); atol = tol)
         end
 
-        @testset "Compact solution type" begin
-            # Test with CompactSolution instead of VerboseSolution
-            compact_solver = RootSolver(
+        @testset "Verbose solution type" begin
+            # VerboseSolution returns the iteration count alongside the root,
+            # whereas the default CompactSolution returns only the scalar root.
+            verbose_solver = RootSolver(
                 NF;
-                solution_type = RootSolvers.CompactSolution(),
+                solution_type = RootSolvers.VerboseSolution(),
                 tolerance = tol,
                 max_iterations = 100
             )
-            x, iters = run_solver(compact_solver, x -> x / NF(2) + NF(1), NF(0.0))
+            x, iters = run_solver(verbose_solver, x -> x / 2 + 1, NF(0.0))
             @test isapprox(x, NF(2.0); atol = tol)
-            @test isnothing(iters)
+            @test iters isa Integer
+            @test 0 < iters <= verbose_solver.max_iterations
         end
     end
 end

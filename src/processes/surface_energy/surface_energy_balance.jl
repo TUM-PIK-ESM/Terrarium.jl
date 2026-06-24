@@ -56,6 +56,9 @@ variables(seb::SurfaceEnergyBalance) = tuplejoin(
     return nothing
 end
 
+""" $TYPEDSIGNATURES """
+initialize!(state, grid, seb::SurfaceEnergyBalance, args...) = initialize!(state, grid, seb.skin_temperature, args...)
+
 """
     $TYPEDSIGNATURES
 

@@ -68,11 +68,12 @@ end
 function initialize!(state, model::LandModel)
     initialize!(state, model, model.initializer)
     grid = get_grid(model)
-    initialize!(state, grid, model.surface_energy_balance)
     initialize!(state, grid, model.surface_hydrology)
     # TODO: change when refactoring model/process types
     initialize!(state, grid, model.vegetation, model.constants, model.atmosphere)
     initialize!(state, grid, model.soil, model.constants)
+    # Initialize the SEB after the soil so that ground_temperature is available
+    initialize!(state, grid, model.surface_energy_balance)
     return nothing
 end
 

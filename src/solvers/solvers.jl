@@ -48,23 +48,7 @@ relaxed_update(::Nothing, x_target, x_old) = x_target
 
 function solve! end
 
-# Evaluate the fixed-point residual F(x) = g(x) - x, where g(x) is the value of
-# the target field produced by `step_func!` when the field is initialized to `x`.
-@propagate_inbounds function build_residual(
-        out, indices, grid, fields, step_func!, target_field, solver,
-        func_args...; func_kwargs...
-    )
-    function residual!(x)
-        target_field[indices...] = x
-        step_func!(out, indices..., grid, fields, func_args...; func_kwargs...)
-        x_new = target_field[indices...]
-        return x_new - x
-    end
-    return residual!
-end
-
 # Solvers
 
 include("fixed_point.jl")
-include("newton_raphson.jl")
 include("root_solvers.jl")

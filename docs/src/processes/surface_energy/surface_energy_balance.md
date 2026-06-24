@@ -53,5 +53,5 @@ compute_surface_energy_fluxes!(state, grid, seb::SurfaceEnergyBalance, constants
 ```
 
 ```@docs; canonical = false
-solve_surface_energy_balance!(state, grid, seb::SurfaceEnergyBalance, constants::PhysicalConstants, atmos::AbstractAtmosphere, hydrology::Optional{AbstractSurfaceHydrology}, args...)
+solve_surface_energy_balance!(state, grid, seb::SurfaceEnergyBalance{NF, <:ImplicitSkinTemperature}, constants::PhysicalConstants, atmos::AbstractAtmosphere, hydrology::Optional{AbstractSurfaceHydrology}, args...) where {NF}
 ```

@@ -25,7 +25,7 @@ function RootSolver(
         method = RootSolvers.NewtonsMethod{NF},
         tolerance::NF = sqrt(eps(NF)),
         max_iterations::Int = 100,
-        solution_type::S = RootSolvers.VerboseSolution()
+        solution_type::S = RootSolvers.CompactSolution()
     ) where {NF, S}
     return RootSolver(NF, method, tolerance, max_iterations, solution_type)
 end
@@ -39,26 +39,36 @@ end
     ) where {NF, N, M, S, target}
     target_field = getproperty(out, target)
 
-    # Define the residual function F(x) = g(x) - x
+    # Build the residual function, with derivatives if necessary
     residual! = build_residual(out, indices, grid, fields, step_func!, target_field, solver, func_args...; func_kwargs...)
 
     # Solve for the root using RootSolvers.jl
     x₀ = target_field[indices...]
     method = M(x₀)
     tol = RootSolvers.ResidualTolerance(solver.tolerance)
-    y₀ = residual!(x₀)
     result = RootSolvers.find_zero(residual!, method, solver.solution_type, tol, solver.max_iterations)
 
     # Extract the root and number of iterations from the result
     x_root = result.root
-    iteration = S <: RootSolvers.CompactSolution ? nothing : result.iter_performed
 
     # Ensure the target field holds the final estimate
     target_field[indices...] = x_root
 
-    return x_root, iteration
+    if S <: RootSolvers.CompactSolution
+        return x_root
+    else
+        return x_root, result.iter_performed
+    end
 end
 
+build_residual(
+    out, indices, grid, fields,
+    step_func!::ObjectiveFunction{<:Any, F, DF},
+    target_field,
+    solver::RootSolver{NF},
+    func_args...;
+    func_kwargs...
+) where {NF, F, DF} = step_func!
 
 @propagate_inbounds function build_residual(
         out, indices, grid, fields,
@@ -73,16 +83,12 @@ end
 
     function residual!(x)
         target_field[indices...] = x
-        step_func!(out, indices..., grid, fields, func_args...; func_kwargs...)
-        gx = target_field[indices...]
-        return gx - x
+        return step_func!(out, indices..., grid, fields, func_args...; func_kwargs...)
     end
 
     function dresidual!(x)
         target_field[indices...] = x
-        dstep_func!(out, indices..., grid, fields, func_args...; func_kwargs...)
-        dgx = target_field[indices...]
-        return dgx - 1
+        return dstep_func!(out, indices..., grid, fields, func_args...; func_kwargs...)
     end
 
     return x -> (residual!(x), dresidual!(x))
@@ -99,9 +105,7 @@ end
 
     function residual!(x)
         target_field[indices...] = x
-        step_func!(out, indices..., grid, fields, func_args...; func_kwargs...)
-        gx = target_field[indices...]
-        return gx - x
+        return step_func!(out, indices..., grid, fields, func_args...; func_kwargs...)
     end
 
     function residual_with_derivative!(x)
