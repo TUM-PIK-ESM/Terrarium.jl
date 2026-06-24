@@ -46,7 +46,7 @@ end
     x₀ = target_field[indices...]
     method = M(x₀)
     tolerance = solver.tolerance
-    result = RootSolvers.find_zero(residual!, method, solver.solution_type, tol, solver.max_iterations)
+    result = RootSolvers.find_zero(residual!, method, solver.solution_type, tolerance, solver.max_iterations)
 
     # Extract the root and number of iterations from the result
     x_root = result.root
