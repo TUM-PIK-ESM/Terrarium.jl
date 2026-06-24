@@ -69,8 +69,14 @@ end
 
 # Kernel functions
 
-@propagate_inbounds function compute_evapotranspiration_conductances!(
-        out, i, j, grid, fields,
+"""
+    $TYPEDSIGNATURES
+
+Compute the skin-driven ground evaporation vapor conductance β/rₐ at grid cell `i, j` for the
+given bare-ground `evaporation` scheme. This conductance is independent of the skin temperature.
+"""
+@propagate_inbounds function compute_evapotranspiration_conductances(
+        i, j, grid, fields,
         evaporation::BareGroundEvaporation,
         constants::PhysicalConstants,
         atmos::AbstractAtmosphere,
@@ -78,7 +84,25 @@ end
     )
     rₐ = aerodynamic_resistance(i, j, grid, fields, atmos) # aerodynamic resistance
     β = ground_evaporation_resistance_factor(i, j, grid, fields, evaporation.ground_resistance, soil)
-    out.ground_evaporation_conductance[i, j, 1] = ground_evaporation_conductance(evaporation, β, rₐ)
+    g_gnd = ground_evaporation_conductance(evaporation, β, rₐ)
+    return g_gnd
+end
+
+"""
+    $TYPEDSIGNATURES
+
+Compute and store the skin-driven ground evaporation vapor conductance on `grid` for the given
+bare-ground `evaporation` scheme.
+"""
+@propagate_inbounds function compute_evapotranspiration_conductances!(
+        out, i, j, grid, fields,
+        evaporation::BareGroundEvaporation,
+        constants::PhysicalConstants,
+        atmos::AbstractAtmosphere,
+        soil::Optional{AbstractSoil} = nothing
+    )
+    g_gnd = compute_evapotranspiration_conductances(i, j, grid, fields, evaporation, constants, atmos, soil)
+    out.ground_evaporation_conductance[i, j, 1] = g_gnd
     return out
 end
 
