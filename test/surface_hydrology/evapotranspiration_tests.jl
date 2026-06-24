@@ -77,7 +77,7 @@ end
     rₐ = 100.0
     g_stm = 0.1
     g_trp = transpiration_conductance(canopy_ET, rₐ, g_stm)
-    @test g_trp ≈ 1 / (rₐ + 1 / g_stm)
+    @test g_trp ≈ g_stm / rₐ
 
     # Zero stomatal conductance gives a small but finite value
     g_trp_zero = transpiration_conductance(canopy_ET, rₐ, 0.0)
