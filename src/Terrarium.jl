@@ -107,7 +107,7 @@ export ColumnGrid, ColumnRingGrid, get_field_grid
 include("grids/grids.jl")
 
 export InputSource, InputSources, FieldInputSource, FieldTimeSeriesInputSource
-export update_inputs!
+export update_inputs!, varpath, varpath, VarPath
 include("input_output/input_sources.jl")
 
 # process/model interface

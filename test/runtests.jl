@@ -27,6 +27,7 @@ if MAIN_TESTS
 
     @testset "Inputs" begin
         include("inputs/inputs.jl")
+        include("inputs/namespaced_inputs.jl")
         include("inputs/input_forcing.jl")
         include("inputs/raster_inputs.jl")
     end

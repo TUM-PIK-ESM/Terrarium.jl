@@ -14,7 +14,7 @@ function build_soil_energy_hydrology_model(
     # initial conditions
     initializer = SoilInitializer(eltype(grid))
     hydrology = SoilHydrology(eltype(grid), vertical_flow; hydrology_kwargs...)
-    strat = HomogeneousStratigraphy(eltype(grid); porosity)
+    strat = HomogeneousSoilStratigraphy(eltype(grid); porosity)
     soil = SoilEnergyWaterCarbon(eltype(grid); hydrology, strat)
     model = SoilModel(grid; soil, initializer)
     return model

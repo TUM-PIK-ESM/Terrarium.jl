@@ -11,7 +11,6 @@ Default values from [hillelIntroductionSoilPhysics1982](@cite).
 * [hillelIntroductionSoilPhysics1982](@cite) Hillel, Academic Press (1982)
 """
 @parameterized @kwdef struct SoilThermalConductivities{NF}
-    # Note: Should sand, silt, and clay have separate thermal properties?
     "Thermal conductivity of water"
     @param water::NF = 0.57 (units = u"W/m/K", bounds = Positive)
 
@@ -21,8 +20,11 @@ Default values from [hillelIntroductionSoilPhysics1982](@cite).
     "Thermal conductivity of air"
     @param air::NF = 0.025 (units = u"W/m/K", bounds = Positive)
 
-    "Thermal conductivity of mineral soil constituents"
-    @param mineral::NF = 3.8 (units = u"W/m/K", bounds = Positive)
+    "Thermal conductivity of quartz (sand) mineral grains"
+    @param quartz::NF = 7.7 (units = u"W/m/K", bounds = Positive)
+
+    "Thermal conductivity of non-quartz (silt/clay) mineral grains"
+    @param mineral::NF = 2.0 (units = u"W/m/K", bounds = Positive)
 
     "Thermal conductivity of organic soil constituents"
     @param organic::NF = 0.25 (units = u"W/m/K", bounds = Positive)
@@ -91,10 +93,37 @@ freezecurve(
 """
     $SIGNATURES
 
+Compute the thermal conductivity of the mineral grains for the given `texture` as the
+quartz-weighted geometric mean of the quartz and non-quartz mineral endpoints
+([johansenThermalConductivitySoils1975](@cite); [petersLidardEffectSoilThermal1998](@cite)):
+
+```math
+\\lambda_{\\text{min}} = \\lambda_q^{\\,q} \\, \\lambda_o^{\\,1 - q}
+```
+
+where the quartz volume fraction ``q`` is assumed equal to the sand fraction.
+"""
+@inline function mineral_thermal_conductivity(conductivities::SoilThermalConductivities, texture::SoilTexture)
+    q = texture.sand
+    κ₁ = conductivities.quartz
+    κ₂ = conductivities.mineral
+    # Compute bulk mineral conductivity
+    κₘ = κ₁^q * κ₂^(1 - q)
+    return κₘ
+end
+
+"""
+    $SIGNATURES
+
 Compute the bulk thermal conductivity of the given soil volume.
 """
 @inline function compute_thermal_conductivity(props::SoilThermalProperties, soil::SoilVolume)
-    κs = getproperties(props.conductivities)
+    c = props.conductivities
+    # the bulk mineral conductivity depends on soil texture; build the constituent conductivities
+    # explicitly so the (texture-derived) `mineral` value enters the weighting and the auxiliary
+    # `quartz` endpoint does not leak in as a spurious constituent
+    κₘ = mineral_thermal_conductivity(c, mineral_texture(soil))
+    κs = (; c.water, c.ice, c.air, c.organic, mineral = κₘ)
     fracs = volumetric_fractions(soil)
     # apply bulk conductivity weighting
     return props.conductivity_weighting(κs, fracs)
