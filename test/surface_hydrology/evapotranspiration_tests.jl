@@ -74,10 +74,11 @@ end
     canopy_ET = PALADYNCanopyEvapotranspiration(Float64)
 
     # g_trp = 1 / (rₐ + rₛ) where rₛ = 1/g_stm
-    rₐ = 100.0
     g_stm = 0.1
+    rₐ = 100.0
+    rₛ = 1 / g_stm
     g_trp = transpiration_conductance(canopy_ET, rₐ, g_stm)
-    @test g_trp ≈ g_stm / rₐ
+    @test g_trp ≈ 1 / (rₐ + rₛ)
 
     # Zero stomatal conductance gives a small but finite value
     g_trp_zero = transpiration_conductance(canopy_ET, rₐ, 0.0)

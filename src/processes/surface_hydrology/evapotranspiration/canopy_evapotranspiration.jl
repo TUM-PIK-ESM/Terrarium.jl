@@ -44,8 +44,8 @@ Compute the transpiration vapor conductance [m/s] from aerodynamic resistance `r
 conductance `g_stm`. The transpiration flux is this conductance times the humidity gradient.
 """
 @inline function transpiration_conductance(::PALADYNCanopyEvapotranspiration{NF}, rₐ, g_stm) where {NF}
-    g_stm = max(g_stm, sqrt(eps(NF))) # clip stomatal conductance
-    return g_stm / rₐ
+    rₛ = 1 / max(g_stm, sqrt(eps(NF))) # clip stomatal conductance
+    return 1 / (rₐ + rₛ)
 end
 
 """
