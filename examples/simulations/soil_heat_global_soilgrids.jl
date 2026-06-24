@@ -127,16 +127,55 @@ sand1 = RingGrids.Field(arch, interior(integrator.state.namespaces.horizon1.sand
 fig = heatmap(sand1[:, 1, 1], title = "Sand fraction of the uppermost horizon")
 DisplayAs.PNG(fig) #hide
 
-# We snapshot the initial soil temperature so we can later plot the change over the simulation.
-T_init = copy(interior(integrator.state.temperature))
+# ## Running the simulation
+# We wrap the integrator in an Oceananigans `Simulation` and attach a `JLD2Writer` that saves the
+# soil temperature field every six hours over a 10-day simulation.
+using Oceananigans: JLD2Writer, TimeInterval, prettytime
+using JLD2
 
-# Now run the simulation for 5 days:
-timestep!(integrator)
-@time run!(integrator, period = Day(5), Δt = 300.0)
+output_dir = mkpath("outputs") #hide
+output_file = joinpath(output_dir, "soil_heat_global_soilgrids.jld2")
 
-# ...and plot the change in temperature of the 25 cm soil layer relative to the initial condition
-# on a divergent blue-white-red colormap, which isolates the texture-dependent thermal response:
-ΔT = interior(integrator.state.temperature)[:, :, end - 3] .- T_init[:, :, end - 3]
-ΔT_soil = RingGrids.Field(arch, ΔT, grid)
-fig = heatmap(ΔT_soil[:, 1, 1], title = "Change in 25 cm soil temperature (vs. initial)", colorrange = (-5, 5), colormap = :bwr)
+simulation = Simulation(integrator; Δt = 300.0, stop_time = 10 * 24 * 3600.0)
+simulation.output_writers[:temperature] = JLD2Writer(
+    integrator,
+    (; temperature = integrator.state.temperature);
+    filename = output_file,
+    schedule = TimeInterval(3600),
+    overwrite_existing = true,
+)
+
+@time run!(simulation)
+
+# ## Visualizing the change in soil temperature
+# We read the saved temperature back as a `FieldTimeSeries` and, at the 25 cm soil layer, compute
+# the change relative to the initial condition (`Ts[1]`). A divergent blue-white-red colormap
+# centered at zero isolates the texture-dependent thermal response. First, the change at the final time:
+Ts = FieldTimeSeries(output_file, "temperature")
+k = size(Ts, 3) - 3 # vertical index of the 25 cm soil layer
+
+soil_temperature_change(t) = RingGrids.Field(CPU(), interior(Ts[t])[:, 1, :] .- interior(Ts[1])[:, 1, :], grid)
+
+fig = heatmap(soil_temperature_change(length(Ts.times))[:, k], title = "Change in 25 cm soil temperature (vs. initial)", colorrange = (-5, 5), colormap = :bwr)
 DisplayAs.PNG(fig) #hide
+
+# Finally, we animate the full evolution of the change over the 10-day simulation. Makie cannot
+# convert an `Observable`-wrapped `RingGrids.Field` directly, so we extract the longitude/latitude
+# axes once and animate the plain `Matrix` of each frame.
+ΔT₁ = soil_temperature_change(1)[:, k]
+lond = RingGrids.get_lond(ΔT₁)
+latd = RingGrids.get_latd(ΔT₁)
+
+let n_t = Observable(1)
+    data = @lift Matrix(soil_temperature_change($n_t)[:, k])
+    plot_title = @lift "Change in 25 cm soil temperature at t = " * prettytime(Ts.times[$n_t])
+    fig = Figure(size = (1000, 500))
+    ax = Axis(fig[1, 1], title = plot_title, xlabel = "Longitude", ylabel = "Latitude")
+    hm = heatmap!(ax, lond, latd, data, colorrange = (-5, 5), colormap = :bwr)
+    Colorbar(fig[1, 2], hm, label = "ΔT (°C)")
+    Makie.record(fig, joinpath("plots", "soil_temperature_change.mp4"), 1:length(Ts.times), framerate = 8) do i
+        n_t[] = i
+    end
+end
+
+# ![Soil temperature change animation](soil_temperature_change.mp4)
