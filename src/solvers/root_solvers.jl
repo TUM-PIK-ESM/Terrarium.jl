@@ -5,9 +5,9 @@ import RootSolvers
 
 Wrapper for RootSolvers.jl root-finding methods.
 """
-struct RootSolver{NF, M, S}
+struct RootSolver{NF, M, S, Tolerance <: RootSolvers.AbstractTolerance{NF}}
     "Numerical tolerance of the root finding iteration"
-    tolerance::NF
+    tolerance::Tolerance
 
     "Maximum number of iterations to run"
     max_iterations::Int
@@ -16,14 +16,14 @@ struct RootSolver{NF, M, S}
     solution_type::S
 
     function RootSolver(::Type{NF}, ::Type{M}, tolerance, max_iterations, solution_type) where {NF, M <: RootSolvers.RootSolvingMethod}
-        return new{NF, M, typeof(solution_type)}(tolerance, max_iterations, solution_type)
+        return new{NF, M, typeof(solution_type), typeof(tolerance)}(tolerance, max_iterations, solution_type)
     end
 end
 
 function RootSolver(
         ::Type{NF};
         method = RootSolvers.NewtonsMethod{NF},
-        tolerance::NF = sqrt(eps(NF)),
+        tolerance = RootSolvers.ResidualTolerance(sqrt(eps(NF))),
         max_iterations::Int = 100,
         solution_type::S = RootSolvers.CompactSolution()
     ) where {NF, S}
@@ -45,7 +45,7 @@ end
     # Solve for the root using RootSolvers.jl
     x₀ = target_field[indices...]
     method = M(x₀)
-    tol = RootSolvers.ResidualTolerance(solver.tolerance)
+    tolerance = solver.tolerance
     result = RootSolvers.find_zero(residual!, method, solver.solution_type, tol, solver.max_iterations)
 
     # Extract the root and number of iterations from the result

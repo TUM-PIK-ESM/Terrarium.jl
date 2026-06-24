@@ -69,7 +69,8 @@ for NF in (Float32, Float64)
     end
 
     @testset "RootSolver ($NF)" begin
-        solver = RootSolver(NF; tolerance = tol, max_iterations = 100)
+        tolerance = RootSolvers.ResidualTolerance(tol)
+        solver = RootSolver(NF; tolerance, max_iterations = 100)
 
         @testset "Linear map" begin
             # Same linear fixed point x = 2 as above
@@ -92,9 +93,9 @@ for NF in (Float32, Float64)
         @testset "Iteration limit" begin
             # A stiff, slowly-converging residual paired with a tight iteration budget:
             # the solver must stop after exactly `max_iterations` steps.
-            limited = RootSolver(NF; tolerance = tol, max_iterations = 2, solution_type = RootSolvers.VerboseSolution())
-            _, iters = run_solver(limited, x -> (x - 10)^2 + log(cbrt(x + 2) + exp(x - 1)), NF(0.0))
-            @test iters == limited.max_iterations
+            limited_solver = RootSolver(NF; tolerance, max_iterations = 2, solution_type = RootSolvers.VerboseSolution())
+            _, iters = run_solver(limited_solver, x -> (x - 10)^2 + log(cbrt(x + 2) + exp(x - 1)), NF(0.0))
+            @test iters == limited_solver.max_iterations
         end
 
         @testset "Type stability" begin
@@ -110,8 +111,8 @@ for NF in (Float32, Float64)
             # whereas the default CompactSolution returns only the scalar root.
             verbose_solver = RootSolver(
                 NF;
+                tolerance,
                 solution_type = RootSolvers.VerboseSolution(),
-                tolerance = tol,
                 max_iterations = 100
             )
             x, iters = run_solver(verbose_solver, x -> x / 2 + 1, NF(0.0))
