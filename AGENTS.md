@@ -19,6 +19,20 @@ dynamics are allowed except in very special cases where they must be clearly doc
 - **Key packages**: KernelAbstractions.jl, CUDA.jl, Enzyme.jl
 - **Style**: ExplicitImports.jl for source code; `using Terrarium` for examples/tests
 
+## Testing
+
+- Test-only dependencies (e.g. `SpecialFunctions`, `CUDA`) live in `test/Project.toml`, not the
+  root project, so the test files cannot be `include`d from the bare `--project=.` environment.
+- To run individual test files, activate the test environment from the project environment with
+  [TestEnv.jl](https://github.com/JuliaTesting/TestEnv.jl):
+  ```julia
+  # started with: julia --project=.
+  using TestEnv; TestEnv.activate()
+  include("test/soil/soil_energy_tests.jl")
+  ```
+- To run the full suite, use `julia --project=. -e 'using Pkg; Pkg.test()'` (Enzyme/AD tests run
+  via `Pkg.test(; test_args=["enzyme"])`).
+
 ## Critical Rules
 
 ### Kernels (GPU compatibility)

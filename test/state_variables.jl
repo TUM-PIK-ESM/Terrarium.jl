@@ -24,9 +24,9 @@ module StateVariablesTestTypes
         input(:forcing, XY()),
     )
 
-    @kwdef struct TestModel{NF, Grid <: AbstractLandGrid{NF}} <: Terrarium.AbstractModel{NF, Grid}
+    @kwdef struct TestModel{NF, Grid <: AbstractLandGrid{NF}, Sub} <: Terrarium.AbstractModel{NF, Grid}
         grid::Grid
-        submodel = SubModel(; grid)
+        submodel::Sub = SubModel(; grid)
         initializer = DefaultInitializer(eltype(grid))
     end
 
@@ -99,16 +99,18 @@ end
     @test hasproperty(fields, :progvar3D)
     @test hasproperty(fields, :submodel)
     @test hasproperty(fields.submodel, :auxvar2D)
-    prog_fields = Terrarium.prognostic_fields(state, model)
+    fields = @inferred get_fields(state, model)
+    @test hasproperty(fields, :submodel)
+    prog_fields = @inferred Terrarium.prognostic_fields(state, model)
     @test length(prog_fields) == 3 # note that namespaces are NOT included
     @test hasproperty(prog_fields, :progvar3D)
     @test hasproperty(prog_fields, :cprogvar3D)
     @test hasproperty(prog_fields, :progvar2D)
-    aux_fields = Terrarium.auxiliary_fields(state, model)
+    aux_fields = @inferred Terrarium.auxiliary_fields(state, model)
     @test length(aux_fields) == 2 # note that namespaces are NOT included
     @test hasproperty(aux_fields, :auxvar3D)
     @test hasproperty(aux_fields, :auxvar2D)
-    input_fields = Terrarium.input_fields(state, model)
+    input_fields = @inferred Terrarium.input_fields(state, model)
     @test length(input_fields) == 1 # note that namespaces are NOT included
     @test hasproperty(input_fields, :forcing)
 end

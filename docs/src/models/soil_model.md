@@ -43,7 +43,7 @@ Each component is summarized briefly below. Follow the linked process pages for 
 
 ### Stratigraphy
 
-The `strat` component parameterizes the vertical distribution of soil material properties (texture, porosity, organic content). It provides kernel functions used by the energy and hydrology sub-processes to look up spatially varying material properties at each grid cell. By default [`HomogeneousStratigraphy`](@ref) is used, which assumes a single uniform material throughout the profile. See [Soil stratigraphy](@ref) for details.
+The `strat` component parameterizes the vertical distribution of soil material properties (texture, porosity, organic content). It provides kernel functions used by the energy and hydrology sub-processes to look up spatially varying material properties at each grid cell. By default [`HomogeneousSoilStratigraphy`](@ref) is used, which specifies a single uniform material throughout all vertical profiles. See [Soil stratigraphy](@ref) for details.
 
 ### Energy balance
 

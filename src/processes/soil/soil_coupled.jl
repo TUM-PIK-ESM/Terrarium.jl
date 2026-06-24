@@ -26,7 +26,7 @@ end
 
 function SoilEnergyWaterCarbon(
         ::Type{NF};
-        strat = HomogeneousStratigraphy(NF),
+        strat = HomogeneousSoilStratigraphy(NF),
         energy = SoilEnergyBalance(NF),
         hydrology = SoilHydrology(NF),
         biogeochem = ConstantSoilCarbonDensity(NF)

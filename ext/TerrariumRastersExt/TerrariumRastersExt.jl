@@ -38,7 +38,8 @@ end
 """
     InputSource(data::Raster, grid::ColumnRingGrid; name = data.name)
 
-Creates a new `RasterInputSource` from the given `Raster` data and `grid`.
+Creates a new `RasterInputSource` from the given `Raster` data and `grid`. The `name` can either
+be a plain `Symbol` or a namespaced path; see [`Terrarium.varpath`](@ref).
 """
 function Terrarium.InputSource(grid::ColumnRingGrid{NF}, raster::AbstractRaster{NF}; name = raster.name, units = NoUnits, reftime = nothing) where {NF}
     # get indices from grid mask
@@ -47,13 +48,18 @@ function Terrarium.InputSource(grid::ColumnRingGrid{NF}, raster::AbstractRaster{
     vd = Terrarium.vardims(raster)
     # infer reference time
     reftime = default_reftime(raster, reftime)
-    return RasterInputSource{NF, name, typeof(vd), typeof(reftime), typeof(idxmap), typeof(raster), typeof(units)}(vd, units, idxmap, reftime, raster)
+    path = Terrarium.varpath(name)
+    return RasterInputSource{NF, path, typeof(vd), typeof(reftime), typeof(idxmap), typeof(raster), typeof(units)}(vd, units, idxmap, reftime, raster)
 end
 
-Terrarium.variables(source::RasterInputSource{NF, name}) where {NF, name} = (Terrarium.input(name, source.dims; units = source.units),)
+Terrarium.variables(source::RasterInputSource) = Terrarium.with_scope(
+    Base.front(Terrarium.varpath(source)),
+    Terrarium.input(Terrarium.varname(source), source.dims; units = source.units)
+) |> tuple
 
-function Terrarium.initialize!(fields, source::RasterInputSource{NF, name}, clock::Clock) where {NF, name}
-    if hasproperty(fields, name)
+function Terrarium.initialize!(fields, source::RasterInputSource, clock::Clock, scope::Terrarium.VarPath = ())
+    name = Terrarium.varname(source)
+    if Terrarium.matches_scope(source, scope) && hasproperty(fields, name)
         field = getproperty(fields, name)
         timedim = dims(source.raster, Ti)
         current_time = timestamp(source.reftime, clock.time)
@@ -71,8 +77,9 @@ end
 # for time-varying rasters this just updates once at the start time
 initialize_from_raster!(field, raster, idxmap, timedim, current_time) = update_from_raster!(field, raster, idxmap, timedim, current_time)
 
-function Terrarium.update_inputs!(fields, source::RasterInputSource{NF, name}, clock::Clock) where {NF, name}
-    if hasproperty(fields, name)
+function Terrarium.update_inputs!(fields, source::RasterInputSource, clock::Clock, scope::Terrarium.VarPath = ())
+    name = Terrarium.varname(source)
+    if Terrarium.matches_scope(source, scope) && hasproperty(fields, name)
         field = getproperty(fields, name)
         timedim = dims(source.raster, Ti)
         current_time = timestamp(source.reftime, clock.time)
