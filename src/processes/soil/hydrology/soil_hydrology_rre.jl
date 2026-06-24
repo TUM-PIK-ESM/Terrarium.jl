@@ -18,11 +18,11 @@ closure relating saturation and pressure head.
 @kwdef struct RichardsEq <: AbstractVerticalFlow end
 
 variables(hydrology::SoilHydrology{NF, RichardsEq}) where {NF} = (
-    prognostic(:saturation_water_ice, XYZ(); closure = get_closure(hydrology), domain = UnitInterval(), desc = "Saturation level of water and ice in the pore space"),
+    prognostic(:saturation_water_ice, XYZ(); closure = get_closure(hydrology), bounds = UnitInterval, desc = "Saturation level of water and ice in the pore space"),
     prognostic(:surface_excess_water, XY(), units = u"m", desc = "Excess water at the soil surface in m³/m²"),
     auxiliary(:hydraulic_conductivity, XYZ(z = Face()), units = u"m/s", desc = "Hydraulic conductivity of soil volumes in m/s"),
     auxiliary(:water_table, XY(), units = u"m", desc = "Elevation of the water table in meters"),
-    input(:liquid_water_fraction, XYZ(), default = NF(1), domain = UnitInterval(), desc = "Fraction of unfrozen water in the pore space"),
+    input(:liquid_water_fraction, XYZ(), default = NF(1), bounds = UnitInterval, desc = "Fraction of unfrozen water in the pore space"),
 )
 
 @propagate_inbounds surface_excess_water(i, j, grid, fields, ::SoilHydrology{NF, RichardsEq}) where {NF} = fields.surface_excess_water[i, j]
@@ -56,7 +56,7 @@ function compute_auxiliary!(
     strat = get_stratigraphy(soil)
     bgc = get_biogeochemistry(soil)
     out = auxiliary_fields(state, hydrology)
-    fields = get_fields(state, hydrology, bgc; except = out)
+    fields = get_fields(state, hydrology, strat, bgc; except = out)
     launch!(grid, XYZ, compute_hydraulics_kernel!, out, fields, hydrology, strat, bgc)
     return nothing
 end
@@ -74,7 +74,7 @@ function compute_tendencies!(
     strat = get_stratigraphy(soil)
     bgc = get_biogeochemistry(soil)
     tendencies = tendency_fields(state, hydrology)
-    fields = get_fields(state, hydrology, bgc, evtr)
+    fields = get_fields(state, hydrology, strat, bgc, evtr)
     clock = state.clock
     launch!(
         grid, XYZ, compute_tendencies_kernel!,
@@ -160,12 +160,12 @@ Computes the unsaturated hydraulic conductivity for `RichardsEq` configurations 
     fgrid = get_field_grid(grid)
     # compute hydraulic conductivity
     @inbounds if k <= 1
-        out.hydraulic_conductivity[i, j, k] = hydraulic_conductivity(i, j, 1, fgrid, fields, hydrology, strat, bgc)
+        out.hydraulic_conductivity[i, j, k] = hydraulic_conductivity(i, j, 1, grid, fields, hydrology, strat, bgc)
     elseif k >= fgrid.Nz
-        out.hydraulic_conductivity[i, j, k] = hydraulic_conductivity(i, j, fgrid.Nz, fgrid, fields, hydrology, strat, bgc)
+        out.hydraulic_conductivity[i, j, k] = hydraulic_conductivity(i, j, fgrid.Nz, grid, fields, hydrology, strat, bgc)
         out.hydraulic_conductivity[i, j, k + 1] = out.hydraulic_conductivity[i, j, k]
     else
-        out.hydraulic_conductivity[i, j, k] = min_zᵃᵃᶠ(i, j, k, fgrid, hydraulic_conductivity, fields, hydrology, strat, bgc)
+        out.hydraulic_conductivity[i, j, k] = min_zᵃᵃᶠ(i, j, k, grid, hydraulic_conductivity, fields, hydrology, strat, bgc)
     end
     return nothing
 end

@@ -146,7 +146,11 @@ links = InterLinks(
     "KernelAbstractions" => "https://juliagpu.github.io/KernelAbstractions.jl/stable/",
     "SpeedyWeather" => "https://speedyweather.github.io/SpeedyWeatherDocumentation/stable/",
     "FreezeCurves" => "https://cryogrid.github.io/FreezeCurves.jl/stable/",
+    "Thermodynamics" => "https://clima.github.io/Thermodynamics.jl/stable/",
 )
+
+# Always have `using Terrarium` available in doctests
+DocMeta.setdocmeta!(Terrarium, :DocTestSetup, :(using Terrarium); recursive = true)
 
 
 makedocs(

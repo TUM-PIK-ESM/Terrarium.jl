@@ -11,6 +11,9 @@ import SpeedyWeather
 # run on GPU if available
 arch = CUDA.functional() ? GPU() : CPU()
 
+ring_grid = RingGrids.FullGaussianGrid(72)
+lon, lat = RingGrids.get_londlatds(ring_grid)
+
 # Load land-sea mask at ~1° resolution
 land_sea_frac = convert.(Float32, dropdims(Raster("inputs/era5-land_land_sea_mask_N72.nc"), dims = Ti))
 land_sea_frac_field = RingGrids.FullGaussianField(Matrix(land_sea_frac), input_as = Matrix)
@@ -39,7 +42,8 @@ initializers = (
     # dry soil
     saturation_water_ice = 1.0,
 )
-integrator = initialize(model, ForwardEuler(), Tair_forcing; initializers, boundary_conditions)
+inputs = InputSources(Tair_forcing)
+integrator = initialize(model, ForwardEuler(); inputs, initializers, boundary_conditions)
 @time timestep!(integrator)
 @time run!(integrator, period = Day(10), dt = 120.0)
 

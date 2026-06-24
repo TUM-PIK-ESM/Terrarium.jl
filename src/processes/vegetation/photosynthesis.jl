@@ -15,54 +15,54 @@ $TYPEDFIELDS
 * [willeitPALADYNV10Comprehensive2016](@cite) Willeit & Ganopolski, Geoscientific Model Development (2016)
 
 """
-@kwdef struct LUEPhotosynthesis{NF} <: AbstractPhotosynthesis{NF}
-    "Rubisco specificity factor at 25°C [dimensionless]. Ratio of carboxylation to oxygenation rates."
-    τ25::NF = 2600.0
+@parameterized @kwdef struct LUEPhotosynthesis{NF} <: AbstractPhotosynthesis{NF}
+    "Rubisco specificity factor at 25°C. Ratio of carboxylation to oxygenation rates."
+    @param τ25::NF = 2600.0 (bounds = Positive,)
 
-    "Michaelis-Menten constant for CO₂ at 25°C [Pa]. PALADYN value for needleleaf trees."
-    Kc25::NF = 30.0
+    "Michaelis-Menten constant for CO₂ at 25°C. PALADYN value for needleleaf trees."
+    @param Kc25::NF = 30.0 (units = u"Pa", bounds = Positive)
 
-    "Michaelis-Menten constant for O₂ at 25°C [Pa]. PALADYN value for needleleaf trees."
-    Ko25::NF = 3.0e4
+    "Michaelis-Menten constant for O₂ at 25°C. PALADYN value for needleleaf trees."
+    @param Ko25::NF = 3.0e4 (units = u"Pa", bounds = Positive)
 
-    "Q10 temperature sensitivity for τ [dimensionless]. Controls temperature dependence of specificity."
-    q10_τ::NF = 0.57
+    "Q10 temperature sensitivity for τ. Controls temperature dependence of specificity."
+    @param q10_τ::NF = 0.57 (bounds = Positive,)
 
-    "Q10 temperature sensitivity for Kc [dimensionless]. Controls temperature dependence of CO₂ affinity."
-    q10_Kc::NF = 2.1
+    "Q10 temperature sensitivity for Kc. Controls temperature dependence of CO₂ affinity."
+    @param q10_Kc::NF = 2.1 (bounds = Positive,)
 
-    "Q10 temperature sensitivity for Ko [dimensionless]. Controls temperature dependence of O₂ affinity."
-    q10_Ko::NF = 1.2
+    "Q10 temperature sensitivity for Ko. Controls temperature dependence of O₂ affinity."
+    @param q10_Ko::NF = 1.2 (bounds = Positive,)
 
-    "Leaf albedo in PAR range [-]"
-    α_leaf::NF = 0.17
+    "Leaf albedo in PAR range"
+    @param α_leaf::NF = 0.17 (bounds = UnitInterval,)
 
-    "Fraction of PAR assimilated at ecosystem level, relative to leaf level [-]"
-    α_a::NF = 0.5
+    "Fraction of PAR assimilated at ecosystem level, relative to leaf level"
+    @param α_a::NF = 0.5 (bounds = UnitInterval,)
 
-    "Intrinsic quantum efficiency of CO2 uptake in C3 plants [mol/mol]"
-    α_C3::NF = 0.08
+    "Intrinsic quantum efficiency of CO2 uptake in C3 plants"
+    @param α_C3::NF = 0.08 (bounds = UnitInterval,)
 
-    "Conversion factor for solar radiation at 550 nm from J/m² to mol/m² [mol/J]"
-    cq::NF = 4.6e-6
+    "Conversion factor for solar radiation at 550 nm from J/m² to mol/m²"
+    @param cq::NF = 4.6e-6 (units = u"mol/J", bounds = Positive, scale = 1.0e-6)
 
-    "Extinction coefficient for radiation through vegetation [-]"
-    k_ext::NF = 0.5
+    "Extinction coefficient for radiation through vegetation"
+    @param k_ext::NF = 0.5 (bounds = Positive,)
 
-    "Upper temperature threshold for CO₂/O₂ specificity factor [°C]. Above this, photosynthesis rapidly declines. PFT-specific, needleleaf tree value."
-    T_CO2_high::NF = 42.0
+    "Upper temperature threshold for CO₂/O₂ specificity factor. Above this, photosynthesis rapidly declines. PFT-specific, needleleaf tree value."
+    @param T_CO2_high::NF = 42.0 (units = u"°C",)
 
-    "Lower temperature threshold for CO₂/O₂ specificity factor [°C]. Below this, photosynthesis rapidly declines. PFT-specific, needleleaf tree value."
-    T_CO2_low::NF = -4.0
+    "Lower temperature threshold for CO₂/O₂ specificity factor. Below this, photosynthesis rapidly declines. PFT-specific, needleleaf tree value."
+    @param T_CO2_low::NF = -4.0 (units = u"°C",)
 
-    "Upper temperature threshold for light-limited photosynthesis rate [°C]. Peak photosynthesis capacity. PFT-specific, needleleaf tree value."
-    T_photos_high::NF = 30.0
+    "Upper temperature threshold for light-limited photosynthesis rate. Peak photosynthesis capacity. PFT-specific, needleleaf tree value."
+    @param T_photos_high::NF = 30.0 (units = u"°C",)
 
-    "Lower temperature threshold for light-limited photosynthesis rate [°C]. Minimum for photosynthesis. PFT-specific, needleleaf tree value."
-    T_photos_low::NF = 15.0
+    "Lower temperature threshold for light-limited photosynthesis rate. Minimum for photosynthesis. PFT-specific, needleleaf tree value."
+    @param T_photos_low::NF = 15.0 (units = u"°C",)
 
-    "Root of quadratic mean shape parameter [-]. Controls smoothness of interpolation between light and RuBisCO limitations (0.7 for smooth, 0.5 for arithmetic mean)."
-    θ_r::NF = 0.7
+    "Root of quadratic mean shape parameter. Controls smoothness of interpolation between light and RuBisCO limitations (0.7 for smooth, 0.5 for arithmetic mean)."
+    @param θ_r::NF = 0.7 (bounds = UnitInterval,)
 end
 
 LUEPhotosynthesis(::Type{NF}; kwargs...) where {NF} = LUEPhotosynthesis{NF}(; kwargs...)
@@ -199,11 +199,11 @@ Follows [willeitPALADYNV10Comprehensive2016; Eqs. (C4-C5)](@cite) and [haxeltine
 """
 @inline function compute_assimilation_factors(
         photo::LUEPhotosynthesis{NF},
-        constants::PhysicalConstants{NF},
+        constants::MaterialConstants{NF},
         Γ_star::NF, T_stress::NF, Kc::NF, Ko::NF, pres_i::NF, pres_O2::NF
     ) where {NF}
     # The factor of 2 in the c_1 denominator relates to the partial pressure terms in the compensation point.
-    c_1 = photo.α_C3 * T_stress * constants.C_mass * (pres_i - Γ_star) / (pres_i + NF(2.0) * Γ_star)
+    c_1 = photo.α_C3 * T_stress * constants.atomic_weight_carbon * (pres_i - Γ_star) / (pres_i + NF(2.0) * Γ_star)
     c_2 = (pres_i - Γ_star) / (pres_i + Kc * (NF(1.0) + pres_O2 / Ko))
     return c_1, c_2
 end
@@ -283,7 +283,7 @@ Compute and return leaf respiration [gC/m²/s] and net assimilation [gC/m²/s] r
 """
 function compute_respiration_assimilation(
         photo::LUEPhotosynthesis{NF},
-        constants::PhysicalConstants{NF},
+        constants::MaterialConstants{NF},
         T_air::NF, swdown::NF, pres::NF, co2::NF, LAI::NF, λc::NF, β::NF,
     ) where {NF}
     # Compute partial CO2 and O2 pressures in [Pa]
@@ -396,7 +396,7 @@ Returns instantaneous rates in [gC/m²/s] and [kgC/m²/s] for integration by the
 
     # Compute Rd, leaf respiration rate in [gC/m²/s],
     # An, net photosynthesis rate in [gC/m²/s]
-    Rd, An = compute_respiration_assimilation(photo, constants, T_air, swdown, pres, co2, LAI, λc, β)
+    Rd, An = compute_respiration_assimilation(photo, constants.material, T_air, swdown, pres, co2, LAI, λc, β)
 
     # Compute GPP, Gross Primary Production in [kgC/m²/s]
     GPP = compute_GPP(photo, An)

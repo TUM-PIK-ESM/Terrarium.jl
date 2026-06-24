@@ -124,7 +124,7 @@ end
 
 @testset "Assimilation factors c1 and c2" begin
     photo = LUEPhotosynthesis()
-    constants = PhysicalConstants()
+    constants = MaterialConstants(Float64)
     T_air = 20.0 # °C
     Γ_star = 3.0 # Value for T_air = 20.0 °C and pres_O2 = 20.9e3 Pa
     Kc = 20.0 # Value for T_air = 20.0 °C
@@ -267,7 +267,7 @@ end
 
 @testset "Photosynthesis (GPP and Rd)" begin
     photo = LUEPhotosynthesis()
-    constants = PhysicalConstants()
+    constants = MaterialConstants(Float64)
     swdown = 50.0 # W/m²
     pres = 1.0e5 # Pa
     co2 = 400.0 # ppm

@@ -76,10 +76,10 @@ if not defined for the given configuration.
 @inline get_closure(hydrology::SoilHydrology) = hydrology.closure
 
 variables(hydrology::SoilHydrology{NF}) where {NF} = (
-    auxiliary(:saturation_water_ice, XYZ(), domain = UnitInterval(), desc = "Saturation level of water and ice in the pore space"),
+    auxiliary(:saturation_water_ice, XYZ(), bounds = UnitInterval, desc = "Saturation level of water and ice in the pore space"),
     auxiliary(:water_table, XY(), units = u"m", desc = "Elevation of the water table in meters"),
     auxiliary(:hydraulic_conductivity, XYZ(z = Face()), units = u"m/s", desc = "Hydraulic conductivity of soil volumes in m/s"),
-    input(:liquid_water_fraction, XYZ(), default = 1, domain = UnitInterval(), desc = "Fraction of unfrozen water in the pore space"),
+    input(:liquid_water_fraction, XYZ(), default = 1, bounds = UnitInterval, desc = "Fraction of unfrozen water in the pore space"),
 )
 
 function compute_water_table!(state, grid, hydrology::SoilHydrology)
@@ -102,7 +102,7 @@ function compute_hydraulics!(state, grid, hydrology::SoilHydrology, soil::Abstra
     strat = get_stratigraphy(soil)
     bgc = get_biogeochemistry(soil)
     out = (hydraulic_conductivity = state.hydraulic_conductivity,)
-    fields = get_fields(state, hydrology, bgc; except = out)
+    fields = get_fields(state, hydrology, strat, bgc; except = out)
     launch!(grid, XYZ, compute_hydraulics_kernel!, out, fields, hydrology, strat, bgc)
     return nothing
 end

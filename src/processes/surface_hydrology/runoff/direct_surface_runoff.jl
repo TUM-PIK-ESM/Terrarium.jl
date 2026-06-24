@@ -12,9 +12,9 @@ water at the surface, and `I` is infiltration into the soil.
 Properties:
 $FIELDS
 """
-@kwdef struct DirectSurfaceRunoff{NF} <: AbstractSurfaceRunoff{NF}
+@parameterized @kwdef struct DirectSurfaceRunoff{NF} <: AbstractSurfaceRunoff{NF}
     "Surface water removal timescale"
-    τ_r::NF = 3600.0
+    @param τ_r::NF = 3600.0 (units = u"s", bounds = Positive)
 end
 
 DirectSurfaceRunoff(::Type{NF}; kwargs...) where {NF} = DirectSurfaceRunoff{NF}(; kwargs...)

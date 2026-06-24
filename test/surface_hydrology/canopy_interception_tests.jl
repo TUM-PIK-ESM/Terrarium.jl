@@ -53,7 +53,7 @@ end
 
 @testset "compute_w_can_tendency" begin
     canopy_interception = PALADYNCanopyInterception(Float64)
-    constants = PhysicalConstants()
+    constants = PhysicalConstants(Float64)
     # Test tendency is zero when all flux terms are zero
     ∂w∂t = compute_w_can_tendency(canopy_interception, 0.0, 0.0, 0.0)
     @test iszero(∂w∂t)
