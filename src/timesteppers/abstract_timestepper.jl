@@ -116,18 +116,26 @@ additional dispatches of `explicit_step_kernel!(field, tendency, ::AbstractLandG
 can be defined to implement more specialized time-stepping schemes.
 """
 function explicit_step!(state, grid::AbstractLandGrid, timestepper::AbstractTimeStepper, Δt, names::Tuple{Vararg{Symbol}})
-    fastiterate(names) do name
-        # apply flux BCs, if present
-        compute_z_bcs!(state.tendencies[name], state.prognostic[name], grid, state)
-        # debug site post-BC
-        debugsite!(explicit_step!, state.tendencies[name], name)
-        # update prognostic state variable
-        explicit_step!(state.prognostic[name], state.tendencies[name], grid, timestepper, Δt)
-        # debug site post-step
-        debugsite!(explicit_step!, state.prognostic[name], name)
+    # step only this namespace's prognostic variables that are also selected in `names`.
+    # iterating the (statically known) prognostic names and guarding on `∈ names` keeps this
+    # type stable, unlike materializing the intersection as a tuple (its length would depend on
+    # the runtime values in `names`).
+    fastiterate(prognostic_names(state)) do name
+        if name ∈ names
+            # apply flux BCs, if present
+            compute_z_bcs!(state.tendencies[name], state.prognostic[name], grid, state)
+            # debug site post-BC
+            debugsite!(explicit_step!, state.tendencies[name], name)
+            # update prognostic state variable
+            explicit_step!(state.prognostic[name], state.tendencies[name], grid, timestepper, Δt)
+            # debug site post-step
+            debugsite!(explicit_step!, state.prognostic[name], name)
+        end
     end
+    # recurse into child namespaces, threading the same `names` selection so each namespace
+    # steps exactly prognostic_names(ns) ∩ names
     fastiterate(state.namespaces) do ns
-        explicit_step!(ns, grid, timestepper, Δt, prognostic_names(ns))
+        explicit_step!(ns, grid, timestepper, Δt, names)
     end
     return nothing
 end
