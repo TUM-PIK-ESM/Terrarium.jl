@@ -68,8 +68,8 @@ end
 
 # mock a model with the same exponential dynamics as `ExpModel`, but with the prognostic
 # variable (and its auxiliary offset and an input) living inside a namespace `:inner`.
-# This exercises time stepping of prognostic and input variables defined in namespaces and 
-# also tests that actually the correct timestepper is used in the namespace as well. 
+# This exercises time stepping of prognostic and input variables defined in namespaces and
+# also tests that actually the correct timestepper is used in the namespace as well.
 @kwdef struct NamespacedExpModel{NF, Grid <: Terrarium.AbstractLandGrid{NF}, I} <: Terrarium.AbstractModel{NF, Grid}
     grid::Grid
     initializer::I = DefaultInitializer(eltype(grid))
@@ -78,11 +78,13 @@ end
 Terrarium.variables(::NamespacedExpModel) = (
     Terrarium.prognostic(:u, Terrarium.XY()),
     Terrarium.auxiliary(:v, Terrarium.XY()),
-    Terrarium.namespace(:inner, (
-        Terrarium.prognostic(:u, Terrarium.XY()),
-        Terrarium.auxiliary(:v, Terrarium.XY()),
-        Terrarium.input(:c, Terrarium.XY()),
-    )),
+    Terrarium.namespace(
+        :inner, (
+            Terrarium.prognostic(:u, Terrarium.XY()),
+            Terrarium.auxiliary(:v, Terrarium.XY()),
+            Terrarium.input(:c, Terrarium.XY()),
+        )
+    ),
 )
 
 # constant offset at the root (v = 0.1); inside the namespace the offset is read from the
