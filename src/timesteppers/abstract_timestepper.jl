@@ -126,6 +126,9 @@ function explicit_step!(state, grid::AbstractLandGrid, timestepper::AbstractTime
         # debug site post-step
         debugsite!(explicit_step!, state.prognostic[name], name)
     end
+    fastiterate(state.namespaces) do ns
+        explicit_step!(ns, grid, timestepper, Δt, prognostic_names(ns))
+    end
     return nothing
 end
 
