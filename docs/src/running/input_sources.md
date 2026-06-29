@@ -115,6 +115,30 @@ integrator = initialize(model, Heun(Δt = 3600.0); inputs)
 
 Internally, `InputSources` will iterate over each source in order when calling `initialize!` and `update_inputs!`.
 
+## Namespaced input variables
+
+Model components may declare their input variables inside a variable [`Namespace`](@ref). For example, a
+[`SoilStratigraphy`](@ref) wraps the variables of each soil horizon in a namespace named after that horizon,
+and every [`PrescribedSoilHorizon`](@ref) declares separate `sand_fraction`, `silt_fraction`, `clay_fraction`,
+and `thickness` inputs. Input sources can target such variables by passing a namespaced path as the `name`:
+
+```julia
+inputs = InputSources(
+    ## targets the `sand_fraction` input variable in the `organic` horizon namespace
+    InputSource(grid, sand_field; name = :organic => :sand_fraction),
+    ## nested namespaces chain as pairs: ns1 => ns2 => varname
+    InputSource(grid, other_field; name = :ns1 => :ns2 => :x),
+)
+```
+
+A plain `Symbol` name always refers to the root namespace; a source named `:sand` will *not* write
+into `organic.sand` and vice versa. Internally, names are normalized to a tuple of `Symbol`s via
+[`varpath`](@ref):
+
+```@docs; canonical = false
+varpath
+```
+
 ## Using inputs inside process kernels
 
 Input variables are stored in `state.inputs` and are also accessible through the top-level `state` shorthand, just like prognostic or auxiliary variables. Inside a kernel function, inputs appear as named fields and are retrieved the same way as any other field:

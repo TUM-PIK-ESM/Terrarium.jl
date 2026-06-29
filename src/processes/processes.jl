@@ -21,14 +21,16 @@ include("atmosphere/prescribed_atmosphere.jl")
 
 # Soil
 
-export SoilTexture
+export SoilTexture, normalize_texture!
 include("soil/stratigraphy/soil_texture.jl")
 export ConstantSoilPorosity, SoilPorositySURFEX
 include("soil/stratigraphy/soil_porosity.jl")
 export SoilVolume, MineralOrganic, volumetric_fractions
 include("soil/stratigraphy/soil_volume.jl")
-export HomogeneousStratigraphy
-include("soil/stratigraphy/homogeneous_strat.jl")
+export ConstantSoilHorizon, PrescribedSoilHorizon
+include("soil/stratigraphy/soil_horizon.jl")
+export SoilStratigraphy, HomogeneousSoilStratigraphy, SoilGridsStratigraphy
+include("soil/stratigraphy/soil_stratigraphy.jl")
 
 export ConstantSoilCarbonDensity
 include("soil/biogeochem/constant_soil_carbon.jl")

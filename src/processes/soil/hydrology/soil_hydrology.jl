@@ -102,7 +102,7 @@ function compute_hydraulics!(state, grid, hydrology::SoilHydrology, soil::Abstra
     strat = get_stratigraphy(soil)
     bgc = get_biogeochemistry(soil)
     out = (hydraulic_conductivity = state.hydraulic_conductivity,)
-    fields = get_fields(state, hydrology, bgc; except = out)
+    fields = get_fields(state, hydrology, strat, bgc; except = out)
     launch!(grid, XYZ, compute_hydraulics_kernel!, out, fields, hydrology, strat, bgc)
     return nothing
 end

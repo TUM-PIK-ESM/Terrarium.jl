@@ -141,27 +141,31 @@ function reset_tendencies!(state::StateVariables)
 end
 
 """
-Initialize input variables from the given input `sources`.
+Initialize input variables from the given input `sources`. The `scope` corresponds to the
+path of namespace names from the root namespace to `state` and is used to match namespaced
+input sources to their target variables; see [`varpath`](@ref).
 """
-function initialize!(state::StateVariables, sources::InputSources)
+function initialize!(state::StateVariables, sources::InputSources, scope::Tuple{Vararg{Symbol}} = ())
     # initialize inputs in current namespace
-    initialize!(state.inputs, sources, state.clock)
+    initialize!(state.inputs, sources, state.clock, scope)
     # recursively initialize namespaces
-    for ns in state.namespaces
-        initialize!(ns, sources)
+    fastiterate(namespace_names(state)) do nsname
+        initialize!(getproperty(getfield(state, :namespaces), nsname), sources, (scope..., nsname))
     end
     return nothing
 end
 
 """
-Update input variables from the given input `sources`.
+Update input variables from the given input `sources`. The `scope` corresponds to the
+path of namespace names from the root namespace to `state` and is used to match namespaced
+input sources to their target variables; see [`varpath`](@ref).
 """
-function update_inputs!(state::StateVariables, sources::InputSources)
+function update_inputs!(state::StateVariables, sources::InputSources, scope::Tuple{Vararg{Symbol}} = ())
     # update inputs in current namespace
-    update_inputs!(state.inputs, sources, state.clock)
+    update_inputs!(state.inputs, sources, state.clock, scope)
     # recursively update namespaces
-    for ns in state.namespaces
-        update_inputs!(ns, sources)
+    fastiterate(namespace_names(state)) do nsname
+        update_inputs!(getproperty(getfield(state, :namespaces), nsname), sources, (scope..., nsname))
     end
     return
 end
@@ -207,21 +211,24 @@ end
 
 Retrieves the `Field` from `state` matching the `name` of the given variable.
 """
-@inline get_field(state, var::AbstractVariable{name}) where {name} = getproperty(state, name)
+@inline get_field(state, ::Union{AbstractVariable{name}, Namespace{name}}) where {name} = getproperty(state, name)
 
 """
     $TYPEDSIGNATURES
 
-Retrieves all `Field`s from `state` matching the names of the given variables.
+Retrieves all `Field`s from `state` matching the names of the given variables. Any `Namespace`s
+in `vars` are resolved recursively and their fields are merged into the returned `NamedTuple`
+keyed by namespace name, with the namespace's own fields collected into a nested `NamedTuple`.
 """
-@inline function get_fields(state, vars::Tuple{Vararg{AbstractVariable}})
-    vars = deduplicate_vars(vars)
-    matched_fields = fastmap(vars) do var
-        get_field(state, var)
-    end
-    names = map(varname, vars)
-    return NamedTuple{names}(matched_fields)
-end
+@generated get_fields(state, vars::Tuple{Vararg{Union{AbstractVariable, Namespace}}}) = _get_fields_expr(:state, :vars, vars)
+
+"""
+    $TYPEDSIGNATURES
+
+Retrieves all `Field`s declared by the given `Namespace` from `state`, where `state` is assumed
+to correspond to the (nested) `StateVariables` of the namespace itself.
+"""
+@inline get_fields(state, ns::Namespace) = get_fields(state, ns.vars)
 
 """
     $SIGNATURES
@@ -235,7 +242,8 @@ Retrieves all non-tendency `Field`s from `state` defined on the given `component
         tuplejoin(allvars, closurevars)
     end
     vars = tuplejoin(component_vars...)
-    return ntdiff(get_fields(state, vars), except)
+    component_fields = get_fields(state, vars)
+    return ntdiff(component_fields, except)
 end
 
 """
@@ -571,4 +579,39 @@ function Base.show(io::IO, state::StateVariables{NF}) where {NF}
     print(io, "├─ Namespaces: $(keys(state.namespaces))")
     println(io)
     return print(io, "└─ Timestepper cache: $(nameof(typeof(state.timestepper_cache)))")
+end
+
+"""
+Generation-time helper for [`get_fields`](@ref). Given the type `Vars` of a tuple of
+`AbstractVariable`s and `Namespace`s, builds an expression that retrieves all matching fields
+from `state_ex` (an expression evaluating to the state container) and `vars_ex` (an expression
+evaluating to the variable tuple). The recursion over namespaces is performed here, at expansion
+time, so that the generated body for `get_fields` contains no self-call. This is what makes the
+method type stable: a runtime self-recursive `get_fields` would otherwise trigger inference's
+recursion limiting and widen the return type of the nested namespace lookups to an abstract
+`NamedTuple`.
+"""
+function _get_fields_expr(state_ex, vars_ex, ::Type{Vars}) where {Vars}
+    types = collect(Vars.parameters)
+    names = map(varname, types)
+    # deduplicate by name (keep first occurrence), as in `deduplicate_vars`
+    unique_idx = unique(i -> names[i], eachindex(types))
+    plain_idx = filter(i -> types[i] <: AbstractVariable, unique_idx)
+    ns_idx = filter(i -> types[i] <: Namespace, unique_idx)
+    plain_names = Tuple(names[i] for i in plain_idx)
+    plain_fields = map(i -> :(get_field($state_ex, $vars_ex[$i])), plain_idx)
+    fields = :(NamedTuple{$plain_names}(tuple($(plain_fields...))))
+    isempty(ns_idx) && return fields
+    ns_names = Tuple(names[i] for i in ns_idx)
+    ns_fields = map(ns_idx) do i
+        substate, subvars = gensym(:state), gensym(:vars)
+        # `Namespace{name, Vars}` => recurse on the nested variable tuple type `Vars`
+        inner = _get_fields_expr(substate, subvars, Vars.parameters[i].parameters[2])
+        quote
+            let $substate = getproperty($state_ex, $(QuoteNode(names[i]))), $subvars = $vars_ex[$i].vars
+                $inner
+            end
+        end
+    end
+    return :(merge($fields, NamedTuple{$ns_names}(tuple($(ns_fields...)))))
 end

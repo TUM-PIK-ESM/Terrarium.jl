@@ -14,9 +14,9 @@ end
 
 ConstantSoilPorosity(::Type{NF}; kwargs...) where {NF} = ConstantSoilPorosity{NF}(; kwargs...)
 
-@inline organic_porosity(props::ConstantSoilPorosity, texture::SoilTexture) = props.organic_porosity
+@inline organic_porosity(params::ConstantSoilPorosity, texture::SoilTexture) = params.organic_porosity
 
-@inline mineral_porosity(props::ConstantSoilPorosity, texture::SoilTexture) = props.mineral_porosity
+@inline mineral_porosity(params::ConstantSoilPorosity, texture::SoilTexture) = params.mineral_porosity
 
 """
     $TYPEDEF
@@ -40,17 +40,25 @@ end
 
 SoilPorositySURFEX(::Type{NF}; kwargs...) where {NF} = SoilPorositySURFEX{NF}(; kwargs...)
 
-@inline organic_porosity(props::SoilPorositySURFEX, texture::SoilTexture) = por.porosity_organic
+@inline organic_porosity(params::SoilPorositySURFEX, texture::SoilTexture) = params.porosity_organic
 
-@inline function mineral_porosity(props::SoilPorositySURFEX, texture::SoilTexture)
-    p₀ = props.porosity_default
-    β_s = props.porosity_sand_coef
+@inline function mineral_porosity(params::SoilPorositySURFEX, texture::SoilTexture)
+    p₀ = params.porosity_default
+    β_s = params.porosity_sand_coef
     por = p₀ + β_s * texture.sand
     return por
 end
 
 # Kernel functions
 
-mineral_porosity(i, j, k, grid, fields, props::AbstractSoilPorosity, texture::SoilTexture) = mineral_porosity(props, texture)
+function mineral_porosity(i, j, grid, fields, horizon::AbstractSoilHorizon)
+    porosity_scheme = porosity(horizon)
+    texture = soil_texture(i, j, grid, fields, horizon)
+    return mineral_porosity(porosity_scheme, texture)
+end
 
-organic_porosity(i, j, k, grid, fields, props::AbstractSoilPorosity, texture::SoilTexture) = organic_porosity(props, texture)
+function organic_porosity(i, j, grid, fields, horizon::AbstractSoilHorizon)
+    porosity_scheme = porosity(horizon)
+    texture = soil_texture(i, j, grid, fields, horizon)
+    return organic_porosity(porosity_scheme, texture)
+end

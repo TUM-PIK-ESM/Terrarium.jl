@@ -7,6 +7,8 @@ using Terrarium
 using CUDA
 using Dates
 using Rasters, NCDatasets
+using NumericalEarth.DataWrangling
+using NumericalEarth.SoilGrids
 using Statistics
 
 using CairoMakie, GeoMakie
@@ -91,7 +93,6 @@ end
 lon_masked = grid_lon[land_mask]
 lat_masked = grid_lat[land_mask] # mask out non-land points
 bc = PrescribedSurfaceTemperature(:T_ub, get_temperature_bc(lon_masked, lat_masked))
-
 inits = (temperature = initial_soil_temperature,)
 
 # We are finally ready to initialize our model with the above initial and boundary conditions:

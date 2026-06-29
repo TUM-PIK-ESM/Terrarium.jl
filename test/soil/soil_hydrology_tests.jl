@@ -197,7 +197,7 @@ end
     grid = ColumnGrid(UniformSpacing(Δz = 0.1, N = Nz))
     swrc = VanGenuchten(α = 2.0, n = 2.0)
     porosity = ConstantSoilPorosity(eltype(grid))
-    strat = HomogeneousStratigraphy(eltype(grid); porosity)
+    strat = HomogeneousSoilStratigraphy(eltype(grid); porosity)
     hydraulic_properties = ConstantSoilHydraulics(eltype(grid); swrc, unsat_hydraulic_cond = UnsatKVanGenuchten(Float64))
     forcing_value = ForcingValue(0.0)
     vwc_forcing = Forcing(parameters = forcing_value, discrete_form = true) do i, j, k, grid, clock, fields, params
