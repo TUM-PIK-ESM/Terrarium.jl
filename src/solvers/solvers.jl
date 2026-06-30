@@ -2,11 +2,21 @@
     $TYPEDEF
 
 Represents an objective function for nonlinear solvers. The name `target`
-refers to the output `Field` which should updated on each iteration.
+refers to the output `Field` which should updated on each iteration. The
+objective function should have the signature
+```julia
+func(out, indices..., grid, fields, func_args...; func_kwargs...)
+```
+where `indices` are the grid indices passed to [`solve!`](@ref) and directly
+return the scalar residual. If an analytical derivative is provided via `dfunc`,
+it should follow the same signature as `func` and return the derivative of
+the residual with respect to the target.
 """
 struct ObjectiveFunction{target, F, DF}
+    "Objective function for the nonlinear solver"
     func::F
 
+    "Optional analytical derivative of the objective function"
     dfunc::DF
 
     ObjectiveFunction(func, dfunc, target::Symbol) = new{target, typeof(func), typeof(dfunc)}(func, dfunc)
