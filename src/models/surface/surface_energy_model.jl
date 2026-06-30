@@ -28,7 +28,7 @@ conditions.
     @component constants::PhysicalConstants{NF} = PhysicalConstants(eltype(grid))
 
     "State variable initializer"
-    @component initializer::Initializer
+    @component initializer::Initializer = DefaultInitializer(eltype(grid))
 
     "Time stepper: a single `AbstractTimeStepper` (e.g. `ForwardEuler`, `Heun`) or an `IMEX`"
     @component timestepper::Timestepper
