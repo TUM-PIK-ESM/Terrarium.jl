@@ -47,7 +47,7 @@ function ModelIntegrator(
     timestepper = get_timestepper(model)
     return ModelIntegrator{
         NF, typeof(architecture(grid)), typeof(grid), typeof(timestepper),
-        typeof(model), typeof(state), typeof(initializers), typeof(inputs),
+        typeof(model), typeof(state), typeof(clock), typeof(initializers), typeof(inputs),
     }(clock, model, inputs, state, initializers)
 end
 
