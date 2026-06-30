@@ -72,9 +72,10 @@ end
 # variable (and its auxiliary offset and an input) living inside a namespace `:inner`.
 # This exercises time stepping of prognostic and input variables defined in namespaces and
 # also tests that actually the correct timestepper is used in the namespace as well.
-@kwdef struct NamespacedExpModel{NF, Grid <: Terrarium.AbstractLandGrid{NF}, I} <: Terrarium.AbstractModel{NF, Grid}
+@kwdef struct NamespacedExpModel{NF, Grid <: Terrarium.AbstractLandGrid{NF}, I, TS <: Terrarium.AbstractTimeStepper} <: Terrarium.AbstractModel{NF, Grid}
     grid::Grid
     initializer::I = DefaultInitializer(eltype(grid))
+    timestepper::TS = ForwardEuler(eltype(grid))
 end
 
 Terrarium.variables(::NamespacedExpModel) = (
@@ -106,13 +107,14 @@ end
 
 @testset "NamespacedExpModel: time stepping prognostic/input in a namespace" begin
     grid = ColumnGrid(CPU(), Float64, UniformSpacing(N = 1))
-    model = NamespacedExpModel(grid)
+    model_heun = NamespacedExpModel(grid; timestepper = Heun())
+    model_euler = NamespacedExpModel(grid)
 
     # root initializers only; the namespaced prognostic `u` starts at its default (zero) and
     # the namespaced input `c` (which has no input source) is set explicitly below.
     initializers = (u = 0.0, v = 0.1)
-    integrator_heun = initialize(model, Heun(); initializers)
-    integrator_euler = initialize(model, ForwardEuler(); initializers)
+    integrator_heun = initialize(model_heun; initializers)
+    integrator_euler = initialize(model_euler; initializers)
 
     # the model must define namespaced variables (prognostic, auxiliary, and input)
     @test haskey(integrator_euler.state.namespaces, :inner)

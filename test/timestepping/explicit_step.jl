@@ -1,6 +1,11 @@
 using Terrarium
 using Test
 
+# The tests below drive `explicit_step!` with a lightweight `NamedTuple` mock standing in for a
+# `StateVariables` object. `explicit_step!` reads the prognostic names via `prognostic_names(state)`,
+# which is only defined for `StateVariables`, so provide a `NamedTuple` method for the mock here
+Terrarium.prognostic_names(state::NamedTuple) = keys(state.prognostic)
+
 struct TestClosure
     varname::Symbol
 end

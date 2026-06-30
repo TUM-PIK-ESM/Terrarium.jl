@@ -15,10 +15,10 @@ using Test
     model_params = vec(parameters(model))
     # increase all parameters by 5%
     model_params .*= 1.05
-    integrator = initialize(model, ForwardEuler(), model_params)
+    integrator = initialize(model, model_params)
     @test all(vec(parameters(integrator.model)) .≈ model_params)
     # test reinitialization of integrator
-    integrator = initialize(model, ForwardEuler())
+    integrator = initialize(model)
     updated_integrator = initialize(integrator, model_params)
     @test all(vec(parameters(integrator.model)) .≈ model_params)
 end

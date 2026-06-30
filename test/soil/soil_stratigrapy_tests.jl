@@ -40,7 +40,7 @@ using Test
 
         # Test soil_horizon
         grid = ColumnGrid(CPU(), Float64, UniformSpacing(N = 10, Δz = 0.1))
-        state = initialize(vars, grid)
+        state = StateVariables(vars, grid)
         fields = Terrarium.get_fields(state, strat)
         horizon = Terrarium.soil_horizon(1, 1, 10, grid, fields, strat)
         texture = Terrarium.soil_texture(1, 1, grid, fields, horizon)
@@ -54,7 +54,7 @@ using Test
         horizon2 = ConstantSoilHorizon(Float64, :h2; texture = SoilTexture(Float64, sand = 0.1), thickness = Inf)
         strat = SoilStratigraphy(Float64, horizon1, horizon2)
         vars = Terrarium.Variables(strat)
-        state = initialize(vars, grid)
+        state = StateVariables(vars, grid)
         fields = Terrarium.get_fields(state, strat)
         h1_texture = SoilTexture(Float64, sand = 0.5)
         set!(fields.h1, h1_texture)
@@ -94,7 +94,7 @@ end
     horizon = PrescribedSoilHorizon(Float64, :ph; porosity)
     vars = Terrarium.Variables(horizon)
     @test values(map(Terrarium.varname, vars.inputs)) == (:sand_fraction, :silt_fraction, :clay_fraction, :thickness)
-    fields = initialize(vars, grid)
+    fields = StateVariables(vars, grid)
     set!(fields.sand_fraction, texture.sand)
     set!(fields.silt_fraction, texture.silt)
     set!(fields.clay_fraction, texture.clay)
@@ -133,7 +133,7 @@ end
 
     # Test soil_horizon
     grid = ColumnGrid(CPU(), Float64, UniformSpacing(N = 10, Δz = 0.1))
-    state = initialize(vars, grid)
+    state = StateVariables(vars, grid)
     fields = Terrarium.get_fields(state, strat)
     horizon = Terrarium.soil_horizon(1, 1, 10, grid, fields, strat)
     texture = Terrarium.soil_texture(1, 1, grid, fields, horizon)
@@ -147,7 +147,7 @@ end
     horizon2 = ConstantSoilHorizon(Float64, :h2; texture = SoilTexture(Float64, sand = 0.1), thickness = Inf)
     strat = SoilStratigraphy(Float64, horizon1, horizon2)
     vars = Terrarium.Variables(strat)
-    state = initialize(vars, grid)
+    state = StateVariables(vars, grid)
     fields = Terrarium.get_fields(state, strat)
     h1_texture = SoilTexture(Float64, sand = 0.5)
     set!(fields.h1, h1_texture)
