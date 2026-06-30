@@ -56,6 +56,7 @@ import ModelParameters
 import Oceananigans
 import Oceananigans.Diagnostics
 import RingGrids
+import RootSolvers
 import Thermodynamics
 
 """
