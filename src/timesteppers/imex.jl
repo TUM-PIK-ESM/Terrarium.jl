@@ -134,7 +134,6 @@ in the [`IMEXCache`](@ref) type; each sub-stepper fetches its own sub-cache via 
 is advanced once for the whole step.
 """
 function timestep!(integrator::ModelIntegrator, timestepper::AbstractIMEX, Δt)
-    # TODO: loop over the namespaces here instead
     cache = integrator.state.timestepper_cache
     # type-stable split of the prognostic variables by their resolved class
     explicit_names = prognostic_names(integrator.state, cache, Explicit())
