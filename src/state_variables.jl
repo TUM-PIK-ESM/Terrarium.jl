@@ -382,7 +382,7 @@ function initialize(
     namespaces = map(vars.namespaces) do ns
         ns_bcs = get(boundary_conditions, varname(ns), (;))
         ns_fields = get(fields, varname(ns), (;))
-        initialize(ns.vars, grid; clock, boundary_conditions = ns_bcs, fields = ns_fields)
+        initialize(ns.vars, grid; clock, timestepper, boundary_conditions = ns_bcs, fields = ns_fields)
     end
     # get closure variable names
     closurenames = map(varname, closure_variables(values(vars.prognostic)))
