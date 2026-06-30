@@ -1,12 +1,12 @@
 using Terrarium
 using Test
 
-using Terrarium: AbstractLandGrid, AbstractImplicitTimestepper, EmptyCache, prognostic, XY
+using Terrarium: AbstractLandGrid, AbstractIMEX, AbstractImplicitTimestepper, AbstractVariable, EmptyCache, Explicit, Implicit, prognostic, XY
 
 module IMEXTestTypes
 
     using Terrarium
-    using Terrarium: AbstractLandGrid, AbstractImplicitTimestepper, prognostic, XY
+    using Terrarium: AbstractLandGrid, AbstractIMEX, AbstractImplicitTimestepper, AbstractVariable, Implicit, prognostic, XY
 
     # A mock implicit timestepper used only to verify IMEX routing. Its update is deliberately distinct
     # from forward Euler (u += 2·∂u∂t·Δt) so we can tell which sub-stepper integrated which variable.
@@ -28,21 +28,42 @@ module IMEXTestTypes
         return nothing
     end
 
-    # Minimal two-variable model with constant unit tendencies. `:a` defaults to the :explicit class and
-    # `:b` defaults to :implicit, so a single model exercises both the declared default and IMEX overrides.
+    # Minimal two-variable model with constant unit tendencies. Both variables default to the `Explicit`
+    # timestepping class; specific routing under an IMEX timestepper is declared via `timestepping` below.
     @kwdef struct TwoVarModel{NF, Grid <: AbstractLandGrid{NF}, TS <: Terrarium.AbstractTimeStepper} <: Terrarium.AbstractModel{NF, Grid}
         grid::Grid
         initializer = DefaultInitializer(eltype(grid))
         timestepper::TS = ForwardEuler(eltype(grid))
     end
 
-    Terrarium.variables(::TwoVarModel) = (prognostic(:a, XY()), prognostic(:b, XY(); timestepper = :implicit))
+    Terrarium.variables(::TwoVarModel) = (prognostic(:a, XY()), prognostic(:b, XY()))
     Terrarium.compute_auxiliary!(state, ::TwoVarModel) = nothing
     function Terrarium.compute_tendencies!(state, ::TwoVarModel)
         set!(state.tendencies.a, 1.0)
         set!(state.tendencies.b, 1.0)
         return nothing
     end
+
+    # Under any IMEX timestepper, integrate `:b` implicitly while `:a` keeps the default `Explicit` class.
+    Terrarium.timestepping(::AbstractVariable{:b}, ::TwoVarModel, ::AbstractIMEX) = Implicit()
+
+    # A second model identical to `TwoVarModel` but with the routing flipped, used to exercise the
+    # per-model nature of `timestepping`: here `:a` is integrated implicitly and `:b` explicitly.
+    @kwdef struct FlippedModel{NF, Grid <: AbstractLandGrid{NF}, TS <: Terrarium.AbstractTimeStepper} <: Terrarium.AbstractModel{NF, Grid}
+        grid::Grid
+        initializer = DefaultInitializer(eltype(grid))
+        timestepper::TS = ForwardEuler(eltype(grid))
+    end
+
+    Terrarium.variables(::FlippedModel) = (prognostic(:a, XY()), prognostic(:b, XY()))
+    Terrarium.compute_auxiliary!(state, ::FlippedModel) = nothing
+    function Terrarium.compute_tendencies!(state, ::FlippedModel)
+        set!(state.tendencies.a, 1.0)
+        set!(state.tendencies.b, 1.0)
+        return nothing
+    end
+
+    Terrarium.timestepping(::AbstractVariable{:a}, ::FlippedModel, ::AbstractIMEX) = Implicit()
 end
 
 @testset "Single timestepper integrates all prognostic variables" begin
@@ -70,7 +91,7 @@ end
     @test all(interior(integrator.state.b) .≈ Δt)
 end
 
-@testset "IMEX routes by declared default class" begin
+@testset "IMEX routes by the timestepping class" begin
     grid = ColumnGrid(CPU(), Float64, UniformSpacing(N = 1))
     timestepper = IMEX(ForwardEuler(Float64), IMEXTestTypes.MockImplicit(Float64))
     model = IMEXTestTypes.TwoVarModel(grid; timestepper)
@@ -78,25 +99,25 @@ end
     cache = integrator.state.timestepper_cache
     # the IMEXCache holds the resolved per-variable classes (in prognostic order) as a type parameter
     @test cache isa Terrarium.IMEXCache
-    @test Terrarium.timestepper_classes(cache) == (:explicit, :implicit)   # (:a, :b)
+    @test Terrarium.timestepping(cache) == (Explicit(), Implicit())   # (:a, :b)
     @test cache.explicit isa EmptyCache && cache.implicit isa EmptyCache
     Δt = default_dt(integrator)
     timestep!(integrator)
-    @test all(interior(integrator.state.a) .≈ Δt)       # :a default :explicit → forward Euler: a += 1·Δt
-    @test all(interior(integrator.state.b) .≈ 2 * Δt)   # :b default :implicit → mock: b += 2·Δt
+    @test all(interior(integrator.state.a) .≈ Δt)       # :a → Explicit → forward Euler: a += 1·Δt
+    @test all(interior(integrator.state.b) .≈ 2 * Δt)   # :b → Implicit → mock: b += 2·Δt
 end
 
-@testset "IMEX timestepper_classes overrides the default; Heun explicit cache" begin
+@testset "timestepping is resolved per model; Heun explicit cache" begin
     grid = ColumnGrid(CPU(), Float64, UniformSpacing(N = 1))
-    # flip both variables relative to their declared defaults
-    timestepper = IMEX(Heun(Float64), IMEXTestTypes.MockImplicit(Float64); timestepper_classes = (; a = :implicit, b = :explicit))
-    model = IMEXTestTypes.TwoVarModel(grid; timestepper)
+    # same IMEX timestepper, but the FlippedModel routes :a implicitly and :b explicitly
+    timestepper = IMEX(Heun(Float64), IMEXTestTypes.MockImplicit(Float64))
+    model = IMEXTestTypes.FlippedModel(grid; timestepper)
     integrator = initialize(model)
     cache = integrator.state.timestepper_cache
-    @test Terrarium.timestepper_classes(cache) == (:implicit, :explicit)   # (:a, :b)
+    @test Terrarium.timestepping(cache) == (Implicit(), Explicit())   # (:a, :b)
     @test cache.explicit isa Terrarium.HeunCache   # Heun's cache lives in the explicit slot
     Δt = default_dt(integrator)
     timestep!(integrator)
-    @test all(interior(integrator.state.a) .≈ 2 * Δt)   # overridden to :implicit → mock: a += 2·Δt
-    @test all(interior(integrator.state.b) .≈ Δt)       # overridden to :explicit → Heun: b += 1·Δt
+    @test all(interior(integrator.state.a) .≈ 2 * Δt)   # :a → Implicit → mock: a += 2·Δt
+    @test all(interior(integrator.state.b) .≈ Δt)       # :b → Explicit → Heun: b += 1·Δt
 end

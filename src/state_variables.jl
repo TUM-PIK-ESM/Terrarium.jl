@@ -323,7 +323,7 @@ function StateVariables(
     ) where {NF}
     model_rec = isnothing(params) ? model : ParameterEditing.reconstruct(model, params)
     vars = Variables(tuplejoin(variables(model_rec), input_variables))
-    state = StateVariables(vars, model_rec.grid; clock, timestepper = get_timestepper(model), boundary_conditions, initializers, fields)
+    state = StateVariables(vars, model_rec.grid; clock, timestepper = get_timestepper(model), model = model_rec, boundary_conditions, initializers, fields)
     return state
 end
 
@@ -366,6 +366,7 @@ function StateVariables(
         grid::AbstractLandGrid{NF};
         clock::Clock = Clock(time = 0.0),
         timestepper = default_timestepper(NF),
+        model = nothing,
         boundary_conditions = (;),
         initializers = (;),
         fields = (;)
@@ -397,7 +398,7 @@ function StateVariables(
         clock,
     )
     # allocate the timestepper's cache
-    cache = initialize(timestepper, initial_state, vars.prognostic)
+    cache = initialize(timestepper, initial_state, vars.prognostic, model)
     state = StateVariables(
         NF,
         closurenames,

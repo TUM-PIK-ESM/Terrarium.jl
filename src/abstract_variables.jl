@@ -194,15 +194,9 @@ computational graph for `update_state!`/`timestep!`. Prognostic variables genera
 by any code not belonging to the timestepper or user. They automatically define a `tendency` (auxiliary)
 variable which is used to hold the value of their instantaneous time derivative computed by `compute_tendencies!`.
 
-Each prognostic variable is assigned a `timestepper` class (`:explicit` or `:implicit`) which, when the
-model's `timestepper` is an [`IMEX`](@ref), determines whether it is integrated by the `explicit` or
-`implicit` timestepper. A single (non-`IMEX`) timestepper integrates all prognostic variables regardless
-of class. The class declared here is a default that can be overridden per-variable via the
-`timestepper_classes` argument of the [`IMEX`](@ref) constructor.
 """
 struct PrognosticVariable{
         name,
-        timestepper,
         VD <: VarDims,
         UT <: Units,
         Var <: Variable{name, VD, UT},
@@ -231,23 +225,12 @@ struct PrognosticVariable{
             tendency::TV,
             domain::DT,
             desc::AbstractString,
-            timestepper::Symbol,
         ) where {name, VD, UT, CL, TV, DT}
-        timestepper in (:explicit, :implicit) ||
-            throw(ArgumentError("prognostic variable `timestepper` must be :explicit or :implicit, got :$timestepper"))
-        return new{name, timestepper, VD, UT, typeof(var), CL, TV, DT}(var, closure, tendency, domain, String(desc))
+        return new{name, VD, UT, typeof(var), CL, TV, DT}(var, closure, tendency, domain, String(desc))
     end
 end
 
 hasclosure(var::PrognosticVariable) = !isnothing(var.closure)
-
-#TODO: extend Oceananigas to not have a naming conflict, okay or just rename it?
-"""
-    timestepper(var::PrognosticVariable)
-
-Return the timestepper (`:explicit` or `:implicit`) assigned to the given prognostic variable.
-"""
-@inline Oceananigans.Simulations.timestepper(::PrognosticVariable{name, timestepper}) where {name, timestepper} = timestepper
 
 # Variable container
 
@@ -455,8 +438,8 @@ Convenience constructor for `Variable`.
 
 Convenience constructors for `PrognosticVariable`.
 """
-@inline prognostic(name::Symbol, dims::VarDims; units = NoUnits, closure = nothing, bounds = Unbounded, desc = "", timestepper = :explicit) = prognostic(var(name, dims, units); closure, bounds, desc, timestepper)
-@inline prognostic(var::Variable; closure = nothing, bounds = Unbounded, desc = "", timestepper = :explicit) = PrognosticVariable(var, closure, tendency(var), bounds, desc, timestepper)
+@inline prognostic(name::Symbol, dims::VarDims; units = NoUnits, closure = nothing, bounds = Unbounded, desc = "") = prognostic(var(name, dims, units); closure, bounds, desc)
+@inline prognostic(var::Variable; closure = nothing, bounds = Unbounded, desc = "") = PrognosticVariable(var, closure, tendency(var), bounds, desc)
 
 """
     $SIGNATURES

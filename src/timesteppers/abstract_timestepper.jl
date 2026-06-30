@@ -36,6 +36,32 @@ Base type for *implicit* time steppers.
 abstract type AbstractImplicitTimestepper{NF} <: AbstractTimeStepper{NF} end
 
 """
+    $TYPEDEF
+
+Indicator type marking a prognostic variable to be integrated by the *explicit* sub-stepper of an
+[`AbstractIMEX`](@ref) timestepper. This is the default class for every variable (see [`timestepping`](@ref)).
+"""
+struct Explicit end
+
+"""
+    $TYPEDEF
+
+Indicator type marking a prognostic variable to be integrated by the *implicit* sub-stepper of an
+[`AbstractIMEX`](@ref) timestepper (see [`timestepping`](@ref)).
+"""
+struct Implicit end
+
+"""
+    timestepping(var::AbstractVariable, model::AbstractModel, timestepper::AbstractTimeStepper)
+
+Return the timestepping class — [`Explicit`](@ref) or [`Implicit`](@ref) — with which the prognostic
+variable `var` of `model` is integrated under `timestepper`. The default is `Explicit()` for all variables,
+models, and timesteppers. Specialize this method (typically on an [`AbstractIMEX`](@ref) timestepper together
+with particular variable and/or model types) to route selected variables to the implicit sub-stepper.
+"""
+timestepping(::AbstractVariable, model, ::AbstractTimeStepper) = Explicit()
+
+"""
     default_dt(timestepper::AbstractTimeStepper)
 
 Get the current timestep size for the time stepper.
@@ -66,12 +92,13 @@ define a `timestepper` field holding an [`AbstractTimeStepper`](@ref) (e.g. [`Fo
 @inline get_timestepper(model::AbstractModel) = model.timestepper
 
 """
-    initialize(timestepper::AbstractTimeStepper, state, progvars)
+    initialize(timestepper::AbstractTimeStepper, state, progvars, model)
 
 Allocate the time stepper cache for `timestepper` against the given `state`. `progvars` is the named tuple
-of prognostic variable metadata (needed e.g. by [`IMEX`](@ref))
+of prognostic variable metadata and `model` the owning [`AbstractModel`](@ref); both are needed e.g. by
+[`AbstractIMEX`](@ref) timesteppers to resolve each variable's [`timestepping`](@ref) class.
 """
-initialize(timestepper::AbstractTimeStepper, state, progvars) = initialize(timestepper, state)
+initialize(timestepper::AbstractTimeStepper, state, progvars, model) = initialize(timestepper, state)
 
 """
     timestep!(integrator::ModelIntegrator, timestepper::AbstractTimeStepper, Δt)
