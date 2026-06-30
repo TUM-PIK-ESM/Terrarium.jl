@@ -29,7 +29,7 @@ module IMEXTestTypes
     end
 
     # Minimal two-variable model with constant unit tendencies. Both variables default to the `Explicit`
-    # timestepping class; specific routing under an IMEX timestepper is declared via `timestepping` below.
+    # timestepping class; specific routing under an IMEX timestepper is declared via `timestepping`
     @kwdef struct TwoVarModel{NF, Grid <: AbstractLandGrid{NF}, TS <: Terrarium.AbstractTimeStepper} <: Terrarium.AbstractModel{NF, Grid}
         grid::Grid
         initializer = DefaultInitializer(eltype(grid))
