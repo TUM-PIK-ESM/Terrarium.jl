@@ -58,6 +58,12 @@ end
 
 ImplicitSkinTemperature(::Type{NF}; κₛ::NF = NF(1.0), solver = default_skin_temperature_solver(NF)) where {NF} = ImplicitSkinTemperature{NF, typeof(solver)}(κₛ, solver)
 
+"""
+    $TYPEDSIGNATURES
+
+Construct the default solver for the implicit skin temperature: a Newton root-finder
+([`RootSolver`](@ref) backed by RootSolvers.jl) with a small iteration budget.
+"""
 function default_skin_temperature_solver(::Type{NF}) where {NF}
     # Default to a Newton root-finder (via RootSolvers.jl) with a small iteration budget
     return RootSolver(NF; max_iterations = 5)
