@@ -1,3 +1,14 @@
+"""
+    $TYPEDEF
+
+Fixed-point (Picard) iteration solver. Repeatedly applies the update `g(x) = x - F(x)`, where
+`F` is the residual returned by the [`ObjectiveFunction`](@ref), optionally under-relaxed via a
+[`RelaxationFactor`](@ref), until the change in the iterate falls below `tolerance` or
+`max_iterations` is reached.
+
+Properties:
+$FIELDS
+"""
 struct FixedPointSolver{NF, R}
     "Numerical tolerance of the fixed point iteration"
     tolerance::NF

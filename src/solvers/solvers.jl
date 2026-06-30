@@ -46,6 +46,15 @@ relaxed_update(::Nothing, x_target, x_old) = x_target
 
 # Interface
 
+"""
+    solve!(out, indices, grid, fields, objective_func!::ObjectiveFunction, solver, args...; kwargs...)
+
+Solve the nonlinear problem defined by `objective_func!` for its `target` field at the given
+`indices`, mutating `out` in place. The objective returns the residual `F(x)` whose root is
+sought; on return, the target field holds the converged estimate and the method returns the
+root (and, for some solvers, the number of iterations performed). Dispatches on the concrete
+`solver` type, e.g. [`RootSolver`](@ref) or [`FixedPointSolver`](@ref).
+"""
 function solve! end
 
 # Solvers

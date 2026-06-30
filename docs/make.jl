@@ -236,6 +236,7 @@ makedocs(
                 "Physics" => "processes/utils/physics_utils.md",
             ],
         ],
+        "Numerical solvers" => "solvers/solvers.md",
         "Contributing" => "contributing.md",
         "Index of API" => "api_index.md",
         "References" => "references.md",
