@@ -18,7 +18,7 @@ module IMEXTestTypes
     Terrarium.default_dt(ts::MockImplicit) = ts.Δt
     Terrarium.is_adaptive(::MockImplicit) = false
 
-    # MockImplicit keeps no working state, so it doesn't fetch a cache.
+    # MockImplicit is just a wrong version of ForwardEuler for testing IMEX routing
     function Terrarium.timestep!(integrator, ts::MockImplicit, Δt, names::Tuple)
         Terrarium.update_state!(integrator, compute_tendencies = true)
         state = integrator.state
