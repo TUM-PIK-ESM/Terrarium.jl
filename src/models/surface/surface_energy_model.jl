@@ -31,7 +31,7 @@ conditions.
     @component initializer::Initializer = DefaultInitializer(eltype(grid))
 
     "Time stepper: a single `AbstractTimeStepper` (e.g. `ForwardEuler`, `Heun`) or an `IMEX`"
-    @component timestepper::Timestepper
+    @component timestepper::Timestepper = default_timestepper(eltype(grid))
 end
 
 function compute_auxiliary!(state, model::SurfaceEnergyModel)

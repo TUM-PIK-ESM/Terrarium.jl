@@ -143,10 +143,7 @@ additional dispatches of `explicit_step_kernel!(field, tendency, ::AbstractLandG
 can be defined to implement more specialized time-stepping schemes.
 """
 function explicit_step!(state, grid::AbstractLandGrid, timestepper::AbstractTimeStepper, Δt, names::Tuple{Vararg{Symbol}})
-    # step only this namespace's prognostic variables that are also selected in `names`.
-    # iterating the (statically known) prognostic names and guarding on `∈ names` keeps this
-    # type stable, unlike materializing the intersection as a tuple (its length would depend on
-    # the runtime values in `names`).
+    # step only this namespace's prognostic variables that are also selected in `names`
     fastiterate(prognostic_names(state)) do name
         if name ∈ names
             # apply flux BCs, if present
@@ -159,7 +156,7 @@ function explicit_step!(state, grid::AbstractLandGrid, timestepper::AbstractTime
             debugsite!(explicit_step!, state.prognostic[name], name)
         end
     end
-    # recurse into child namespaces, threading the same `names` selection so each namespace
+    # recurse into child namespaces
     # steps exactly prognostic_names(ns) ∩ names
     fastiterate(state.namespaces) do ns
         explicit_step!(ns, grid, timestepper, Δt, names)
