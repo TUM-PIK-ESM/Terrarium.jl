@@ -115,8 +115,8 @@ end
 
     # Increases linearly with f_can
     f_can = 0.2
-    @test canopy_evaporation_conductance(canopy_ET, f_val, rₐ) ≈
-        canopy_evaporation_conductance(canopy_ET, 2 * f_val, rₐ)
+    @test canopy_evaporation_conductance(canopy_ET, f_can, rₐ) ≈
+        canopy_evaporation_conductance(canopy_ET, 2 * f_can, rₐ)
 
     # Decreases with increasing rₐ
     @test canopy_evaporation_conductance(canopy_ET, 1.0, 100.0) <
@@ -151,18 +151,6 @@ end
 
     # Residual water content gives β ≈ 0
     @test ground_evaporation_resistance_factor(smrf, θres, θfc, θres) ≈ 0.0
-end
-
-# ==============================================================================
-# Surface humidity flux partitioning (canopy)
-# ==============================================================================
-
-@testset "surface_humidity_flux canopy" begin
-    # Total flux is the sum of the partitioned components
-    E_gnd = 1.0e-6
-    E_can = 2.0e-6
-    T_can = 3.0e-6
-    @test E_gnd + E_can + T_can ≈ 6.0e-6
 end
 
 # ==============================================================================
