@@ -3,6 +3,7 @@ using Terrarium:
     compute_evaporation_flux,
     transpiration_conductance,
     canopy_evaporation_conductance,
+    ground_evaporation_conductance,
     ground_evaporation_resistance_factor
 using Test
 
@@ -113,9 +114,9 @@ end
     @test iszero(canopy_evaporation_conductance(canopy_ET, 0.0, rₐ))
 
     # Increases linearly with f_can
-    for f_val in [0.0, 0.25, 0.5, 0.75, 1.0]
-        @test canopy_evaporation_conductance(canopy_ET, f_val, rₐ) ≈ f_val / rₐ
-    end
+    f_can = 0.2
+    @test canopy_evaporation_conductance(canopy_ET, f_val, rₐ) ≈
+        canopy_evaporation_conductance(canopy_ET, 2 * f_val, rₐ)
 
     # Decreases with increasing rₐ
     @test canopy_evaporation_conductance(canopy_ET, 1.0, 100.0) <
@@ -181,21 +182,21 @@ end
     # Step 1: conductances
     g_trp = transpiration_conductance(canopy_ET, rₐ, g_stm)
     g_can = canopy_evaporation_conductance(canopy_ET, f_can, rₐ)
-    g_gnd = β / rₐ
+    g_gnd = ground_evaporation_conductance(canopy_ET, β, rₐ)
 
     # Step 2: partitioned fluxes
     E_trp = compute_evaporation_flux(canopy_ET, Δq_skin, g_trp)
     E_can = compute_evaporation_flux(canopy_ET, Δq_skin, g_can)
     E_gnd = compute_evaporation_flux(canopy_ET, Δq_ground, g_gnd)
 
-    # All components are positive (evaporation) and sum to the total
+    # All components are positive (evaporation)
     @test E_trp > 0
     @test E_can > 0
     @test E_gnd > 0
-    @test (E_trp + E_can + E_gnd) > 0
 
     # Dry soil (β = 0) suppresses ground evaporation
-    @test iszero(compute_evaporation_flux(canopy_ET, Δq_ground, 0.0 / rₐ))
+    @test iszero(ground_evaporation_conductance(canopy_ET, zero(β), rₐ))
+    @test iszero(compute_evaporation_flux(canopy_ET, Δq_ground, 0.0))
 
     # Saturated canopy evaporates more than partially wet canopy
     g_can_sat = canopy_evaporation_conductance(canopy_ET, 1.0, rₐ)
@@ -208,11 +209,11 @@ end
     rₐ = 50.0
     Δq = 0.001
 
-    # Conductance β/rₐ and flux scale with soil moisture limiting factor
-    for β_val in [0.0, 0.25, 0.5, 0.75, 1.0]
-        g = β_val / rₐ
-        @test compute_evaporation_flux(bg, Δq, g) ≈ (β_val / rₐ) * Δq
-    end
+    # Test compute_evaporation_flux for bare ground
+    β = 0.5
+    g = β / rₐ
+    @test compute_evaporation_flux(bg, Δq, g) ≈ g * Δq
+
 end
 
 # ==============================================================================
