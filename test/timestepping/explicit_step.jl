@@ -54,8 +54,8 @@ Terrarium.variables(closure::TestClosure) = (
     Terrarium.explicit_step!(state, grid, ForwardEuler(; Δt), Δt, (:x, :y))
     @test all(state.prognostic.x .≈ Δt * dxdt)
     @test all(state.prognostic.y .≈ Δt * dydt)
-    # the names-restricted explicit step does not recurse into namespaces
-    @test all(iszero.(state.namespaces.inner.prognostic.x))
+    # the explicit step recurses into namespaces, stepping namespaced prognostics whose name is in `names`
+    @test all(state.namespaces.inner.prognostic.x .≈ Δt * dxdt * 2)
     # check that z was not changed (inverse closure not evaluated)
     @test all(iszero.(state.auxiliary.z))
 end

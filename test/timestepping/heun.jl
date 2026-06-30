@@ -141,8 +141,8 @@ end
     @test integrator_heun.state.u[2] == u_inner_heun[2]
 
     # exact integrated values for the namespaced prognostic
-    dt_euler = default_dt(integrator_euler.timestepper)
+    dt_euler = default_dt(integrator_euler)
     @test u_inner_euler[2] == 0.1 * dt_euler
-    dt_heun = default_dt(integrator_heun.timestepper)
+    dt_heun = default_dt(integrator_heun)
     @test u_inner_heun[2] == (0.1 * dt_heun + (0.1 * dt_heun + 0.1) * dt_heun) / 2
 end
