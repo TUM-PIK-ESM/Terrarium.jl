@@ -50,7 +50,7 @@ Terrarium.variables(closure::TestClosure) = (
     set!(state.tendencies.x, dxdt)
     set!(state.tendencies.y, dydt)
     set!(state.namespaces.inner.tendencies.x, dxdt * 2)
-    # step only the named top-level prognostic variables
+
     Terrarium.explicit_step!(state, grid, ForwardEuler(; Δt), Δt, (:x, :y))
     @test all(state.prognostic.x .≈ Δt * dxdt)
     @test all(state.prognostic.y .≈ Δt * dydt)
