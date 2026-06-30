@@ -4,7 +4,7 @@ using Test
 @testset "Prescribed turbulent fluxes" begin
     grid = ColumnGrid(CPU(), Float64, ExponentialSpacing(N = 10))
     turbulent_fluxes = PrescribedTurbulentFluxes(eltype(grid))
-    seb = SurfaceEnergyBalance(Float64; turbulent_fluxes)    
+    seb = SurfaceEnergyBalance(Float64; turbulent_fluxes)
     model = SurfaceEnergyModel(grid, surface_energy_balance = seb)
     state = StateVariables(model)
     @test hasproperty(state.inputs, :sensible_heat_flux)
