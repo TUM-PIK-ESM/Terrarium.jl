@@ -193,7 +193,6 @@ point in (simulation) time. From a computational perspective, they can be seen a
 computational graph for `update_state!`/`timestep!`. Prognostic variables generally should not be modified
 by any code not belonging to the timestepper or user. They automatically define a `tendency` (auxiliary)
 variable which is used to hold the value of their instantaneous time derivative computed by `compute_tendencies!`.
-
 """
 struct PrognosticVariable{
         name,
@@ -218,16 +217,6 @@ struct PrognosticVariable{
 
     "Variable description"
     desc::String
-
-    function PrognosticVariable(
-            var::Variable{name, VD, UT},
-            closure::CL,
-            tendency::TV,
-            domain::DT,
-            desc::AbstractString,
-        ) where {name, VD, UT, CL, TV, DT}
-        return new{name, VD, UT, typeof(var), CL, TV, DT}(var, closure, tendency, domain, String(desc))
-    end
 end
 
 hasclosure(var::PrognosticVariable) = !isnothing(var.closure)
