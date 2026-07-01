@@ -115,8 +115,9 @@ end
 
     # Increases linearly with f_can
     f_can = 0.2
-    @test canopy_evaporation_conductance(canopy_ET, f_can, rₐ) ≈
-        2 * canopy_evaporation_conductance(canopy_ET, 2 * f_can, rₐ)
+    rₐ = 50.0
+    @test 2 * canopy_evaporation_conductance(canopy_ET, f_can, rₐ) ≈
+        canopy_evaporation_conductance(canopy_ET, 2 * f_can, rₐ)
 
     # Decreases with increasing rₐ
     @test canopy_evaporation_conductance(canopy_ET, 1.0, 100.0) <
