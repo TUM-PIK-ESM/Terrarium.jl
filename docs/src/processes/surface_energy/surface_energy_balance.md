@@ -46,6 +46,12 @@ compute_auxiliary!(state, grid, seb::SurfaceEnergyBalance, constants::PhysicalCo
 
 ## Methods
 
+The `SurfaceEnergyBalance` process provides two primary method interfaces:
+
 ```@docs; canonical = false
-compute_surface_energy_fluxes!
+compute_surface_energy_fluxes!(state, grid, seb::SurfaceEnergyBalance, constants::PhysicalConstants, atmos::AbstractAtmosphere, hydrology::Optional{AbstractSurfaceHydrology}, args...)
+```
+
+```@docs; canonical = false
+solve_surface_energy_balance!(state, grid, seb::SurfaceEnergyBalance{NF, <:ImplicitSkinTemperature}, constants::PhysicalConstants, atmos::AbstractAtmosphere, hydrology::Optional{AbstractSurfaceHydrology}, args...) where {NF}
 ```

@@ -10,7 +10,7 @@ $FIELDS
 """
 @parameterized @kwdef struct PrescribedSkinTemperature{NF} <: AbstractSkinTemperature{NF}
     "Assumed thermal conductivity at the surface"
-    @param κₛ::NF = 2.0 (units = u"W/m/K", bounds = Positive)
+    @param κₛ::NF = 1.0 (units = u"W/m/K", bounds = Positive)
 end
 
 PrescribedSkinTemperature(::Type{NF}; kwargs...) where {NF} = PrescribedSkinTemperature{NF}(; kwargs...)
@@ -37,21 +37,48 @@ variables(::PrescribedSkinTemperature) = (
 
 Scheme for an implicit skin temperature ``T_s`` satisfying:
 ```math
-R_{\\text{net}}(T_s) = H_s(T_s) + H_l(T_s) + G(T_s, T_g)
+R_{\\text{net}}(T_s) + H_s(T_s) + H_l(T_s) - G(T_s, T_g) = 0 
 ```
 where ``R_{\\text{net}}`` is the net radiation budget, ``H_s`` is the sensible heat flux, ``H_l`` is the latent
 heat flux from sublimation and evapotranspiration, ``G`` is the ground heat flux, and ``T_g`` is the ground
-temperature, or temperature of the uppermost subsurface (soil or snow) layer.
+temperature, or temperature of the uppermost subsurface (soil or snow) layer. All fluxes follow the positive upwards 
+convention. For ``G``, this means from the deeper soil towards the surface is positive. For the other fluxes, this 
+means from the surface towards the atmosphere is positive. 
 
 Properties:
 $FIELDS
 """
-@parameterized @kwdef struct ImplicitSkinTemperature{NF} <: AbstractSkinTemperature{NF}
+@parameterized struct ImplicitSkinTemperature{NF, Solver} <: AbstractSkinTemperature{NF}
     "Assumed thermal conductivity at the surface"
-    @param κₛ::NF = 2.0 (units = u"W/m/K", bounds = Positive)
+    @param κₛ::NF (units = u"W/m/K", bounds = Positive)
+
+    "Numerical solver for the implicit skin temperature"
+    solver::Solver
 end
 
-ImplicitSkinTemperature(::Type{NF}; kwargs...) where {NF} = ImplicitSkinTemperature{NF}(; kwargs...)
+ImplicitSkinTemperature(::Type{NF}; κₛ::NF = NF(1.0), solver = default_skin_temperature_solver(NF)) where {NF} = ImplicitSkinTemperature{NF, typeof(solver)}(κₛ, solver)
+
+"""
+    $TYPEDSIGNATURES
+
+Construct the default solver for the implicit skin temperature: a Newton root-finder
+([`RootSolver`](@ref) backed by RootSolvers.jl) with a small iteration budget.
+"""
+function default_skin_temperature_solver(::Type{NF}) where {NF}
+    # Default to a Newton root-finder (via RootSolvers.jl) with a small iteration budget
+    return RootSolver(NF; max_iterations = 5)
+end
+
+"""
+    $TYPEDSIGNATURES
+
+Seed the prognostic `skin_temperature` with the current `ground_temperature` so the implicit
+nonlinear solve starts from a physically sensible guess close to the root.
+"""
+function initialize!(state, grid, ::ImplicitSkinTemperature, args...)
+    set!(state.skin_temperature, state.ground_temperature)
+    return nothing
+end
 
 """
     $TYPEDSIGNATURES
@@ -70,11 +97,11 @@ end
 """
     $TYPEDSIGNATURES
 
-Compute the ground heat flux as the residual of the net radiation `R_net` and the
-sensible `H_s` and latent `H_l` heat flux.
+Compute the ground heat flux `G` that closes the surface energy balance. With all fluxes
+positive upward (aligned with `+z`), the energy arriving at the skin from below must balance
+the radiative and turbulent losses above, so `G = R_net + H_s + H_l`.
 """
 @inline function compute_ground_heat_flux(::AbstractSkinTemperature, R_net, H_s, H_l)
-    # Compute ground heat flux as the residual of R_net and turbulent fluxes
     G = R_net + H_s + H_l
     return G
 end
@@ -101,9 +128,9 @@ end
 """
     $TYPEDSIGNATURES
 
-Update `skin_temperature` according to the current state of `ground_heat_flux`.
+Compute `skin_temperature` according to the current state of `ground_heat_flux`.
 """
-function update_skin_temperature!(state, grid, skinT::ImplicitSkinTemperature)
+function compute_skin_temperature!(state, grid, skinT::ImplicitSkinTemperature)
     out = prognostic_fields(state, skinT)
     fields = get_fields(state, skinT; except = out)
     launch!(grid, XY, compute_skin_temperature_kernel!, out, fields, skinT)
@@ -113,7 +140,7 @@ end
 """
     $TYPEDSIGNATURES
 
-Compute `ground_heat_flux` as the residual ``R_\\text{net} - H_s - H_l``.
+Compute `ground_heat_flux` as the residual ``R_\\text{net} + H_s + H_l`` (all fluxes positive upward).
 """
 function compute_ground_heat_flux!(
         state, grid,
@@ -158,8 +185,7 @@ Compute the ground heat flux from the surface net radiation and sensible/latent 
 @propagate_inbounds function compute_ground_heat_flux(
         i, j, grid, fields,
         skinT::AbstractSkinTemperature,
-        ::AbstractRadiativeFluxes,
-        ::AbstractTurbulentFluxes
+        ::AbstractSurfaceEnergyBalance
     )
     # Get individual flux terms
     R_net = fields.surface_net_radiation[i, j]
@@ -170,12 +196,63 @@ Compute the ground heat flux from the surface net radiation and sensible/latent 
     return G
 end
 
+"""
+    $TYPEDSIGNATURES
+
+Recompute surface energy fluxes using [`compute_surface_energy_fluxes!`](@ref) and update the skin temperature
+based on the resulting ground heat flux.
+"""
+@propagate_inbounds function compute_skin_temperature!(
+        out, i, j, grid, fields,
+        skinT::ImplicitSkinTemperature,
+        seb::AbstractSurfaceEnergyBalance,
+        seb_args...
+    )
+    # Compute all fluxes based on current skin temperature (this includes ground heat flux already)
+    compute_surface_energy_fluxes!(out, i, j, grid, fields, seb, seb_args...)
+    out.skin_temperature[i, j, 1] = compute_skin_temperature(i, j, grid, fields, skinT)
+    return nothing
+end
+
+"""
+    $TYPEDSIGNATURES
+
+Same as [`compute_skin_temperature!`](@ref) but returns the residual instead of updating the `skin_temperature` `Field`.
+"""
+@propagate_inbounds function compute_skin_temperature_residual!(
+        out, i, j, grid, fields,
+        skinT::ImplicitSkinTemperature,
+        seb::AbstractSurfaceEnergyBalance,
+        seb_args...
+    )
+    # Compute all fluxes based on current skin temperature (this includes ground heat flux already)
+    compute_surface_energy_fluxes!(out, i, j, grid, fields, seb, seb_args...)
+    # Compute skin temperature
+    Ts_implicit = compute_skin_temperature(i, j, grid, fields, skinT)
+    Ts_prev = out.skin_temperature[i, j, 1]
+    return Ts_prev - Ts_implicit
+end
+
+"""
+    $TYPEDSIGNATURES
+
+Run a full nonlinear solve to determine the `skin_temperature` at grid cell `i, j` that solves the surface energy balance.
+"""
+@propagate_inbounds function solve_skin_temperature!(
+        out, i, j, grid, fields,
+        skinT::ImplicitSkinTemperature,
+        seb::AbstractSurfaceEnergyBalance,
+        seb_args...
+    )
+    objective = ObjectiveFunction(compute_skin_temperature_residual!, :skin_temperature)
+    return solve!(out, (i, j), grid, fields, objective, skinT.solver, skinT, seb, seb_args...)
+end
+
 # Kernels
 
 @kernel function compute_skin_temperature_kernel!(out, grid, fields, skinT::ImplicitSkinTemperature, args...)
     i, j = @index(Global, NTuple)
 
-    # Compute and store skin temperature
     out.skin_temperature[i, j, 1] = compute_skin_temperature(i, j, grid, fields, skinT, args...)
 end
 

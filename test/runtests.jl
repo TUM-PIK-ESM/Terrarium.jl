@@ -17,6 +17,10 @@ if MAIN_TESTS
         include("grids.jl")
     end
 
+    @testset "Solvers" begin
+        include("solvers/test_solvers.jl")
+    end
+
     @testset "State variables" begin
         include("state_variables.jl")
     end
@@ -33,6 +37,10 @@ if MAIN_TESTS
         include("timestepping/run_simulation.jl")
         include("timestepping/heun.jl")
         include("timestepping/imex.jl")
+    end
+
+    @testset "Thermodynamics" begin
+        include("thermodynamics_test.jl")
     end
 
     @testset "Soil model and processes" begin
