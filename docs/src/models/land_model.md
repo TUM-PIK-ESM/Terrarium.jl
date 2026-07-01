@@ -18,7 +18,7 @@ using Terrarium
 ```@example landmodel
 arch = CPU()
 grid = ColumnGrid(arch, Float32, ExponentialSpacing(N = 10)) # 10 soil layers
-model = LandModel(grid, timestepper=ForwardEuler(eltype(grid))) # Default configuration
+model = LandModel(grid) # Default configuration
 integrator = initialize(model)
 ```
 

@@ -18,7 +18,7 @@ using Terrarium
 ```@example vegmodel
 arch = CPU()
 grid = ColumnGrid(arch, Float32, UniformSpacing(N = 1)) # grid with one vertical layer
-model = VegetationModel(grid, timestepper=ForwardEuler(eltype(grid))) # Default configuration
+model = VegetationModel(grid) # Default configuration
 integrator = initialize(model)
 ```
 
