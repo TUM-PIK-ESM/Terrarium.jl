@@ -82,7 +82,7 @@ which ranges from 0 (dry) to 1 (saturated) and controls the efficiency of canopy
 
 ### Precipitation
 
-After accounting for interception and canopy , the precipitation reaching the ground is
+After accounting for interception and canopy evaporation, the precipitation reaching the ground is
 ```math
 \begin{equation}
 P_{\text{ground}} = P - I_{\text{can}} + R_{\text{can}} - E_{\text{can}}\,.
@@ -101,19 +101,6 @@ compute_auxiliary!(state, grid, canopy_interception::PALADYNCanopyInterception, 
 compute_tendencies!(state, grid, canopy_interception::PALADYNCanopyInterception, evapotranspiration::AbstractEvapotranspiration, args...)
 ```
 
-## Methods
-
-```@docs; canonical = false
-canopy_water
-```
-
-```@docs; canonical = false
-saturation_canopy_water
-```
-
-```@docs; canonical = false
-rainfall_ground
-```
 
 ## Kernel functions
 
@@ -135,6 +122,18 @@ compute_w_can_tendency
 
 ```@docs; canonical = false
 compute_precip_ground
+```
+
+```@docs; canonical = false
+canopy_water
+```
+
+```@docs; canonical = false
+saturation_canopy_water
+```
+
+```@docs; canonical = false
+rainfall_ground
 ```
 
 ## [References](@id "canopy_interception.refs")
