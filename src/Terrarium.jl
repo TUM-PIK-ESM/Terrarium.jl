@@ -131,7 +131,7 @@ export Forcings
 include("forcings.jl")
 
 # timestepping
-export timestep!, default_dt, is_adaptive, get_timestepper, timestepping, Explicit, Implicit
+export timestep!, default_dt, is_adaptive, get_timestepper, timestepping, Timestepping, Explicit, Implicit
 include("timesteppers/abstract_timestepper.jl")
 
 # abstract model types

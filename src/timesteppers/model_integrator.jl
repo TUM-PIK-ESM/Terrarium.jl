@@ -153,10 +153,19 @@ timestep!(sim::Simulation) = Oceananigans.TimeSteppers.time_step!(sim)
     timestep!(integrator::ModelIntegrator, timestepper::AbstractTimeStepper, Δt)
 
 Advance the model forward by one timestep of size `Δt` using a single `timestepper`, which integrates
-*all* prognostic variables. The variable names are forwarded to the corresponding
-`timestep!(integrator, timestepper, Δt, names)` method and the clock is advanced once for the whole step.
+*all* prognostic variables. Dispatches on the timestepper's [`timestepping`](@ref) trait
+([`Explicit`](@ref)/[`Implicit`](@ref)) to `timestep!(integrator, timestepper, ::Timestepping, Δt)`.
 """
-function timestep!(integrator::ModelIntegrator, timestepper::AbstractTimeStepper, Δt)
+timestep!(integrator::ModelIntegrator, timestepper::AbstractTimeStepper, Δt) =
+    timestep!(integrator, timestepper, timestepping(timestepper), Δt)
+
+"""
+    timestep!(integrator::ModelIntegrator, timestepper::AbstractTimeStepper, ::Timestepping, Δt)
+
+Trait-dispatched single-timestepper step: forward the prognostic variable names to the scheme's
+`timestep!(integrator, timestepper, Δt, names)` method and advance the clock once for the whole step. 
+"""
+function timestep!(integrator::ModelIntegrator, timestepper::AbstractTimeStepper, ::Timestepping, Δt)
     # a single time stepper integrates all prognostic variables
     names = prognostic_names(integrator.state)
     isempty(names) || timestep!(integrator, timestepper, Δt, names)

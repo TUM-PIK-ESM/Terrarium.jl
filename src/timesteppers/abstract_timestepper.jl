@@ -38,27 +38,44 @@ abstract type AbstractImplicitTimestepper{NF} <: AbstractTimeStepper{NF} end
 """
     $TYPEDEF
 
-Indicator type marking a prognostic variable to be integrated by the *explicit* sub-stepper of an
-[`AbstractIMEX`](@ref) timestepper. This is the default class for every variable (see [`timestepping`](@ref)).
+Trait supertype classifying how a timestepper or prognostic variable is integrated in time, either
+[`Explicit`](@ref) or [`Implicit`](@ref). See [`timestepping`](@ref).
 """
-struct Explicit end
+abstract type Timestepping end
 
 """
     $TYPEDEF
 
-Indicator type marking a prognostic variable to be integrated by the *implicit* sub-stepper of an
-[`AbstractIMEX`](@ref) timestepper (see [`timestepping`](@ref)).
+[`Timestepping`](@ref) trait marking *explicit* integration. It is the trait of explicit timesteppers
+(e.g. [`ForwardEuler`](@ref), [`Heun`](@ref)) and the default class of every prognostic variable — i.e. the
+sub-stepper an [`AbstractIMEX`](@ref) routes the variable to.
 """
-struct Implicit end
+struct Explicit <: Timestepping end
 
 """
-    timestepping(var::AbstractVariable, model::AbstractModel, timestepper::AbstractTimeStepper)
+    $TYPEDEF
 
-Return the timestepping class — [`Explicit`](@ref) or [`Implicit`](@ref) — with which the prognostic
-variable `var` of `model` is integrated under `timestepper`. The default is `Explicit()` for all variables,
-models, and timesteppers. Specialize this method (typically on an [`AbstractIMEX`](@ref) timestepper together
-with particular variable and/or model types) to route selected variables to the implicit sub-stepper.
+[`Timestepping`](@ref) trait marking *implicit* integration. It is the trait of implicit timesteppers and,
+under an [`AbstractIMEX`](@ref), of prognostic variables routed to the implicit sub-stepper.
 """
+struct Implicit <: Timestepping end
+
+"""
+    timestepping(timestepper::AbstractTimeStepper)::Timestepping
+
+Return the [`Timestepping`](@ref) trait — [`Explicit`](@ref) or [`Implicit`](@ref) — of the given
+`timestepper`. [`AbstractExplicitTimestepper`](@ref)s are `Explicit()` and
+[`AbstractImplicitTimestepper`](@ref)s are `Implicit()`.
+
+    timestepping(var::AbstractVariable, model::AbstractModel, timestepper::AbstractTimeStepper)::Timestepping
+
+Return the [`Timestepping`](@ref) class with which the prognostic variable `var` of `model` is integrated
+under `timestepper`. Defaults to `Explicit()` for all variables; specialize this method (typically on an
+[`AbstractIMEX`](@ref) timestepper together with particular variable and/or model types) to route selected
+variables to the implicit sub-stepper.
+"""
+timestepping(::AbstractExplicitTimestepper) = Explicit()
+timestepping(::AbstractImplicitTimestepper) = Implicit()
 timestepping(::AbstractVariable, model, ::AbstractTimeStepper) = Explicit()
 
 """
