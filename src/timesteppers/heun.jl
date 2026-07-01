@@ -3,12 +3,14 @@
 
 Simple forward 2nd order Heun / improved Euler time stepping scheme.
 """
-@kwdef struct Heun{NF} <: AbstractExplicitTimestepper{NF}
+@kwdef struct Heun{NF} <: AbstractTimeStepper{NF}
     "Initial timestep size in seconds"
     Δt::NF = 300.0
 end
 
 Heun(::Type{NF}; kwargs...) where {NF} = Heun{NF}(; kwargs...)
+
+timestepping(::Heun) = Explicit()
 
 default_dt(heun::Heun) = heun.Δt
 

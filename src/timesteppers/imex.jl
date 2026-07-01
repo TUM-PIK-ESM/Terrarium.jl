@@ -42,13 +42,13 @@ $(TYPEDFIELDS)
 """
 struct IMEX{
         NF,
-        E <: AbstractExplicitTimestepper{NF},
-        I <: AbstractImplicitTimestepper{NF},
+        E <: AbstractTimeStepper{NF},
+        I <: AbstractTimeStepper{NF},
     } <: AbstractIMEX{NF}
-    "Sub-stepper for prognostic variables of class `Explicit`"
+    "Sub-stepper for prognostic variables of class `Explicit` (should have `timestepping(explicit) == Explicit()`)"
     explicit::E
 
-    "Sub-stepper for prognostic variables of class `Implicit`"
+    "Sub-stepper for prognostic variables of class `Implicit` (should have `timestepping(implicit) == Implicit()`)"
     implicit::I
 end
 
@@ -109,9 +109,10 @@ function initialize(imex::AbstractIMEX, state, progvars, model)
     return IMEXCache{classes}(initialize(explicit_timestepper(imex), state), initialize(implicit_timestepper(imex), state))
 end
 
-# A sub-stepper of an IMEX reads its own slice of the cache, selected by its class.
-get_cache(cache::IMEXCache, ::AbstractExplicitTimestepper) = cache.explicit
-get_cache(cache::IMEXCache, ::AbstractImplicitTimestepper) = cache.implicit
+# A sub-stepper of an IMEX reads its own slice of the cache, selected by its `timestepping` trait.
+get_cache(cache::IMEXCache, timestepper::AbstractTimeStepper) = get_cache(cache, timestepping(timestepper))
+get_cache(cache::IMEXCache, ::Explicit) = cache.explicit
+get_cache(cache::IMEXCache, ::Implicit) = cache.implicit
 
 """
     $SIGNATURES

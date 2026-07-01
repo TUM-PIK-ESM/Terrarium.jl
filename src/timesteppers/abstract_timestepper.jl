@@ -24,20 +24,6 @@ abstract type AbstractTimeStepper{NF} end
 """
     $TYPEDEF
 
-Base type for *explicit* time steppers.
-"""
-abstract type AbstractExplicitTimestepper{NF} <: AbstractTimeStepper{NF} end
-
-"""
-    $TYPEDEF
-
-Base type for *implicit* time steppers.
-"""
-abstract type AbstractImplicitTimestepper{NF} <: AbstractTimeStepper{NF} end
-
-"""
-    $TYPEDEF
-
 Trait supertype classifying how a timestepper or prognostic variable is integrated in time, either
 [`Explicit`](@ref) or [`Implicit`](@ref). See [`timestepping`](@ref).
 """
@@ -64,8 +50,9 @@ struct Implicit <: Timestepping end
     timestepping(timestepper::AbstractTimeStepper)::Timestepping
 
 Return the [`Timestepping`](@ref) trait — [`Explicit`](@ref) or [`Implicit`](@ref) — of the given
-`timestepper`. [`AbstractExplicitTimestepper`](@ref)s are `Explicit()` and
-[`AbstractImplicitTimestepper`](@ref)s are `Implicit()`.
+`timestepper`. Every concrete timestepper must define this trait (e.g. `timestepping(::ForwardEuler) =
+Explicit()`); there is no default so that a new scheme declares its class explicitly. It is used, among other
+things, to route each sub-stepper of an [`AbstractIMEX`](@ref) to its slice of the [`IMEXCache`](@ref).
 
     timestepping(var::AbstractVariable, model::AbstractModel, timestepper::AbstractTimeStepper)::Timestepping
 
@@ -74,8 +61,6 @@ under `timestepper`. Defaults to `Explicit()` for all variables; specialize this
 [`AbstractIMEX`](@ref) timestepper together with particular variable and/or model types) to route selected
 variables to the implicit sub-stepper.
 """
-timestepping(::AbstractExplicitTimestepper) = Explicit()
-timestepping(::AbstractImplicitTimestepper) = Implicit()
 timestepping(::AbstractVariable, model, ::AbstractTimeStepper) = Explicit()
 
 """
