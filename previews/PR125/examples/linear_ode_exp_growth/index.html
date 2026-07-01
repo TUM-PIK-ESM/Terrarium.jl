@@ -97,12 +97,12 @@ run!(sim)
 println(&quot;Simulation data saved to $(output_file)&quot;)</code></pre><pre><code class="nohighlight hljs">[ Info: Initializing simulation...
 ┌ Warning: error ArgumentError(&quot;a group or dataset named grid is already present within this group&quot;) thrown when trying to serialize the grid at serialized/grid
 └ @ Oceananigans.OutputWriters ~/.julia/packages/Oceananigans/RVuAP/src/OutputWriters/jld2_writer.jl:234
-[ Info:     ... simulation initialization complete (11.706 seconds)
+[ Info:     ... simulation initialization complete (11.057 seconds)
 [ Info: Executing initial time step...
-[ Info:     ... initial time step complete (2.366 seconds).
-[ Info: Simulation is stopping after running for 16.548 seconds.
+[ Info:     ... initial time step complete (2.212 seconds).
+[ Info: Simulation is stopping after running for 15.649 seconds.
 [ Info: Simulation time 5 minutes equals or exceeds stop time 5 minutes.
-Simulation data saved to /tmp/jl_h29yrk7EL6/simulation.jld2
+Simulation data saved to /tmp/jl_YF8pUjulYt/simulation.jld2
 </code></pre><p>Then load the output data and plot the results:</p><pre><code class="language-julia hljs">using CairoMakie
 
 fts = FieldTimeSeries(output_file, &quot;u&quot;)
@@ -114,9 +114,9 @@ Build Info:
   Official https://julialang.org release
 Platform Info:
   OS: Linux (x86_64-linux-gnu)
-  CPU: 4 × AMD EPYC 9V74 80-Core Processor
+  CPU: 4 × AMD EPYC 7763 64-Core Processor
   WORD_SIZE: 64
-  LLVM: libLLVM-18.1.7 (ORCJIT, znver4)
+  LLVM: libLLVM-18.1.7 (ORCJIT, znver3)
   GC: Built with stock GC
 Threads: 1 default, 1 interactive, 1 GC (on 4 virtual cores)
 Environment:

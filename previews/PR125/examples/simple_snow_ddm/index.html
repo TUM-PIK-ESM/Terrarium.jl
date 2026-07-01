@@ -93,18 +93,18 @@ run!(snow_sim)
 println(&quot;Simulation data saved to $(output_file_snow)&quot;)</code></pre><pre><code class="nohighlight hljs">[ Info: Initializing simulation...
 ┌ Warning: error ArgumentError(&quot;a group or dataset named grid is already present within this group&quot;) thrown when trying to serialize the grid at serialized/grid
 └ @ Oceananigans.OutputWriters ~/.julia/packages/Oceananigans/RVuAP/src/OutputWriters/jld2_writer.jl:234
-[ Info:     ... simulation initialization complete (4.158 seconds)
+[ Info:     ... simulation initialization complete (4.186 seconds)
 [ Info: Executing initial time step...
-[ Info:     ... initial time step complete (2.971 seconds).
-[ Info: Simulation is stopping after running for 16.849 seconds.
+[ Info:     ... initial time step complete (1.812 seconds).
+[ Info: Simulation is stopping after running for 15.624 seconds.
 [ Info: Simulation time 80 days equals or exceeds stop time 80 days.
-Simulation data saved to /tmp/jl_uxiFOJUJqZ/ddsnow-simulation.jld2
-</code></pre><p>And now, we plot that data. First we load the JLD2 file.</p><pre><code class="language-julia hljs">fts_result = FieldTimeSeries(output_file_snow, &quot;snow_storage&quot;)</code></pre><pre><code class="nohighlight hljs">1410×1×1×1921 FieldTimeSeries{Oceananigans.OutputReaders.InMemory} located at (Center, Center, ⋅) of snow_storage at /tmp/jl_uxiFOJUJqZ/ddsnow-simulation.jld2
+Simulation data saved to /tmp/jl_XM5W9CFihW/ddsnow-simulation.jld2
+</code></pre><p>And now, we plot that data. First we load the JLD2 file.</p><pre><code class="language-julia hljs">fts_result = FieldTimeSeries(output_file_snow, &quot;snow_storage&quot;)</code></pre><pre><code class="nohighlight hljs">1410×1×1×1921 FieldTimeSeries{Oceananigans.OutputReaders.InMemory} located at (Center, Center, ⋅) of snow_storage at /tmp/jl_XM5W9CFihW/ddsnow-simulation.jld2
 ├── grid: 1410×1×1 RectilinearGrid{Float32, Periodic, Flat, Bounded} on CPU with 3×0×1 halo
 ├── indices: (:, :, :)
 ├── time_indexing: Linear()
 ├── backend: InMemory()
-├── path: /tmp/jl_uxiFOJUJqZ/ddsnow-simulation.jld2
+├── path: /tmp/jl_XM5W9CFihW/ddsnow-simulation.jld2
 ├── name: snow_storage
 └── data: 1416×1×1×1921 OffsetArray(::Array{Float32, 4}, -2:1413, 1:1, 1:1, 1:1921) with eltype Float32 with indices -2:1413×1:1×1:1×1:1921
     └── max=27.1672, min=0.0, mean=4.50698</code></pre><p>Then, we plot it using <code>CairoMakie</code>. For this purpose we first convert to a <code>RingGrids.Field</code> and then plot it via <code>heatmap</code> like so</p><pre><code class="language-julia hljs">tsteps = 1
@@ -140,9 +140,9 @@ Build Info:
   Official https://julialang.org release
 Platform Info:
   OS: Linux (x86_64-linux-gnu)
-  CPU: 4 × AMD EPYC 9V74 80-Core Processor
+  CPU: 4 × AMD EPYC 7763 64-Core Processor
   WORD_SIZE: 64
-  LLVM: libLLVM-18.1.7 (ORCJIT, znver4)
+  LLVM: libLLVM-18.1.7 (ORCJIT, znver3)
   GC: Built with stock GC
 Threads: 1 default, 1 interactive, 1 GC (on 4 virtual cores)
 Environment:
