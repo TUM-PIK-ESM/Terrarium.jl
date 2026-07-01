@@ -37,9 +37,9 @@ RootSolver
 
 ## Fixed-point solvers
 
-[`FixedPointSolver`](@ref) implements a simple Picard iteration. Because the objective returns
-the residual `F(x) = x - g(x)`, the updated iterate is recovered as `g(x) = x - F(x)`. Updates
-may be stabilized with under-relaxation through a [`RelaxationFactor`](@ref).
+[`FixedPointSolver`](@ref) implements a simple fixed-point iteration $x_{n+1} = g(x_n)$. Since the [`ObjectiveFunction`](@ref)
+is formulated as a residual `r(x)`, the iterative scheme uses `g(x) = x - \alpha r(x)` for the fixed-point update. Updates may be
+under-relaxed by setting $\alpha < 1$ via [`RelaxationFactor`](@ref).
 
 ```@docs; canonical = false
 FixedPointSolver
