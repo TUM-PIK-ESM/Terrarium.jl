@@ -1,20 +1,22 @@
 using Terrarium
 using Test
 
-using Terrarium: AbstractLandGrid, AbstractIMEX, AbstractImplicitTimestepper, AbstractVariable, EmptyCache, Explicit, Implicit, prognostic, XY
+using Terrarium: AbstractLandGrid, AbstractIMEX, AbstractTimeStepper, AbstractVariable, EmptyCache, Explicit, Implicit, prognostic, XY
 
 module IMEXTestTypes
 
     using Terrarium
-    using Terrarium: AbstractLandGrid, AbstractIMEX, AbstractImplicitTimestepper, AbstractVariable, Implicit, prognostic, XY
+    using Terrarium: AbstractLandGrid, AbstractIMEX, AbstractTimeStepper, AbstractVariable, Implicit, prognostic, XY
 
     # A mock implicit timestepper used only to verify IMEX routing. Its update is deliberately distinct
     # from forward Euler (u += 2·∂u∂t·Δt) so we can tell which sub-stepper integrated which variable.
-    struct MockImplicit{NF} <: AbstractImplicitTimestepper{NF}
+    # It declares the `Implicit()` timestepping trait so IMEX routes it to the implicit cache slot.
+    struct MockImplicit{NF} <: AbstractTimeStepper{NF}
         Δt::NF
     end
     MockImplicit(::Type{NF}; Δt = 300.0) where {NF} = MockImplicit{NF}(NF(Δt))
 
+    Terrarium.timestepping(::MockImplicit) = Implicit()
     Terrarium.default_dt(ts::MockImplicit) = ts.Δt
     Terrarium.is_adaptive(::MockImplicit) = false
 
