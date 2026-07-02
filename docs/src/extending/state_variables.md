@@ -20,7 +20,7 @@ InputVariable
 ```
 Variables are typically constructed using one of the convenience functions [`prognostic`](@ref), [`auxiliary`](@ref), or [`input`](@ref).
 
-These variable definitions are purely symbolic; they do not hold any data and cannot be used for computation. Calling [`initialize`](@ref) on a model, process, or [`Variables`](@ref) container (see following sections) results in corresponding [Fields](@ref) being allocated for each variable. 
+These variable definitions are purely symbolic; they do not hold any data and cannot be used for computation. Constructing [`StateVariables`](@ref) from a model, process, or [`Variables`](@ref) container (see following sections) results in corresponding [Fields](@ref) being allocated for each variable. 
 
 A default implementation of `variables` is provided for all [`AbstractModel`](@ref) and `AbstractCoupledProcesses` types that automatically collects variables from all [`AbstractProcess`](@ref) types defined therein:
 
@@ -85,7 +85,7 @@ function hypotenuse(::Pythagoras, grid, clock, fields)
 end
 
 grid = ColumnGrid(CPU(), Float64, UniformSpacing(N = 1))
-state = initialize(Pythagoras{Float64}(), grid)
+state = StateVariables(Pythagoras{Float64}(), grid)
 state.hypotenuse
 ```
 

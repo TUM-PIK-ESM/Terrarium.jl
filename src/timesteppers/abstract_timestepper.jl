@@ -1,7 +1,18 @@
 """
-Base type for time-stepper state caches.
+    $TYPEDEF
+
+Base type for time stepper caches. Each [`AbstractTimeStepper`](@ref) allocates a corresponding
+`AbstractTimeStepperCache` subtype (via [`initialize`](@ref)) to hold any working state it needs between
+stages/steps.
 """
 abstract type AbstractTimeStepperCache{NF} end
+
+"""
+    $TYPEDEF
+
+Trivial cache for time steppers that require no working state (e.g. [`ForwardEuler`](@ref)).
+"""
+struct EmptyCache{NF} <: AbstractTimeStepperCache{NF} end
 
 # AbstractTimeStepper
 
@@ -9,6 +20,48 @@ abstract type AbstractTimeStepperCache{NF} end
 Base type for time steppers.
 """
 abstract type AbstractTimeStepper{NF} end
+
+"""
+    $TYPEDEF
+
+Trait supertype classifying how a timestepper or prognostic variable is integrated in time, either
+[`Explicit`](@ref) or [`Implicit`](@ref). See [`timestepping`](@ref).
+"""
+abstract type Timestepping end
+
+"""
+    $TYPEDEF
+
+[`Timestepping`](@ref) trait marking *explicit* integration. It is the trait of explicit timesteppers
+(e.g. [`ForwardEuler`](@ref), [`Heun`](@ref)) and the default class of every prognostic variable — i.e. the
+sub-stepper an [`AbstractIMEX`](@ref) routes the variable to.
+"""
+struct Explicit <: Timestepping end
+
+"""
+    $TYPEDEF
+
+[`Timestepping`](@ref) trait marking *implicit* integration. It is the trait of implicit timesteppers and,
+under an [`AbstractIMEX`](@ref), of prognostic variables routed to the implicit sub-stepper.
+"""
+struct Implicit <: Timestepping end
+
+"""
+    timestepping(timestepper::AbstractTimeStepper)::Timestepping
+
+Return the [`Timestepping`](@ref) trait — [`Explicit`](@ref) or [`Implicit`](@ref) — of the given
+`timestepper`. Every concrete timestepper must define this trait (e.g. `timestepping(::ForwardEuler) =
+Explicit()`); there is no default so that a new scheme declares its class explicitly. It is used, among other
+things, to route each sub-stepper of an [`AbstractIMEX`](@ref) to its slice of the [`IMEXCache`](@ref).
+
+    timestepping(var::AbstractVariable, model::AbstractModel, timestepper::AbstractTimeStepper)::Timestepping
+
+Return the [`Timestepping`](@ref) class with which the prognostic variable `var` of `model` is integrated
+under `timestepper`. Defaults to `Explicit()` for all variables; specialize this method (typically on an
+[`AbstractIMEX`](@ref) timestepper together with particular variable and/or model types) to route selected
+variables to the implicit sub-stepper.
+"""
+timestepping(::AbstractVariable, model, ::AbstractTimeStepper) = Explicit()
 
 """
     default_dt(timestepper::AbstractTimeStepper)
@@ -23,6 +76,31 @@ function default_dt end
 Return `true` if the given time stepper is adaptive, false otherwise.
 """
 function is_adaptive end
+
+"""
+    $SIGNATURES
+
+Default `timestepper` for models: a single `explicit` [`ForwardEuler`](@ref) time stepper.
+"""
+default_timestepper(::Type{NF}) where {NF} = ForwardEuler(NF)
+
+"""
+    get_timestepper(model::AbstractModel)::AbstractTimeStepper
+
+Return the `timestepper` associated with the given `model`. All `AbstractModel`s are required to
+define a `timestepper` field holding an [`AbstractTimeStepper`](@ref) (e.g. [`ForwardEuler`](@ref),
+[`Heun`](@ref), or [`IMEX`](@ref)).
+"""
+@inline get_timestepper(model::AbstractModel) = model.timestepper
+
+"""
+    initialize(timestepper::AbstractTimeStepper, state, progvars, model)
+
+Allocate the time stepper cache for `timestepper` against the given `state`. `progvars` is the named tuple
+of prognostic variable metadata and `model` the owning [`AbstractModel`](@ref); both are needed e.g. by
+[`AbstractIMEX`](@ref) timesteppers to resolve each variable's [`timestepping`](@ref) class.
+"""
+initialize(timestepper::AbstractTimeStepper, state, progvars, model) = initialize(timestepper, state)
 
 """
     timestep!(integrator::ModelIntegrator, timestepper::AbstractTimeStepper, Δt)
@@ -42,35 +120,48 @@ timestep!(state, model::AbstractModel, timestepper::AbstractTimeStepper, Δt) = 
 """
     initialize(::AbstractTimeStepper, state)
 
-Initialize and return the time stepping state cache for the given time stepper.
-. Allocate and return a `NamedTuple` of intermediate fields/state required by the given
-`timestepper`. Time steppers that do not require any cache can fall back to the default 
-implementation, which returns an empty `NamedTuple`.
+Initialize and return the [`AbstractTimeStepperCache`](@ref) holding any intermediate fields/state required by the
+given `timestepper`. Time steppers that need no working state fall back to the default implementation,
+which returns an [`EmptyCache`](@ref).
 """
-initialize(timestepper::AbstractTimeStepper, state) = (;)
+initialize(timestepper::AbstractTimeStepper{NF}, state) where {NF} = EmptyCache{NF}()
+
+"""
+    get_cache(cache::AbstractTimeStepperCache, timestepper::AbstractTimeStepper)
+
+Return the working cache for `timestepper` given the model's `state.timestepper_cache`. For a single
+timestepper this is the cache itself; an [`IMEX`](@ref) cache returns the sub-cache matching the
+timestepper's class.
+"""
+get_cache(cache::AbstractTimeStepperCache, ::AbstractTimeStepper) = cache
 
 """
     $SIGNATURES
 
-Evaluate an explicit update `u += ∂u∂t*Δt` for all prognostic fields and their corresponding
-tendencies. By default, this is implemented as a simple Euler update `u += dudt*Δt` which can
-serve as a building block for more complex, multi-stage timesteppers. Where necessary,
+Evaluate an explicit update `u += ∂u∂t*Δt` for the prognostic fields of `state` listed in `names` and
+their corresponding tendencies. By default, this is implemented as a simple Euler update `u += dudt*Δt`
+which can serve as a building block for more complex, multi-stage timesteppers. Where necessary,
 additional dispatches of `explicit_step_kernel!(field, tendency, ::AbstractLandGrid, ::TimeStepper, Δt)`
 can be defined to implement more specialized time-stepping schemes.
 """
-function explicit_step!(state, grid::AbstractLandGrid, timestepper::AbstractTimeStepper, Δt)
-    fastiterate(keys(state.prognostic)) do name
-        # apply flux BCs, if present
-        compute_z_bcs!(state.tendencies[name], state.prognostic[name], grid, state)
-        # debug site post-BC
-        debugsite!(explicit_step!, state.tendencies[name], name)
-        # update prognostic state variable
-        explicit_step!(state.prognostic[name], state.tendencies[name], grid, timestepper, Δt)
-        # debug site post-step
-        debugsite!(explicit_step!, state.prognostic[name], name)
+function explicit_step!(state, grid::AbstractLandGrid, timestepper::AbstractTimeStepper, Δt, names::Tuple{Vararg{Symbol}})
+    # step only this namespace's prognostic variables that are also selected in `names`
+    fastiterate(prognostic_names(state)) do name
+        if name ∈ names
+            # apply flux BCs, if present
+            compute_z_bcs!(state.tendencies[name], state.prognostic[name], grid, state)
+            # debug site post-BC
+            debugsite!(explicit_step!, state.tendencies[name], name)
+            # update prognostic state variable
+            explicit_step!(state.prognostic[name], state.tendencies[name], grid, timestepper, Δt)
+            # debug site post-step
+            debugsite!(explicit_step!, state.prognostic[name], name)
+        end
     end
+    # recurse into child namespaces
+    # steps exactly prognostic_names(ns) ∩ names
     fastiterate(state.namespaces) do ns
-        explicit_step!(ns, grid, timestepper, Δt)
+        explicit_step!(ns, grid, timestepper, Δt, names)
     end
     return nothing
 end

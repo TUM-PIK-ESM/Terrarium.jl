@@ -11,6 +11,7 @@ $(TYPEDFIELDS)
         GridType <: AbstractLandGrid{NF},
         Soil <: AbstractSoil{NF},
         Initializer <: AbstractInitializer,
+        Timestepper <: AbstractTimeStepper{NF},
     } <: AbstractSoilModel{NF, GridType}
     "Spatial grid type"
     grid::GridType
@@ -23,6 +24,9 @@ $(TYPEDFIELDS)
 
     "State variable initializer"
     @component initializer::Initializer = DefaultInitializer(eltype(grid))
+
+    "Time stepper: a single `AbstractTimeStepper` (e.g. `ForwardEuler`, `Heun`) or an `IMEX`"
+    @component timestepper::Timestepper = default_timestepper(eltype(grid))
 end
 
 # Model interface methods

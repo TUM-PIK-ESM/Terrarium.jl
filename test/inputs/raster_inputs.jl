@@ -53,7 +53,7 @@ const RasterInputSource = TerrariumRastersExt.RasterInputSource
         @test first(vars) == Terrarium.input(:temperature, XY())
 
         # Test initialization
-        state = initialize(Variables(source), grid)
+        state = StateVariables(Variables(source), grid)
         @test hasproperty(state.inputs, :temperature)
 
         # Test that initialize! copies data correctly
@@ -108,7 +108,7 @@ const RasterInputSource = TerrariumRastersExt.RasterInputSource
         @test first(vars) == Terrarium.input(:forcing, XY())
 
         # Test initialization and update
-        state = initialize(Variables(source), grid)
+        state = StateVariables(Variables(source), grid)
         @test hasproperty(state.inputs, :forcing)
 
         # Initialize (should be no-op for time-varying)
@@ -173,7 +173,7 @@ const RasterInputSource = TerrariumRastersExt.RasterInputSource
         @test variables(sources) == (Terrarium.input(:var1, XY()), Terrarium.input(:var2, XY()))
 
         # Test initialization
-        state = initialize(Variables(sources), grid)
+        state = StateVariables(Variables(sources), grid)
         @test hasproperty(state.inputs, :var1)
         @test hasproperty(state.inputs, :var2)
 

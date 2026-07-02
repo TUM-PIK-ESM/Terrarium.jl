@@ -95,7 +95,7 @@ end
     swrc = VanGenuchten(α = 2.0, n = 2.0)
     hydraulic_properties = ConstantSoilHydraulics(Float64; swrc, unsat_hydraulic_cond = UnsatKVanGenuchten(Float64))
     hydrology = SoilHydrology(eltype(grid), RichardsEq(); hydraulic_properties)
-    state = initialize(hydrology, grid)
+    state = StateVariables(hydrology, grid)
 
     # Case 1: Oversaturation at surface
     set!(state.saturation_water_ice, (x, z) -> max(1.1 + z, 1.0))
@@ -132,7 +132,7 @@ end
     model = SoilModel(grid; soil, initializer)
     # Fully saturated, steady state
     initializers = (saturation_water_ice = (x, z) -> 1.0,)
-    integrator = initialize(model, ForwardEuler(); initializers)
+    integrator = initialize(model; initializers)
     state = integrator.state
     # check that initial water table depth is correctly calculated from initial condition
     @test all(isapprox.(state.water_table, 0, atol = 1.0e-12))
@@ -151,7 +151,7 @@ end
 
     # Variably saturated with water table
     initializers = (saturation_water_ice = (x, z) -> min(1, 0.5 - 0.1 * z),)
-    integrator = initialize(model, ForwardEuler(); initializers)
+    integrator = initialize(model; initializers)
     state = integrator.state
     water_table = state.water_table
     hydraulic_cond = state.hydraulic_conductivity
@@ -211,7 +211,7 @@ end
         temperature = 10.0, # positive soil temperature
         saturation_water_ice = 1.0, # fully saturated
     )
-    integrator = initialize(model, ForwardEuler(); initializers)
+    integrator = initialize(model; initializers)
     state = integrator.state
     fields = get_fields(state, hydrology)
     # check that forcing_ET is zero when no latent heat flux is supplied

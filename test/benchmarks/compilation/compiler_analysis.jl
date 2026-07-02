@@ -32,7 +32,7 @@ end
 vegsoil = build_model()
 # Variably saturated with water table at roughly 5 m depth
 initializers = (saturation_water_ice = (x, z) -> min(1, 0.5 - 0.1 * z),)
-tinf = @snoop_inference initialize(vegsoil, ForwardEuler(); initializers)
+tinf = @snoop_inference initialize(vegsoil; initializers)
 # print_tree(tinf, maxdepth=100)
 ProfileView.view(flamegraph(tinf))
 Δt = 60.0

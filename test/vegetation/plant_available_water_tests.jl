@@ -17,7 +17,7 @@ using Test
     strat = HomogeneousSoilStratigraphy(eltype(grid), porosity = ConstantSoilPorosity(mineral_porosity = 0.5))
     soil = SoilEnergyWaterCarbon(eltype(grid); hydrology, strat)
     soilvars = Variables(soil)
-    state = initialize(merge(vars, soilvars), grid)
+    state = StateVariables(merge(vars, soilvars), grid)
     set!(state.temperature, 10.0)
 
     # Soil moisture limiting factor

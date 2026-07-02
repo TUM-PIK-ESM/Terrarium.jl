@@ -13,6 +13,7 @@ conditions.
         SEB <: AbstractSurfaceEnergyBalance,
         Atmosphere <: AbstractAtmosphere,
         Initializer <: AbstractInitializer,
+        Timestepper <: AbstractTimeStepper{NF},
     } <: AbstractSurfaceEnergyModel{NF, GridType}
     "Spatial grid"
     grid::GridType
@@ -28,6 +29,9 @@ conditions.
 
     "State variable initializer"
     @component initializer::Initializer = DefaultInitializer(eltype(grid))
+
+    "Time stepper: a single `AbstractTimeStepper` (e.g. `ForwardEuler`, `Heun`) or an `IMEX`"
+    @component timestepper::Timestepper = default_timestepper(eltype(grid))
 end
 
 function compute_auxiliary!(state, model::SurfaceEnergyModel)

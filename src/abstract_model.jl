@@ -106,7 +106,7 @@ Default implementation of [`variables`](@ref) for composite [`AbstractModel`](@r
 [`AbstractCoupledProcesses`](@ref) types that automatically collects all variables from all processes defined
 as properties/fields on the given `obj`.
 """
-variables(obj::Union{AbstractCoupledProcesses, AbstractModel}) = mapreduce(variables, tuplejoin, processes(obj))
+variables(obj::Union{AbstractCoupledProcesses, AbstractModel}) = tuplejoin(fastmap(variables, processes(obj))...)
 
 # Allow dispatch on nothing for process types
 @inline compute_auxiliary!(state, grid, ::Nothing, args...) = nothing

@@ -14,6 +14,7 @@ $TYPEDFIELDS
         Atmosphere <: AbstractAtmosphere{NF},
         GridType <: AbstractLandGrid{NF},
         Initializer <: AbstractInitializer,
+        Timestepper <: AbstractTimeStepper{NF},
     } <: AbstractVegetationModel{NF, GridType}
     "Spatial grid type"
     grid::GridType
@@ -29,6 +30,9 @@ $TYPEDFIELDS
 
     "State variable initializer"
     @component initializer::Initializer = DefaultInitializer(eltype(grid))
+
+    "Time stepper: a single `AbstractTimeStepper` (e.g. `ForwardEuler`, `Heun`) or an `IMEX`"
+    @component timestepper::Timestepper = default_timestepper(eltype(grid))
 end
 
 function compute_auxiliary!(state, model::VegetationModel)

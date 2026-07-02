@@ -14,6 +14,7 @@ $TYPEDFIELDS
         CanopyET <: AbstractEvapotranspiration,
         SurfaceRunoff <: AbstractSurfaceRunoff,
         Initializer <: AbstractInitializer,
+        Timestepper <: AbstractTimeStepper{NF},
     } <: AbstractSurfaceHydrologyModel{NF, GridType}
     "Spatial grid type"
     grid::GridType
@@ -35,6 +36,9 @@ $TYPEDFIELDS
 
     "State variable initializer"
     initializer::Initializer = DefaultInitializer(eltype(grid))
+
+    "Time stepper: a single `AbstractTimeStepper` (e.g. `ForwardEuler`, `Heun`) or an `IMEX`"
+    timestepper::Timestepper = default_timestepper(eltype(grid))
 end
 
 # Model interface methods

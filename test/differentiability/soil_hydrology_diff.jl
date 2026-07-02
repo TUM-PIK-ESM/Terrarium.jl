@@ -28,7 +28,7 @@ end
     model = build_soil_energy_hydrology_model(CPU(), Float64; porosity, hydraulic_properties)
     swrc = hydraulic_properties.swrc # θ(ψₘ)
     swrc_inv = inv(swrc) # ψₘ(θ)
-    integrator = initialize(model, ForwardEuler())
+    integrator = initialize(model)
     state = integrator.state
     compute_auxiliary!(state, model)
     dstate = make_zero(state)
@@ -89,7 +89,7 @@ end
 @testset "Soil hydrology: compute_auxiliary! RRE" begin
     hydraulic_properties = SoilHydraulicsSURFEX(Float64)
     model = build_soil_energy_hydrology_model(CPU(), Float64; hydraulic_properties)
-    integrator = initialize(model, ForwardEuler())
+    integrator = initialize(model)
     state = integrator.state
     # first run compute_auxiliary! for the full model (needed to compute hydraulic properties)
     compute_auxiliary!(state, model)
@@ -112,7 +112,7 @@ end
 @testset "Soil hydrology: compute_tendencies! RRE" begin
     hydraulic_properties = SoilHydraulicsSURFEX(Float64)
     model = build_soil_energy_hydrology_model(CPU(), Float64; hydraulic_properties)
-    integrator = initialize(model, ForwardEuler())
+    integrator = initialize(model)
     state = integrator.state
     # first run compute_auxiliary! for the full model (needed to compute hydraulic properties)
     compute_auxiliary!(state, model)
@@ -135,14 +135,12 @@ end
 @testset "Soil energy/hydrology model: timestep!" begin
     hydraulic_properties = ConstantSoilHydraulics(Float64)
     model = build_soil_energy_hydrology_model(CPU(), Float64; hydraulic_properties)
-    integrator = initialize(model, ForwardEuler())
+    integrator = initialize(model)
     dintegrator = make_zero(integrator)
     # set a seed for the temperature
     dintegrator.state.temperature .= 1.0
-    stepper = integrator.timestepper
-    dstepper = make_zero(stepper)
     Δt = 60.0
-    @time Enzyme.autodiff(set_runtime_activity(Reverse), timestep!, Const, Duplicated(integrator, dintegrator), Duplicated(stepper, dstepper), Const(Δt))
+    @time Enzyme.autodiff(set_runtime_activity(Reverse), timestep!, Const, Duplicated(integrator, dintegrator), Const(Δt))
     @test all(isfinite.(dintegrator.state.temperature))
     @test all(isfinite.(dintegrator.state.pressure_head))
 end

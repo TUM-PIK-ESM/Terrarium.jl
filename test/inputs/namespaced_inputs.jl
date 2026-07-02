@@ -26,7 +26,7 @@ using Test
         Terrarium.namespace(:ns1, (Terrarium.input(:x, XY()),)),
         Terrarium.namespace(:ns2, (Terrarium.input(:x, XY()),)),
     )
-    state = initialize(all_vars, grid)
+    state = StateVariables(all_vars, grid)
     X1 .= 3.0f0
     initialize!(state, InputSources(src))
     ## only ns1.x should be set by the source
@@ -86,7 +86,7 @@ end
         InputSource(grid, silt; name = :horizon1 => :silt_fraction),
         InputSource(grid, clay; name = :horizon1 => :clay_fraction),
     )
-    integrator = initialize(model, ForwardEuler(NF); inputs)
+    integrator = initialize(model; inputs)
     state = integrator.state
     @test Terrarium.namespace_names(state) == map(nameof, strat.horizons)
     ## inputs land only in the first horizon namespace

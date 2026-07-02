@@ -91,7 +91,7 @@ end
     skin_temperature = PrescribedSkinTemperature(eltype(grid))
     seb = SurfaceEnergyBalance(Float64; skin_temperature)
     model = SurfaceEnergyModel(grid, surface_energy_balance = seb)
-    state = initialize(model)
+    state = StateVariables(model)
     @test hasproperty(state.inputs, :skin_temperature)
     set!(state.skin_temperature, 1.0)
     compute_auxiliary!(state, grid, skin_temperature)
@@ -108,7 +108,7 @@ end
     model = SurfaceEnergyModel(grid, surface_energy_balance = seb, atmosphere = atmosphere)
 
     # Sunny and dry in Bergen Norway (Figure 5.11, Shuttleworth 2012)
-    state = initialize(model)
+    state = StateVariables(model)
     results = test_skin_temperature_solve!(
         state, grid, seb, model;
         surface_shortwave_down = 600.0,
@@ -125,7 +125,7 @@ end
     @test all(results.surface_net_radiation .< 0)
 
     # Sunny and humid
-    state = initialize(model)
+    state = StateVariables(model)
     results = test_skin_temperature_solve!(
         state, grid, seb, model;
         surface_shortwave_down = 600.0,
@@ -142,7 +142,7 @@ end
     @test all(results.surface_net_radiation .< 0)
 
     # Cloudy and dry
-    state = initialize(model)
+    state = StateVariables(model)
     results = test_skin_temperature_solve!(
         state, grid, seb, model;
         surface_shortwave_down = 150.0,
@@ -159,7 +159,7 @@ end
     @test all(results.surface_net_radiation .> 0)
 
     # Cloudy and humid
-    state = initialize(model)
+    state = StateVariables(model)
     results = test_skin_temperature_solve!(
         state, grid, seb, model;
         surface_shortwave_down = 150.0,

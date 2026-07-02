@@ -3,9 +3,10 @@ using Test
 
 # mock a simple model with exponential dynamics (and a constant offset) to test time steppers
 
-@kwdef struct ExpModel{NF, Grid <: Terrarium.AbstractLandGrid{NF}, I} <: Terrarium.AbstractModel{NF, Grid}
+@kwdef struct ExpModel{NF, Grid <: Terrarium.AbstractLandGrid{NF}, I, TS <: Terrarium.AbstractTimeStepper} <: Terrarium.AbstractModel{NF, Grid}
     grid::Grid
     initializer::I = DefaultInitializer(eltype(grid))
+    timestepper::TS = ForwardEuler(eltype(grid))
 end
 
 Terrarium.variables(::ExpModel) = (
@@ -26,11 +27,12 @@ end
 @testset "ExpModel: Heun and Euler time steppers" begin
 
     grid = ColumnGrid(CPU(), Float64, UniformSpacing(N = 1))
-    model = ExpModel(grid)
+    model_euler = ExpModel(grid)
+    model_heun = ExpModel(grid; timestepper = Heun())
 
     initializers = (u = 0.0, v = 0.1)
-    integrator_heun = initialize(model, Heun(); initializers)
-    integrator_euler = initialize(model, ForwardEuler(); initializers)
+    integrator_heun = initialize(model_heun; initializers)
+    integrator_euler = initialize(model_euler; initializers)
 
     # test that Heun estimate is more accurate (larger value than Euler here)
     # test that both are what we expect
@@ -40,11 +42,11 @@ end
     @test integrator_heun.state.u[2] > integrator_euler.state.u[2]
 
     # Euler: expected value: u = 0.1 * Δt
-    dt_euler = default_dt(integrator_euler.timestepper)
+    dt_euler = default_dt(integrator_euler)
     @test integrator_euler.state.u[2] == 0.1 * dt_euler
 
     # Heun: expected value: u = (0.1Δt + (0.1 * Δt + 0.1) * Δt) / 2
-    dt_heun = default_dt(integrator_heun.timestepper)
+    dt_heun = default_dt(integrator_heun)
     @test integrator_heun.state.u[2] == (0.1 * dt_heun + (0.1 * dt_heun + 0.1) * dt_heun) / 2
 end
 
@@ -58,7 +60,7 @@ end
     end
 
     initializers = (u = -20, v = -5.0)
-    integrator = initialize(model, ForwardEuler(); initializers)
+    integrator = initialize(model; initializers)
 
     # Test that timestep! clips negative values
     timestep!(integrator)
@@ -70,9 +72,10 @@ end
 # variable (and its auxiliary offset and an input) living inside a namespace `:inner`.
 # This exercises time stepping of prognostic and input variables defined in namespaces and
 # also tests that actually the correct timestepper is used in the namespace as well.
-@kwdef struct NamespacedExpModel{NF, Grid <: Terrarium.AbstractLandGrid{NF}, I} <: Terrarium.AbstractModel{NF, Grid}
+@kwdef struct NamespacedExpModel{NF, Grid <: Terrarium.AbstractLandGrid{NF}, I, TS <: Terrarium.AbstractTimeStepper} <: Terrarium.AbstractModel{NF, Grid}
     grid::Grid
     initializer::I = DefaultInitializer(eltype(grid))
+    timestepper::TS = ForwardEuler(eltype(grid))
 end
 
 Terrarium.variables(::NamespacedExpModel) = (
@@ -104,13 +107,14 @@ end
 
 @testset "NamespacedExpModel: time stepping prognostic/input in a namespace" begin
     grid = ColumnGrid(CPU(), Float64, UniformSpacing(N = 1))
-    model = NamespacedExpModel(grid)
+    model_heun = NamespacedExpModel(grid; timestepper = Heun())
+    model_euler = NamespacedExpModel(grid)
 
     # root initializers only; the namespaced prognostic `u` starts at its default (zero) and
     # the namespaced input `c` (which has no input source) is set explicitly below.
     initializers = (u = 0.0, v = 0.1)
-    integrator_heun = initialize(model, Heun(); initializers)
-    integrator_euler = initialize(model, ForwardEuler(); initializers)
+    integrator_heun = initialize(model_heun; initializers)
+    integrator_euler = initialize(model_euler; initializers)
 
     # the model must define namespaced variables (prognostic, auxiliary, and input)
     @test haskey(integrator_euler.state.namespaces, :inner)
@@ -137,8 +141,8 @@ end
     @test integrator_heun.state.u[2] == u_inner_heun[2]
 
     # exact integrated values for the namespaced prognostic
-    dt_euler = default_dt(integrator_euler.timestepper)
+    dt_euler = default_dt(integrator_euler)
     @test u_inner_euler[2] == 0.1 * dt_euler
-    dt_heun = default_dt(integrator_heun.timestepper)
+    dt_heun = default_dt(integrator_heun)
     @test u_inner_heun[2] == (0.1 * dt_heun + (0.1 * dt_heun + 0.1) * dt_heun) / 2
 end

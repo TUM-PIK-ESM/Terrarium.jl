@@ -15,6 +15,7 @@ module StateVariablesTestTypes
     @kwdef struct SubModel{NF, Grid <: AbstractLandGrid{NF}} <: Terrarium.AbstractModel{NF, Grid}
         grid::Grid
         initializer = DefaultInitializer(eltype(grid))
+        timestepper = ForwardEuler(eltype(grid))
     end
 
     Terrarium.variables(model::SubModel) = (
@@ -28,6 +29,7 @@ module StateVariablesTestTypes
         grid::Grid
         submodel::Sub = SubModel(; grid)
         initializer = DefaultInitializer(eltype(grid))
+        timestepper = ForwardEuler(eltype(grid))
     end
 
     struct TestClosure <: Terrarium.AbstractClosureRelation end
@@ -50,7 +52,7 @@ end
 @testset "State variable initialization" begin
     grid = ColumnGrid(CPU(), DEFAULT_NF, ExponentialSpacing(N = 10))
     model = StateVariablesTestTypes.TestModel(; grid)
-    state = initialize(model)
+    state = StateVariables(model)
     # Check that all prognostic variables are defined correctly
     @test hasproperty(state, :progvar3D) && isa(state.prognostic.progvar3D, Field{Center, Center, Center})
     @test hasproperty(state, :progvar2D) && isa(state.prognostic.progvar2D, Field{Center, Center, Nothing})
@@ -74,7 +76,7 @@ end
 @testset "State variable utilities" begin
     grid = ColumnGrid(CPU(), DEFAULT_NF, ExponentialSpacing(N = 10))
     model = StateVariablesTestTypes.TestModel(; grid)
-    state = initialize(model)
+    state = StateVariables(model)
     for input in state.inputs
         set!(input, 1)
     end
@@ -87,7 +89,7 @@ end
     @test all(map(field -> all(field .== 1), state.inputs)) # inputs should not be modified
 
     # test copyto!
-    state2 = initialize(model)
+    state2 = StateVariables(model)
     copyto!(state2, state)
     @test all(map(field -> all(field .== 2), state2.prognostic))
     @test all(map(field -> all(field .== 2), state2.auxiliary))

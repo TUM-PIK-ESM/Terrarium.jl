@@ -18,7 +18,7 @@ initializers = (
     saturation_water_ice = (x, z) -> min(1, 0.5 - 0.1 * z),
     carbon_vegetation = 0.5,
 )
-integrator = @time initialize(land, ForwardEuler(); initializers);
+integrator = @time initialize(land; initializers);
 # manually set atmospheric inputs to different values
 set!(integrator.state.windspeed, 1.0) # 1 m/s
 set!(integrator.state.specific_humidity, 1.0e-4) # kg/kg

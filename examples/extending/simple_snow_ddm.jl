@@ -60,13 +60,15 @@ Terrarium.variables(model::DegreeDaySnow{NF}) where {NF} = (
     Terrarium.prognostic(:snow_storage, XY(), units = u"m", desc = "Snow water equivalent in m"),
 )
 
-@kwdef struct SnowModel{NF, Grid <: Terrarium.AbstractLandGrid{NF}, Pro, Init} <: Terrarium.AbstractModel{NF, Grid}
+@kwdef struct SnowModel{NF, Grid <: Terrarium.AbstractLandGrid{NF}, Pro, Init, TS <: Terrarium.AbstractTimeStepper} <: Terrarium.AbstractModel{NF, Grid}
     "Spatial grid on which state variables are discretized"
     grid::Grid
     "Snow melting process"
     snow_melt::Pro = DegreeDaySnow()
     "Model initializer"
     initializer::Init = DefaultInitializer(eltype(grid))
+    "Time stepper (e.g. `ForwardEuler`, `Heun`, or `IMEX`)"
+    timestepper::TS = ForwardEuler(eltype(grid))
 end
 #
 Terrarium.variables(model::SnowModel) = (
@@ -174,9 +176,9 @@ snow_initializers = (snow_storage = 0.5,)
 
 # Now, we initialize our model and the integrator. As in the first example, we use a `Heun` time stepper
 
-snow_model = SnowModel(snow_grid);
+snow_model = SnowModel(snow_grid; timestepper = Heun(Δt = Float32(1.0)));
 snow_inputs = InputSources(sf_input, lst_input)
-snow_integrator = initialize(snow_model, Heun(Δt = Float32(1.0)); inputs = snow_inputs, initializers = snow_initializers)
+snow_integrator = initialize(snow_model; inputs = snow_inputs, initializers = snow_initializers)
 
 # ... and we can finally run the model. As before, by wrapping it in an `Oceananigans.Simulation` to output our results
 snow_sim = Simulation(snow_integrator; stop_time = 80days, Δt = 3600.0)
