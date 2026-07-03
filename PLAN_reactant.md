@@ -128,6 +128,13 @@
 >   `Type{Float32}`) makes the BC function a non-bitstype kernel argument. Hoist all
 >   constants (`amplitude = NF(5)` etc.) out of the closure.
 >
+> *(2026-07-03: `REACTANT_upstream_issue.md` reviewed & upgraded for the independent
+> Oceananigans session — every claim re-verified against bare Oceananigans, incl. a new
+> constructor-level probe showing `AbstractRange` z inputs are also materialized (only endpoint
+> tuples stay `StepRangeLen`); misleading "missing @adapt_structure" framing replaced with
+> verified pointers (both adapt rules exist; unadapted scalar fields are a candidate survivor);
+> appendix added with env recipe, red-test suggestion, and fix-location shortlist.)*
+>
 > **TODO (deferred, tracked): non-range `z` / `ExponentialSpacing` under Reactant.**
 > Stretched vertical grids (`ExponentialSpacing`, `PrescribedSpacing`) require array-valued
 > vertical coordinates, which currently fail Reactant kernel tracing inside Oceananigans
