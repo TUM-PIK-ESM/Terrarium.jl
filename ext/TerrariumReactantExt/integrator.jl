@@ -21,7 +21,10 @@ end
 function compiled_step(integrator::ReactantIntegrator, Δt)
     return get!(COMPILED_STEPS, (objectid(integrator), Δt)) do
         @info "Reactant: compiling timestep! (Δt=$Δt)"
-        @compile step_core!(integrator, Δt)
+        # `raise=true` lowers the KernelAbstractions kernels (halo fills, tendency/closure kernels)
+        # so their traced grid/array arguments are adapted correctly; without it the launch trips
+        # Reactant's `_check_no_traced_in_kernel_arg`. Mirrors Oceananigans' own Reactant tests.
+        @compile raise = true raise_first = true sync = true step_core!(integrator, Δt)
     end
 end
 

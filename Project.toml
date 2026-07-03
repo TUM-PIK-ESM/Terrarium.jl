@@ -26,10 +26,12 @@ Unitful = "1986cc42-f94f-5a68-af5c-568840ba703d"
 [weakdeps]
 Checkpointing = "eb46d486-4f9c-4c3d-b445-a617f2a2f1ca"
 Rasters = "a3a2b9e3-a471-40c9-b274-f788e487c689"
+Reactant = "3c362404-f566-11ee-1572-e11a4b42c853"
 
 [extensions]
 TerrariumCheckpointingExt = "Checkpointing"
 TerrariumRastersExt = "Rasters"
+TerrariumReactantExt = "Reactant"
 
 [compat]
 Adapt = "4"
@@ -46,6 +48,7 @@ IntervalSets = "0.7"
 KernelAbstractions = "0.9"
 ModelParameters = "0.4"
 Oceananigans = "0.100 - 0.109, 0.110"
+Reactant = "0.2"
 RootSolvers = "1"
 RingGrids = "0.1"
 SpeedyWeatherInternals = "0.2.1"
