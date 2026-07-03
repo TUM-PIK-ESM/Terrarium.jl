@@ -109,30 +109,12 @@ function report(results; label = "")
     return results
 end
 
-# --- architecture-dispatched advancement (temporary Reactant shim) ----------------------
+# --- advancement (identical call on both architectures) ---------------------------------
 #
-# TEMPORARY: until `TerrariumReactantExt` overrides `timestep!`/`run!` for `ReactantState`,
-# the Reactant branch compiles a single step with `@compile` and drives a host loop. Once
-# the ext lands, both branches become `Terrarium.run!(integrator; steps, Δt)`.
+# The architecture is the only difference: `TerrariumReactantExt` overrides `run!` for
+# `ReactantState` to compile the step once and drive a host loop; on CPU it is the plain loop.
 
-_one_step!(integrator, Δt) = (Terrarium.timestep!(integrator, Δt); nothing)
-
-advance!(integrator, Δt, nsteps) = advance!(architecture(integrator), integrator, Δt, nsteps)
-
-function advance!(::Union{CPU, GPU}, integrator, Δt, nsteps)
-    for _ in 1:nsteps
-        Terrarium.timestep!(integrator, Δt)
-    end
-    return integrator
-end
-
-function advance!(::ReactantState, integrator, Δt, nsteps)
-    r_step! = @compile _one_step!(integrator, Δt)
-    for _ in 1:nsteps
-        r_step!(integrator, Δt)
-    end
-    return integrator
-end
+advance!(integrator, Δt, nsteps) = Terrarium.run!(integrator; steps = nsteps, Δt = Δt)
 
 # --- top-level per-model test -----------------------------------------------------------
 
