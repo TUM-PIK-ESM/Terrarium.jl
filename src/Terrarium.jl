@@ -18,7 +18,7 @@ using KernelAbstractions: @kernel, @index
 
 # Oceananigans numerics
 using Oceananigans.AbstractOperations: Average, Integral, ConditionalOperation, KernelFunctionOperation
-using Oceananigans.Architectures: Architectures, AbstractArchitecture, CPU, GPU, architecture, on_architecture, array_type
+using Oceananigans.Architectures: Architectures, AbstractArchitecture, CPU, GPU, ReactantState, architecture, on_architecture, array_type
 using Oceananigans.Fields: Field, FunctionField, AbstractField, Center, Face, set!, compute!, interior, location
 using Oceananigans.Forcings: Forcing, ContinuousForcing, DiscreteForcing
 using Oceananigans.Grids: Periodic, Flat, Bounded, znodes, znode, zspacings
@@ -75,7 +75,7 @@ Alias for Oceananigans `AbstractBoundaryConditionClassification`
 const BCType = AbstractBoundaryConditionClassification
 
 # Re-export selected types and methods from Oceananigans
-export Simulation, Field, FieldTimeSeries, CPU, GPU, Clock, Center, Face
+export Simulation, Field, FieldTimeSeries, CPU, GPU, ReactantState, Clock, Center, Face
 export Value, Flux, Gradient, ValueBoundaryCondition, GradientBoundaryCondition, FluxBoundaryCondition, NoFluxBoundaryCondition
 export run!, time_step!, set!, reset!, compute!, interior, architecture, on_architecture, znodes, zspacings, location
 

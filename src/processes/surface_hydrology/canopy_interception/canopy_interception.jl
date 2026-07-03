@@ -89,7 +89,7 @@ Compute the canopy saturation fraction as `w_can / w_can_max`.
 @inline function compute_canopy_saturation_fraction(canopy_interception::PALADYNCanopyInterception{NF}, w_can, LAI, SAI) where {NF}
     # Compute the wet canopy fraction
     w_can_max = canopy_interception.w_can_max * (LAI + SAI)
-    f_can = w_can_max > 0 ? w_can / w_can_max : zero(NF)
+    f_can = ifelse(w_can_max > zero(NF), w_can / w_can_max, zero(NF))
     return f_can
 end
 
