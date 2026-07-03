@@ -10,9 +10,11 @@ import RingGrids
 
 function build_integrator(v::Val, arch, NF)
     cfg = build_model(v, arch, NF)
-    return Terrarium.initialize(cfg.model;
+    return Terrarium.initialize(
+        cfg.model;
         boundary_conditions = cfg.boundary_conditions,
-        initializers = cfg.initializers)
+        initializers = cfg.initializers
+    )
 end
 
 cpu_dt(v::Val, NF) = build_model(v, CPU(), NF).Δt

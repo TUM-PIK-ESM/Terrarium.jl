@@ -54,8 +54,10 @@ function sync_state!(dst, src)
         _sync_group!(getfield(dst, group), getfield(src, group))
     end
     for nsname in Terrarium.namespace_names(dst)
-        sync_state!(getproperty(getfield(dst, :namespaces), nsname),
-                    getproperty(getfield(src, :namespaces), nsname))
+        sync_state!(
+            getproperty(getfield(dst, :namespaces), nsname),
+            getproperty(getfield(src, :namespaces), nsname)
+        )
     end
     _sync_clock!(getfield(dst, :clock), getfield(src, :clock))
     return dst

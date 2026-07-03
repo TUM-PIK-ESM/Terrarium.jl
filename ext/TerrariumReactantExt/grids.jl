@@ -17,5 +17,7 @@ Terrarium.on_architecture(arch::RARCH, grid::ColumnRingGrid) =
     ColumnRingGrid(grid.rings, grid.mask, on_architecture(arch, grid.grid))
 
 Terrarium.on_architecture(arch::CPU, grid::ColumnRingGrid{<:Any, <:RARCH}) =
-    ColumnRingGrid(on_architecture(arch, grid.rings), on_architecture(arch, grid.mask),
-                   on_architecture(arch, grid.grid))
+    ColumnRingGrid(
+    on_architecture(arch, grid.rings), on_architecture(arch, grid.mask),
+    on_architecture(arch, grid.grid)
+)

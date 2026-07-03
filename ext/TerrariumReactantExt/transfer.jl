@@ -26,8 +26,10 @@ function Terrarium.initialize(
     # 1. CPU twin: same processes/params, CPU grid.
     cpu_model = rebuild_model(model, on_architecture(CPU(), device_grid))
     cpu_clock = isnothing(clock) ? Terrarium.Clock(time = zero(NF)) : on_architecture(CPU(), clock)
-    cpu_integrator = Terrarium.initialize(cpu_model, params;
-        clock = cpu_clock, inputs, boundary_conditions, initializers, fields)
+    cpu_integrator = Terrarium.initialize(
+        cpu_model, params;
+        clock = cpu_clock, inputs, boundary_conditions, initializers, fields
+    )
     # 2. Transfer the fully-initialized CPU integrator to the device.
     return to_device(cpu_integrator, model, boundary_conditions)
 end
@@ -39,7 +41,8 @@ function to_device(cpu_integrator, device_model::ReactantModel{NF}, boundary_con
     device_field_grid = get_field_grid(device_grid)
     device_clock = Oceananigans.TimeSteppers.Clock(device_field_grid)   # traced ConcreteRNumber clock
     inputs = cpu_integrator.inputs
-    device_state = StateVariables(device_model;
+    device_state = StateVariables(
+        device_model;
         clock = device_clock,
         input_variables = Terrarium.variables(inputs),
         boundary_conditions,
@@ -56,8 +59,10 @@ function copy_state_data!(dst, src)
         _copy_group!(getfield(dst, group), getfield(src, group))
     end
     for nsname in namespace_names(dst)
-        copy_state_data!(getproperty(getfield(dst, :namespaces), nsname),
-                         getproperty(getfield(src, :namespaces), nsname))
+        copy_state_data!(
+            getproperty(getfield(dst, :namespaces), nsname),
+            getproperty(getfield(src, :namespaces), nsname)
+        )
     end
     _copy_clock!(getfield(dst, :clock), getfield(src, :clock))
     return dst
