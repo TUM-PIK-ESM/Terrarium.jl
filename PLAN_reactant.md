@@ -112,6 +112,14 @@
 > 2. Root cause #2 (`llvm.intr.trap`): **SOLVED** — see "PHASE A EXECUTED" below.
 > 3. Compiled `run!`/`timestep!` wired through the ext; correctness `@test`s re-enabled.
 >
+> **CI: `.github/workflows/Reactant_CI.yml` added.** Runs the `test/reactant` suite on
+> ubuntu / Julia 1.12 for pushes + PRs to `main` (plus `workflow_dispatch`); skippable via
+> `skip-ci` / `skip-reactant-ci` PR labels; 90-min timeout (Reactant compile is minutes-scale,
+> heavily amortized by `julia-actions/cache`). Steps mirror SpeedyWeather's Reactant CI:
+> `Pkg.develop(path=".") + instantiate` into `test/reactant`, then run `runtests.jl`. Both steps
+> validated locally verbatim (fresh instantiate OK; suite 30/30). `test/reactant/Manifest.toml`
+> is already covered by the repo's global `Manifest*.toml` gitignore rule.
+>
 > **Two additional gotchas found while wiring the suite (document in the docs phase):**
 > - `using CUDA` is required in any Reactant driver script/env (Reactant's KernelAbstractions
 >   integration needs it even on CPU; without it, kernel launches fail with
@@ -235,10 +243,17 @@ check as a trap and make raising impossible regardless.
 - **Repo sweep:** grep all kernel call graphs for `@assert`/`throw`/`error(`/`round(Int`/integer
   `div`/`mod` and fix what is on the SoilModel path now; list the rest in this plan for later
   phases (hydrology/vegetation/surface energy).
-- **Regression guard:** add a "raise-ability" unit test to `test/reactant/` (analogous to
-  Oceananigans' `test_reactant_unit.jl`): `@compile raise=true` each Terrarium kernel family
-  standalone, plus the `check_bounds == 0` assertion, so a future in-kernel assert/throw is caught
-  by CI at the kernel level with a readable failure, not at full-`timestep!` level.
+- **Regression guards:**
+  - `check_bounds` guard — **DONE**: `test/reactant/runtests.jl` now fails fast (~1.5 s, before
+    any package loading) with a readable error when run with `--check-bounds=yes` (which e.g.
+    `Pkg.test` forces by default), since forced bounds checks make every kernel un-raisable.
+    Verified in both modes.
+  - "Raise-ability" unit test — **OPTIONAL, deferred by decision (2026-07-03)**: `@compile
+    raise=true` each Terrarium kernel family standalone (analogous to Oceananigans'
+    `test_reactant_unit.jl`), so a future in-kernel assert/throw is caught at kernel granularity
+    with the culprit named, instead of as an opaque full-`timestep!` MLIR error. Not needed while
+    the end-to-end suite covers the active kernel set; revisit when enabling further process
+    families (hydrology RRE, vegetation, surface energy) under Reactant.
 - **AGENTS.md:** extend the kernel rules with the concrete Reactant rationale: no reachable throw
   paths (including `@assert` and un-elided bounds checks) in kernels — they lower to
   `llvm.intr.trap`, which cannot be raised to StableHLO.
