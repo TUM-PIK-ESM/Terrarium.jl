@@ -96,15 +96,29 @@
 > - Ready to merge: PR2 `ifelse` refactors (verified), `test/reactant/` infra,
 >   `TerrariumReactantExt` (construction/init verified).
 >
-> **Immediate next steps (Terrarium-side, no upstream dependency for the uniform case):**
-> 1. Make `ColumnGrid`/`ColumnRingGrid` emit range-`z` for uniform spacing (unblocks the grid arg).
->    **DONE:** `z_coordinates(NF, spacing)` in `vertical_discretization.jl` — `Vector` fallback,
->    `range` specialization for `UniformSpacing`; both grid constructors now use it. Test registry
->    switched to `UniformSpacing` configs; `@test_broken` flipped back to `@test`.
-> 2. Eliminate the `llvm.intr.trap` in the soil-energy kernels (root cause #2) → first fully
->    working compiled `timestep!`. **DONE** — see "PHASE A EXECUTED" below.
-> 3. Then wire the compiled `run!`/`timestep!` recipe (`raise=true raise_first=true sync=true`,
->    optional `@trace for`) and re-enable the correctness `@test`s.
+> **MILESTONE (2026-07-03): full correctness suite GREEN — 30/30.**
+> `julia --project=test/reactant test/reactant/runtests.jl` passes for both registry configs
+> (`:soil_heat_column` and `:soil_heat_global` on `ColumnRingGrid` with a function surface BC):
+> initialization + 10 compiled steps + clock, CPU vs Reactant, diffs at Float32 rounding level
+> (max rel ~1e-7). The user API is exactly the CPU one — only the architecture differs.
+>
+> **Immediate next steps — all DONE:**
+> 1. Uniform-spacing `z` fix: `z_coordinates(NF, spacing)` in `vertical_discretization.jl` —
+>    `Vector` fallback, **2-tuple `(-depth, 0)`** specialization for `UniformSpacing`; both grid
+>    constructors use it. Registry switched to `UniformSpacing`; `@test_broken` → `@test`.
+>    ⚠️ Nuance: passing an explicit `AbstractRange` z is NOT enough — Oceananigans materializes
+>    it into coordinate arrays (→ untraceable, root cause #1 again); only the **tuple** form
+>    yields `StepRangeLen` coordinates. CPU regression: 305/305 green with the tuple form.
+> 2. Root cause #2 (`llvm.intr.trap`): **SOLVED** — see "PHASE A EXECUTED" below.
+> 3. Compiled `run!`/`timestep!` wired through the ext; correctness `@test`s re-enabled.
+>
+> **Two additional gotchas found while wiring the suite (document in the docs phase):**
+> - `using CUDA` is required in any Reactant driver script/env (Reactant's KernelAbstractions
+>   integration needs it even on CPU; without it, kernel launches fail with
+>   `MethodError: ka_with_reactant(::Nothing, …)`).
+> - Boundary-condition closures must capture only **isbits** values: capturing `NF` (a
+>   `Type{Float32}`) makes the BC function a non-bitstype kernel argument. Hoist all
+>   constants (`amplitude = NF(5)` etc.) out of the closure.
 >
 > **TODO (deferred, tracked): non-range `z` / `ExponentialSpacing` under Reactant.**
 > Stretched vertical grids (`ExponentialSpacing`, `PrescribedSpacing`) require array-valued

@@ -9,6 +9,7 @@
 
 using Terrarium
 using Reactant
+using CUDA   # required by Reactant's KernelAbstractions integration, even on CPU
 using Test
 
 # Tolerances: XLA reorders floating-point ops, so exact equality is not expected. Start loose

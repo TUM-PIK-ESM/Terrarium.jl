@@ -42,9 +42,11 @@ function build_model(::Val{:soil_heat_global}, arch, NF)
     grid = ColumnRingGrid(arch, NF, UniformSpacing(Δz = NF(0.2), N = 20), rings)  # default all-active mask
     model = SoilModel(grid)
 
-    seconds_per_day = NF(24 * 3600)
-    # smooth surface forcing as a function of column index x and time t (no indexed lookup)
-    surface_temperature(x, t) = NF(5) * sin(NF(2π) * t / seconds_per_day) * cos(NF(x))
+    # smooth surface forcing as a function of column index x and time t (no indexed lookup);
+    # the closure must capture only isbits values (no NF::Type!) to be a valid kernel argument
+    amplitude = NF(5)
+    ω = NF(2π) / NF(24 * 3600)
+    surface_temperature(x, t) = amplitude * sin(ω * t) * cos(x)
     bcs = PrescribedSurfaceTemperature(:T_ub, surface_temperature)
 
     # smooth, deterministic initial temperature profile
