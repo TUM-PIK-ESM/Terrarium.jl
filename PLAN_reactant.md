@@ -1,0 +1,519 @@
+# Plan: Reactant-compatible Terrarium
+
+> **Execution status (living section — updated as work proceeds).**
+> Branch: `mg/reactant-compat`. Nothing committed yet (awaiting explicit request).
+>
+> **Done & verified**
+> - **PR2 (`ifelse` rewrites):** rewrote the value-dependent conditionals in
+>   `soil_energy_closures.jl` (`liquid_water_fraction`, `energy_to_temperature`),
+>   `kernel_utils.jl` (`findfirst_z`), and `canopy_interception.jl` (saturation fraction) to
+>   branchless `ifelse`. Verified behavior-preserving: existing soil-energy + canopy tests pass
+>   (38/38). Deferred with markers: RRE double-write (`soil_hydrology_rre.jl`), the
+>   type-unstable `Ice()/Liquid()` phase ternary, and the fixed-point `while` loop.
+> - **PR1 (test infra):** `test/reactant/` created with its own `Project.toml`
+>   (Reactant 0.2.270, Oceananigans 0.110.7), `runtests.jl`, `setup.jl` (model registry:
+>   `:soil_heat_column`, `:soil_heat_global`), and `correctness.jl` (state sync, per-field
+>   comparison, `test_model`). Instantiated successfully.
+> - **Enabling change:** `ReactantState` re-exported from `Terrarium`; `Reactant` added to
+>   `[weakdeps]`/`[extensions]`/`[compat]` in the root `Project.toml`.
+> - **Phase 0 spike — findings (the important part):**
+>   1. Model/grid/state **construction on `ReactantState` works**; fields become
+>      `ConcretePJRTArray`-backed.
+>   2. **Eager KA kernel launches fail** on `ReactantBackend` (bare `launch!` outside a compile
+>      context) — so `initialize!`'s eager `fill_halo_regions!` cannot run on the device.
+>      → Design decision: **build + initialize on CPU, then transfer to device**; only
+>      `timestep!` is compiled.
+>   3. Transfer primitive: `Oceananigans.on_architecture(ReactantState(), x)` (NOT
+>      `adapt(array_type, x)` — that strips the `Field` wrapper and sets grid arch to
+>      `Nothing`). Verified it preserves `Field`s and gives concrete device arrays.
+>   4. The land-grid `on_architecture` must transfer the **inner** `RectilinearGrid` (which
+>      keeps `arch = ReactantState`) and rewrap — the generic land-grid fallback uses `adapt`
+>      and yields a `Nothing`-arch grid whose field allocation calls `zeros(Nothing, …)`.
+>   5. Rebuilding a model with a swapped grid must go through the type's `wrapper` (UnionAll)
+>      constructor to **re-infer type parameters** — `setproperties` keeps the old concrete
+>      params and errors trying to `convert` the device grid to the CPU grid type.
+>   6. With the CPU-build→device-transfer path, a full reactant integrator constructs and syncs,
+>      and **`@compile timestep!` enters tracing** (fields become `TracedRNumber`).
+>   7. `TerrariumReactantExt` fully drafted: `on_architecture` grid transfer (grids.jl),
+>      build-on-CPU→transfer `initialize` (transfer.jl), compiled+cached `timestep!`/`run!`
+>      (integrator.jl). **Initialization correctness passes** for `:soil_heat_column` (initial
+>      CPU vs device states match, 7/7) — so the whole construct→transfer→sync pipeline is
+>      correct. `CUDA` must be loaded in the test env (KA↔Reactant glue); added to
+>      `test/reactant/Project.toml`.
+>
+> **CORRECTED DIAGNOSIS (supersedes the earlier "hard upstream blocker" framing).**
+> After studying Oceananigans' own Reactant tests (`Oceananigans/test/reactant_test_utils.jl`,
+> `test_reactant.jl`, `test_reactant_single_column_models.jl`) and **running their patterns in our
+> exact env**, the version combo (Oceananigans 0.110.7 + Reactant 0.2.270 + CUDA loaded) is **not
+> broken**: native `HydrostaticFreeSurfaceModel`s on `RectilinearGrid` compile and time-step
+> correctly. So the blocker is **Terrarium-side and specific**, layered as follows.
+>
+> **What the working Oceananigans setups do** (adopt these):
+> - Build the model **natively on the device** (`GridType(ReactantState(); …)`), set ICs, then
+>   `@jit update_state!` and `@compile sync=true first_time_step!/time_step!`; the single-column
+>   test uses `@compile raise=true raise_first=true sync=true` around a
+>   `@trace track_numbers=false for _ in 1:Nt; time_step!(model, Δt); end` loop
+>   (`run_timesteps!`), and drives first-vs-subsequent steps via a host loop (`r_run!`).
+> - Correctness is checked by building the *same* model on CPU and on device, `set!`-ing the same
+>   ICs, running both, and comparing `interior(...)` with `≈` (our `test/reactant/` mirrors this).
+> - Key knobs: `Reactant.set_default_backend("cpu"/"gpu")`, `@compile … sync=true`,
+>   `raise=true raise_first=true`, `@trace … for` for the step loop, `ConcreteRNumber` step counts.
+>
+> **Root cause #1 — array vertical coordinates (SOLVED for the uniform case).**
+> A `RectilinearGrid` whose vertical coordinates are an explicit **array** (Terrarium's `ColumnGrid`
+> always builds `z` via `vcat(...)` → a `Vector`, for *all* spacings incl. uniform) fails Reactant
+> kernel tracing: the coordinate arrays are not converted to `CuTracedArray` and
+> `_check_no_traced_in_kernel_arg` rejects the grid argument to the halo kernel.
+> - Isolated with **bare Oceananigans**: identical `HydrostaticFreeSurfaceModel` compiles with a
+>   regular-range `z=(-200,0)` (StepRangeLen coords) but **fails** with an explicit `z`-vector.
+>   Matches the ext's own note that `RectilinearGrid` "retains StepRangeLen coordinates which
+>   sidestep the CuTracedArray VX type constraint" (i.e. array-coord RG is unsupported upstream).
+> - **Fix:** have `ColumnGrid`/`ColumnRingGrid` pass a **range** `z` to `RectilinearGrid` when the
+>   spacing is uniform. Confirmed this removes the grid-argument error end-to-end. Non-uniform
+>   spacings (`ExponentialSpacing`, `PrescribedSpacing`) inherently need array `z` → remain blocked
+>   on an upstream Oceananigans fix (report: array-coord `RectilinearGrid` under Reactant).
+>
+> **Root cause #2 — Terrarium kernels emit `llvm.intr.trap` (CURRENT FRONTIER).**
+> With a range-`z` grid, tracing gets past the grid/halo stage and now fails while *raising* the
+> Terrarium compute kernels to StableHLO:
+> `error: cannot raise op to stablehlo "llvm.intr.trap"`, on
+> `gpu_energy_to_temperature_kernel!` and `gpu_compute_tendencies_kernel!`. A `trap` comes from a
+> residual bounds check / error path / possibly-throwing op in the kernel call graph (Oceananigans'
+> own kernels raise cleanly, so Terrarium's have an eliminable trap source — candidates: bounds
+> checks on the `ground_temperature` `@view`, a `convert`/division that can throw, or a missing
+> `@inbounds`/`@propagate_inbounds` on a callee). Next step: bisect which op in
+> `energy_to_temperature!`/`compute_energy_tendency` emits the trap and remove it.
+>
+> **Status of dependency facts (still true):** our stack forces Reactant `≥0.2.243`
+> (RingGrids ≥0.1.5); viable window `[0.2.243, 0.2.270]`; 0.2.243 segfaulted on the *isolated*
+> `fill_halo_regions!` probe (a non-representative pattern — ignore), 0.2.270 is what we use.
+>
+> **Decision (user): report upstream + land safe pieces — done, and refined:**
+> - `test/reactant/` suite is CI-safe: initialization comparison passes; device time-stepping is
+>   wrapped `@test_broken` (flips to "Unexpectedly Pass" once #2 is fixed).
+> - `REACTANT_upstream_issue.md` retargeted to the *precise* upstream gap (array-coord
+>   `RectilinearGrid` under Reactant) — only relevant for non-uniform spacings.
+> - Ready to merge: PR2 `ifelse` refactors (verified), `test/reactant/` infra,
+>   `TerrariumReactantExt` (construction/init verified).
+>
+> **Immediate next steps (Terrarium-side, no upstream dependency for the uniform case):**
+> 1. Make `ColumnGrid`/`ColumnRingGrid` emit range-`z` for uniform spacing (unblocks the grid arg).
+> 2. Eliminate the `llvm.intr.trap` in the soil-energy kernels (root cause #2) → first fully
+>    working compiled `timestep!`.
+> 3. Then wire the compiled `run!`/`timestep!` recipe (`raise=true raise_first=true sync=true`,
+>    optional `@trace for`) and re-enable the correctness `@test`s.
+
+**Goal:** run Terrarium models through [Reactant.jl](https://github.com/EnzymeAD/Reactant.jl)
+(tracing → MLIR/StableHLO → XLA) with the architecture as the *only* user-facing knob:
+
+```julia
+grid = ColumnRingGrid(ReactantState(), Float32, ExponentialSpacing(N = 30), rings, mask)
+model = SoilModel(grid)
+integrator = initialize(model; boundary_conditions, initializers)
+run!(integrator, period = Hour(12), Δt = 600.0)   # transparently compiled + executed by XLA
+```
+
+Everything else — `Reactant.to_rarray`, `@compile`, traced clocks, the compiled step cache —
+stays hidden inside a package extension, following the Oceananigans and SpeedyWeather precedents.
+
+---
+
+## 1. Background: how the two reference implementations work
+
+### 1.1 Reactant in one paragraph
+
+Reactant *traces* a Julia function call with `TracedRArray` arguments into an MLIR module and
+compiles it with XLA (`@compile f(args...)` returns a compiled callable; `@jit` compiles + runs).
+Data lives in `ConcreteRArray`s (device buffers); scalars are compile-time constants unless
+converted with `to_rarray(x; track_numbers = true)` → `ConcreteRNumber`. During tracing, ordinary
+Julia control flow is *executed*, so:
+
+- `if`/`&&`/`? :` on a **traced value** throws (`TracedRNumber{Bool}` cannot be `Bool`-converted) →
+  must become `ifelse` (both branches evaluated, same result type) or `@trace if` (compiled to
+  `stablehlo.if`).
+- loops with static bounds are **unrolled** at trace time; `@trace for` compiles a real
+  `stablehlo.while` loop instead (supports `checkpointing = ...` for AD).
+- `while` loops with value-dependent exit conditions cannot be traced as-is.
+- Type instabilities in the traced call graph fail or silently freeze the traced branch.
+
+`ReactantCore` is a tiny package providing `@trace` (no-op without Reactant loaded) — Oceananigans
+carries it as a *hard* dependency and keeps `Reactant` itself as a weakdep.
+
+### 1.2 Oceananigans (v0.110.5, already in our Manifest)
+
+This is the big win for Terrarium: **most of the machinery we need already exists** in the
+Oceananigans we build on.
+
+- `ReactantState <: AbstractSerialArchitecture` is defined and exported by the *main* package
+  (`Oceananigans.Architectures`); it works everywhere an architecture is accepted.
+- `OceananigansReactantExt` (activated by loading `Reactant`) provides:
+  - `architecture`/`array_type`/`on_architecture` for Reactant arrays
+    (`on_architecture(::ReactantState, ::Array) = Reactant.to_rarray(a)`),
+  - grid construction/transfer for `RectilinearGrid` etc. (incl. `Reactant.traced_type_inner`
+    rules and `ConstructionBase.constructorof` so grids can be re-materialized with traced
+    type parameters),
+  - `Field` support: `set_to_function!`/`set_to_field!` take a CPU detour (build the field on a
+    CPU grid, then `copyto!` into the Reactant field) because some KA kernels don't trace yet,
+  - `Clock` handling: `Clock(grid::ReactantGrid)` stores `time`/`iteration`/`last_Δt` as
+    `ConcreteRNumber`s; `tick!`/`tick_time!` overloads for `Clock{<:TracedRNumber}` mutate
+    `.mlir_data` in place,
+  - time stepping: `first_time_step!`, `time_step_for!(sim, N) = @trace for _ in 1:N ...`, and
+    `run!(::ReactantSimulation) = error(...)` (Oceananigans deliberately does **not** make its
+    high-level `run!` work — a lesson for us: our own `run!` must be overridden in the ext),
+  - KernelAbstractions kernels trace via Reactant's `ReactantKernelAbstractionsExt`
+    (`launch!` works, with known gaps, e.g. `interpolate!`'s kernel — Reactant.jl#2364).
+
+### 1.3 SpeedyWeather (PR [#970](https://github.com/SpeedyWeather/SpeedyWeather.jl/pull/970) merged 2026-03, PR [#985](https://github.com/SpeedyWeather/SpeedyWeather.jl/pull/985) follow-up)
+
+SpeedyWeather had to build its own architecture type (`ReactantDevice{D}` in
+`SpeedyWeatherInternals.Architectures`) because it doesn't sit on Oceananigans. What we take from
+it is the *workflow*, not the plumbing:
+
+- **`SpeedyWeatherReactantExt`**: `time_stepping!(sim, r_time_step! = nothing)` — compiles
+  `time_step!` on the fly if no precompiled function is passed, then runs a plain host loop
+  calling the compiled step (`@trace for` is commented out pending upstream fixes). A
+  Reactant-aware `Clock` constructor uses `to_rarray(...; track_numbers = true)`.
+- **`@maybe_jit arch expr`**: expands to `_jit(arch, f, args...; kwargs...)`; the default `_jit`
+  just calls `f`, the ext overloads it for `ReactantDevice` to `@jit`, and it detects nested
+  compile contexts (`within_compile()`) so an inner `@maybe_jit` inside an outer trace is a
+  no-op. This is how "minimal user contact" is achieved.
+- **`test/reactant/` correctness suite** (own `Project.toml`, separate CI workflow
+  `CI_Reactant_Correctness.yml`, *not* part of the default test run):
+  - `setup.jl`: `create_cpu_model(ModelType)` / `create_reactant_model(ModelType)` — same
+    configuration, different architecture;
+  - `sync_variables!(sim_cpu, sim_reactant)`: recursive copy of all variables Reactant → CPU so
+    both start from bit-identical state;
+  - `compare_arrays(nt_cpu, nt_reactant; rtol, atol)`: walks NamedTuples, reports
+    max/mean abs/rel differences per variable + `isapprox` verdict;
+  - `test_tendencies!` (one step, compare tendencies) and `test_time_stepping!`
+    (N steps, compare prognostic + diagnostic variables and the clock);
+  - `test_model(ModelType; trunc, nsteps, rtol, atol)` orchestrates the above per model type —
+    this is the "flexible over models" pattern we're asked to reproduce;
+  - tolerances `RTOL = 1e-3`, `ATOL = 1e-8` at Float32 (XLA reorders floating-point math, so
+    bitwise equality is not achievable).
+- PR #985 shows the long tail: dozens of small `if → ifelse` rewrites and constructor
+  parametrizations across parameterizations. Expect the same shape of work in Terrarium's
+  process library.
+
+### 1.4 Design conclusion
+
+Terrarium re-exports Oceananigans architectures and builds all state on Oceananigans `Field`s,
+grids, `launch!`, and `Clock`. So unlike SpeedyWeather we do **not** define our own architecture
+type: we adopt **`Oceananigans.ReactantState`** directly (already re-exportable through our
+existing `export CPU, GPU` line) and inherit `OceananigansReactantExt` wholesale. Our own
+`TerrariumReactantExt` only has to cover what Terrarium adds on top: the land grids, the
+`ModelIntegrator`/`run!` loop, the clock default, and trace-safety of our kernels.
+
+---
+
+## 2. Current-state audit of Terrarium
+
+What the survey of `src/` found, mapped to the three work categories from the task.
+
+### 2.1 Type parametricity — mostly already there
+
+Good news: the core containers are fully parametric and concretely typed already
+(`StateVariables{NF, names..., Fields..., Cache, ClockType}`, `ModelIntegrator{NF, Arch, Grid,
+TimeStepper, Model, StateVars, ClockType, ...}`, `SoilModel{NF, GridType, Soil, Initializer,
+Timestepper}`, `ColumnGrid`/`ColumnRingGrid{NF, Arch, ...}`, all process structs). Remaining
+items:
+
+| Item | Location | Action |
+|---|---|---|
+| `StateVariables` `constructorof` returns a closure | `src/state_variables.jl:69` | Verify Reactant's `make_tracer` can rebuild it; likely needs an explicit `Reactant.traced_type_inner` rule in the ext (pattern: OceananigansReactantExt's rules for `RectilinearGrid` and friends) since `NF` and the name tuples are type parameters |
+| `ColumnGrid` / `ColumnRingGrid` | `src/grids/` | May need `traced_type_inner` + `make_tracer_via_immutable_constructor` rules in the ext (the wrapped `RectilinearGrid` is already covered upstream) |
+| `Clock` created as `Clock(time = zero(NF))` | `src/state_variables.jl`, `src/timesteppers/model_integrator.jl:200` | Introduce an architecture-dispatched `default_clock(grid)` so the ext can return the `ConcreteRNumber`-backed clock (§3, Phase B) |
+| `on_architecture(arch, grid::AbstractLandGrid) = adapt(array_type(arch), grid)` | `src/grids/grids.jl:25` | `adapt`-based transfer won't produce `ConcreteRArray`s; route through `on_architecture` recursion instead (upstream ext pattern) |
+
+Process parameter structs (e.g. `SoilThermalProperties{NF}`) hold plain `NF` scalars. Under
+tracing these become **compile-time constants** — fine for forward runs (changing a parameter
+merely recompiles); revisit with `track_numbers = true` when we want parameter
+gradients/estimation through Reactant (out of scope here, see §6).
+
+### 2.2 Runtime conditionals and ternaries — enumerated
+
+Only 13 ternaries exist in `src/`; most branch on *types* (`isnothing(...)` on process fields),
+which is resolved at trace time and fine. The value-dependent ones, plus `if`/`while` blocks that
+matter, in priority order:
+
+**Blocking for phase-1 target (SoilModel, heat conduction only):**
+
+1. `src/processes/soil/energy/soil_energy_closures.jl:135-144` — `liquid_water_fraction(::FreeWater, ...)`:
+   `if U >= zero(U) ... else ...` → single `ifelse` expression (both branches are same-type
+   scalars; the `else` branch is already branchless).
+2. `src/processes/soil/energy/soil_energy_closures.jl:150-163` — `energy_to_temperature(::FreeWater, ...)`:
+   `if/elseif/else` → nested `ifelse` (the branchless one-liner is already sketched in a comment).
+3. `src/timesteppers/abstract_timestepper.jl:147-167` — `explicit_step!` filtering
+   `if name ∈ names`: symbols/tuples only ⇒ resolved at trace time, **no change needed**
+   (same for the equivalent branches in `heun.jl`).
+4. `src/diagnostics/debugging.jl` — `debugsite!` branches on the global `DEBUG::Bool`: not traced,
+   fine when `false`; `checkfinite!` (`any(!isfinite, ...) && error(...)`) **cannot** run under
+   tracing. Action: document that debug mode is unsupported with `ReactantState`, and short-circuit
+   `debugsite!`/`checkfinite!` for Reactant fields in the ext so an enabled debug flag degrades
+   gracefully instead of throwing mid-trace.
+
+**Needed for later phases (hydrology / surface energy / vegetation):**
+
+5. `src/processes/soil/hydrology/soil_hydrology_rre.jl:162-164` — `if k <= 1 ... elseif k >= Nz`:
+   branches on the KA index, which is traced under Reactant's KA path → rewrite with `ifelse`.
+6. `src/utils/kernel_utils.jl:7-16` — `findfirst_z`: `if idx < 0 && cond(...)` inside the loop and
+   a trailing ternary → branchless rewrite (`idx = ifelse((idx < 0) & cond, k, idx)`, return via
+   `ifelse`).
+7. `src/processes/physics_utils.jl:42` — `phase = T <= zero(T) ? Ice() : Liquid()`: branches on a
+   value *and* returns different **types** — `ifelse` can't fix this. Restructure: evaluate the
+   Thermodynamics call for both phases and `ifelse`-blend the scalars, or use a phase-free
+   formulation. (Used by surface energy balance, not by the phase-1 soil model.)
+8. `src/processes/surface_hydrology/canopy_interception/canopy_interception.jl:92` —
+   `w_can_max > 0 ? ... : zero(NF)` → `ifelse` (guard the division with `safediv`).
+9. `src/solvers/fixed_point.jl:47-55` — `while abs(x₁-x₀) > tol && iter <= max_iterations` inside
+   a kernel (used by `skin_temperature.jl`), similarly `src/solvers/root_solvers.jl` /
+   RootSolvers.jl: value-dependent `while` is the hardest category. Options, in order of
+   preference: (a) fixed-iteration `for` loop with a converged mask
+   (`x = ifelse(converged, x, update)`) — trace-unrollable and branch-free; (b) `@trace while`
+   once upstream support is solid; (c) exclude models using implicit skin temperature from
+   Reactant support initially. Decide when we reach the LandModel phase.
+
+**Host-side control flow (fine as-is):** `run!`'s `for _ in 1:steps` loop, `get_steps`
+(`Dates.Period` arithmetic), `initialize` (documented as type-unstable, runs once outside the
+trace), `update_inputs!` scope matching (`if matches_scope(...)` — static), `Base.getproperty`
+name dispatch on `StateVariables` (symbol comparisons, resolved at trace time).
+
+### 2.3 Structural pieces that need ext support
+
+- **`run!(integrator::ModelIntegrator; ...)`** (`model_integrator.jl:88`) and
+  **`timestep!(integrator, Δt)`**: the ext must intercept these for Reactant architectures,
+  compile the step once, and drive a host loop (SpeedyWeather pattern; Oceananigans errors out of
+  its `run!` instead — we want ours to *work*).
+- **Clock**: `tick!` on a plain `Clock{Float64}` mutates a plain float — invisible to the compiled
+  program. With the `ConcreteRNumber` clock from `OceananigansReactantExt` + its traced `tick!`,
+  time advances *inside* the compiled step. Needs the `default_clock(grid)` hook (§2.1).
+- **`ColumnRingGrid` construction**: builds a `RectilinearGrid(arch, ...)` (covered upstream) but
+  also calls `on_architecture(arch, rings)` / `(arch, mask)`. The rings/mask are only used for
+  CPU-side pre/post-processing (mask indexing in `RingGrids.Field` conversion, `sum(mask)` at
+  construction) — keep them on the **CPU** under `ReactantState` (mirrors how the land-sea mask is
+  deliberately kept on CPU in the GPU example). RingGrids ≥ the version with
+  `RingGridsReactantExt` (from SpeedyWeather PR #970) would also allow device transfer, but we
+  don't need it in kernels.
+- **Output/diagnostics path** (`RingGrids.Field(arch, field, grid)`, plotting, `JLD2Writer`): all
+  logical-mask indexing — must materialize with `Array(...)`/`on_architecture(CPU(), ...)` first.
+  Not needed for correctness tests; document as a known limitation initially.
+- **Boundary conditions**: `PrescribedSurfaceTemperature(:T_ub, f)` with `f(x, t)` a smooth
+  function traces through `getbc`/`compute_z_bcs!` like any Oceananigans BC. The
+  `soil_heat_global.jl` BC additionally does `lon_device[round(Int, x)]` — a traced integer gather;
+  should lower to `stablehlo.gather` but is a known risk (§5). The correctness test starts with the
+  purely functional variant.
+
+---
+
+## 3. Implementation plan
+
+Phased so that every phase lands as one focused PR with green CI (ColPrac / AGENTS.md rule 12).
+
+### Phase 0 — Spike (no PR, throwaway branch)
+
+Timebox: a day. In a scratch environment with `Reactant` + current Terrarium:
+
+1. `grid = ColumnGrid(ReactantState(), Float32, ExponentialSpacing(N = 10))` → catalog what breaks
+   in grid construction and `StateVariables` allocation.
+2. `@code_hlo` / `@jit timestep!(integrator, Δt)` on the phase-1 model with items 2.2.1–2.2.2
+   patched locally → catalog tracing failures (this tells us whether our KA kernels trace at all,
+   the single biggest unknown, cf. Reactant.jl#2364).
+3. Record findings in `PROGRESS_reactant.md`; adjust the phase ordering below if the spike
+   surfaces a structural blocker (e.g. `launch!` on our wrapped grids not tracing).
+
+**Exit criterion:** we know the exact error list between us and a compiled `timestep!`.
+
+### Phase A — Correctness-test infrastructure (test-first, as requested)
+
+New directory `test/reactant/` with its **own Project.toml** (Reactant must not enter the root
+`[deps]`; the main `Pkg.test()` run stays Reactant-free):
+
+```
+test/reactant/
+├── Project.toml        # Terrarium (dev'd), Reactant, Oceananigans, RingGrids, Test, Statistics
+├── runtests.jl         # config: NF, NSTEPS, RTOL/ATOL; includes the files below
+├── setup.jl            # model registry: build (model, bcs, initializers, Δt) per ModelType & arch
+└── correctness.jl      # generic comparison machinery + test_model entry point
+```
+
+Design (generalizing `SpeedyWeather/test/reactant/`, made flexible across Terrarium models):
+
+- **Model registry** — one method per tested configuration, keyed by a symbol or config type so
+  new models are added by adding a method, nothing else:
+
+  ```julia
+  # returns everything `initialize` needs; arch is the only degree of freedom
+  function build_model(::Val{:soil_heat_global}, arch, NF)
+      rings = RingGrids.FullGaussianGrid(...)   # small synthetic grid, e.g. N24
+      mask  = <deterministic synthetic land mask>          # no NetCDF inputs in CI
+      grid  = ColumnRingGrid(arch, NF, ExponentialSpacing(N = 20), rings, mask)
+      model = SoilModel(grid)
+      bcs   = PrescribedSurfaceTemperature(:T_ub, (x, t) -> ...)  # smooth sinusoidal fn of x, t
+      inits = (temperature = (x, z) -> ...,)
+      return (; model, boundary_conditions = bcs, initializers = inits, Δt = NF(600))
+  end
+  ```
+
+  First registered configs: `:soil_heat_column` (single `ColumnGrid` column — the minimal
+  debugging target) and `:soil_heat_global` (the requested `ColumnRingGrid` setup from
+  `examples/simulations/soil_heat_global.jl`, with the file-based ERA5 mask replaced by a
+  synthetic one and the array-lookup BC replaced by a pure function of `(x, t)` initially).
+  Later: `:soil_energy_water` (hydrology on), `:land_column` (full LandModel).
+
+- **State sync** — `sync_state!(integrator_cpu, integrator_reactant)`: copy every prognostic,
+  auxiliary, and input `Field` (recursing into namespaces, reusing the traversal already in
+  `Base.copyto!(::StateVariables, ::StateVariables)`) via `copyto!(interior(dst),
+  Array(interior(src)))`, plus clock fields. Ensures both integrators step from identical state
+  regardless of who was initialized first.
+
+- **Comparison** — `compare_states(cpu, reactant; rtol, atol)` walks the three variable groups +
+  namespaces and returns `Dict{Symbol, NamedTuple}` of
+  `(max_abs_diff, mean_abs_diff, max_rel_diff, mean_rel_diff, matches)` exactly like SpeedyWeather's
+  `compare_arrays`, printed in the test log for diagnosis.
+
+- **Tests per model** (mirroring `test_tendencies!` / `test_time_stepping!`):
+  1. *Initialization*: `initialize(model, ...)` on both architectures → compare initial state.
+  2. *Tendencies*: sync, one `update_state!` (compiled on the Reactant side) → compare
+     `state.tendencies`.
+  3. *Time stepping*: sync, `NSTEPS` steps (compiled `timestep!` in a host loop vs plain CPU
+     `run!`) → compare prognostic + auxiliary variables and clock time/iteration.
+  - Tolerances as constants in `runtests.jl` (start `RTOL = 1e-3`, `ATOL = 1e-8` at Float32,
+    tighten empirically — pure heat conduction should be far less noisy than a spectral
+    atmosphere).
+
+- Until Phase C lands, the Reactant side can be exercised with an explicit
+  `r_step! = @compile timestep!(integrator, Δt)` inside the test helper — i.e. the tests are
+  written **against the target user API but with a temporary local compile shim**, so this phase
+  can merge before the ext exists (marked `@test_broken`/skipped in CI until Phase C).
+
+### Phase B — `TerrariumReactantExt`: construction path (everything outside the trace)
+
+- `Project.toml`: add `Reactant` to `[weakdeps]` + `TerrariumReactantExt = "Reactant"` to
+  `[extensions]` (+ `[compat] Reactant = "0.2.x"` matching Oceananigans' bound). *No change to
+  `[deps]`* — `ReactantCore` (for `@trace` in `src/`) is deliberately deferred until something in
+  `src/` actually needs it; so far all traced-loop code lives in the ext where full Reactant is
+  available (AGENTS.md rule 13).
+- `ext/TerrariumReactantExt/` skeleton (submodule files mirroring the upstream ext layout):
+  - `architectures.jl` — re-export/plumbing; `const ReactantLandGrid{NF} =
+    AbstractLandGrid{NF, <:ReactantState}` etc.
+  - `grids.jl` — `on_architecture(::ReactantState, ::ColumnGrid/::ColumnRingGrid)` (transfer the
+    wrapped `RectilinearGrid` via upstream ext; keep `rings`/`mask` on CPU); constructor path so
+    `ColumnRingGrid(ReactantState(), NF, spacing, rings, mask)` builds on CPU and transfers
+    (upstream `LatitudeLongitudeGrid(::ReactantState)` pattern); `traced_type_inner` /
+    `make_tracer` rules if the spike shows they're needed.
+  - `state_variables.jl` — `default_clock(grid::ReactantLandGrid)` returning the
+    `ConcreteRNumber`-backed clock via `Oceananigans` ext's `Clock(grid)`; any `set!`/initializer
+    fixes that don't already come from upstream `set_to_function!`.
+  - `diagnostics.jl` — no-op `debugsite!`/`checkfinite!` for Reactant fields.
+- `src/` hook: replace the two hardcoded `Clock(time = zero(NF))` defaults with
+  `default_clock(grid)` (default implementation preserves current behavior exactly).
+- **Milestone/tests:** phase-A "Initialization" tests pass — model + state construct on
+  `ReactantState`, fields are `ConcreteRArray`-backed, initializers applied, initial states match
+  CPU.
+
+### Phase C — Traced `timestep!` + hidden compilation (the core)
+
+- `src/` kernel-safety edits (each a tiny, behavior-preserving diff, testable by the *existing*
+  CPU suite):
+  1. `ifelse` rewrites 2.2.1, 2.2.2 (soil energy closures) — required for phase-1 model;
+  2. 2.2.5 (RRE boundary indices), 2.2.6 (`findfirst_z`), 2.2.8 (canopy interception) — same
+     pattern, do them in the same sweep since AGENTS.md already mandates `ifelse` in kernels and
+     these are pre-existing violations;
+  3. leave 2.2.7 (Thermodynamics phase) and 2.2.9 (fixed-point `while`) for the LandModel phase,
+     with `# TODO(reactant)` markers.
+- `ext/TerrariumReactantExt/integrator.jl`:
+  - `timestep!(integrator::ReactantIntegrator, Δt; finalize)` — look up / build the compiled step:
+
+    ```julia
+    r_step! = get!(COMPILED_STEPS, cache_key(integrator, Δt)) do
+        @compile timestep_core!(integrator, Δt)
+    end
+    r_step!(integrator, Δt)
+    ```
+
+    where `timestep_core!` is the existing `timestep!(integrator, timestepper, Δt)` +
+    `compute_auxiliary!` finalization, and `COMPILED_STEPS` is an ext-level `IdDict` keyed by
+    (integrator identity, Δt value) — Δt is a trace constant, so a new Δt recompiles (documented;
+    revisit with `ConcreteRNumber` Δt if it becomes annoying).
+  - `run!(integrator::ReactantIntegrator; steps, period, Δt)` — compute `steps` host-side
+    (unchanged `get_steps`), compile once, host loop `for _ in 1:steps r_step!(...) end`
+    (SpeedyWeather's proven pattern; upgrade to `@trace for` once upstream is reliable — keep the
+    switch in one function).
+  - `initialize!(integrator::ReactantIntegrator)` — ensure the init sequence (`reset!`,
+    `fill_halo_regions!`, user initializers, model initializer incl. the `invclosure!` kernel)
+    runs correctly; individual kernel launches here may be `@jit`-wrapped or run through a
+    one-shot compile — init is once-per-simulation, performance-irrelevant.
+- **Milestone/tests:** all Phase-A correctness tests green for `:soil_heat_column` and
+  `:soil_heat_global`; user-facing API identical to CPU.
+
+### Phase D — CI, docs, examples
+
+- `.github/workflows/CI_Reactant_Correctness.yml` (adapted from SpeedyWeather's): CPU-only runner,
+  Julia 1.11, `julia --project=test/reactant test/reactant/runtests.jl`; path-filtered or
+  label-triggered if runtime is heavy (Reactant compilation is minutes-scale).
+- `docs/src/reactant.md`: usage (change one line — the architecture), what happens under the hood,
+  limitations (no debug mode, recompile on Δt change, output writers need CPU materialization,
+  unsupported components list).
+- Extend `examples/simulations/soil_heat_global.jl` with a note or add a small
+  `soil_heat_global_reactant.jl` variant (optional, could be deferred).
+- AGENTS.md: add Reactant to the critical-rules section (no `while` on state values in kernels;
+  new value-conditionals must be `ifelse`; run `test/reactant` when touching kernels).
+
+### Phase E — Outlook (separate planning once C is green)
+
+1. **More models in the registry**: SoilModel with active hydrology (needs C-2 rewrites +
+   Richards-equation closures audit), `LandModel` (blocked on 2.2.7 + 2.2.9), vegetation.
+2. **Inputs**: `FieldTimeSeriesInputSource` under Reactant (time interpolation = traced gather;
+   or update inputs host-side between compiled steps — likely the pragmatic first cut).
+3. **Differentiation through Reactant** (`Enzyme.autodiff` on the compiled step — SpeedyWeather's
+   `differentation.jl` analog), connecting to the existing `test/differentiability` goals.
+4. **GPU/TPU via Reactant** (`Reactant.set_default_backend("gpu")`) — should be free once CPU
+   correctness holds; add a GPU CI job like SpeedyWeather's `test/GPU/reactant.jl`.
+5. **Performance benchmarking** vs. plain CPU/CUDA paths; `@trace for` step loops with
+   checkpointing.
+6. **Parameter tracking** (`track_numbers`) for parameter estimation without recompilation.
+
+---
+
+## 4. Deliverables / PR breakdown
+
+| PR | Contents | Merge gate |
+|---|---|---|
+| 1 | Phase A: `test/reactant/` infra (registry, sync, compare, test_model) with local compile shim | Runs locally; skipped/`test_broken` in default CI |
+| 2 | Phase C-1/2 `ifelse` rewrites in `src/` (no Reactant anywhere) | Existing full test suite green (pure refactor) |
+| 3 | Phase B ext skeleton + grids + clock + Project.toml weakdep | Phase-A init tests green |
+| 4 | Phase C integrator: compiled `timestep!`/`run!` + cache | Full `test/reactant` green |
+| 5 | Phase D: CI workflow + docs page + AGENTS.md | Docs build; CI job green |
+
+(3 and 4 may merge as one if the ext stays small.)
+
+---
+
+## 5. Risks & open questions (please review)
+
+1. **Do our KA kernels trace?** Biggest unknown; Oceananigans' own kernels do, but e.g.
+   `interpolate!` doesn't (Reactant.jl#2364). Our kernels are simple stencils but pass NamedTuples
+   of `Field`s/views (`ground_temperature` is a `@view field[:, :, Nz]`). → Phase 0 spike answers
+   this before we commit to the phasing.
+2. **`ContinuousBoundaryFunction` tracing** (`getbc` evaluating a Julia closure per boundary
+   point): expected to work for pure functions; the `round(Int, x)`-indexed lon/lat lookup from
+   `soil_heat_global.jl` is riskier (traced gather). Fallback: `Field`-valued BCs updated
+   host-side between steps.
+3. **Version churn**: Reactant moves fast (Oceananigans pins `0.2.236`); our Oceananigans compat
+   is `0.100–0.110` — the Reactant path should be gated on recent Oceananigans (0.110+) and we
+   should expect occasional upstream breakage. The separate test env isolates this from core CI.
+4. **Compiled-step cache** keyed by integrator identity: a user mutating the model between calls
+   (e.g. `initialize(integrator, params)`) gets a *new* integrator → new compile — correct but
+   potentially surprising (silent multi-second pause). Mitigation: `@info` on compile, like
+   SpeedyWeather.
+5. **Δt as trace constant**: `run!(...; Δt = 600.0)` then `Δt = 900.0` recompiles. Acceptable?
+   (Alternative: promote Δt to `ConcreteRNumber` from the start — slightly more ext code, avoids
+   recompiles, matches how Oceananigans handles `last_Δt`.)
+6. **Scope of "minimal user contact"**: is `run!`/`timestep!` coverage enough for v1, or must
+   `Simulation(integrator)` + output writers also work under Reactant? (Oceananigans currently
+   *errors* on `run!(::ReactantSimulation)`, so full `Simulation` support means going beyond
+   upstream; I propose: v1 = `run!`/`timestep!` on the integrator, `Simulation` documented as
+   unsupported.)
+7. **Where the correctness tests run**: separate `test/reactant` env + dedicated CI workflow
+   (SpeedyWeather model) vs. a `test_args=["reactant"]` group like the Enzyme tests. Plan assumes
+   the former (keeps Reactant out of `test/Project.toml`); flag if you prefer the latter.
