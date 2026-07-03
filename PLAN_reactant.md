@@ -98,10 +98,150 @@
 >
 > **Immediate next steps (Terrarium-side, no upstream dependency for the uniform case):**
 > 1. Make `ColumnGrid`/`ColumnRingGrid` emit range-`z` for uniform spacing (unblocks the grid arg).
+>    **DONE:** `z_coordinates(NF, spacing)` in `vertical_discretization.jl` — `Vector` fallback,
+>    `range` specialization for `UniformSpacing`; both grid constructors now use it. Test registry
+>    switched to `UniformSpacing` configs; `@test_broken` flipped back to `@test`.
 > 2. Eliminate the `llvm.intr.trap` in the soil-energy kernels (root cause #2) → first fully
->    working compiled `timestep!`.
+>    working compiled `timestep!`. **DONE** — see "PHASE A EXECUTED" below.
 > 3. Then wire the compiled `run!`/`timestep!` recipe (`raise=true raise_first=true sync=true`,
 >    optional `@trace for`) and re-enable the correctness `@test`s.
+>
+> **TODO (deferred, tracked): non-range `z` / `ExponentialSpacing` under Reactant.**
+> Stretched vertical grids (`ExponentialSpacing`, `PrescribedSpacing`) require array-valued
+> vertical coordinates, which currently fail Reactant kernel tracing inside Oceananigans
+> (coordinate arrays not adapted to `CuTracedArray`; isolated with bare Oceananigans — see
+> `REACTANT_upstream_issue.md`). This is deliberately **out of scope for the current push** and
+> will be tackled separately:
+> - file the upstream issue (`REACTANT_upstream_issue.md`) against Oceananigans.jl and track it;
+> - when picking it up: check whether newer Oceananigans/Reactant releases adapt
+>   `StaticVerticalDiscretization` arrays for kernel launch (the ext already does this for
+>   `LatitudeLongitudeGrid` — the fix pattern exists upstream);
+> - possible interim option if urgently needed: approximate stretched grids by conformal
+>   remapping on a uniform grid, or carry a local ext patch adapting the RG `z` arrays
+>   (type-piracy, last resort);
+> - once fixed, add an `ExponentialSpacing` config to the `test/reactant` registry so both
+>   coordinate representations stay covered.
+
+---
+
+## Root cause #2 investigation plan — `llvm.intr.trap` in soil-energy kernels
+
+**Symptom.** With a range-`z` grid, `@compile raise=true …` of the Terrarium step fails in the
+MLIR "raise to StableHLO" pass: `error: cannot raise op to stablehlo "llvm.intr.trap"`, with the
+failing functions named as `gpu_energy_to_temperature_kernel!` and
+`gpu_compute_tendencies_kernel!` (the soil-energy closure and tendency kernels).
+
+**Why traps appear (mechanism).** Under `raise=true`, ReactantCUDAExt compiles each
+KernelAbstractions kernel through the CUDA GPUCompiler pipeline to LLVM IR, then EnzymeJAX raises
+that IR to StableHLO. GPUCompiler lowers *every* Julia `throw` path — `@assert`, `BoundsError`
+from un-elided bounds checks, `InexactError` from `convert`/`round(Int, …)`, `DivideError` from
+integer `div`/`mod`, `error(...)` guard methods — to `llvm.intr.trap`. On a real GPU the trap is
+harmless unless triggered; but StableHLO has no trap, so **any reachable throw path in the kernel
+call graph, even one that never fires, hard-fails the raise**. (This is also why the kernels work
+on CUDA today.) Consequently the search is for *reachable throw sites*, not for actual errors.
+
+> **PHASE A EXECUTED — ROOT CAUSE #2 SOLVED (2026-07-03).**
+> - Neutralizing the `SoilVolume`/`MineralOrganic` inner-constructor asserts eliminated the trap:
+>   **first fully working Reactant-compiled `timestep!`** on the range-`z` uniform `ColumnGrid` —
+>   4 compiled steps via the ext's cached `run!`, traced clock advanced to 4, CPU-vs-Reactant
+>   `internal_energy` max abs diff 0.0625 on O(10⁶) values (rel ~1e-8), `isapprox = true`.
+> - An intermediate attempt to keep the asserts behind `@boundscheck` + `@propagate_inbounds`
+>   FAILED, with an instructive reason (from the MLIR debug locations): the tendency-kernel call
+>   chain passes through **Oceananigans' operators** (`∂zᵃᵃᶜ`, `δzᵃᵃᶜ`, `ℑzᵃᵃᶠ`), which are
+>   `@inline` but not `@propagate_inbounds` — the inbounds context is lost there, so the
+>   `@boundscheck` block survives and traps. Rule of thumb: **@boundscheck-gating cannot protect
+>   anything reached through Oceananigans operator functors.**
+> - **Final fix (implemented):** `SoilVolume` and `MineralOrganic` now have raw positional inner
+>   constructors (kernel path, no validation) and hand-written validating **keyword** constructors
+>   (host path; `@kwdef` replaced since Julia ≥1.12 forbids overwriting its generated method).
+>   All existing `@test_throws AssertionError` semantics preserved.
+> - **Bonus bug found & fixed by the widened test run:** the PR2 `findfirst_z` rewrite returned
+>   `ifelse(idx > 0, z_nodes[idx], z_nodes[n])` — `ifelse` evaluates *both* branches, so the
+>   not-found case (`idx = -1`) read `z_nodes[-1]` (BoundsError on CPU, silent OOB under
+>   `@inbounds` on GPU). Fixed by selecting the *index*, not the loads:
+>   `z_nodes[ifelse(idx > 0, idx, n)]`. Lesson for all ifelse rewrites: never index in an
+>   unselected branch.
+> - Verification: Reactant drive passes (above) AND 288/288 CPU tests (composition incl. assert
+>   throws, energy, full soil model incl. hydrology water-table path).
+
+### Phase A — confirm the prime suspect (static audit already done)
+
+A grep of the failing kernels' call graph found in-kernel `@assert`s — which already violate the
+AGENTS.md rule "No error messages … inside kernels":
+
+| Suspect | Where | Reached from |
+|---|---|---|
+| 3× `@assert` in `SoilVolume` inner constructor | `src/processes/soil/stratigraphy/soil_volume.jl:26-28` | `SoilVolume(por, sat, liq, solid)` built **per grid point** in `energy_to_temperature!`, `temperature_to_energy!`, and via `soil_volume(...)` in the thermal-conductivity chain of the tendency kernel — matches **exactly** the two failing kernels |
+| 1× `@assert` in `MineralOrganic` inner constructor | `soil_volume.jl:87` | `soil_matrix(i,j,k,…)` constructs the solid-phase struct per point in the same kernels |
+| 4× `@assert` in `SoilTexture` constructor | `soil_texture.jl:18-21` | likely host-only (model setup) — verify whether `soil_matrix` reconstructs textures per point |
+
+**Action A1 (decisive, ~1 h):** locally neutralize the `SoilVolume` + `MineralOrganic` asserts and
+recompile the two failing targets. Expected outcomes:
+- raise succeeds → root cause confirmed; go to Phase C (fix properly).
+- raise fails with a *different* trap location → repeat: the audit list above is ordered; continue
+  down it (then Phase B for anything non-obvious).
+
+**Environment guard (from Oceananigans' own unit tests):** assert `Base.JLOptions().check_bounds == 0`
+in the reactant test harness — running with `--check-bounds=yes` would materialize *every* bounds
+check as a trap and make raising impossible regardless.
+
+### Phase B — systematic localization (only if Phase A is insufficient)
+
+1. **Tight iteration harness** (`scratchpad/trap_bisect.jl`): compile each kernel family
+   *separately* against the range-`z` reactant integrator — `closure!` (energy→temperature),
+   `invclosure!` (temperature→energy), `compute_tendencies!` — so each attempt is ~30 s, not a
+   full `timestep!` compile.
+2. **Read the IR instead of guessing:** dump the pre-raise module (`@code_hlo` at the stage the
+   installed Reactant supports, e.g. `optimize=:before_raise`/`optimize=false`) and grep for
+   `llvm.intr.trap`. GPUCompiler's exception lowering leaves `gpu_report_exception` calls and
+   string constants naming the Julia exception type and source function — read the enclosing
+   `func.func` to get the culprit directly.
+3. **Body bisection protocol** (when IR reading is inconclusive): replace the kernel body with a
+   trivial copy (`out[...] = in[...]`); if that raises, restore sub-expressions in dependency
+   order — `SoilVolume`/`soil_matrix` construction → `porosity`/`saturation_water_ice` lookups →
+   `compute_heat_capacity` → closure math (`liquid_water_fraction`, `energy_to_temperature`) →
+   `∂zᵃᵃᶜ`/`ℑzᵃᵃᶠ` operator chain → `InverseQuadratic` conductivity (`sqrt`, `^`) — until the trap
+   reappears. If the trivial body *still* traps: bisect the **kernel arguments** instead (drop
+   fields from the NamedTuple, starting with the `ground_temperature` SubArray view), and test the
+   launch path (Terrarium's `launch!` passes the `ColumnGrid` wrapper into kernels — try an
+   Oceananigans-style launch with the raw field grid to rule the wrapper in/out).
+4. **Secondary suspects** (only reachable-throw candidates the audit flagged): `sqrt`/`^` domain
+   branches in `InverseQuadratic` (`soil_thermal_properties.jl:111,174`) — the CUDA device
+   overrides normally replace these with intrinsic versions, so they are *expected* to be clean,
+   but the bisection order above covers them.
+
+### Phase C — fix patterns and hardening
+
+- **In-kernel asserts:** keep validation for host-side construction but remove it from the
+  per-point hot path. Options, in order of preference: (i) delete the asserts from the inner
+  constructors (AGENTS.md already forbids error paths in kernels; validation belongs to the
+  user-facing keyword constructors), or (ii) split into a raw positional constructor used by
+  kernels and a validating `kwdef`/keyword path used at model setup. Verify with the existing CPU
+  test suite (soil tests assert physical bounds indirectly).
+- **Repo sweep:** grep all kernel call graphs for `@assert`/`throw`/`error(`/`round(Int`/integer
+  `div`/`mod` and fix what is on the SoilModel path now; list the rest in this plan for later
+  phases (hydrology/vegetation/surface energy).
+- **Regression guard:** add a "raise-ability" unit test to `test/reactant/` (analogous to
+  Oceananigans' `test_reactant_unit.jl`): `@compile raise=true` each Terrarium kernel family
+  standalone, plus the `check_bounds == 0` assertion, so a future in-kernel assert/throw is caught
+  by CI at the kernel level with a readable failure, not at full-`timestep!` level.
+- **AGENTS.md:** extend the kernel rules with the concrete Reactant rationale: no reachable throw
+  paths (including `@assert` and un-elided bounds checks) in kernels — they lower to
+  `llvm.intr.trap`, which cannot be raised to StableHLO.
+
+### Phase D — fallback if a trap lives in third-party code
+
+If after Phase B a trap remains inside Base/KernelAbstractions/Oceananigans code we cannot edit:
+extract the dumped `func.func`, file it against Reactant.jl/EnzymeJAX (they have handled
+trap-stripping for common patterns before), and check for a Reactant pass/knob that strips
+provably-dead traps. Track versions; do not fork.
+
+**Exit criterion.** `@compile raise=true raise_first=true sync=true step_core!(integrator, Δt)`
+compiles for the range-`z` `:soil_heat_column` config, steps run, and the correctness comparison
+against CPU passes — at which point the `@test_broken` markers in `test/reactant/correctness.jl`
+flip back to `@test`.
+
+---
 
 **Goal:** run Terrarium models through [Reactant.jl](https://github.com/EnzymeAD/Reactant.jl)
 (tracing → MLIR/StableHLO → XLA) with the architecture as the *only* user-facing knob:

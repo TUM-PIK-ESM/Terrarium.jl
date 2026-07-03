@@ -49,8 +49,7 @@ struct ColumnRingGrid{
         # TODO: Need to consider ordering of array dimensions;
         # using the z-axis here probably results in inefficient memory access patterns
         # since most or all land computations will be along this axis
-        z_thick = get_spacing(vert)
-        z_coords = convert.(NF, vcat(-reverse(cumsum(z_thick)), zero(eltype(z_thick))))
+        z_coords = z_coordinates(NF, vert)
         grid = Oceananigans.Grids.RectilinearGrid(arch, NF, size = (Nh, Nz), x = (1, Nh), z = z_coords, topology = (Periodic, Flat, Bounded))
         # adapt ring grid and mask
         rings = on_architecture(arch, rings)

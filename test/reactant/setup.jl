@@ -20,7 +20,10 @@ cpu_dt(v::Val, NF) = build_model(v, CPU(), NF).Δt
 # --- :soil_heat_column — minimal single-column SoilModel (heat conduction) --------------
 
 function build_model(::Val{:soil_heat_column}, arch, NF)
-    grid = ColumnGrid(arch, NF, ExponentialSpacing(N = 10))
+    # UniformSpacing yields range-valued z coordinates, which trace under Reactant;
+    # array-valued z (ExponentialSpacing/PrescribedSpacing) is blocked upstream — see
+    # PLAN_reactant.md and REACTANT_upstream_issue.md.
+    grid = ColumnGrid(arch, NF, UniformSpacing(Δz = NF(0.2), N = 10))
     model = SoilModel(grid)
     # constant surface temperature; default (zero-flux) bottom boundary
     bcs = PrescribedSurfaceTemperature(:T_ub, NF(1))
@@ -35,7 +38,8 @@ end
 
 function build_model(::Val{:soil_heat_global}, arch, NF)
     rings = RingGrids.FullGaussianGrid(4)                 # small: 4 nlat_half
-    grid = ColumnRingGrid(arch, NF, ExponentialSpacing(N = 20), rings)  # default all-active mask
+    # UniformSpacing for Reactant-traceable range z coordinates (see :soil_heat_column note)
+    grid = ColumnRingGrid(arch, NF, UniformSpacing(Δz = NF(0.2), N = 20), rings)  # default all-active mask
     model = SoilModel(grid)
 
     seconds_per_day = NF(24 * 3600)

@@ -148,27 +148,16 @@ function test_model(config::Symbol; nsteps = NSTEPS, rtol = RTOL, atol = ATOL, N
 
         Δt = cpu_dt(Val(config), NF)
         advance!(cpu, Δt, nsteps)
+        advance!(rea, Δt, nsteps)
 
         @testset "after $nsteps steps" begin
-            # NOTE: device time stepping is currently blocked upstream — compiling `timestep!`
-            # fails when Oceananigans launches a halo-fill kernel with the grid as an argument
-            # (the RectilinearGrid's traced arrays are not converted to CuTracedArray by
-            # Reactant's kernel adaptation). Reproduces with bare Oceananigans; see
-            # PLAN_reactant.md. Marked `@test_broken` so the suite completes and will flag an
-            # "Unexpectedly Pass" once a working Oceananigans↔Reactant version combo ships.
-            try
-                advance!(rea, Δt, nsteps)
-                stepped = compare_states(cpu.state, rea.state; rtol, atol)
-                report(stepped; label = "Stepped state diffs:")
-                all_match = all(r -> r.matches, values(stepped)) &&
-                    _scalar(getfield(cpu.state, :clock).iteration) ==
-                    _scalar(getfield(rea.state, :clock).iteration)
-                @test_broken all_match
-            catch err
-                @warn "Device time stepping failed (known upstream Oceananigans↔Reactant " *
-                      "grid-kernel tracing blocker; see PLAN_reactant.md)" exception = err
-                @test_broken false
+            stepped = compare_states(cpu.state, rea.state; rtol, atol)
+            report(stepped; label = "Stepped state diffs:")
+            for (_, r) in stepped
+                @test r.matches
             end
+            @test _scalar(getfield(cpu.state, :clock).iteration) ==
+                _scalar(getfield(rea.state, :clock).iteration)
         end
     end
     return nothing
