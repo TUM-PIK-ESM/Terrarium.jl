@@ -8,4 +8,5 @@ Terrarium = "80418d68-07fa-499d-ae2b-c12e531f5cd8"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [compat]
-Reactant = "0.2"
+Oceananigans = "0.110.7"
+Reactant = "0.2.270"
