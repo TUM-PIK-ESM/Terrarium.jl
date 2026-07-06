@@ -207,8 +207,10 @@ neural = NeuralSnowMelt(
 
 # Quick check of the learned melt law against the analytic one (the kernel and this host-side
 # forward compute the same thing):
-nn_melt(p::NeuralSnowMelt, T) = (Tn = (T - p.T_mean) / p.T_std;
-    (p.b2[1] + sum(p.W2[1, h] * tanh(p.W1[h, 1] * Tn + p.b1[h]) for h in 1:length(p.b1))) * p.M_scale)
+nn_melt(p::NeuralSnowMelt, T) = (
+    Tn = (T - p.T_mean) / p.T_std;
+    (p.b2[1] + sum(p.W2[1, h] * tanh(p.W1[h, 1] * Tn + p.b1[h]) for h in 1:length(p.b1))) * p.M_scale
+)
 
 T_check = range(NF(-30), NF(30), length = 200)
 melt_error = maximum(abs, nn_melt.(Ref(neural), T_check) .- melt.(Ref(reference), T_check))
@@ -310,13 +312,15 @@ function snow_grad!(integrator, dintegrator, S0, S_ref, Nt)
     _, loss = Enzyme.autodiff(
         Enzyme.set_runtime_activity(Enzyme.ReverseWithPrimal), snow_loss, Enzyme.Active,
         Enzyme.Duplicated(integrator, dintegrator),
-        Enzyme.Const(S0), Enzyme.Const(S_ref), Enzyme.Const(Nt))
+        Enzyme.Const(S0), Enzyme.Const(S_ref), Enzyme.Const(Nt)
+    )
     return loss
 end
 
 dintegrator = Enzyme.make_zero(integrator)
 compiled_snow_grad! = Reactant.@compile raise = true raise_first = true sync = true snow_grad!(
-    integrator, dintegrator, S0, S_ref, Nt_ft)
+    integrator, dintegrator, S0, S_ref, Nt_ft
+)
 
 # Adam update of the network weights. Because rolling the melt through `Nt·Δt ≈ 10⁶` seconds
 # amplifies its gradient enormously, an adaptive optimizer (which rescales by the gradient
