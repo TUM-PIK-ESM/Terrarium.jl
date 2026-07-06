@@ -225,9 +225,10 @@ _lons, _lats = RingGrids.get_lonlats(rings)                  # per-column lon/la
 air_temperature = NF.(25 .- 30 .* abs.(_lats) ./ (π / 2))    # warm equator (~25°C), cold poles (~-5°C)
 snow_fall = fill(NF(1.0e-7), length(_lats))                  # uniform light snowfall [m/s]
 
+## input sources take a RingGrids.Field over the grid's rings
 inputs = InputSources(
-    InputSource(grid, air_temperature, name = :air_temperature, units = u"°C"),
-    InputSource(grid, snow_fall, name = :snow_fall, units = u"m/s"),
+    InputSource(grid, RingGrids.Field(air_temperature, rings), name = :air_temperature, units = u"°C"),
+    InputSource(grid, RingGrids.Field(snow_fall, rings), name = :snow_fall, units = u"m/s"),
 )
 initializers = (snow_storage = NF(0.5),)                      # start with 0.5 m everywhere
 
@@ -242,9 +243,86 @@ snow_ddm = run_snow(reference)
 snow_nn = run_snow(neural)
 
 snow_diff = maximum(abs, snow_ddm .- snow_nn)
-println("Ran both snow models for 30 days on $(length(lats)) columns.")
-println("Max |S_ddm − S_nn| after 30 days: ", snow_diff, " m  (mean snow ", mean(snow_ddm), " m)")
+println("Ran both snow models for 30 days on $(length(_lats)) columns.")
+println("Max |S_ddm − S_nn| after offline training: ", snow_diff, " m  (mean snow ", mean(snow_ddm), " m)")
+
+# ## Online finetuning: training *through* the snow dynamics
+#
+# The training above was *offline*: we fit the melt law `M(T)` pointwise, independently of the
+# simulation. *Online* training instead differentiates through the model's time integration — we
+# roll the snow dynamics forward with the neural melt, compare the simulated snow to a reference
+# trajectory, and backpropagate through the whole rollout to the network weights. This is the
+# differentiable-simulation idea, and it is exactly what Reactant + Enzyme make possible: the
+# rollout (a time loop of the snow update) is compiled and differentiated end-to-end.
+#
+# This is primarily a demonstration of the *mechanics* of online, through-the-dynamics training.
+# It can, however, help even here: the offline objective fits `M(T)` pointwise, whereas the online
+# objective matches the simulated snow trajectory directly — the quantity we actually care about —
+# so a small pointwise melt error that would accumulate over the rollout gets corrected.
+#
+# We use a short daily rollout and, as the target, the *same* dynamics driven by the analytic
+# melt. All fields are shaped `(1, ncolumns)` to match the network's batched output.
+
+const Δt_ft = 86400.0f0    # 1-day steps
+const Nt_ft = 15           # 15-day rollout
+
+## reference snow trajectory under the analytic melt (Euler + non-negativity clip)
+function analytic_rollout(reference, S0, T, P, Δt, Nt)
+    S = S0
+    for _ in 1:Nt
+        S = max.(S .+ Δt .* (P .- melt.(Ref(reference), T)), 0.0f0)
+    end
+    return S
+end
+
+T_run = reshape(air_temperature, 1, :)
+P_run = reshape(snow_fall, 1, :)
+S0_run = fill(NF(0.5), 1, length(air_temperature))
+Tn_run = (T_run .- T_mean) ./ T_std
+S_ref_run = analytic_rollout(reference, S0_run, T_run, P_run, Δt_ft, Nt_ft)
+
+## differentiable loss: roll the NN melt forward and match the reference snow trajectory
+function rollout_loss(model, ps, st, data)
+    Tn, S0, P, S_ref = data
+    S = S0
+    st_running = st
+    for _ in 1:Nt_ft
+        Mn, st_running = model(Tn, ps, st_running)     # normalized melt, (1, ncol)
+        S = max.(S .+ Δt_ft .* (P .- Mn .* M_scale), 0.0f0)
+    end
+    return mean(abs2, S .- S_ref), st_running, (;)
+end
+
+ft_data = (rdev(Tn_run), rdev(S0_run), rdev(P_run), rdev(S_ref_run))
+
+## start a fresh optimizer from the offline-trained weights (a new TrainState so the rollout
+## loss is compiled freshly — a TrainState caches the compiled step for one loss function)
+function finetune!(mlp, ps, st, data; epochs = 200, lr = NF(1.0e-3))
+    tstate = Lux.Training.TrainState(mlp, ps, st, Optimisers.Adam(lr))
+    local loss
+    for epoch in 1:epochs
+        _, loss, _, tstate = Lux.Training.single_train_step!(AutoEnzyme(), rollout_loss, data, tstate)
+        (epoch == 1 || epoch % 50 == 0) &&
+            println("  finetune epoch $epoch   rollout loss = $(Reactant.to_number(loss))")
+    end
+    return tstate
+end
+
+println("Online finetuning through the snow dynamics (Reactant + Enzyme):")
+tstate_ft = finetune!(mlp, tstate.parameters, tstate.states, ft_data)
+
+# We rebuild the neural process from the finetuned weights and run the hybrid model once more.
+
+ps_ft = cdev(tstate_ft.parameters)
+neural_ft = NeuralSnowMelt(
+    ps_ft.layer_1.weight, ps_ft.layer_1.bias,
+    ps_ft.layer_2.weight, ps_ft.layer_2.bias,
+    T_mean, T_std, M_scale,
+)
+snow_nn_ft = run_snow(neural_ft)
+println("Max |S_ddm − S_nn| after online finetuning: ", maximum(abs, snow_ddm .- snow_nn_ft), " m")
 
 # The neural snow model reproduces the analytic degree-day model to within the network's fit
 # error — the physics-based melt law has been replaced by a trained, kernelized neural network,
-# which is the essential building block of hybrid land modeling in Terrarium.
+# trained both offline (fitting the melt law) and online (through the snow dynamics). This is the
+# essential building block of hybrid land modeling in Terrarium.
