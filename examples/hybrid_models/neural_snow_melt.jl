@@ -53,13 +53,16 @@ DegreeDaySnow(::Type{NF}) where {NF} = DegreeDaySnow{NF}()
 # computes the melt `M` from an MLP with a single hidden layer (`1 → H → 1`, tanh). It stores the
 # MLP's weight arrays and the input/output normalization constants used during training.
 
-struct NeuralSnowMelt{NF, M, V} <: AbstractProcess{NF}
+# Each weight/bias gets its own type parameter: on the device they become `CuTracedArray`s whose
+# shape is encoded in the type, so `W1` (H×1) and `W2` (1×H) are *different* types (and likewise
+# `b1`/`b2`), which a single shared parameter could not represent.
+struct NeuralSnowMelt{NF, MW1, VB1, MW2, VB2} <: AbstractProcess{NF}
     "Hidden weight matrix (H×1) and bias (H)"
-    W1::M
-    b1::V
+    W1::MW1
+    b1::VB1
     "Output weight matrix (1×H) and bias (1)"
-    W2::M
-    b2::V
+    W2::MW2
+    b2::VB2
     "Input normalization for temperature (°C)"
     T_mean::NF
     T_std::NF
@@ -246,83 +249,111 @@ snow_diff = maximum(abs, snow_ddm .- snow_nn)
 println("Ran both snow models for 30 days on $(length(_lats)) columns.")
 println("Max |S_ddm − S_nn| after offline training: ", snow_diff, " m  (mean snow ", mean(snow_ddm), " m)")
 
-# ## Online finetuning: training *through* the snow dynamics
+# ## Online finetuning: training *through* the full Terrarium model
 #
 # The training above was *offline*: we fit the melt law `M(T)` pointwise, independently of the
-# simulation. *Online* training instead differentiates through the model's time integration — we
-# roll the snow dynamics forward with the neural melt, compare the simulated snow to a reference
-# trajectory, and backpropagate through the whole rollout to the network weights. This is the
-# differentiable-simulation idea, and it is exactly what Reactant + Enzyme make possible: the
-# rollout (a time loop of the snow update) is compiled and differentiated end-to-end.
+# simulation. *Online* training instead differentiates through the model's own time integration.
+# Here we do this with the **full Terrarium model** — a `SnowModel` containing `NeuralSnowMelt`
+# stepped by `run_timesteps!` — on the Reactant device: we roll the model forward, compare the
+# simulated snow to a reference trajectory, and let Enzyme backpropagate through the compiled
+# rollout (kernels and all) to the network weights. This is the differentiable-simulation idea,
+# and it is what Reactant + Enzyme make possible.
 #
-# This is primarily a demonstration of the *mechanics* of online, through-the-dynamics training.
-# It can, however, help even here: the offline objective fits `M(T)` pointwise, whereas the online
-# objective matches the simulated snow trajectory directly — the quantity we actually care about —
+# It can help even in this toy setting: the offline objective fits `M(T)` pointwise, whereas the
+# online objective matches the simulated snow trajectory directly — the quantity we care about —
 # so a small pointwise melt error that would accumulate over the rollout gets corrected.
-#
-# We use a short daily rollout and, as the target, the *same* dynamics driven by the analytic
-# melt. All fields are shaped `(1, ncolumns)` to match the network's batched output.
 
 const Δt_ft = 86400.0f0    # 1-day steps
 const Nt_ft = 15           # 15-day rollout
 
-## reference snow trajectory under the analytic melt (Euler + non-negativity clip)
-function analytic_rollout(reference, S0, T, P, Δt, Nt)
-    S = S0
-    for _ in 1:Nt
-        S = max.(S .+ Δt .* (P .- melt.(Ref(reference), T)), 0.0f0)
-    end
-    return S
+# We run the full model on the Reactant device. The trained weights are already there
+# (`tstate.parameters`); we build a device `NeuralSnowMelt` and the input sources on a
+# `ReactantState` grid.
+
+device_grid = ColumnRingGrid(ReactantState(), NF, UniformSpacing(N = 1), rings)
+device_inputs = InputSources(
+    InputSource(device_grid, RingGrids.Field(air_temperature, rings), name = :air_temperature, units = u"°C"),
+    InputSource(device_grid, RingGrids.Field(snow_fall, rings), name = :snow_fall, units = u"m/s"),
+)
+build_device_integrator(process) = initialize(
+    SnowModel(device_grid; snow_melt = process, timestepper = ForwardEuler(NF));
+    inputs = device_inputs, initializers = (snow_storage = NF(0.5),),
+)
+
+ps_dev = tstate.parameters   # offline-trained weights, on the device
+neural_device = NeuralSnowMelt(
+    ps_dev.layer_1.weight, ps_dev.layer_1.bias,
+    ps_dev.layer_2.weight, ps_dev.layer_2.bias,
+    T_mean, T_std, M_scale,
+)
+integrator = build_device_integrator(neural_device)
+
+# The target is the snow field the *analytic* model produces after the same rollout, and the reset
+# state `S0` (0.5 m everywhere). Both are obtained on the device.
+
+reference_integrator = build_device_integrator(DegreeDaySnow(NF))
+run!(reference_integrator; steps = Nt_ft, Δt = Δt_ft)
+S_ref = copy(interior(reference_integrator.state.snow_storage))
+S0 = copy(interior(integrator.state.snow_storage))
+
+# The loss resets the snow to `S0`, steps the full `SnowModel(NeuralSnowMelt)` with
+# `run_timesteps!`, and measures the mismatch to the reference. `snow_grad!` differentiates it with
+# Enzyme; the network-weight gradients land in `dintegrator.model.snow_melt`. (We zero the shadow
+# *outside* the compiled function — `make_zero!` inside it cannot reconstruct the immutable model.)
+
+function snow_loss(integrator, S0, S_ref, Nt)
+    copyto!(interior(integrator.state.snow_storage), S0)     # reset the rollout
+    run_timesteps!(integrator, Δt_ft, Nt)                    # step the full Terrarium model
+    return mean(abs2, interior(integrator.state.snow_storage) .- S_ref)
+end
+function snow_grad!(integrator, dintegrator, S0, S_ref, Nt)
+    _, loss = Enzyme.autodiff(
+        Enzyme.set_runtime_activity(Enzyme.ReverseWithPrimal), snow_loss, Enzyme.Active,
+        Enzyme.Duplicated(integrator, dintegrator),
+        Enzyme.Const(S0), Enzyme.Const(S_ref), Enzyme.Const(Nt))
+    return loss
 end
 
-T_run = reshape(air_temperature, 1, :)
-P_run = reshape(snow_fall, 1, :)
-S0_run = fill(NF(0.5), 1, length(air_temperature))
-Tn_run = (T_run .- T_mean) ./ T_std
-S_ref_run = analytic_rollout(reference, S0_run, T_run, P_run, Δt_ft, Nt_ft)
+dintegrator = Enzyme.make_zero(integrator)
+compiled_snow_grad! = Reactant.@compile raise = true raise_first = true sync = true snow_grad!(
+    integrator, dintegrator, S0, S_ref, Nt_ft)
 
-## differentiable loss: roll the NN melt forward and match the reference snow trajectory
-function rollout_loss(model, ps, st, data)
-    Tn, S0, P, S_ref = data
-    S = S0
-    st_running = st
-    for _ in 1:Nt_ft
-        Mn, st_running = model(Tn, ps, st_running)     # normalized melt, (1, ncol)
-        S = max.(S .+ Δt_ft .* (P .- Mn .* M_scale), 0.0f0)
-    end
-    return mean(abs2, S .- S_ref), st_running, (;)
-end
-
-ft_data = (rdev(Tn_run), rdev(S0_run), rdev(P_run), rdev(S_ref_run))
-
-## start a fresh optimizer from the offline-trained weights (a new TrainState so the rollout
-## loss is compiled freshly — a TrainState caches the compiled step for one loss function)
-function finetune!(mlp, ps, st, data; epochs = 200, lr = NF(1.0e-3))
-    tstate = Lux.Training.TrainState(mlp, ps, st, Optimisers.Adam(lr))
-    local loss
+# Adam update of the network weights. Because rolling the melt through `Nt·Δt ≈ 10⁶` seconds
+# amplifies its gradient enormously, an adaptive optimizer (which rescales by the gradient
+# magnitude) is far more robust here than plain gradient descent. The optimizer runs eagerly on
+# the host over the device weight arrays — which are shared with `integrator.model.snow_melt`, so
+# the model updates in place. (Eager, not traced, so Adam's scalar state is a plain number.)
+function finetune!(integrator, S0, S_ref; epochs = 100, lr = NF(1.0e-3))
+    p = integrator.model.snow_melt
+    params = (; W1 = p.W1, b1 = p.b1, W2 = p.W2, b2 = p.b2)
+    opt = Optimisers.setup(Optimisers.Adam(lr), params)
     for epoch in 1:epochs
-        _, loss, _, tstate = Lux.Training.single_train_step!(AutoEnzyme(), rollout_loss, data, tstate)
-        (epoch == 1 || epoch % 50 == 0) &&
-            println("  finetune epoch $epoch   rollout loss = $(Reactant.to_number(loss))")
+        dintegrator = Enzyme.make_zero(integrator)           # fresh zero shadow each step
+        loss = compiled_snow_grad!(integrator, dintegrator, S0, S_ref, Nt_ft)
+        dp = dintegrator.model.snow_melt
+        grads = (; W1 = dp.W1, b1 = dp.b1, W2 = dp.W2, b2 = dp.b2)
+        Optimisers.update!(opt, params, grads)
+        (epoch == 1 || epoch % 25 == 0) &&
+            println("  finetune epoch $epoch   snow loss = $(Reactant.to_number(loss))")
     end
-    return tstate
+    return nothing
 end
 
-println("Online finetuning through the snow dynamics (Reactant + Enzyme):")
-tstate_ft = finetune!(mlp, tstate.parameters, tstate.states, ft_data)
+println("Online finetuning through the full SnowModel (Reactant + Enzyme):")
+finetune!(integrator, S0, S_ref)
 
-# We rebuild the neural process from the finetuned weights and run the hybrid model once more.
+# We rebuild a CPU neural process from the finetuned weights and run the hybrid model once more to
+# compare against the analytic model.
 
-ps_ft = cdev(tstate_ft.parameters)
 neural_ft = NeuralSnowMelt(
-    ps_ft.layer_1.weight, ps_ft.layer_1.bias,
-    ps_ft.layer_2.weight, ps_ft.layer_2.bias,
+    Array(neural_device.W1), Array(neural_device.b1),
+    Array(neural_device.W2), Array(neural_device.b2),
     T_mean, T_std, M_scale,
 )
 snow_nn_ft = run_snow(neural_ft)
 println("Max |S_ddm − S_nn| after online finetuning: ", maximum(abs, snow_ddm .- snow_nn_ft), " m")
 
-# The neural snow model reproduces the analytic degree-day model to within the network's fit
-# error — the physics-based melt law has been replaced by a trained, kernelized neural network,
-# trained both offline (fitting the melt law) and online (through the snow dynamics). This is the
-# essential building block of hybrid land modeling in Terrarium.
+# The physics-based melt law has been replaced by a trained, kernelized neural network — trained
+# offline (fitting the melt law) and then finetuned online by differentiating through the full
+# Terrarium `SnowModel` with Reactant + Enzyme. This is the essential building block of hybrid
+# land modeling in Terrarium.

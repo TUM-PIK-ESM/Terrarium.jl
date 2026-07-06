@@ -25,6 +25,34 @@
 >   `DegreeDaySnow`. (Example is not part of CI; heavy Lux/Reactant/Enzyme/CUDA stack.)
 >
 > Findings recorded inline as executed (below the Session-2 block).
+>
+> ### Session-3 findings (COMPLETE — `examples/hybrid_models/neural_snow_melt.jl`, own env)
+> - **NN-in-kernel:** `Lux.apply` cannot be compiled inside a KA kernel (it pulls in string ops —
+>   `print_to_string`/`utf8proc_*` — with no device lowering; the BjerknesWorkshop noted this too).
+>   The kernel instead evaluates the MLP's forward pass **explicitly** from its weight arrays (a
+>   scalar unroll over the hidden units). This compiles for CPU/GPU/Reactant. Also required **3-D
+>   field indexing** (`T[i,j,1]`), not 2-D — 2-D indexing throws `jl_f_throw_methoderror` under
+>   `CuTracedArray` (AGENTS.md pitfall #10).
+> - **Offline training (Reactant + Enzyme):** hand-rolled `Enzyme.autodiff` + `Optimisers.update!`
+>   inside `@compile` fails — Adam's `Float32` step-count `Leaf` field can't hold a `TracedRNumber`.
+>   Use Lux's Reactant path instead: `Lux.Training.single_train_step!(AutoEnzyme(), loss, data,
+>   tstate)` with params on `MLDataDevices.reactant_device()` (it wraps the optimizer as a
+>   `ReactantCompatibleOptimisers.ReactantOptimiser`). Fits `M(T)=max(0,k(T−T_melt))`: loss
+>   0.69→2e-5, melt error 2.9e-8.
+> - **Online finetuning (differentiable simulation):** a `single_train_step!` with a **custom
+>   rollout loss** that steps the snow dynamics with the NN melt and matches the analytic
+>   trajectory. Gotcha: a `TrainState` caches its compiled step for **one** loss — reusing the
+>   offline tstate with a different loss errors ("no method for this Thunk"); build a **fresh
+>   TrainState** from the trained params for the new loss. Rollout loss 1.4e-5→1.2e-13; it
+>   *improves* the 30-day snow match (0.0195 m → 9e-7 m) because the online objective targets the
+>   trajectory directly.
+> - **Running the hybrid model:** on **CPU** (both `DegreeDaySnow` and `NeuralSnowMelt` SnowModels,
+>   input-driven `run!`), since Terrarium's input sources are not yet traced under Reactant; the
+>   NN process kernel is device-agnostic and compiles under Reactant (that is how it is trained).
+>   `InputSource(::ColumnRingGrid, RingGrids.Field(vec, rings); name, units)` — needs a
+>   `RingGrids.Field`, not a plain vector.
+> - Env: `examples/hybrid_models/{Project.toml, neural_snow_melt.jl}` (Manifest gitignored),
+>   pinned via the shared Reactant 0.2.270. Example not part of CI.
 
 > ## Session 2 plan (2026-07-06) — revisions + autodiff
 >
