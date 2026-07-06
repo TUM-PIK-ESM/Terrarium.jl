@@ -1,5 +1,6 @@
 [deps]
 CUDA = "052768ef-5323-5732-b1bb-66c8b64840ba"
+Enzyme = "7da242da-08ed-463a-9acd-ee780be4f1d9"
 Oceananigans = "9e8cae18-63c1-5223-a75c-80ca9d6e9a09"
 Reactant = "3c362404-f566-11ee-1572-e11a4b42c853"
 RingGrids = "d1845624-ad4f-453b-8ff4-a8db365bf3a7"

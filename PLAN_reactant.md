@@ -53,6 +53,35 @@
 > Risk: Terrarium's soil-energy kernels use `sqrt`/`^` (InverseQuadratic conductivity) and
 > freeze-curve `ifelse`; Enzyme-through-Reactant should handle these but is unverified — B2 is
 > the check. Diagnose if the adjoint fails/NaNs; do not weaken the forward path to make AD pass.
+>
+> ### Session-2 findings (as executed)
+> - **A1 done.** `NSTEPS = 100`. Both configs pass at 100 steps within the existing
+>   `RTOL=1e-3`/`ATOL=1e-6` (prognostic `internal_energy` max rel diff ~4.7e-7); no tolerance
+>   change needed. Verified 30/30 on the pinned 0.110.7/0.2.270 env.
+> - **A2 done — no `@trace` needed for the in-kernel `ifelse`es (confirmed).** `@trace` is a
+>   Reactant *frontend* macro (Julia-level tracing via `call_with_reactant`); it does not apply
+>   inside kernels, which are compiled through the KernelAbstractions + `raise=true` path
+>   (GPUCompiler → LLVM → StableHLO). There, `ifelse` is a Julia builtin that lowers to LLVM
+>   `select` → `stablehlo.select` — exactly the branchless data-select we want; putting `@trace`
+>   there would be inapplicable. Evidence it lowers correctly: the 100-step CPU-vs-Reactant
+>   numerical match (a mis-lowered select would diverge). No code change. (`@trace` *is* used —
+>   correctly — for the Julia-level time-loop in `run_timesteps!`; see A3.)
+> - **Time-dependent continuous BCs ARE supported (earlier "unsupported" conclusion was wrong).**
+>   The committed `:soil_heat_global` BC is `amplitude*sin(ω*t)*cos(x)`. It passed 30/30 locally
+>   on 2026-07-03 (see `scratchpad/suite_final.log`) and passes on remote CI with
+>   `raise=true` — so the time-dependent BC is fine and the doc/BC "fix" was reverted
+>   (`setup.jl` restored to the time-dependent BC; the false doc limitation removed).
+>   - **Local-only failure (open, non-blocking):** on this machine the global config now fails to
+>     compile (`InvalidIRError` in `gpu__fill_bottom_and_top_halo!`; a traced `Reactant.Ops.multiply`
+>     of the clock time appears in device IR). It reproduces with and without `raise=true`. But the
+>     package builds are **identical** to the Jul-3 passing run (Oceananigans XnMRS 0.110.7,
+>     Reactant N8Jgp 0.2.270, `Reactant_jll` 0.0.391+1; no `LocalPreferences.toml`, no XLA env),
+>     and remote passes — so this is a **stale local artifact** from the version drift/re-pin churn
+>     (env had drifted to 0.110.5/0.2.269 and was re-pinned to 0.110.7/0.2.270), not a code/version
+>     limitation. Fix attempt: fresh Manifest resolve (mirroring remote). `:soil_heat_column`
+>     compiles/passes locally regardless, so local verification of the rest of the work proceeds via
+>     it; the global config is covered by remote CI.
+>   - Env pinned to 0.110.7/0.2.270 in `test/reactant/Project.toml [compat]` to stop silent drift.
 
 > **Execution status (living section — updated as work proceeds).**
 > Branch: `mg/reactant-compat` (Session-1 work committed; see git log).

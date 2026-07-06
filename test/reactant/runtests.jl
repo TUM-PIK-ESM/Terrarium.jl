@@ -40,3 +40,5 @@ include("setup.jl")
     test_model(:soil_heat_column)
     test_model(:soil_heat_global)
 end
+
+include("autodiff.jl")

@@ -44,3 +44,8 @@ T = Array(interior(integrator.state.temperature))
 
 The target device is selected by Reactant, e.g. `Reactant.set_default_backend("gpu")` before
 constructing the model.
+
+!!! note "Current limitations"
+    - Vertical spacing must be **uniform** (`UniformSpacing`); array-valued coordinates from
+      `ExponentialSpacing`/`PrescribedSpacing` cannot yet be traced.
+    - Changing `Δt` recompiles the time step.
