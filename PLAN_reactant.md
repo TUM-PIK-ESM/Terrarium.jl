@@ -53,6 +53,25 @@
 >   `RingGrids.Field`, not a plain vector.
 > - Env: `examples/hybrid_models/{Project.toml, neural_snow_melt.jl}` (Manifest gitignored),
 >   pinned via the shared Reactant 0.2.270. Example not part of CI.
+> - **Online finetuning THROUGH THE FULL MODEL (revised per request).** The final example
+>   differentiates through the actual `SnowModel(NeuralSnowMelt)` (not a hand-written rollout):
+>   `Enzyme.autodiff(ReverseWithPrimal, loss, Active, Duplicated(integrator, dintegrator), …)`
+>   over `run_timesteps!`, compiled with `@compile raise=true …` — the full input-driven model
+>   runs and differentiates under Reactant. Key gotchas found:
+>   - The full `SnowModel(NeuralSnowMelt)` **runs under Reactant** (static `FieldInputSource`
+>     inputs + ext transfer are fine) once the process struct gives **each weight/bias its own
+>     type parameter** (device `CuTracedArray`s encode shape in the type, so `W1` (H×1) ≠ `W2`
+>     (1×H)).
+>   - `Enzyme.make_zero!` **inside** the compiled function fails ("cannot set SnowModel …" —
+>     can't reconstruct the immutable model); `make_zero` the shadow **outside** each step instead
+>     (matches the soil `autodiff.jl` pattern).
+>   - Rolling melt through `Nt·Δt ≈ 10⁶ s` amplifies its gradient enormously → plain SGD diverges
+>     identically at any lr (saturates the melt clip in ~1 step). An **adaptive optimizer**
+>     (eager host-side `Optimisers.Adam` over the device weight arrays — eager, so no traced-scalar
+>     issue) is robust. Result: snow loss 1.6e-5 → ~1e-8, match 0.0195 m → 0.0116 m.
+>   - Kept the **hand-rolled MLP forward** in the kernel (`Lux.apply` compiles in a CPU kernel but
+>     not a Reactant device kernel, and Enzyme through a CPU `Lux.apply`-in-kernel model also
+>     errored). Lux is used for the architecture, init, and offline training only.
 
 > ## Session 2 plan (2026-07-06) — revisions + autodiff
 >
