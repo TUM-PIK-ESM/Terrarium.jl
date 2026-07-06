@@ -79,9 +79,38 @@
 >     and remote passes — so this is a **stale local artifact** from the version drift/re-pin churn
 >     (env had drifted to 0.110.5/0.2.269 and was re-pinned to 0.110.7/0.2.270), not a code/version
 >     limitation. Fix attempt: fresh Manifest resolve (mirroring remote). `:soil_heat_column`
->     compiles/passes locally regardless, so local verification of the rest of the work proceeds via
 >     it; the global config is covered by remote CI.
->   - Env pinned to 0.110.7/0.2.270 in `test/reactant/Project.toml [compat]` to stop silent drift.
+>   - **RESOLVED:** a fresh Manifest resolve (deleting `test/reactant/Manifest.toml`, then
+>     `Pkg.develop(".") + instantiate`, mirroring remote) fixed the local failure — it pulled
+>     Oceananigans **0.110.8** (newly released; compat `>=0.110.7` allows it) with a consistent
+>     transitive set, and the full suite (time-dependent BC included) now passes 30/30 locally.
+>     Confirms it was a stale/mixed local Manifest from the drift/re-pin churn, never a code or
+>     fundamental limitation. Compat pin kept at `Oceananigans = "0.110.7"` (allows 0.110.8).
+> - **A3 done (run cache removed).** `COMPILED_STEPS`/`compiled_step` deleted. Added
+>   `run_timesteps!(integrator, Δt, Nt, checkpointing=false)` with `@trace for` (single compiled
+>   `stablehlo.while`); `run!(integrator; steps, period, Δt, checkpointing=false, compiled_run!=nothing)`
+>   compiles it on demand and accepts a reusable compiled function; `timestep!` = `run!(; steps=1)`.
+> - **`run_timesteps!` is now a Terrarium function (src), extended in the ext (per request).**
+>   Generic host-loop method in `model_integrator.jl` (Reactant-free, ignores `checkpointing`),
+>   exported; `TerrariumReactantExt` adds the `ReactantIntegrator` method (`@trace`). Tests/example
+>   call the public `Terrarium.run_timesteps!` (no `Base.get_extension`). CPU method verified
+>   (iter 0→5); Reactant method verified via the suite.
+> - **Checkpointing is an optional argument (per request).** `checkpointing` kwarg on `run!` and
+>   4th positional on `run_timesteps!`, forwarded to `@trace checkpointing=…`: `false` (default) or
+>   a scheme (`Reactant.Periodic(n)`/`Binomial(n)`). No effect on forward runs; bounds reverse-pass
+>   memory under AD. `true` (auto-`isqrt`) only works as a `@trace` literal, so the runtime knob
+>   takes `false` or an explicit scheme — documented.
+> - **B (autodiff) done.** `Enzyme` added to `test/reactant/Project.toml`.
+>   `test/reactant/autodiff.jl`: compiles `Enzyme.autodiff(ReverseWithPrimal, …, Duplicated(integrator,
+>   dintegrator), …)` over `run_timesteps!`; asserts ∂loss/∂U₀ finite + nonzero, and that the
+>   gradient is **invariant** to the checkpointing scheme (`false` vs `Periodic(2)`). Passes 6/6
+>   (`loss=0.795`, `max|∂loss/∂U₀|≈1.9e-7`). Example
+>   `examples/autodiff/differentiating_terrarium_reactant.jl` mirrors the CPU autodiff example using
+>   `ReactantState` + `run_timesteps!` with a `Periodic` checkpointing scheme (not executed in docs
+>   builds, like the CPU one).
+> - **Final state: full suite 30/30 correctness + 6/6 autodiff green on Oceananigans 0.110.8 /
+>   Reactant 0.2.270.** All Session-2 asks (100 steps, `@trace`/`ifelse` check, cache removal +
+>   `compiled_run!`, `run_timesteps!` in src, checkpointing arg, autodiff + example) complete.
 
 > **Execution status (living section — updated as work proceeds).**
 > Branch: `mg/reactant-compat` (Session-1 work committed; see git log).
