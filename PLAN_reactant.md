@@ -1,7 +1,61 @@
 # Plan: Reactant-compatible Terrarium
 
+> ## Session 2 plan (2026-07-06) — revisions + autodiff
+>
+> Base state: the correctness suite is green (30/30) and committed on `mg/reactant-compat`.
+> Two work streams; **correctness tests must stay green after each step**
+> (`julia --project=test/reactant test/reactant/runtests.jl`).
+>
+> ### Stream A — revise the existing implementation
+> A1. **100 steps.** Bump `NSTEPS` 10 → 100 in `test/reactant/runtests.jl`; run the suite.
+>     If accumulated round-off breaks the current `RTOL=1e-3`/`ATOL=1e-6`, record and loosen
+>     minimally (document the chosen tolerance).
+> A2. **`@trace` vs `ifelse` check.** Confirm the in-kernel `ifelse`es need no `@trace`.
+>     Reasoning to verify empirically: kernels are compiled through the KA + `raise=true`
+>     (GPUCompiler→StableHLO) path, where Julia-level `@trace` does not apply and `ifelse`
+>     lowers to LLVM `select` → `stablehlo.select`. The passing 100-step correctness comparison
+>     against CPU is the evidence (a mis-lowered select would diverge numerically). Document the
+>     conclusion; no code change expected.
+> A3. **Remove the compile cache.** Delete `COMPILED_STEPS` and `compiled_step` from
+>     `ext/TerrariumReactantExt/integrator.jl`. Follow Oceananigans' `run_timesteps!` pattern:
+>     - add `run_timesteps!(integrator, Δt, Nt)` using `@trace for _ in 1:Nt; step_core!(…); end`
+>       (one compiled StableHLO while-loop for the whole run, instead of a host loop over a
+>       compiled single step);
+>     - `run!(integrator::ReactantIntegrator; steps, period, Δt, compiled_run! = nothing)` —
+>       if `compiled_run!` is `nothing`, compile it here
+>       (`@compile raise=true raise_first=true sync=true run_timesteps!(integrator, Δt, nsteps)`),
+>       then call it; return the integrator. Lets callers reuse a compiled function across runs.
+>     - `timestep!(integrator::ReactantIntegrator, Δt)` becomes a thin `run!(…; steps=1)` (single
+>       code path, no hidden cache).
+>     Keep `step_core!` (raw step: `timestep!(integrator, timestepper, Δt)` + `compute_auxiliary!`).
+>     Re-run the suite.
+>
+> ### Stream B — autodiff via Reactant + Enzyme
+> Pattern from Oceananigans `test/test_reactant_hydrostatic_free_surface_models.jl`:
+> a scalar `loss(integrator, Δt, nsteps)` whose time loop is
+> `@trace checkpointing=true track_numbers=false for …` calling the **raw** step
+> (`timestep!(integrator, get_timestepper(model), Δt)` + `compute_auxiliary!`; public API — NOT
+> the auto-compiling `run!`, which would nest `@compile`); a `grad_loss` wrapping
+> `Enzyme.autodiff(set_strong_zero(ReverseWithPrimal), loss, Active, Duplicated(integrator,
+> dintegrator), Const(Δt), Const(nsteps))`; both compiled with
+> `Reactant.@compile raise=true raise_first=true sync=true`. Sensitivity of a scalar loss
+> (mean-square final temperature) w.r.t. the initial prognostic `internal_energy`
+> (`interior(dintegrator.state.internal_energy)`).
+> B1. Add `Enzyme` to `test/reactant/Project.toml`; instantiate.
+> B2. `test/reactant/autodiff.jl` (included from `runtests.jl`): compile `grad_loss` for a small
+>     `:soil_heat_column` integrator; assert loss `> 0` & finite, gradient nonzero & finite.
+> B3. `examples/autodiff/differentiating_terrarium_reactant.jl` — analogous to
+>     `differentiating_terrarium.jl` but with `ReactantState()` + `@trace checkpointing=true`
+>     instead of Checkpointing.jl's `Revolve`. Not executed in docs builds (Enzyme/Reactant
+>     compile time), matching the existing autodiff example.
+> B4. Full suite green (correctness + autodiff).
+>
+> Risk: Terrarium's soil-energy kernels use `sqrt`/`^` (InverseQuadratic conductivity) and
+> freeze-curve `ifelse`; Enzyme-through-Reactant should handle these but is unverified — B2 is
+> the check. Diagnose if the adjoint fails/NaNs; do not weaken the forward path to make AD pass.
+
 > **Execution status (living section — updated as work proceeds).**
-> Branch: `mg/reactant-compat`. Nothing committed yet (awaiting explicit request).
+> Branch: `mg/reactant-compat` (Session-1 work committed; see git log).
 >
 > **Done & verified**
 > - **PR2 (`ifelse` rewrites):** rewrote the value-dependent conditionals in
