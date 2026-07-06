@@ -1,5 +1,31 @@
 # Plan: Reactant-compatible Terrarium
 
+> ## Session 3 plan (2026-07-06) — hybrid ML example
+>
+> Goal: a **technical** demonstration of hybrid (NN-in-model) land modeling with Terrarium +
+> Reactant + Enzyme, based on `examples/extending/simple_snow_ddm.jl`. New self-contained folder
+> `examples/hybrid_models/` with its **own environment**.
+>
+> - **Target physics.** The degree-day melt is `M(T) = max(0, k·(T − T_melt))` (a ReLU), so the
+>   snow tendency is `dS/dt = P − M(T)`. This is a clean 1-D regression target for the NN.
+> - **Data.** Generate `(T, M(T))` pairs from `DegreeDaySnow` over a temperature range (offline,
+>   on CPU).
+> - **`NeuralSnowMelt` process** (alternative to `DegreeDaySnow`): holds a small Lux MLP + params +
+>   states + input/output normalization; `compute_tendencies!` launches a KA kernel that applies
+>   the NN **per grid point** (`dS/dt = P − M_nn(T)`). Per the request, the NN runs *inside* the
+>   kernel (a first test — the BjerknesWorkshop notes this is the hard case vs. batched global
+>   eval; we accept it as a demo).
+> - **Training.** Reactant + Enzyme: loss = MSE(`M_nn(T)`, `M(T)`) over the data; differentiate
+>   w.r.t. NN params with `Enzyme.autodiff(set_strong_zero(ReverseWithPrimal), …, Duplicated(ps,
+>   dps), …)` compiled with `@compile raise=true raise_first=true sync=true`; step with Optimisers.
+> - **De-risk first (spike):** can a tiny Lux MLP be applied inside a Terrarium KA kernel compiled
+>   by Reactant (`raise=true`)? If `Lux.apply` in-kernel does not trace, fall back to a manual MLP
+>   forward (extract weight arrays, do the matmuls explicitly) — still trained via Lux/Enzyme.
+> - **Verify:** training reduces the loss and the trained hybrid model runs and roughly matches
+>   `DegreeDaySnow`. (Example is not part of CI; heavy Lux/Reactant/Enzyme/CUDA stack.)
+>
+> Findings recorded inline as executed (below the Session-2 block).
+
 > ## Session 2 plan (2026-07-06) — revisions + autodiff
 >
 > Base state: the correctness suite is green (30/30) and committed on `mg/reactant-compat`.
