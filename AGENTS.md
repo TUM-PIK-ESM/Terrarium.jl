@@ -41,8 +41,15 @@ dynamics are allowed except in very special cases where they must be clearly doc
 - Functions marked with `@kernel` are called **kernels** which then invoke **kernel functions** with call pattern `compute_something(i, j, k, grid, fields, process::ProcessType, args...)` or `compute_something!(out, i, j, k, grid, fields, proces::ProcessType)`
     - Kernel functions defined for 2D kernels instead have `i, j` instead of `i, j, k`
 - Kernels and their subsequent call graph must be fully **type-stable** and **allocation-free**
-- Use `ifelse` — never short-circuiting `if`/`else` in kernels
-- No error messages, no `AbstractModel`s, and no `state` inside kernels
+- Use `ifelse` — never short-circuiting `if`/`else` in kernels. `ifelse` evaluates **both**
+  branches, so never index in a branch that may be out of range: select the *index*, not the
+  loads (write `x[ifelse(cond, i, n)]`, not `ifelse(cond, x[i], x[n])`)
+- No error messages, no `AbstractModel`s, and no `state` inside kernels. This bans **any reachable
+  throw path** — `@assert`, bounds errors from un-elided `@inbounds`, `InexactError` from
+  `convert`/`round(Int, …)`, integer `DivideError` — because under Reactant these lower to
+  `llvm.intr.trap`, which cannot be raised to StableHLO and fails compilation *even if never
+  triggered*. Put argument validation in host-side (keyword) constructors, not in the positional
+  constructors that kernels call
 - Always extract relevant input/output `Field`s with `get_fields` and related methods
 - Favor explicit enumeration of process types when invoking kernels rather than passing `AbstractCoupledProcesses` types
 - Mark functions called inside kernels with `@inline` or `@propagate_inbounds` when including indices
@@ -58,6 +65,35 @@ is a top priority and must be continuously tested.
 - **No global state**: Initialize all parameters explicitly; never rely on global variables or implicit state
 - **Test differentiability**: Use Enzyme to test that critical functions compute valid adjoints; include in test suite. See existing tests in `test/differentiability` for reference.
 - **Document AD limitations**: If a function cannot be differentiated, mark it clearly with comments and docstrings
+
+### Reactant compatibility
+
+Terrarium runs through Reactant.jl (trace → MLIR/StableHLO → XLA). All Reactant-specific code lives
+in `TerrariumReactantExt`; the user's only knob is the architecture, `ReactantState()`. A model on a
+`ReactantState` grid is built and initialized on the CPU, transferred to the device, and its
+`run!`/`timestep!`/`run_timesteps!` compiled by XLA. Correctness is tested in `test/reactant/`
+(own `Project.toml`, CI `Reactant_CI.yml`).
+
+- **No reachable throw paths in kernels** — see the Kernels rule above (this is the single most
+  common Reactant compile failure).
+- **`using CUDA` is required alongside Reactant, even on CPU**: it provides the KernelAbstractions↔Reactant
+  glue. Without it, kernel launches fail with `MethodError: ka_with_reactant(::Nothing, …)`.
+- **Closures compiled into kernels must capture only `isbits` values.** A boundary-condition
+  function that closes over a `Type` (e.g. `NF`/`Float32`) becomes a non-`isbits` kernel argument
+  and fails to compile — hoist numeric constants out (`amplitude = NF(5); bc(x, t) = amplitude * …`).
+- **Vertical spacing must be uniform under Reactant.** `z_coordinates` returns an endpoint tuple for
+  `UniformSpacing` so Oceananigans keeps range (`StepRangeLen`) coordinates, which trace. Array-valued
+  `z` (`ExponentialSpacing`/`PrescribedSpacing`) is not yet traceable through kernel launches (upstream
+  Oceananigans gap; tracked in `REACTANT_upstream_issue.md`).
+- **Reverse-mode AD**: differentiate `run_timesteps!` with `Enzyme.autodiff(set_strong_zero(ReverseWithPrimal),
+  …, Duplicated(integrator, dintegrator), …)` inside `@compile raise=true raise_first=true sync=true`.
+  Pass a `checkpointing` scheme (`Reactant.Periodic(n)`) to `run!`/`run_timesteps!` to bound reverse-pass
+  memory; it must not change the gradient. See `test/reactant/autodiff.jl`.
+- **Do not run `test/reactant` under `--check-bounds=yes`**: forced bounds checks make every kernel
+  un-raisable (see the trap rule); `runtests.jl` guards against this.
+- **Debugging a Reactant failure**: if a compile fails locally but passed before / passes on CI at the
+  *same* package versions, suspect a stale `Manifest`/precompile cache — delete `test/reactant/Manifest.toml`
+  and re-resolve before concluding it is a code or fundamental limitation.
 
 ### Type Stability & Memory
 

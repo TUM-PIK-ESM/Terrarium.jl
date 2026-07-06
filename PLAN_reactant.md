@@ -373,9 +373,11 @@ check as a trap and make raising impossible regardless.
     with the culprit named, instead of as an opaque full-`timestep!` MLIR error. Not needed while
     the end-to-end suite covers the active kernel set; revisit when enabling further process
     families (hydrology RRE, vegetation, surface energy) under Reactant.
-- **AGENTS.md:** extend the kernel rules with the concrete Reactant rationale: no reachable throw
-  paths (including `@assert` and un-elided bounds checks) in kernels — they lower to
-  `llvm.intr.trap`, which cannot be raised to StableHLO.
+- **AGENTS.md — DONE (2026-07-06).** Kernels rules tightened (no reachable throw path →
+  `llvm.intr.trap`, unraisable; `ifelse` evaluates both branches so select the index, not the
+  loads) and a new **"### Reactant compatibility"** subsection added (build-on-CPU→device model,
+  `using CUDA` requirement, `isbits`-only kernel closures, uniform-`z` requirement, reverse-mode-AD
+  recipe + `checkpointing`, no `--check-bounds=yes`, and the stale-Manifest debugging tip).
 
 ### Phase D — fallback if a trap lives in third-party code
 
