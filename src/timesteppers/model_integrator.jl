@@ -103,6 +103,25 @@ function Oceananigans.Simulations.run!(
     return integrator
 end
 
+"""
+    run_timesteps!(integrator, Δt, Nt, checkpointing = false)
+
+Advance `integrator` by `Nt` steps of size `Δt`, updating auxiliary variables after each step.
+This is the low-level stepping loop underlying [`run!`](@ref) and the natural building block for
+reverse-mode differentiation of a whole integration.
+
+The generic (host) implementation is a plain loop and ignores `checkpointing`. `ReactantState`
+integrators override this method in `TerrariumReactantExt`, compiling the loop into a single
+traced program in which `checkpointing` selects the reverse-mode-AD checkpointing scheme
+(`false`, or a scheme such as `Reactant.Periodic(n)`).
+"""
+function run_timesteps!(integrator::ModelIntegrator, Δt, Nt, checkpointing = false)
+    for _ in 1:Nt
+        timestep!(integrator, Δt)
+    end
+    return nothing
+end
+
 # Terrarium method interfaces
 
 """

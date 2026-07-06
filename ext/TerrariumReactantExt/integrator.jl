@@ -16,39 +16,50 @@ function step_core!(integrator, Δt)
     return nothing
 end
 
-# Advance the integrator by `Nt` steps of size `Δt`. `Reactant.@trace` compiles the loop to a
-# single `stablehlo.while` (rather than unrolling `Nt` copies of the step into the trace). This
-# is the function compiled by `run!` and mirrors Oceananigans' `run_timesteps!` test helper.
-function run_timesteps!(integrator, Δt, Nt)
-    Reactant.@trace track_numbers = false for _ in 1:Nt
+# Reactant specialization of `Terrarium.run_timesteps!` (generic host loop defined in src). Here
+# `Reactant.@trace` compiles the loop to a single `stablehlo.while` (rather than unrolling `Nt`
+# copies of the step into the trace); this is the function compiled by `run!` and mirrors
+# Oceananigans' `run_timesteps!` test helper.
+#
+# `checkpointing` is forwarded to `@trace` and controls reverse-mode-AD memory: `false` (default)
+# stores every intermediate state; a scheme such as `Reactant.Periodic(n)`/`Reactant.Binomial(n)`
+# stores only `n` checkpoints and recomputes the rest. It has no effect on a pure forward run but
+# matters when this function is differentiated (see the autodiff example).
+function Terrarium.run_timesteps!(integrator::ReactantIntegrator, Δt, Nt, checkpointing = false)
+    Reactant.@trace checkpointing = checkpointing track_numbers = false for _ in 1:Nt
         step_core!(integrator, Δt)
     end
     return nothing
 end
 
 """
-    run!(integrator; steps, period, Δt, compiled_run! = nothing)
+    run!(integrator; steps, period, Δt, checkpointing = false, compiled_run! = nothing)
 
 Run a `ReactantState` integrator. If `compiled_run!` is `nothing`, the stepping loop is compiled
 here with Reactant (`raise=true` lowers the KernelAbstractions kernels — halo fills,
 tendency/closure kernels — so their traced grid/array arguments are adapted correctly).
 The compiled function is returned-through by being reusable: pass it back as `compiled_run!` on
-subsequent runs with the same `Δt` and step count to skip recompilation.
+subsequent runs with the same `Δt`, step count, and `checkpointing` to skip recompilation.
+
+`checkpointing` selects the reverse-mode-AD checkpointing strategy for the traced loop — `false`
+(default), or a scheme such as `Reactant.Periodic(n)`/`Reactant.Binomial(n)`. It has no effect on
+a forward run but bounds the memory of a reverse pass when the compiled function is differentiated.
 """
 function Oceananigans.Simulations.run!(
         integrator::ReactantIntegrator;
         steps::Union{Int, Nothing} = nothing,
         period::Union{Terrarium.Period, Nothing} = nothing,
         Δt = Terrarium.default_dt(get_timestepper(integrator.model)),
+        checkpointing = false,
         compiled_run! = nothing,
     )
     Δt = Terrarium.convert_dt(Δt)
     nsteps = Terrarium.get_steps(steps, period, Δt)
     if isnothing(compiled_run!)
-        @info "Reactant: compiling run_timesteps! (Δt=$Δt, steps=$nsteps)"
-        compiled_run! = @compile raise = true raise_first = true sync = true run_timesteps!(integrator, Δt, nsteps)
+        @info "Reactant: compiling run_timesteps! (Δt=$Δt, steps=$nsteps, checkpointing=$checkpointing)"
+        compiled_run! = @compile raise = true raise_first = true sync = true run_timesteps!(integrator, Δt, nsteps, checkpointing)
     end
-    compiled_run!(integrator, Δt, nsteps)
+    compiled_run!(integrator, Δt, nsteps, checkpointing)
     return integrator
 end
 

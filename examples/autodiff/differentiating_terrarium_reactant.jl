@@ -14,7 +14,6 @@
 using Terrarium
 using Reactant, CUDA   # CUDA is required by Reactant's kernel integration, even on CPU
 using Enzyme
-using Reactant: @trace
 
 import CairoMakie as Makie
 
@@ -30,30 +29,30 @@ integrator = initialize(model; boundary_conditions = bcs, initializers)
 # We differentiate a scalar objective — the mean-square soil temperature after `nsteps` — with
 # respect to the initial state. The time loop calls the raw per-step functions (`timestep!` with
 # the model's timestepper, then `compute_auxiliary!`) rather than `run!`, because `run!` itself
-# compiles and we want to compile the *whole* gradient in one go. Wrapping the loop in
-# `@trace checkpointing=true` tells Reactant to store periodic checkpoints and recompute the rest
-# during the reverse pass, keeping memory bounded for long integrations.
+# compiles and we want to compile the *whole* gradient in one go. [`run_timesteps!`](@ref) is the
+# stepping loop underlying `run!`; on `ReactantState` it traces the loop and takes a `checkpointing`
+# scheme. Passing `Reactant.Periodic(n)` stores `n` checkpoints and recomputes the rest during the
+# reverse pass, keeping memory bounded for long integrations (the same scheme is accepted by `run!`
+# via its `checkpointing` keyword).
 
-function loss(integrator, Δt, nsteps)
-    timestepper = get_timestepper(integrator.model)
-    @trace checkpointing = true track_numbers = false for _ in 1:nsteps
-        timestep!(integrator, timestepper, Δt)
-        compute_auxiliary!(integrator.state, integrator.model)
-    end
-    return sum(interior(integrator.state.temperature) .^ 2) / length(interior(integrator.state.temperature))
+function loss(integrator, Δt, nsteps, checkpointing)
+    run_timesteps!(integrator, Δt, nsteps, checkpointing)
+    T = interior(integrator.state.temperature)
+    return sum(T .^ 2) / length(T)
 end
 
 # `Enzyme.autodiff` in reverse mode computes the objective together with its gradient. We pass the
 # integrator as `Duplicated`, so its shadow `dintegrator` accumulates the sensitivity of the loss
 # with respect to every state variable — in particular the initial internal energy `U₀`.
 
-function grad_loss!(integrator, dintegrator, Δt, nsteps)
+function grad_loss!(integrator, dintegrator, Δt, nsteps, checkpointing)
     _, loss_value = Enzyme.autodiff(
         Enzyme.set_strong_zero(Enzyme.ReverseWithPrimal),
         loss, Enzyme.Active,
         Enzyme.Duplicated(integrator, dintegrator),
         Enzyme.Const(Δt),
         Enzyme.Const(nsteps),
+        Enzyme.Const(checkpointing),
     )
     return loss_value
 end
@@ -64,9 +63,10 @@ end
 dintegrator = Enzyme.make_zero(integrator)
 Δt = 600.0f0
 nsteps = 200
+checkpointing = Reactant.Periodic(isqrt(nsteps))   # ≈ √n checkpoints
 
-compiled_grad! = @compile raise = true raise_first = true sync = true grad_loss!(integrator, dintegrator, Δt, nsteps)
-loss_value = compiled_grad!(integrator, dintegrator, Δt, nsteps)
+compiled_grad! = @compile raise = true raise_first = true sync = true grad_loss!(integrator, dintegrator, Δt, nsteps, checkpointing)
+loss_value = compiled_grad!(integrator, dintegrator, Δt, nsteps, checkpointing)
 
 # The sensitivity ``\partial \text{loss} / \partial U_0`` of the objective with respect to the
 # initial internal energy of each soil layer now lives in `dintegrator`. We move it to the CPU to

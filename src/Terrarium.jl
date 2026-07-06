@@ -148,7 +148,7 @@ include("processes/processes.jl")
 include("models/models.jl")
 
 # model integrator/simulation types and methods
-export ModelIntegrator, initialize, current_time, iteration
+export ModelIntegrator, initialize, current_time, iteration, run_timesteps!
 include("timesteppers/model_integrator.jl")
 
 # Concrete timestepper implementations
