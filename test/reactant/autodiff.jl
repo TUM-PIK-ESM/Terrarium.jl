@@ -37,7 +37,8 @@ function reactant_gradient(config, NF, Δt, nsteps, checkpointing)
     integrator = build_integrator(Val(config), ReactantState(), NF)
     dintegrator = Enzyme.make_zero(integrator)
     compiled_grad! = Reactant.@compile raise = true raise_first = true sync = true ad_grad!(
-        integrator, dintegrator, Δt, nsteps, checkpointing)
+        integrator, dintegrator, Δt, nsteps, checkpointing
+    )
     loss_value = compiled_grad!(integrator, dintegrator, Δt, nsteps, checkpointing)
     return _scalar(loss_value), Array(interior(dintegrator.state.internal_energy))
 end
