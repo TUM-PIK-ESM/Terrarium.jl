@@ -53,23 +53,20 @@ DegreeDaySnow(::Type{NF}) where {NF} = DegreeDaySnow{NF}()
 # computes the melt `M` from an MLP with a single hidden layer (`1 → H → 1`, tanh). It stores the
 # MLP's weight arrays and the input/output normalization constants used during training.
 
-# Each weight/bias gets its own type parameter: on the device they become `CuTracedArray`s whose
-# shape is encoded in the type, so `W1` (H×1) and `W2` (1×H) are *different* types (and likewise
-# `b1`/`b2`), which a single shared parameter could not represent.
-struct NeuralSnowMelt{NF, MW1, VB1, MW2, VB2} <: AbstractProcess{NF}
-    "Hidden weight matrix (H×1) and bias (H)"
-    W1::MW1
-    b1::VB1
-    "Output weight matrix (1×H) and bias (1)"
-    W2::MW2
-    b2::VB2
+# We store the Lux parameter object `ps` directly (a `NamedTuple` of the layers' weights and
+# biases, on whatever architecture the model runs on). Its type already captures each array's
+# distinct type — on the device the weights become `CuTracedArray`s whose shape is part of the
+# type — so a single `ps` field suffices.
+struct NeuralSnowMelt{NF, PS} <: AbstractProcess{NF}
+    "Lux parameters of the melt MLP (`NamedTuple` of layer weights/biases)"
+    ps::PS
     "Input normalization for temperature (°C)"
     T_mean::NF
     T_std::NF
     "Output scale mapping the network's O(1) output back to a melt rate [m/s]"
     M_scale::NF
 end
-Adapt.@adapt_structure NeuralSnowMelt   # so the weight arrays move with the architecture
+Adapt.@adapt_structure NeuralSnowMelt   # so the parameter arrays move with the architecture
 
 # Both processes declare exactly the same state variables, so either can be dropped into the model.
 const SnowVars{NF} = Union{DegreeDaySnow{NF}, NeuralSnowMelt{NF}}
@@ -135,11 +132,13 @@ end
     P = @inbounds fields.snow_fall[i, j, 1]
     T = @inbounds fields.air_temperature[i, j, 1]
     Tn = (T - p.T_mean) / p.T_std
-    ## explicit MLP forward pass: y = W2 * tanh.(W1 * Tn .+ b1) .+ b2
-    acc = @inbounds p.b2[1]
-    for h in 1:length(p.b1)
-        z = @inbounds p.W1[h, 1] * Tn + p.b1[h]
-        acc += @inbounds p.W2[1, h] * tanh(z)
+    ## explicit MLP forward pass over the Lux parameters: y = W2 * tanh.(W1 * Tn .+ b1) .+ b2
+    W1 = p.ps.layer_1.weight; b1 = p.ps.layer_1.bias
+    W2 = p.ps.layer_2.weight; b2 = p.ps.layer_2.bias
+    acc = @inbounds b2[1]
+    for h in 1:length(b1)
+        z = @inbounds W1[h, 1] * Tn + b1[h]
+        acc += @inbounds W2[1, h] * tanh(z)
     end
     M = acc * p.M_scale          # un-scale network output to a melt rate
     return P - M
@@ -194,22 +193,18 @@ tstate = train_mlp(mlp, ps, st, data)
 
 # ## Assemble the trained neural process
 #
-# We move the trained weights back to the CPU (we run the hybrid model on the CPU below) and build
-# the `NeuralSnowMelt` process. Each Lux `Dense` layer stores a `weight` matrix and `bias` vector.
+# We move the trained parameters back to the CPU (we run the hybrid model on the CPU below) and
+# build the `NeuralSnowMelt` process directly from the Lux parameter object.
 
 cdev = MLDD.cpu_device()
-ps_trained = cdev(tstate.parameters)
-neural = NeuralSnowMelt(
-    ps_trained.layer_1.weight, ps_trained.layer_1.bias,   # W1 (H×1), b1 (H)
-    ps_trained.layer_2.weight, ps_trained.layer_2.bias,   # W2 (1×H), b2 (1)
-    T_mean, T_std, M_scale,
-)
+neural = NeuralSnowMelt(cdev(tstate.parameters), T_mean, T_std, M_scale)
 
 # Quick check of the learned melt law against the analytic one (the kernel and this host-side
 # forward compute the same thing):
 nn_melt(p::NeuralSnowMelt, T) = (
     Tn = (T - p.T_mean) / p.T_std;
-    (p.b2[1] + sum(p.W2[1, h] * tanh(p.W1[h, 1] * Tn + p.b1[h]) for h in 1:length(p.b1))) * p.M_scale
+    W1 = p.ps.layer_1.weight; b1 = p.ps.layer_1.bias; W2 = p.ps.layer_2.weight; b2 = p.ps.layer_2.bias;
+    (b2[1] + sum(W2[1, h] * tanh(W1[h, 1] * Tn + b1[h]) for h in 1:length(b1))) * p.M_scale
 )
 
 T_check = range(NF(-30), NF(30), length = 200)
@@ -282,12 +277,7 @@ build_device_integrator(process) = initialize(
     inputs = device_inputs, initializers = (snow_storage = NF(0.5),),
 )
 
-ps_dev = tstate.parameters   # offline-trained weights, on the device
-neural_device = NeuralSnowMelt(
-    ps_dev.layer_1.weight, ps_dev.layer_1.bias,
-    ps_dev.layer_2.weight, ps_dev.layer_2.bias,
-    T_mean, T_std, M_scale,
-)
+neural_device = NeuralSnowMelt(tstate.parameters, T_mean, T_std, M_scale)   # params already on device
 integrator = build_device_integrator(neural_device)
 
 # The target is the snow field the *analytic* model produces after the same rollout, and the reset
@@ -322,20 +312,19 @@ compiled_snow_grad! = Reactant.@compile raise = true raise_first = true sync = t
     integrator, dintegrator, S0, S_ref, Nt_ft
 )
 
-# Adam update of the network weights. Because rolling the melt through `Nt·Δt ≈ 10⁶` seconds
+# Adam update of the network parameters. Because rolling the melt through `Nt·Δt ≈ 10⁶` seconds
 # amplifies its gradient enormously, an adaptive optimizer (which rescales by the gradient
-# magnitude) is far more robust here than plain gradient descent. The optimizer runs eagerly on
-# the host over the device weight arrays — which are shared with `integrator.model.snow_melt`, so
-# the model updates in place. (Eager, not traced, so Adam's scalar state is a plain number.)
+# magnitude) is far more robust here than plain gradient descent. We optimize the Lux parameters
+# `ps` directly; the optimizer runs eagerly on the host over the device arrays — which are shared
+# with `integrator.model.snow_melt.ps`, so the model updates in place. (Eager, not traced, so
+# Adam's scalar state is a plain number.)
 function finetune!(integrator, S0, S_ref; epochs = 100, lr = NF(1.0e-3))
-    p = integrator.model.snow_melt
-    params = (; W1 = p.W1, b1 = p.b1, W2 = p.W2, b2 = p.b2)
+    params = integrator.model.snow_melt.ps
     opt = Optimisers.setup(Optimisers.Adam(lr), params)
     for epoch in 1:epochs
         dintegrator = Enzyme.make_zero(integrator)           # fresh zero shadow each step
         loss = compiled_snow_grad!(integrator, dintegrator, S0, S_ref, Nt_ft)
-        dp = dintegrator.model.snow_melt
-        grads = (; W1 = dp.W1, b1 = dp.b1, W2 = dp.W2, b2 = dp.b2)
+        grads = dintegrator.model.snow_melt.ps
         Optimisers.update!(opt, params, grads)
         (epoch == 1 || epoch % 25 == 0) &&
             println("  finetune epoch $epoch   snow loss = $(Reactant.to_number(loss))")
@@ -349,11 +338,7 @@ finetune!(integrator, S0, S_ref)
 # We rebuild a CPU neural process from the finetuned weights and run the hybrid model once more to
 # compare against the analytic model.
 
-neural_ft = NeuralSnowMelt(
-    Array(neural_device.W1), Array(neural_device.b1),
-    Array(neural_device.W2), Array(neural_device.b2),
-    T_mean, T_std, M_scale,
-)
+neural_ft = NeuralSnowMelt(cdev(integrator.model.snow_melt.ps), T_mean, T_std, M_scale)
 snow_nn_ft = run_snow(neural_ft)
 println("Max |S_ddm − S_nn| after online finetuning: ", maximum(abs, snow_ddm .- snow_nn_ft), " m")
 
