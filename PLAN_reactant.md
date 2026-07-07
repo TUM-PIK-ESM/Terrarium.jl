@@ -59,9 +59,12 @@
 >   over `run_timesteps!`, compiled with `@compile raise=true …` — the full input-driven model
 >   runs and differentiates under Reactant. Key gotchas found:
 >   - The full `SnowModel(NeuralSnowMelt)` **runs under Reactant** (static `FieldInputSource`
->     inputs + ext transfer are fine) once the process struct gives **each weight/bias its own
->     type parameter** (device `CuTracedArray`s encode shape in the type, so `W1` (H×1) ≠ `W2`
->     (1×H)).
+>     inputs + ext transfer are fine). The process stores the Lux **`ps` NamedTuple** in a single
+>     type parameter — the NamedTuple type already captures each array's distinct
+>     (shape-encoded) `CuTracedArray` type, so no per-field type params are needed. (Storing the
+>     weights as separate fields also works, but then each needs its own type param, since
+>     `W1` (H×1) and `W2` (1×H) are different `CuTracedArray` types.) The kernel reads
+>     `p.ps.layer_1.weight` etc. and does the forward by hand.
 >   - `Enzyme.make_zero!` **inside** the compiled function fails ("cannot set SnowModel …" —
 >     can't reconstruct the immutable model); `make_zero` the shadow **outside** each step instead
 >     (matches the soil `autodiff.jl` pattern).
