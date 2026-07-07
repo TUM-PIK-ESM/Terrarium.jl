@@ -2,19 +2,11 @@
 #
 # `run!` on a device integrator compiles the whole stepping loop into a single StableHLO
 # program (via `@trace for`) and runs it. The compiled function can be reused across runs by
-# passing it back as the `compiled_run!` keyword. The compiled core calls the timestepper-level
+# passing it back as the `compiled_run!` keyword. The traced loop body calls the timestepper-level
 # `timestep!` (`timestep!(integrator, timestepper, Δt)`), which is NOT overridden here — this is
 # what avoids recursively re-entering the compiling wrapper.
 
 const ReactantIntegrator = ModelIntegrator{<:Any, <:RARCH}
-
-# One full step + auxiliary finalization; the unit stepped by the traced loop.
-function step_core!(integrator, Δt)
-    timestepper = get_timestepper(integrator.model)
-    Terrarium.timestep!(integrator, timestepper, Terrarium.convert_dt(Δt))
-    Terrarium.compute_auxiliary!(integrator.state, integrator.model)
-    return nothing
-end
 
 # Reactant specialization of `Terrarium.run_timesteps!` (generic host loop defined in src). Here
 # `Reactant.@trace` compiles the loop to a single `stablehlo.while` (rather than unrolling `Nt`
@@ -26,9 +18,13 @@ end
 # stores only `n` checkpoints and recomputes the rest. It has no effect on a pure forward run but
 # matters when this function is differentiated (see the autodiff example).
 function Terrarium.run_timesteps!(integrator::ReactantIntegrator, Δt, Nt, checkpointing = false)
+    timestepper = get_timestepper(integrator.model)
+    Δt = Terrarium.convert_dt(Δt)
     Reactant.@trace checkpointing = checkpointing track_numbers = false for _ in 1:Nt
-        step_core!(integrator, Δt)
+        Terrarium.timestep!(integrator, timestepper, Δt)
     end
+    # Update auxiliary variables for the final timestep.
+    Terrarium.compute_auxiliary!(integrator.state, integrator.model)
     return nothing
 end
 
