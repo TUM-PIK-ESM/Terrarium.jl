@@ -128,6 +128,8 @@ end
     i, j = @index(Global, NTuple)
     @inbounds tend.snow_storage[i, j, 1] = nn_snow_flux(i, j, fields, snow_melt)
 end
+#TODO: currently Lux models can't run within a kernel, so we manually reimplement here. 
+# In case we can't solve this on Lux side soon, we can move this to a stand alone package.
 @inline function nn_snow_flux(i, j, fields, p::NeuralSnowMelt)
     P = @inbounds fields.snow_fall[i, j, 1]
     T = @inbounds fields.air_temperature[i, j, 1]
