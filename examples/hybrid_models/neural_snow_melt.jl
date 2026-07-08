@@ -5,25 +5,24 @@
 # and replace its analytic melt law with a small neural network, which we train to reproduce the
 # original melt using [Reactant.jl](https://github.com/EnzymeAD/Reactant.jl) (compilation) and
 # [Enzyme.jl](https://github.com/EnzymeAD/Enzyme.jl) (reverse-mode gradients). It is deliberately
-# a toy problem — the NN just relearns a function we already know — but it shows the full
+# a toy problem - the NN just relearns a function we already know - but it shows the full
 # machinery: generating training data from a Terrarium process, training an MLP with Reactant +
 # Enzyme, and evaluating that MLP *inside a kernel* as a drop-in replacement process.
 #
 # ## What we are (and are not) doing
 #
 # * The degree-day melt is `M(T) = max(0, k·(T − T_melt))` — a rectified linear function of
-#   temperature. A tiny MLP can represent it. We train the MLP offline on `(T, M(T))` pairs.
+#   temperature. A tiny MLP can represent it. We first train the MLP offline on `(T, M(T))` pairs, and then continue the training online within a Terrarium model later. 
 # * The `NeuralSnowMelt` process evaluates the trained MLP **per grid point inside a
-#   KernelAbstractions kernel**. Because `Lux.apply` cannot currently be compiled inside a kernel
-#   (it pulls in string handling that has no GPU/StableHLO lowering — see the note below), the
-#   kernel evaluates the MLP's forward pass *explicitly* from its weight arrays.
-# * Training runs on the Reactant device (Reactant + Enzyme). The hybrid model is then *run* on
-#   the CPU, because Terrarium's input-driven simulations are not yet traced through Reactant; the
-#   same kernel is device-agnostic and compiles under Reactant (that is how it is trained).
+#   KernelAbstractions kernel**. Plain `Lux.apply` cannot be compiled inside a kernel, so we use
+#   [KernelLux.jl](https://github.com/maximilian-gelbrecht/KernelLux.jl), whose `apply_in_kernel`
+#   is a device-safe drop-in for `Lux.apply` for a `Chain` of `Dense` layers.
 
 using Terrarium
 using Reactant, CUDA          # CUDA is required by Reactant's kernel integration, even on CPU
 using Lux, Enzyme, Optimisers, Random
+using KernelLux               # device-safe `apply_in_kernel` / `kernelize` for Lux in kernels
+using StaticArrays: SA
 using Statistics: mean, std
 using KernelAbstractions: @index, @kernel
 using Terrarium: launch!, XY, interior, AbstractProcess
@@ -51,15 +50,18 @@ DegreeDaySnow(::Type{NF}) where {NF} = DegreeDaySnow{NF}()
 #
 # `NeuralSnowMelt` mirrors `DegreeDaySnow` — same variables, same tendency `dS/dt = P − M` — but
 # computes the melt `M` from an MLP with a single hidden layer (`1 → H → 1`, tanh). It stores the
-# MLP's weight arrays and the input/output normalization constants used during training.
+# Lux model together with its parameters/state, and the input/output normalization constants used
+# during training, so the kernel can evaluate the network with `KernelLux.apply_in_kernel`.
 
-# We store the Lux parameter object `ps` directly (a `NamedTuple` of the layers' weights and
-# biases, on whatever architecture the model runs on). Its type already captures each array's
-# distinct type — on the device the weights become `CuTracedArray`s whose shape is part of the
-# type — so a single `ps` field suffices.
-struct NeuralSnowMelt{NF, PS} <: AbstractProcess{NF}
+# The `model` is the `Lux.Chain` (immutable/isbits — just layer dims and activations); `ps`/`st`
+# are the Lux parameter and state objects, on whatever architecture the network runs on.
+struct NeuralSnowMelt{NF, M, PS, ST} <: AbstractProcess{NF}
+    "The Lux MLP (`Chain` of `Dense` layers)"
+    model::M
     "Lux parameters of the melt MLP (`NamedTuple` of layer weights/biases)"
     ps::PS
+    "Lux state of the melt MLP"
+    st::ST
     "Input normalization for temperature (°C)"
     T_mean::NF
     T_std::NF
@@ -114,10 +116,6 @@ end
 end
 
 # ### Tendencies for the neural process
-#
-# The kernel evaluates the MLP explicitly: normalize `T`, run one hidden `tanh` layer and the
-# linear output layer over the `H` hidden units, then un-scale to a melt rate. All operations are
-# plain scalar arithmetic and array indexing, so the kernel compiles for CPU, GPU, and Reactant.
 
 function Terrarium.compute_tendencies!(state, grid, snow_melt::NeuralSnowMelt)
     fields = get_fields(state, snow_melt)
@@ -128,28 +126,20 @@ end
     i, j = @index(Global, NTuple)
     @inbounds tend.snow_storage[i, j, 1] = nn_snow_flux(i, j, fields, snow_melt)
 end
-#TODO: currently Lux models can't run within a kernel, so we manually reimplement here.
-# In case we can't solve this on Lux side soon, we can move this to a stand alone package.
 @inline function nn_snow_flux(i, j, fields, p::NeuralSnowMelt)
     P = @inbounds fields.snow_fall[i, j, 1]
     T = @inbounds fields.air_temperature[i, j, 1]
     Tn = (T - p.T_mean) / p.T_std
-    ## explicit MLP forward pass over the Lux parameters: y = W2 * tanh.(W1 * Tn .+ b1) .+ b2
-    W1 = p.ps.layer_1.weight; b1 = p.ps.layer_1.bias
-    W2 = p.ps.layer_2.weight; b2 = p.ps.layer_2.bias
-    acc = @inbounds b2[1]
-    for h in 1:length(b1)
-        z = @inbounds W1[h, 1] * Tn + b1[h]
-        acc += @inbounds W2[1, h] * tanh(z)
-    end
-    M = acc * p.M_scale          # un-scale network output to a melt rate
+    ## KernelLux evaluates the MLP inside the kernel; the input is a 1-element static vector.
+    y, _ = apply_in_kernel(p.model, SA[Tn], p.ps, p.st)
+    M = y[1] * p.M_scale          # un-scale network output to a melt rate
     return P - M
 end
 
 # ## Generate training data from the reference process
 #
 # We sample temperatures over a realistic range and evaluate the degree-day melt to get targets.
-# Inputs and targets are normalized so the network trains on O(1) quantities; the normalization
+# Inputs and targets are normalized; the normalization
 # constants are stored in the `NeuralSnowMelt` process and undone at inference.
 
 const NF = Float32
@@ -196,18 +186,18 @@ tstate = train_mlp(mlp, ps, st, data)
 # ## Assemble the trained neural process
 #
 # We move the trained parameters back to the CPU (we run the hybrid model on the CPU below) and
-# build the `NeuralSnowMelt` process directly from the Lux parameter object.
-
+# build the `NeuralSnowMelt` process.
 cdev = MLDD.cpu_device()
-neural = NeuralSnowMelt(cdev(tstate.parameters), T_mean, T_std, M_scale)
+neural_process(model, ps, st) =
+    NeuralSnowMelt(model, kernelize(cdev(ps)), cdev(st), T_mean, T_std, M_scale)
+neural = neural_process(mlp, tstate.parameters, tstate.states)
 
-# Quick check of the learned melt law against the analytic one (the kernel and this host-side
-# forward compute the same thing):
-nn_melt(p::NeuralSnowMelt, T) = (
-    Tn = (T - p.T_mean) / p.T_std;
-    W1 = p.ps.layer_1.weight; b1 = p.ps.layer_1.bias; W2 = p.ps.layer_2.weight; b2 = p.ps.layer_2.bias;
-    (b2[1] + sum(W2[1, h] * tanh(W1[h, 1] * Tn + b1[h]) for h in 1:length(b1))) * p.M_scale
-)
+# Quick check of the learned melt law against the analytic one, via the same `apply_in_kernel`:
+function nn_melt(p::NeuralSnowMelt, T)
+    Tn = (T - p.T_mean) / p.T_std
+    y, _ = apply_in_kernel(p.model, SA[Tn], p.ps, p.st)
+    return y[1] * p.M_scale
+end
 
 T_check = range(NF(-30), NF(30), length = 200)
 melt_error = maximum(abs, nn_melt.(Ref(neural), T_check) .- melt.(Ref(reference), T_check))
@@ -279,7 +269,7 @@ build_device_integrator(process) = initialize(
     inputs = device_inputs, initializers = (snow_storage = NF(0.5),),
 )
 
-neural_device = NeuralSnowMelt(tstate.parameters, T_mean, T_std, M_scale)   # params already on device
+neural_device = NeuralSnowMelt(mlp, tstate.parameters, tstate.states, T_mean, T_std, M_scale)   # params already on device
 integrator = build_device_integrator(neural_device)
 
 # The target is the snow field the *analytic* model produces after the same rollout, and the reset
@@ -340,7 +330,7 @@ finetune!(integrator, S0, S_ref)
 # We rebuild a CPU neural process from the finetuned weights and run the hybrid model once more to
 # compare against the analytic model.
 
-neural_ft = NeuralSnowMelt(cdev(integrator.model.snow_melt.ps), T_mean, T_std, M_scale)
+neural_ft = neural_process(mlp, integrator.model.snow_melt.ps, integrator.model.snow_melt.st)
 snow_nn_ft = run_snow(neural_ft)
 println("Max |S_ddm − S_nn| after online finetuning: ", maximum(abs, snow_ddm .- snow_nn_ft), " m")
 
