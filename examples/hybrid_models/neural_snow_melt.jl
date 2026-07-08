@@ -12,7 +12,7 @@
 # ## What we are (and are not) doing
 #
 # * The degree-day melt is `M(T) = max(0, k·(T − T_melt))` — a rectified linear function of
-#   temperature. A tiny MLP can represent it. We first train the MLP offline on `(T, M(T))` pairs, and then continue the training online within a Terrarium model later. 
+#   temperature. A tiny MLP can represent it. We first train the MLP offline on `(T, M(T))` pairs, and then continue the training online within a Terrarium model later.
 # * The `NeuralSnowMelt` process evaluates the trained MLP **per grid point inside a
 #   KernelAbstractions kernel**. Plain `Lux.apply` cannot be compiled inside a kernel, so we use
 #   [KernelLux.jl](https://github.com/maximilian-gelbrecht/KernelLux.jl), whose `apply_in_kernel`
