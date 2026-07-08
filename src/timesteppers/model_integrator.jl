@@ -106,9 +106,7 @@ end
 """
     run_timesteps!(integrator, Δt, Nt, checkpointing = false)
 
-Advance `integrator` by `Nt` steps of size `Δt`, updating auxiliary variables after each step.
-This is the low-level stepping loop underlying [`run!`](@ref) and the natural building block for
-reverse-mode differentiation of a whole integration.
+Advance `integrator` by `Nt` steps of size `Δt`.
 
 The generic (host) implementation is a plain loop and ignores `checkpointing`. `ReactantState`
 integrators override this method in `TerrariumReactantExt`, compiling the loop into a single
@@ -119,6 +117,7 @@ function run_timesteps!(integrator::ModelIntegrator, Δt, Nt, checkpointing = fa
     for _ in 1:Nt
         timestep!(integrator, Δt)
     end
+    compute_auxiliary!(integrator.state, integrator.model)
     return nothing
 end
 
