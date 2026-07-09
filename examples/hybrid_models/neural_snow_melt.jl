@@ -70,8 +70,30 @@ struct NeuralSnowMelt{NF, M, PS, ST} <: AbstractProcess{NF}
 end
 Adapt.@adapt_structure NeuralSnowMelt   # so the parameter arrays move with the architecture
 
-# Both processes declare exactly the same state variables, so either can be dropped into the model.
-const SnowVars{NF} = Union{DegreeDaySnow{NF}, NeuralSnowMelt{NF}}
+# `NeuralSnowMeltBatched` holds exactly the same data as `NeuralSnowMelt`, but its
+# `compute_tendencies!` (below) evaluates the MLP as a single *batched* `Lux.apply` over all
+# columns at once — **without** a `launch!`/kernel. This is the second demonstration approach in
+# the online-training section: see the discussion there for the trade-offs versus the in-kernel
+# process. It stores the plain Lux parameters (no `kernelize` — the batched forward is ordinary
+# array math, not in-kernel scalar code).
+struct NeuralSnowMeltBatched{NF, M, PS, ST} <: AbstractProcess{NF}
+    "The Lux MLP (`Chain` of `Dense` layers)"
+    model::M
+    "Lux parameters of the melt MLP (`NamedTuple` of layer weights/biases)"
+    ps::PS
+    "Lux state of the melt MLP"
+    st::ST
+    "Input normalization for temperature (°C)"
+    T_mean::NF
+    T_std::NF
+    "Output scale mapping the network's O(1) output back to a melt rate [m/s]"
+    M_scale::NF
+end
+Adapt.@adapt_structure NeuralSnowMeltBatched
+
+# All three processes declare exactly the same state variables, so any of them can be dropped into
+# the model.
+const SnowVars{NF} = Union{DegreeDaySnow{NF}, NeuralSnowMelt{NF}, NeuralSnowMeltBatched{NF}}
 Terrarium.variables(::SnowVars{NF}) where {NF} = (
     Terrarium.input(:air_temperature, XY(), default = NF(0), units = u"°C", desc = "Near-surface air temperature in °C"),
     Terrarium.input(:snow_fall, XY(), default = NF(0), units = u"m/s", desc = "Snow fall rate in m/s"),
@@ -134,6 +156,27 @@ end
     y, _ = apply_in_kernel(p.model, SA[Tn], p.ps, p.st)
     M = y[1] * p.M_scale          # un-scale network output to a melt rate
     return P - M
+end
+
+# ### Tendencies for the *batched* neural process (no kernel launch)
+#
+# This is the second demonstration approach. Instead of launching a kernel that evaluates the MLP
+# once per grid point, we gather all the columns' temperatures into a single `(1, N)` batch, run
+# the network with one ordinary (batched) `Lux.apply` — a matmul + activation — and scatter the
+# resulting melt back into the tendency field. There is no `launch!`: the whole tendency is a
+# vectorized array operation. This traces natively under Reactant (no `raise` needed for it — it is
+# plain array math, exactly Reactant's normal Lux workflow) and differentiates with Enzyme the
+# same way the offline training does. For a large network the batched matmul is far more efficient
+# than a per-point kernel; the trade-off is that the tendency is computed for the whole grid at
+# once, so it does not naturally compose with per-point physics that would live inside a kernel.
+function Terrarium.compute_tendencies!(state, grid, snow_melt::NeuralSnowMeltBatched)
+    fields = get_fields(state, snow_melt)
+    T = interior(fields.air_temperature)                                   # inputs over all columns
+    Tn = (T .- snow_melt.T_mean) ./ snow_melt.T_std                        # normalize (materializes)
+    M_norm, _ = Lux.apply(snow_melt.model, reshape(Tn, 1, length(Tn)), snow_melt.ps, snow_melt.st)
+    M = reshape(M_norm, size(T)) .* snow_melt.M_scale                      # un-scale to a melt rate
+    interior(state.tendencies.snow_storage) .= interior(fields.snow_fall) .- M
+    return nothing
 end
 
 # ## Generate training data from the reference process
@@ -242,22 +285,36 @@ println("Max |S_ddm − S_nn| after offline training: ", snow_diff, " m  (mean s
 #
 # The training above was *offline*: we fit the melt law `M(T)` pointwise, independently of the
 # simulation. *Online* training instead differentiates through the model's own time integration.
-# Here we do this with the **full Terrarium model** — a `SnowModel` containing `NeuralSnowMelt`
+# Here we do this with the **full Terrarium model** — a `SnowModel` containing the neural process,
 # stepped by `run_timesteps!` — on the Reactant device: we roll the model forward, compare the
 # simulated snow to a reference trajectory, and let Enzyme backpropagate through the compiled
-# rollout (kernels and all) to the network weights. This is the differentiable-simulation idea,
-# and it is what Reactant + Enzyme make possible.
+# rollout to the network weights. This is the differentiable-simulation idea, and it is what
+# Reactant + Enzyme make possible.
 #
 # It can help even in this toy setting: the offline objective fits `M(T)` pointwise, whereas the
 # online objective matches the simulated snow trajectory directly — the quantity we care about —
 # so a small pointwise melt error that would accumulate over the rollout gets corrected.
+#
+# ### Two ways to evaluate the network — same result
+#
+# We run the online finetuning **twice**, with the two processes defined above, to show they are
+# interchangeable:
+#
+# 1. **In-kernel** (`NeuralSnowMelt`): the network is evaluated per grid point inside a
+#    KernelAbstractions kernel (`apply_in_kernel`). This composes naturally with per-point,
+#    kernel-based physics, but for a large network the per-point evaluation is comparatively slow.
+# 2. **Batched, kernel-free** (`NeuralSnowMeltBatched`): the network is evaluated for all columns
+#    at once with a single batched `Lux.apply` and no kernel launch. For a large network this
+#    batched matmul is far more efficient, but the tendency is a whole-grid vectorized operation
+#    that does not fold into a per-point physics kernel.
+#
+# Both are differentiated through the identical `run_timesteps!` rollout and, starting from the
+# same offline weights, converge to essentially the same finetuned model.
 
 const Δt_ft = 86400.0f0    # 1-day steps
 const Nt_ft = 15           # 15-day rollout
 
-# We run the full model on the Reactant device. The trained weights are already there
-# (`tstate.parameters`); we build a device `NeuralSnowMelt` and the input sources on a
-# `ReactantState` grid.
+# We run the full model on the Reactant device, with the input sources on a `ReactantState` grid.
 
 device_grid = ColumnRingGrid(ReactantState(), NF, UniformSpacing(N = 1), rings)
 device_inputs = InputSources(
@@ -269,20 +326,18 @@ build_device_integrator(process) = initialize(
     inputs = device_inputs, initializers = (snow_storage = NF(0.5),),
 )
 
-neural_device = NeuralSnowMelt(mlp, tstate.parameters, tstate.states, T_mean, T_std, M_scale)   # params already on device
-integrator = build_device_integrator(neural_device)
-
 # The target is the snow field the *analytic* model produces after the same rollout, and the reset
-# state `S0` (0.5 m everywhere). Both are obtained on the device.
+# state `S0` (0.5 m everywhere); both are process-independent, so we get them once from a reference.
 
 reference_integrator = build_device_integrator(DegreeDaySnow(NF))
+S0 = copy(interior(reference_integrator.state.snow_storage))     # reset state, 0.5 m everywhere
 run!(reference_integrator; steps = Nt_ft, Δt = Δt_ft)
 S_ref = copy(interior(reference_integrator.state.snow_storage))
-S0 = copy(interior(integrator.state.snow_storage))
 
-# The loss resets the snow to `S0`, steps the full `SnowModel(NeuralSnowMelt)` with
-# `run_timesteps!`, and measures the mismatch to the reference. `snow_grad!` differentiates it with
-# Enzyme; the network-weight gradients land in `dintegrator.model.snow_melt`. (We zero the shadow
+# The loss resets the snow to `S0`, steps the full `SnowModel` with `run_timesteps!`, and measures
+# the mismatch to the reference. `snow_grad!` differentiates it with Enzyme; the network-weight
+# gradients land in `dintegrator.model.snow_melt.ps`. Both are generic over the process type — they
+# see only the `integrator` — so the same functions drive both approaches. (We zero the shadow
 # *outside* the compiled function — `make_zero!` inside it cannot reconstruct the immutable model.)
 
 function snow_loss(integrator, S0, S_ref, Nt)
@@ -299,42 +354,65 @@ function snow_grad!(integrator, dintegrator, S0, S_ref, Nt)
     return loss
 end
 
-dintegrator = Enzyme.make_zero(integrator)
-compiled_snow_grad! = Reactant.@compile raise = true raise_first = true sync = true snow_grad!(
-    integrator, dintegrator, S0, S_ref, Nt_ft
-)
-
 # Adam update of the network parameters. Because rolling the melt through `Nt·Δt ≈ 10⁶` seconds
 # amplifies its gradient enormously, an adaptive optimizer (which rescales by the gradient
 # magnitude) is far more robust here than plain gradient descent. We optimize the Lux parameters
 # `ps` directly; the optimizer runs eagerly on the host over the device arrays — which are shared
 # with `integrator.model.snow_melt.ps`, so the model updates in place. (Eager, not traced, so
-# Adam's scalar state is a plain number.)
-function finetune!(integrator, S0, S_ref; epochs = 100, lr = NF(1.0e-3))
+# Adam's scalar state is a plain number.) The compiled gradient function is passed in so the same
+# loop works for either process.
+function finetune!(compiled_grad!, integrator, S0, S_ref; epochs = 100, lr = NF(1.0e-3), label = "")
     params = integrator.model.snow_melt.ps
     opt = Optimisers.setup(Optimisers.Adam(lr), params)
     for epoch in 1:epochs
         dintegrator = Enzyme.make_zero(integrator)           # fresh zero shadow each step
-        loss = compiled_snow_grad!(integrator, dintegrator, S0, S_ref, Nt_ft)
+        loss = compiled_grad!(integrator, dintegrator, S0, S_ref, Nt_ft)
         grads = dintegrator.model.snow_melt.ps
         Optimisers.update!(opt, params, grads)
         (epoch == 1 || epoch % 25 == 0) &&
-            println("  finetune epoch $epoch   snow loss = $(Reactant.to_number(loss))")
+            println("  [$label] epoch $epoch   snow loss = $(Reactant.to_number(loss))")
     end
     return nothing
 end
 
-println("Online finetuning through the full SnowModel (Reactant + Enzyme):")
-finetune!(integrator, S0, S_ref)
+# Drive one approach end to end: build the device integrator for `device_process`, compile its
+# gradient, finetune, then rebuild an equivalent CPU process (via `cpu_process_from`) from the
+# finetuned weights and run the hybrid model to get the snow field to compare against the analytic.
+function finetune_and_run(device_process, cpu_process_from; label)
+    integrator = build_device_integrator(device_process)
+    dintegrator = Enzyme.make_zero(integrator)
+    compiled_grad! = Reactant.@compile raise = true raise_first = true sync = true snow_grad!(
+        integrator, dintegrator, S0, S_ref, Nt_ft
+    )
+    println("Online finetuning through the full SnowModel [$label] (Reactant + Enzyme):")
+    finetune!(compiled_grad!, integrator, S0, S_ref; label)
+    cpu_process = cpu_process_from(integrator.model.snow_melt.ps, integrator.model.snow_melt.st)
+    return run_snow(cpu_process)
+end
 
-# We rebuild a CPU neural process from the finetuned weights and run the hybrid model once more to
-# compare against the analytic model.
+# Each approach starts from an independent copy of the offline-trained weights (a device→host→device
+# round trip), so finetuning one does not disturb the other. The in-kernel CPU process uses
+# `kernelize`d parameters; the batched CPU process uses plain arrays (ordinary `Lux.apply`).
+fresh_offline_ps() = rdev(cdev(tstate.parameters))
 
-neural_ft = neural_process(mlp, integrator.model.snow_melt.ps, integrator.model.snow_melt.st)
-snow_nn_ft = run_snow(neural_ft)
-println("Max |S_ddm − S_nn| after online finetuning: ", maximum(abs, snow_ddm .- snow_nn_ft), " m")
+snow_nn_ft_kernel = finetune_and_run(
+    NeuralSnowMelt(mlp, fresh_offline_ps(), tstate.states, T_mean, T_std, M_scale),
+    (ps, st) -> neural_process(mlp, ps, st);
+    label = "in-kernel",
+)
+snow_nn_ft_batched = finetune_and_run(
+    NeuralSnowMeltBatched(mlp, fresh_offline_ps(), tstate.states, T_mean, T_std, M_scale),
+    (ps, st) -> NeuralSnowMeltBatched(mlp, cdev(ps), cdev(st), T_mean, T_std, M_scale);
+    label = "batched",
+)
 
-# The physics-based melt law has been replaced by a trained, kernelized neural network — trained
-# offline (fitting the melt law) and then finetuned online by differentiating through the full
-# Terrarium `SnowModel` with Reactant + Enzyme. This is the essential building block of hybrid
-# land modeling in Terrarium.
+println("Max |S_ddm − S_nn| after online finetuning [in-kernel]: ", maximum(abs, snow_ddm .- snow_nn_ft_kernel), " m")
+println("Max |S_ddm − S_nn| after online finetuning [batched]:   ", maximum(abs, snow_ddm .- snow_nn_ft_batched), " m")
+println("Max |S_in-kernel − S_batched| between the two approaches: ", maximum(abs, snow_nn_ft_kernel .- snow_nn_ft_batched), " m")
+
+# The physics-based melt law has been replaced by a trained neural network — fit offline and then
+# finetuned online by differentiating through the full Terrarium `SnowModel` with Reactant +
+# Enzyme. We demonstrated the two ways to embed the network — evaluated per grid point inside a
+# kernel, or batched across the grid without a kernel — which give essentially the same result and
+# trade off physics integration against efficiency for large networks. This is the essential
+# building block of hybrid land modeling in Terrarium.
