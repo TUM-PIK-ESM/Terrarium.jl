@@ -297,8 +297,8 @@ println("Max |S_ddm − S_nn| after offline training: ", snow_diff, " m  (mean s
 #
 # ### Two ways to evaluate the network — same result
 #
-# We run the online finetuning **twice**, with the two processes defined above, to show they are
-# interchangeable:
+# We run the online finetuning **twice**, with the two processes defined above, to show to both them 
+# as they both have possible applicaations for hybrid land modelling with Terrarium. 
 #
 # 1. **In-kernel** (`NeuralSnowMelt`): the network is evaluated per grid point inside a
 #    KernelAbstractions kernel (`apply_in_kernel`). This composes naturally with per-point,
