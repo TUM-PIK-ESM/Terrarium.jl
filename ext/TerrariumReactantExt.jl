@@ -4,8 +4,9 @@ module TerrariumReactantExt
 #
 # Design: a Terrarium model whose grid lives on `ReactantState` is built
 # and initialized on the CPU (where eager KernelAbstractions kernel launches work), then the
-# initialized state is transferred to the device. Only `timestep!`/`run!` are traced and compiled
-# by Reactant. Kernel launches inside the compiled step trace fine (this requires `CUDA` to be loaded
+# initialized state is transferred to the device (might be revised in the future).
+# Only `timestep!`/`run!` are traced and compiled by Reactant. 
+# Kernel launches inside the compiled step trace fine (this requires `CUDA` to be loaded
 # alongside `Reactant`, even on CPU).
 
 using Terrarium

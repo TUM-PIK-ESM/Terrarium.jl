@@ -5,6 +5,7 @@
 # grid lives on `ReactantState`, we build a CPU twin, initialize it eagerly on the CPU, then move
 # the initialized state to the device. Kernel launches then only occur inside the compiled
 # `timestep!` (see integrator.jl), where they trace normally.
+# We might revise this later to use `@jit` for the initialize!
 
 # Rebuild a model with a new grid, re-inferring type parameters. `setproperties` keeps the original
 # concrete parameters and would try to `convert` the device grid to the CPU grid type.
