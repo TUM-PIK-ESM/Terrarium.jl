@@ -14,7 +14,7 @@ and the unfrozen fraction of pore water. Note that, under this formulation, zero
 The closure relation is defined as being a mapping from the conserved quantity (energy) to the continuous
 quantity (temperature), i.e. the inverse of U(T).
 """
-struct SoilEnergyTemperatureClosure <: AbstractSoilEnergyClosure end
+struct SoilEnergyTemperatureClosure <: AbstractEnergyClosure end
 
 """
 Defines `temperature` as the closure variable for `SoilEnergyTemperatureClosure`.
@@ -91,7 +91,7 @@ end
     # add liquid water fraction to fields
     fields = merge(fields, (; liquid_water_fraction = out.liquid_water_fraction))
     solid = soil_matrix(i, j, k, grid, fields, strat, bgc)
-    soil = SoilVolume(por, sat, liq, solid)
+    soil = SoilComposition(por, sat, liq, solid)
     C = compute_heat_capacity(energy.thermal_properties, soil)
     # compute energy from temperature, heat capacity, and ice fraction
     U = out.internal_energy[i, j, k] = T * C - L * sat * por * (1 - liq)
@@ -122,44 +122,11 @@ end
     fields = merge(fields, (; liquid_water_fraction = out.liquid_water_fraction))
     # calculate soil volumetric fractions
     solid = soil_matrix(i, j, k, grid, fields, strat, bgc)
-    soil = SoilVolume(por, sat, liq, solid)
+    soil = SoilComposition(por, sat, liq, solid)
     C = compute_heat_capacity(energy.thermal_properties, soil)
     # calculate temperature from internal energy and liquid water fraction
     T = out.temperature[i, j, k] = energy_to_temperature(fc, U, Lθ, C)
     return T
-end
-
-"""
-Calculate the unfrozen water content from the given internal energy, latent heat content, and saturation.
-"""
-@inline function liquid_water_fraction(::FreeWater, U::NF, Lθ::NF, sat::NF) where {NF}
-    return if U >= zero(U)
-        # Case 1: U ≥ Lθ -> thawed
-        one(sat)
-    else
-        # Case 2a: -Lθ ≤ U ≤ 0 -> phase change
-        # Case 2b: U < -Lθ -> frozen (zero)
-        (U >= -Lθ) * (one(sat) - safediv(U, -Lθ))
-    end
-end
-
-"""
-Calculate the inverse enthalpy function given the internal energy, latent heat content, and heat
-capacity under the free water freezing characteristic.
-"""
-@inline function energy_to_temperature(::FreeWater, U::NF, Lθ::NF, C::NF) where {NF}
-    return if U < -Lθ
-        # Case 1: U < -Lθ → frozen
-        (U + Lθ) / C
-    elseif U >= zero(U)
-        # Case 2a: U ≥ 0 → thawed
-        U / C
-    else
-        # Case 2b: -Lθ ≤ U < 0 → phase change
-        zero(NF)
-    end
-    # One-liner version:
-    # return (U < -Lθ)*(U + Lθ) / C
 end
 
 # Kernels

@@ -211,7 +211,7 @@ See the [Soil hydrology](@ref) doc page for further details and the full list of
 To add a closure relation to a new process:
 
 1. Define a concrete subtype of `AbstractClosureRelation` (or a process-specific abstract
-   subtype, e.g. `AbstractSoilEnergyClosure`)
+   subtype, e.g. `AbstractEnergyClosure`)
 2. Implement `variables(::MyClosureRelation)` which should, at minimum, define the relevant `auxiliary`
    variable for the closure (`temperature` and `pressure_head` for soil energy and hydrology respectively)
 3. Implement `closure!` and `invclosure!` dispatching on the process type

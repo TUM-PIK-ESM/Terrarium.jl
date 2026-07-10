@@ -1,18 +1,6 @@
 """
     $TYPEDEF
 
-Represents an explicit formulation of the two-phase heat conduction operator in 1D:
-
-```math
-\\frac{\\partial U(T,\\phi)}{\\partial t} = \\boldsymbol{\\nabla} \\cdot \\left[ \\kappa(T) \\boldsymbol{\\nabla}_x T(x,t) \\right]
-```
-where \$T\$ is temperature [K], \$U\$ is internal energy [J m⁻³], and \$\\kappa\$ is the thermal conductivity [W m K⁻¹].
-"""
-@kwdef struct ExplicitTwoPhaseHeatConduction <: AbstractHeatOperator end
-
-"""
-    $TYPEDEF
-
 Standard implementation of the soil energy balance accounting for freezing and thawing of pore water/ice.
 The `closure` field represents the temperature-energy closure \$U(T,\\phi)\$ which relates temperature to internal
 energy via an arbitrary set of additional parameters \$\\phi\$ which are determined by the model configuration.
@@ -23,7 +11,7 @@ $TYPEDFIELDS
 struct SoilEnergyBalance{
         NF,
         HeatOperator <: AbstractHeatOperator,
-        EnergyClosure <: AbstractSoilEnergyClosure,
+        EnergyClosure <: AbstractEnergyClosure,
         ThermalProps <: SoilThermalProperties{NF},
     } <: AbstractSoilEnergyBalance{NF}
     "Heat transport operator"
@@ -39,7 +27,7 @@ end
 SoilEnergyBalance(
     ::Type{NF};
     operator::AbstractHeatOperator = ExplicitTwoPhaseHeatConduction(),
-    closure::AbstractSoilEnergyClosure = SoilEnergyTemperatureClosure(),
+    closure::AbstractEnergyClosure = SoilEnergyTemperatureClosure(),
     thermal_properties::SoilThermalProperties{NF} = SoilThermalProperties(NF),
 ) where {NF} = SoilEnergyBalance(operator, closure, thermal_properties)
 
@@ -109,22 +97,6 @@ end
 end
 
 """ $TYPEDSIGNATURES """
-@propagate_inbounds function compute_energy_tendency(
-        i, j, k, grid, fields,
-        energy::SoilEnergyBalance{NF, <:ExplicitTwoPhaseHeatConduction},
-        hydrology::AbstractSoilHydrology,
-        strat::AbstractStratigraphy,
-        bgc::AbstractSoilBiogeochemistry
-    ) where {NF}
-    # Operators require the underlying Oceananigans grid
-    field_grid = get_field_grid(grid)
-
-    # Divergence of heat fluxes
-    ∂U∂t = -∂zᵃᵃᶜ(i, j, k, field_grid, diffusive_heat_flux, fields, energy, hydrology, strat, bgc)
-    return ∂U∂t
-end
-
-""" $TYPEDSIGNATURES """
 @propagate_inbounds function compute_thermal_conductivity(
         i, j, k, grid, fields,
         energy::SoilEnergyBalance,
@@ -134,18 +106,6 @@ end
     )
     soil = soil_volume(i, j, k, grid, fields, strat, hydrology, bgc)
     return compute_thermal_conductivity(energy.thermal_properties, soil)
-end
-
-# Diffusive heat flux term passed to ∂z operator
-""" $TYPEDSIGNATURES """
-@propagate_inbounds function diffusive_heat_flux(i, j, k, grid, fields, args...)
-    # Get temperature field
-    T = fields.temperature
-    # Compute and ∂U∂tinterpolate conductivity to grid cell faces
-    κ = ℑzᵃᵃᶠ(i, j, k, grid, compute_thermal_conductivity, fields, args...)
-    # Fourier's law: q = -κ ∂T/∂z
-    q = -κ * ∂zᵃᵃᶠ(i, j, k, grid, T)
-    return q
 end
 
 # Kernels

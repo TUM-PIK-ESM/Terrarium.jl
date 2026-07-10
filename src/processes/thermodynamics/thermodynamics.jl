@@ -1,33 +1,41 @@
-"""
-Return the number of seconds per day in the given number format.
-"""
-seconds_per_day(::Type{NF}) where {NF} = ustrip(u"s", NF(1)u"d")
+@inline Thermodynamics.Parameters.R_d(c::ThermodynamicConstants) = c.gas_constant_dry_air
+@inline Thermodynamics.Parameters.R_v(c::ThermodynamicConstants) = c.gas_constant_water_vapor
+@inline Thermodynamics.Parameters.cp_d(c::ThermodynamicConstants) = c.specific_heat_capacity_dry_air
+@inline Thermodynamics.Parameters.cp_i(c::ThermodynamicConstants) = c.specific_heat_capacity_ice
+@inline Thermodynamics.Parameters.cp_l(c::ThermodynamicConstants) = c.specific_heat_capacity_liquid_water
+@inline Thermodynamics.Parameters.cp_v(c::ThermodynamicConstants) = c.specific_heat_capacity_water_vapor
+@inline Thermodynamics.Parameters.LH_v0(c::ThermodynamicConstants) = c.latent_heat_vaporization
+@inline Thermodynamics.Parameters.LH_s0(c::ThermodynamicConstants) = c.latent_heat_sublimation
+@inline Thermodynamics.Parameters.T_0(c::ThermodynamicConstants) = c.temperature_reference
+@inline Thermodynamics.Parameters.T_freeze(c::ThermodynamicConstants) = c.temperature_water_freeze
+@inline Thermodynamics.Parameters.T_triple(c::ThermodynamicConstants) = c.temperature_water_triple_point
+@inline Thermodynamics.Parameters.press_triple(c::ThermodynamicConstants) = c.pressure_water_triple_point
+
+# Derived parameters
+@inline Thermodynamics.Parameters.Rv_over_Rd(c::ThermodynamicConstants) = Thermodynamics.Parameters.R_v(c) / Thermodynamics.Parameters.R_d(c)
+@inline ratio_gas_constant_dry_air_to_water_vapor(c::ThermodynamicConstants) = R_d(c) / R_v(c)
 
 """
-Return the number of seconds per hour in the given number format.
+    specific_heat_capacity_moist_air(c::ThermodynamicConstants, q)
+
+Compute the isobaric specific heat capacity [J/(kg*K)] of moist air as a function 
+of the total specific humidity `q` [kg/kg]. Wrapper around 
+[`cp_m`](@extref Thermodynamics.cp_m). 
 """
-seconds_per_hour(::Type{NF}) where {NF} = ustrip(u"s", NF(1)u"hr")
+@inline specific_heat_capacity_moist_air(c::ThermodynamicConstants, q) = Thermodynamics.cp_m(c, q)
+"""
+    celsius_to_kelvin(c::ThermodynamicConstants, T)
+
+Convert the given temperature in °C to Kelvin based on the constant `temperature_water_freeze`.
+"""
+@inline celsius_to_kelvin(c::ThermodynamicConstants, T) = T + c.temperature_water_freeze
 
 """
-    $SIGNATURES
+    psychrometric_constant(c::ThermodynamicConstants, p)
 
-Compute partial pressure of oxygen from surface pressure in Pa.
+Calcualte the psychrometric constant at the given atmospheric pressure `p`.
 """
-@inline function partial_pressure_O2(pres::NF) where {NF}
-    # TODO Shouldn't this be in physical constants?
-    pres_O2 = NF(0.209) * pres
-    return pres_O2
-end
-
-"""
-    $SIGNATURES
-
-Compute partial pressure of CO2 from surface pressure and CO2 concentration in Pa.
-"""
-@inline function partial_pressure_CO2(pres::NF, conc_co2::NF) where {NF}
-    pres_co2 = conc_co2 * NF(1.0e-6) * pres
-    return pres_co2
-end
+@inline psychrometric_constant(c::ThermodynamicConstants, p) = c.specific_heat_capacity_dry_air * p / (c.latent_heat_vaporization * ratio_gas_constant_dry_air_to_water_vapor(c))
 
 """
     relative_to_specific_humidity(r_h, pr, T, c::ThermodynamicConstants)

@@ -1,16 +1,23 @@
 # Utilities
 
 export PhysicalConstants, ThermodynamicConstants, MaterialConstants, UniversalConstants
-include("physical_constants.jl")
-include("physics_utils.jl")
+include("constants.jl")
+include("unit_conversions.jl")
 
 # Abstract types and methods
 
+include("thermodynamics/abstract_types.jl")
 include("atmosphere/abstract_types.jl")
 include("surface_energy/abstract_types.jl")
 include("surface_hydrology/abstract_types.jl")
 include("soil/abstract_types.jl")
 include("vegetation/abstract_types.jl")
+
+# Thermodynamics
+
+include("thermodynamics/thermodynamics.jl")
+include("thermodynamics/enthalpy.jl")
+include("thermodynamics/heat_conduction.jl")
 
 # Atmosphere
 
@@ -19,14 +26,14 @@ include("atmosphere/aerodynamics.jl")
 export PrescribedAtmosphere, RainSnow, LongShortWaveRadiation, TracerGas, TracerGases, AmbientCO2
 include("atmosphere/prescribed_atmosphere.jl")
 
-# Soil
+# Ground (soil and other subsurface media)
 
 export SoilTexture, normalize_texture!
 include("soil/stratigraphy/soil_texture.jl")
 export ConstantSoilPorosity, SoilPorositySURFEX
 include("soil/stratigraphy/soil_porosity.jl")
-export SoilVolume, MineralOrganic, volumetric_fractions
-include("soil/stratigraphy/soil_volume.jl")
+export SoilComposition, MineralOrganic, volumetric_fractions
+include("soil/stratigraphy/soil_composition.jl")
 export ConstantSoilHorizon, PrescribedSoilHorizon
 include("soil/stratigraphy/soil_horizon.jl")
 export SoilStratigraphy, HomogeneousSoilStratigraphy, SoilGridsStratigraphy
