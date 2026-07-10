@@ -20,6 +20,24 @@
 > - **Env pin.** `test/reactant/Project.toml` gains `[sources] Oceananigans = {rev = "main"}` (the
 >   fix is unreleased). Drop it and rely on `[compat]` once a tagged release carries the fix.
 >
+> **Also this session — build-on-CPU initialization removed (simplification).** Investigated whether
+> the CPU-twin build/transfer in `transfer.jl` was still needed, or whether `@jit initialize!` would
+> work. Findings (empirical, at Oceananigans main / Reactant 0.2.270):
+> - `@jit initialize!` does **not** work: the user field initializers call `set!(field, function)`,
+>   whose Oceananigans device impl (`set_to_function!` on a `ReactantField`) detours through the CPU
+>   — inherently eager, un-traceable (fails `getindex(::OffsetVector{TracedRNumber}, ::UnitRange)`
+>   method ambiguity inside a trace).
+> - The Phase-0 premise ("eager KA launches fail on ReactantBackend outside a compiled region") is
+>   **stale**: eager `set!(field,f)`, `fill_halo_regions!`, and the full `initialize!(integrator)`
+>   (incl. `compute_auxiliary!`'s closure kernels) all run **eagerly** on a device-allocated state now.
+> - So the CPU **twin model** is unnecessary. New `transfer.jl` (89 → 31 lines): allocate the state
+>   directly on the device grid, build a traced `Clock(field_grid)`, and delegate to the generic
+>   `Terrarium.initialize` via `@invoke` (a direct call would recurse into the `ReactantModel`
+>   method). Removed `rebuild_model`/`to_device`/`copy_state_data!`/`_copy_group!`/`_copy_clock!`/
+>   `_scalar` and the now-dead ext imports. Verified: device-vs-CPU initial state **bit-identical**
+>   (`max_abs_diff = 0.0`) for column + global configs; full suite still **45/45 + 6/6**. AGENTS.md
+>   Reactant-compat design paragraph updated to "eager device initialization".
+>
 > ## Session 3 plan (2026-07-06) — hybrid ML example
 >
 > Goal: a **technical** demonstration of hybrid (NN-in-model) land modeling with Terrarium +

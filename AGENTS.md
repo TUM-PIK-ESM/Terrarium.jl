@@ -70,9 +70,11 @@ is a top priority and must be continuously tested.
 
 Terrarium runs through Reactant.jl (trace → MLIR/StableHLO → XLA). All Reactant-specific code lives
 in `TerrariumReactantExt`; the user's only knob is the architecture, `ReactantState()`. A model on a
-`ReactantState` grid is built and initialized on the CPU, transferred to the device, and its
-`run!`/`timestep!`/`run_timesteps!` compiled by XLA. Correctness is tested in `test/reactant/`
-(own `Project.toml`, CI `Reactant_CI.yml`).
+`ReactantState` grid allocates its state directly on the device grid and is initialized *eagerly*
+on the device (eager KernelAbstractions launches run on the Reactant backend; Oceananigans'
+`set_to_function!` for a device field detours through the CPU internally). Only
+`run!`/`timestep!`/`run_timesteps!` are traced and compiled by XLA. Correctness is tested in
+`test/reactant/` (own `Project.toml`, CI `Reactant_CI.yml`).
 
 - **No reachable throw paths in kernels** — see the Kernels rule above (this is the single most
   common Reactant compile failure).
