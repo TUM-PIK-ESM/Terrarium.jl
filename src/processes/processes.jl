@@ -66,28 +66,28 @@ include("soil/soil_coupled.jl")
 # Vegetation
 
 export PALADYNCarbonDynamics
-include("vegetation/carbon_dynamics.jl")
+include("vegetation/dynamics/carbon_dynamics.jl")
 
 export PALADYNVegetationDynamics
-include("vegetation/vegetation_dynamics.jl")
+include("vegetation/dynamics/vegetation_dynamics.jl")
 
 export PALADYNPhenology
-include("vegetation/phenology.jl")
+include("vegetation/phenology/phenology.jl")
 
 export StaticExponentialRootDistribution
-include("vegetation/root_distribution.jl")
+include("vegetation/hydraulics/root_distribution.jl")
 
 export FieldCapacityLimitedPAW
-include("vegetation/plant_available_water.jl")
+include("vegetation/hydraulics/plant_available_water.jl")
 
 export LUEPhotosynthesis
-include("vegetation/photosynthesis.jl")
+include("vegetation/photosynthesis/lue_photosynthesis.jl")
 
 export MedlynStomatalConductance
-include("vegetation/stomatal_conductance.jl")
+include("vegetation/stomatal_conductance/medlyn_stomatal_conductance.jl")
 
 export PALADYNAutotrophicRespiration
-include("vegetation/autotrophic_respiration.jl")
+include("vegetation/respiration/autotrophic_respiration.jl")
 
 export VegetationCarbon
 include("vegetation/vegetation_carbon.jl")
