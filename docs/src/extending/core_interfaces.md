@@ -175,7 +175,7 @@ These methods provide a unified interface that can be used by timesteppers, call
 
 ### Soil energy: temperature–enthalpy closure
 
-The [`SoilEnergyBalance`](@ref) process uses the [`SoilEnergyTemperatureClosure`](@ref) to relate volumetric internal energy $U$ (J/m³) to temperature $T$ (°C) and the liquid water fraction $l$ (-):
+The [`SoilThermodynamics`](@ref) process uses the [`SoilEnergyTemperatureClosure`](@ref) to relate volumetric internal energy $U$ (J/m³) to temperature $T$ (°C) and the liquid water fraction $l$ (-):
 
 $$U(T) = T \cdot C(T) - L_{\text{sl}} \, \theta \, (1 - l(T))$$
 

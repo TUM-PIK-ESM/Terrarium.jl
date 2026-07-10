@@ -35,7 +35,7 @@ variables(model)
 | Field | Type | Scope | Process page |
 |-------|------|-------|---------------|
 | `strat` | [`AbstractStratigraphy`](@ref) | Vertical structure of soil | [Soil stratigraphy](@ref) |
-| `energy` | [`AbstractSoilEnergyBalance`](@ref) | Heat conduction and freeze-thaw of soil water | [Soil energy balance](@ref) |
+| `energy` | [`AbstractSoilThermodynamics`](@ref) | Heat conduction and freeze-thaw of soil water | [Soil energy balance](@ref) |
 | `hydrology` | [`AbstractSoilHydrology`](@ref) | Vertical flow of water between soil layers | [Soil hydrology](@ref) |
 | `biogeochem` | [`AbstractSoilBiogeochemistry`](@ref) | Soil organic carbon and biogeochemical fluxes | Not yet added |
 
@@ -47,7 +47,7 @@ The `strat` component parameterizes the vertical distribution of soil material p
 
 ### Energy balance
 
-The `energy` component represents heat conduction in the soil column, including the latent heat of freeze-thaw phase change. The default implementation is [`SoilEnergyBalance`](@ref), which evolves the volumetric internal energy $U$ (J m⁻³) as the prognostic variable and derives temperature via the [`SoilEnergyTemperatureClosure`](@ref). See [Soil energy balance](@ref) for details.
+The `energy` component represents heat conduction in the soil column, including the latent heat of freeze-thaw phase change. The default implementation is [`SoilThermodynamics`](@ref), which evolves the volumetric internal energy $U$ (J m⁻³) as the prognostic variable and derives temperature via the [`SoilEnergyTemperatureClosure`](@ref). See [Soil energy balance](@ref) for details.
 
 ### Hydrology
 

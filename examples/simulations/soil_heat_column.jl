@@ -2,7 +2,7 @@
 # ## Part I: Nonlinear heat conduction with phase change
 # This example shows how to set up a simple model of nonlinear heat conduction
 # in a single vertical soil column (similar to the example shown in the README).
-# The [`SoilEnergyBalance`](@ref) process in Terrarium solves the nonlinear form
+# The [`SoilThermodynamics`](@ref) process in Terrarium solves the nonlinear form
 # of the heat equation with phase change. This allows for the simulation of
 # freeze/thaw dynamics in both seasonally and perennially frozen soils.
 
@@ -136,7 +136,7 @@ thermal_properties = SoilThermalProperties(
 
 # Here we set up the "soil" processes according to our configuration.
 
-energy = SoilEnergyBalance(eltype(grid); thermal_properties);
+energy = SoilThermodynamics(eltype(grid); thermal_properties);
 soil = SoilEnergyWaterCarbon(eltype(grid); energy, strat, biogeochem);
 model = SoilModel(grid; soil);
 

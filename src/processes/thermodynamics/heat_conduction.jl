@@ -20,7 +20,7 @@ explicit two-phase heat conduction operator.
 """
 @propagate_inbounds function compute_energy_tendency(
         i, j, k, grid, fields,
-        energy::AbstractEnergyBalance,
+        energy::AbstractThermodynamics,
         args...
     )
     # Operators require the underlying Oceananigans grid
@@ -40,7 +40,7 @@ medium-specific thermal conductivity to the face.
 """
 @propagate_inbounds function diffusive_heat_flux(
         i, j, k, grid, fields,
-        energy::AbstractEnergyBalance,
+        energy::AbstractThermodynamics,
         args...
     )
     # Get temperature field
@@ -55,7 +55,7 @@ end
 """ $TYPEDSIGNATURES """
 @propagate_inbounds function compute_thermal_conductivity(
         i, j, k, grid, fields,
-        energy::AbstractEnergyBalance,
+        energy::AbstractThermodynamics,
         args...
     )
     return compute_thermal_conductivity(energy.thermal_properties)

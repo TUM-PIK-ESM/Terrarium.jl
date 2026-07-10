@@ -30,7 +30,7 @@ end
 
 @testset "Soil energy: initialize!" begin
     grid = ColumnGrid(CPU(), Float64, ExponentialSpacing())
-    energy = SoilEnergyBalance(eltype(grid))
+    energy = SoilThermodynamics(eltype(grid))
     soil = SoilEnergyWaterCarbon(eltype(grid); energy)
     constants = PhysicalConstants(eltype(grid))
     state = StateVariables(soil, grid)
@@ -53,7 +53,7 @@ end
 
 @testset "Soil energy: compute_tendencies!" begin
     grid = ColumnGrid(CPU(), Float64, ExponentialSpacing(N = 10))
-    energy = SoilEnergyBalance(eltype(grid))
+    energy = SoilThermodynamics(eltype(grid))
     soil = SoilEnergyWaterCarbon(eltype(grid); energy)
     constants = PhysicalConstants(eltype(grid))
     state = StateVariables(soil, grid)
@@ -65,7 +65,7 @@ end
 
 @testset "Soil energy: closure!" begin
     grid = ColumnGrid(CPU(), Float64, ExponentialSpacing(N = 10))
-    energy = SoilEnergyBalance(eltype(grid))
+    energy = SoilThermodynamics(eltype(grid))
     soil = SoilEnergyWaterCarbon(eltype(grid); energy)
     constants = PhysicalConstants(eltype(grid))
     state = StateVariables(soil, grid)
@@ -115,7 +115,7 @@ end
         conductivities = SoilThermalConductivities(mineral = k),
         heat_capacities = SoilHeatCapacities(mineral = c),
     )
-    energy = SoilEnergyBalance(eltype(grid); thermal_properties)
+    energy = SoilThermodynamics(eltype(grid); thermal_properties)
     soil = SoilEnergyWaterCarbon(eltype(grid); energy, strat, biogeochem)
     initializer = DefaultInitializer(eltype(grid))
     model = SoilModel(grid; soil, initializer)

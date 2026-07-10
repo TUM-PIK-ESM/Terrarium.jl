@@ -1,19 +1,19 @@
 """
     $TYPEDEF
 
-Standard implementation of the soil energy balance accounting for freezing and thawing of pore water/ice.
+Standard implementation of the soil thermal dynamics accounting for freezing and thawing of pore water/ice.
 The `closure` field represents the temperature-energy closure \$U(T,\\phi)\$ which relates temperature to internal
 energy via an arbitrary set of additional parameters \$\\phi\$ which are determined by the model configuration.
 
 Properties:
 $TYPEDFIELDS
 """
-struct SoilEnergyBalance{
+struct SoilThermodynamics{
         NF,
         HeatOperator <: AbstractHeatOperator,
         EnergyClosure <: AbstractEnergyClosure,
         ThermalProps <: SoilThermalProperties{NF},
-    } <: AbstractSoilEnergyBalance{NF}
+    } <: AbstractSoilThermodynamics{NF}
     "Heat transport operator"
     operator::HeatOperator
 
@@ -24,34 +24,34 @@ struct SoilEnergyBalance{
     thermal_properties::ThermalProps
 end
 
-SoilEnergyBalance(
+SoilThermodynamics(
     ::Type{NF};
     operator::AbstractHeatOperator = ExplicitTwoPhaseHeatConduction(),
     closure::AbstractEnergyClosure = SoilEnergyTemperatureClosure(),
     thermal_properties::SoilThermalProperties{NF} = SoilThermalProperties(NF),
-) where {NF} = SoilEnergyBalance(operator, closure, thermal_properties)
+) where {NF} = SoilThermodynamics(operator, closure, thermal_properties)
 
-variables(energy::SoilEnergyBalance) = (
+variables(energy::SoilThermodynamics) = (
     prognostic(:internal_energy, XYZ(); closure = energy.closure, units = u"J/m^3", desc = "Internal energy of the soil volume, including both latent and sensible components"),
     auxiliary(:ground_temperature, XY(), ground_temperature, energy, units = u"°C", desc = "Temperature of the uppermost ground or soil grid cell in °C"),
 )
 
 # Field constructor for ground_temperature that returns a view of the uppermost soil layer
-function ground_temperature(energy::SoilEnergyBalance, grid, clock, fields)
+function ground_temperature(energy::SoilThermodynamics, grid, clock, fields)
     fgrid = get_field_grid(grid)
     # Use uppermost soil layer as ground temperature
     # TODO: Revisit this if/when we extend the vertical layers to include snow and canopy
     return @view fields.temperature[:, :, fgrid.Nz]
 end
 
-get_thermal_properties(energy::SoilEnergyBalance) = energy.thermal_properties
+get_thermal_properties(energy::SoilThermodynamics) = energy.thermal_properties
 
-get_closure(energy::SoilEnergyBalance) = energy.closure
+get_closure(energy::SoilThermodynamics) = energy.closure
 
 """ $TYPEDSIGNATURES """
 function initialize!(
         state, grid,
-        energy::SoilEnergyBalance,
+        energy::SoilThermodynamics,
         soil::AbstractSoil,
         constants::PhysicalConstants,
         args...
@@ -65,12 +65,12 @@ function initialize!(
 end
 
 """ $TYPEDSIGNATURES """
-compute_auxiliary!(state, grid, energy::SoilEnergyBalance, soil::AbstractSoil, args...) = nothing
+compute_auxiliary!(state, grid, energy::SoilThermodynamics, soil::AbstractSoil, args...) = nothing
 
 """ $TYPEDSIGNATURES """
 function compute_tendencies!(
         state, grid,
-        energy::SoilEnergyBalance,
+        energy::SoilThermodynamics,
         soil::AbstractSoil,
         args...
     )
@@ -89,7 +89,7 @@ end
 """ $TYPEDSIGNATURES """
 @propagate_inbounds function compute_energy_tendencies!(
         tendencies, i, j, k, grid, fields,
-        energy::SoilEnergyBalance,
+        energy::SoilThermodynamics,
         args...
     )
     tendencies.internal_energy[i, j, k] += compute_energy_tendency(i, j, k, grid, fields, energy, args...)
@@ -99,7 +99,7 @@ end
 """ $TYPEDSIGNATURES """
 @propagate_inbounds function compute_thermal_conductivity(
         i, j, k, grid, fields,
-        energy::SoilEnergyBalance,
+        energy::SoilThermodynamics,
         hydrology::AbstractSoilHydrology,
         strat::AbstractStratigraphy,
         bgc::AbstractSoilBiogeochemistry
@@ -110,7 +110,7 @@ end
 
 # Kernels
 
-@kernel inbounds = true function compute_tendencies_kernel!(tendencies, grid, fields, energy::SoilEnergyBalance, args...)
+@kernel inbounds = true function compute_tendencies_kernel!(tendencies, grid, fields, energy::SoilThermodynamics, args...)
     i, j, k = @index(Global, NTuple)
     compute_energy_tendencies!(tendencies, i, j, k, grid, fields, energy, args...)
 end

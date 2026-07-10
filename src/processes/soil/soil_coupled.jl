@@ -7,7 +7,7 @@ The stratigraphy parameterization determines how the vertical layering of the so
 struct SoilEnergyWaterCarbon{
         NF,
         Stratigraphy <: AbstractStratigraphy{NF},
-        Energy <: AbstractSoilEnergyBalance{NF},
+        Energy <: AbstractSoilThermodynamics{NF},
         Hydrology <: AbstractSoilHydrology{NF},
         Biogeochemistry <: AbstractSoilBiogeochemistry{NF},
     } <: AbstractSoil{NF}
@@ -27,7 +27,7 @@ end
 function SoilEnergyWaterCarbon(
         ::Type{NF};
         strat = HomogeneousSoilStratigraphy(NF),
-        energy = SoilEnergyBalance(NF),
+        energy = SoilThermodynamics(NF),
         hydrology = SoilHydrology(NF),
         biogeochem = ConstantSoilCarbonDensity(NF)
     ) where {NF}

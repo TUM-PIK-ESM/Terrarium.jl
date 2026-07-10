@@ -4,9 +4,9 @@
 Base type for soil energy balance process implementations. Subtypes should define
 state variables for soil `temperature`, `internal_energy`, and any other relevant
 thermal properties or state variables. Soil energy balances evolve the soil internal
-energy and therefore subtype [`AbstractEnergyBalance`](@ref).
+energy and therefore subtype [`AbstractThermodynamics`](@ref).
 """
-abstract type AbstractSoilEnergyBalance{NF} <: AbstractEnergyBalance{NF} end
+abstract type AbstractSoilThermodynamics{NF} <: AbstractThermodynamics{NF} end
 
 # Parameterizations
 

@@ -27,7 +27,7 @@ variables(::SoilEnergyTemperatureClosure) = (
 function closure!(
         state, grid,
         closure::SoilEnergyTemperatureClosure,
-        energy::SoilEnergyBalance,
+        energy::SoilThermodynamics,
         ground::AbstractSoil,
         constants::PhysicalConstants,
         args...
@@ -46,7 +46,7 @@ end
 function invclosure!(
         state, grid,
         closure::SoilEnergyTemperatureClosure,
-        energy::SoilEnergyBalance,
+        energy::SoilThermodynamics,
         ground::AbstractSoil,
         constants::PhysicalConstants,
         args...
@@ -65,7 +65,7 @@ end
         out, i, j, k, grid, fields,
         ::SoilEnergyTemperatureClosure,
         ::FreeWater,
-        energy::SoilEnergyBalance{NF, OP, SoilEnergyTemperatureClosure},
+        energy::SoilThermodynamics{NF, OP, SoilEnergyTemperatureClosure},
         hydrology::AbstractSoilHydrology,
         strat::AbstractStratigraphy,
         bgc::AbstractSoilBiogeochemistry,
@@ -102,7 +102,7 @@ end
         out, i, j, k, grid, fields,
         ::SoilEnergyTemperatureClosure,
         fc::FreeWater,
-        energy::SoilEnergyBalance,
+        energy::SoilThermodynamics,
         hydrology::AbstractSoilHydrology,
         strat::AbstractStratigraphy,
         bgc::AbstractSoilBiogeochemistry,
