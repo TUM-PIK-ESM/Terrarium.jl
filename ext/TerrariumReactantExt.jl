@@ -3,7 +3,7 @@ module TerrariumReactantExt
 # Reactant support for Terrarium.
 #
 # Design: a Terrarium model whose grid lives on `ReactantState` allocates its state directly on
-# the device grid and is initialized on the device (but slow in uncompiled mode). Only `timestep!`/`run!` 
+# the device grid and is initialized on the device (but slow in uncompiled mode). Only `timestep!`/`run!`
 # are traced and compiled by Reactant.
 # Kernel launches inside the compiled step trace fine (this requires `CUDA` to be loaded
 # alongside `Reactant`, even on CPU).
