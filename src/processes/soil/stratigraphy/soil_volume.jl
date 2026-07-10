@@ -21,10 +21,7 @@ struct SoilVolume{NF, Solid <: AbstractSoilMatrix{NF}}
     "Parameterization of the solid phase (matrix) of the soil"
     solid::Solid
 
-    # Positional constructor; called per grid point inside kernels, so it must not validate:
-    # any throw path (incl. @assert) lowers to llvm.intr.trap in the GPU compiler pipeline,
-    # which cannot be raised to StableHLO by Reactant. Argument bounds are enforced by the
-    # keyword constructor below, which is the intended host-side construction path.
+    # Positional constructor
     function SoilVolume(porosity::NF, saturation::NF, liquid::NF, solid::AbstractSoilMatrix{NF}) where {NF <: Number}
         return new{NF, typeof(solid)}(porosity, saturation, liquid, solid)
     end
@@ -101,8 +98,7 @@ struct MineralOrganic{NF} <: AbstractSoilMatrix{NF}
     "Organic soil fraction"
     organic::NF
 
-    # Positional constructor; called per grid point in kernels (soil_matrix), so it must not
-    # validate — see the note on the SoilVolume positional constructor above.
+    # Positional constructor
     function MineralOrganic(texture::SoilTexture{NF}, organic::NF) where {NF}
         return new{NF}(texture, organic)
     end
