@@ -46,7 +46,3 @@ The target device is selected by Reactant, e.g. `Reactant.set_default_backend("g
 constructing the model.
 
 In the example folder you can also find examples that demonstrate how to use the Reactant model to take derivatives of the model and integratate and train neural networks. 
-
-!!! note "Current limitations"
-    - Vertical spacing must be **uniform** (`UniformSpacing`); array-valued coordinates from
-      `ExponentialSpacing`/`PrescribedSpacing` cannot yet be traced.
