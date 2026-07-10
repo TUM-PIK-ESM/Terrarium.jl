@@ -1,5 +1,25 @@
 # Plan: Reactant-compatible Terrarium
 
+> ## Session 4 (2026-07-10) — array-`z` / stretched spacing unblocked (upstream fixed)
+>
+> The deferred "non-range `z` / `ExponentialSpacing` under Reactant" TODO (below) is **DONE**.
+> - **Upstream fix confirmed.** Oceananigans `main` (post-0.110.8-tag) adapts the `RectilinearGrid`
+>   extents in its `Adapt.adapt_structure` rule (`src/Grids/rectilinear_grid.jl`:
+>   `Adapt.adapt(to, grid.Lx)` etc., previously passed through unadapted) — exactly the surviving
+>   traced-scalar candidate the issue diagnosis flagged. Verified with the Case A/B reproduction:
+>   a `RectilinearGrid` with `Vector`/range `z` now traces through the halo kernel and time-steps
+>   under Reactant (Reactant 0.2.270). The registry-tagged 0.110.8 does **not** have the fix.
+> - **Terrarium change (minimal, per request).** Reverted the z-coordinate workaround to `main`:
+>   removed `z_coordinates` (both the generic and the `UniformSpacing` tuple methods) and restored
+>   the inlined `vcat(-reverse(cumsum(...)), 0)` `Vector` form in `ColumnGrid`/`ColumnRingGrid`.
+>   `git diff main` for those three files is now **empty**. Updated the stale
+>   `AGENTS.md` Reactant bullet and the `test/reactant/setup.jl` comments.
+> - **Coverage.** Added a `:soil_heat_column_stretched` (`ExponentialSpacing`) config to
+>   `test/reactant/`; the full suite is green (**45/45** correctness incl. the new stretched
+>   config + **6/6** autodiff) against Oceananigans `main`.
+> - **Env pin.** `test/reactant/Project.toml` gains `[sources] Oceananigans = {rev = "main"}` (the
+>   fix is unreleased). Drop it and rely on `[compat]` once a tagged release carries the fix.
+>
 > ## Session 3 plan (2026-07-06) — hybrid ML example
 >
 > Goal: a **technical** demonstration of hybrid (NN-in-model) land modeling with Terrarium +

@@ -1,5 +1,22 @@
 # Upstream issue draft: Oceananigans + Reactant — `RectilinearGrid` with array/range vertical coordinates fails kernel-launch tracing
 
+> **RESOLVED upstream (2026-07-10).** Fixed on Oceananigans `main` (post-0.110.8-tag; not yet in
+> a tagged release) by adapting the grid extents in the `RectilinearGrid` `Adapt.adapt_structure`
+> rule: `src/Grids/rectilinear_grid.jl` now emits `Adapt.adapt(to, grid.Lx)` (and `Ly`/`Lz`)
+> instead of passing them through unadapted — exactly the surviving-traced-scalar candidate flagged
+> in the diagnosis below. With the fix, a `RectilinearGrid` with array-valued (`Vector`) or range
+> vertical coordinates traces through kernel launches and time-steps correctly under Reactant
+> (verified with the Case A/B reproduction below on Oceananigans main / Reactant 0.2.270).
+>
+> **Terrarium impact:** the uniform-only workaround (endpoint-tuple `z` for `UniformSpacing`) was
+> removed — `z_coordinates` is gone and both grid constructors are back to the plain `Vector` form
+> (identical to `main`). All `AbstractVerticalSpacing`s (incl. `ExponentialSpacing`,
+> `PrescribedSpacing`) now trace. A `:soil_heat_column_stretched` (`ExponentialSpacing`) config was
+> added to `test/reactant/` and passes CPU-vs-Reactant. The `test/reactant` env pins Oceananigans
+> to `main` via `[sources]` until a release carrying the fix is tagged; drop that pin then.
+>
+> The original issue text and diagnosis are retained below for reference.
+
 **Where to file:** Oceananigans.jl. Working notes for an independent fix session are in the
 appendix at the bottom (drop that section from the actual issue text).
 
