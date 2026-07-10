@@ -81,19 +81,12 @@ in `TerrariumReactantExt`; the user's only knob is the architecture, `ReactantSt
 - **Closures compiled into kernels must capture only `isbits` values.** A boundary-condition
   function that closes over a `Type` (e.g. `NF`/`Float32`) becomes a non-`isbits` kernel argument
   and fails to compile — hoist numeric constants out (`amplitude = NF(5); bc(x, t) = amplitude * …`).
-- **Vertical spacing must be uniform under Reactant.** `z_coordinates` returns an endpoint tuple for
-  `UniformSpacing` so Oceananigans keeps range (`StepRangeLen`) coordinates, which trace. Array-valued
-  `z` (`ExponentialSpacing`/`PrescribedSpacing`) is not yet traceable through kernel launches (upstream
-  Oceananigans gap; tracked in `REACTANT_upstream_issue.md`).
 - **Reverse-mode AD**: differentiate `run_timesteps!` with `Enzyme.autodiff(set_strong_zero(ReverseWithPrimal),
   …, Duplicated(integrator, dintegrator), …)` inside `@compile raise=true raise_first=true sync=true`.
   Pass a `checkpointing` scheme (`Reactant.Periodic(n)`) to `run!`/`run_timesteps!` to bound reverse-pass
   memory; it must not change the gradient. See `test/reactant/autodiff.jl`.
 - **Do not run `test/reactant` under `--check-bounds=yes`**: forced bounds checks make every kernel
   un-raisable (see the trap rule); `runtests.jl` guards against this.
-- **Debugging a Reactant failure**: if a compile fails locally but passed before / passes on CI at the
-  *same* package versions, suspect a stale `Manifest`/precompile cache — delete `test/reactant/Manifest.toml`
-  and re-resolve before concluding it is a code or fundamental limitation.
 
 ### Type Stability & Memory
 

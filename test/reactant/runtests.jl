@@ -38,6 +38,7 @@ include("setup.jl")
 
 @testset "Terrarium CPU vs Reactant" begin
     test_model(:soil_heat_column)
+    test_model(:soil_heat_column_stretched)   # array-valued (ExponentialSpacing) vertical coordinates
     test_model(:soil_heat_global)
 end
 

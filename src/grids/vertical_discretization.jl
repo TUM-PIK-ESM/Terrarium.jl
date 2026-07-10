@@ -20,23 +20,6 @@ Return a `Vector` of vertical layer thicknesses according to the given discretiz
 get_spacing(spacing::AbstractVerticalSpacing) = spacing.(1:num_layers(spacing))
 
 """
-    $SIGNATURES
-
-Return the vertical coordinate specification implied by the given `spacing` with numeric type
-`NF`, in the form expected by the `z` argument of `Oceananigans.RectilinearGrid`. The generic
-implementation returns a `Vector` of the `N + 1` cell interface coordinates from the (negative)
-total depth up to zero, in ascending order. Spacings with uniform layer thicknesses instead
-return the 2-tuple `(-depth, 0)`, from which Oceananigans constructs regularly spaced
-(`StepRangeLen`) coordinates. This distinction matters under Reactant: array-valued vertical
-coordinates currently cannot be traced through kernel launches, while regular range coordinates
-can (see PLAN_reactant.md).
-"""
-function z_coordinates(::Type{NF}, spacing::AbstractVerticalSpacing) where {NF}
-    z_thick = get_spacing(spacing)
-    return convert.(NF, vcat(-reverse(cumsum(z_thick)), zero(eltype(z_thick))))
-end
-
-"""
     $TYPEDEF
 
 Uniform vertical discretization with `N` layers of size `Δz`.
@@ -50,14 +33,6 @@ Base.@kwdef struct UniformSpacing{NF} <: AbstractVerticalSpacing{NF}
 end
 
 (spacing::UniformSpacing)(i::Int) = spacing.Δz
-
-# Uniform layers admit an exact endpoint (tuple) representation, from which Oceananigans
-# builds regularly spaced coordinates that trace under Reactant (unlike array-valued
-# coordinates); see the z_coordinates docstring above.
-function z_coordinates(::Type{NF}, spacing::UniformSpacing) where {NF}
-    N = num_layers(spacing)
-    return (convert(NF, -N * spacing.Δz), zero(NF))
-end
 
 """
     $TYPEDEF
