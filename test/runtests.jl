@@ -52,11 +52,11 @@ if MAIN_TESTS
     end
 
     @testset "Surface energy balance" begin
-        include("surface_energy/seb_tests.jl")
+        include("surface/seb_tests.jl")
     end
 
     @testset "Surface hydrology" begin
-        include("surface_hydrology/surface_hydrology_tests.jl")
+        include("surface/surface_hydrology_tests.jl")
     end
 
     @testset "Coupled models" begin
