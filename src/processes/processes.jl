@@ -8,8 +8,7 @@ include("unit_conversions.jl")
 
 include("thermodynamics/abstract_types.jl")
 include("atmosphere/abstract_types.jl")
-include("surface_energy/abstract_types.jl")
-include("surface_hydrology/abstract_types.jl")
+include("surface/abstract_types.jl")
 include("soil/abstract_types.jl")
 include("vegetation/abstract_types.jl")
 
@@ -93,44 +92,31 @@ include("vegetation/autotrophic_respiration.jl")
 export VegetationCarbon
 include("vegetation/vegetation_carbon.jl")
 
-# Surface Energy Balance
+# Surface
 
 export PrescribedAlbedo, ConstantAlbedo
-include("surface_energy/albedo.jl")
-
+include("surface/albedo.jl")
 export PrescribedRadiativeFluxes, DiagnosedRadiativeFluxes
-include("surface_energy/radiative_fluxes.jl")
-
+include("surface/radiative_fluxes.jl")
 export PrescribedSkinTemperature, ImplicitSkinTemperature
-include("surface_energy/skin_temperature.jl")
-
+include("surface/skin_temperature.jl")
 export PrescribedTurbulentFluxes, DiagnosedTurbulentFluxes
-include("surface_energy/turbulent_fluxes.jl")
-
+include("surface/turbulent_fluxes.jl")
 export SurfaceEnergyBalance
-include("surface_energy/surface_energy_balance.jl")
-
-# Surface Hydrology
-
+include("surface/surface_energy_balance.jl")
 export NoCanopyInterception, PALADYNCanopyInterception
-include("surface_hydrology/canopy_interception/canopy_interception.jl")
-
-include("surface_hydrology/evapotranspiration/evapotranspiration_base.jl")
-
+include("surface/canopy_interception/canopy_interception.jl")
+include("surface/evapotranspiration/evapotranspiration_base.jl")
 export SoilMoistureResistanceFactor, ConstantEvaporationResistanceFactor
-include("surface_hydrology/evapotranspiration/ground_resistance_factor.jl")
-
+include("surface/evapotranspiration/ground_resistance_factor.jl")
 export BareGroundEvaporation
-include("surface_hydrology/evapotranspiration/bare_ground_evaporation.jl")
-
+include("surface/evapotranspiration/bare_ground_evaporation.jl")
 export PALADYNCanopyEvapotranspiration
-include("surface_hydrology/evapotranspiration/canopy_evapotranspiration.jl")
-
+include("surface/evapotranspiration/canopy_evapotranspiration.jl")
 export DirectSurfaceRunoff
-include("surface_hydrology/runoff/direct_surface_runoff.jl")
-
+include("surface/runoff/direct_surface_runoff.jl")
 export SurfaceHydrology
-include("surface_hydrology/surface_hydrology.jl")
+include("surface/surface_hydrology.jl")
 
 # Default debug hooks
 @inline debughook!(::typeof(compute_auxiliary_kernel!), out, args...) = checkfinite!(out)
