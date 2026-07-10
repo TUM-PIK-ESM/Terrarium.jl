@@ -1,3 +1,5 @@
+# Thermodynamics interface
+
 @inline Thermodynamics.Parameters.R_d(c::ThermodynamicConstants) = c.gas_constant_dry_air
 @inline Thermodynamics.Parameters.R_v(c::ThermodynamicConstants) = c.gas_constant_water_vapor
 @inline Thermodynamics.Parameters.cp_d(c::ThermodynamicConstants) = c.specific_heat_capacity_dry_air
@@ -23,6 +25,7 @@ of the total specific humidity `q` [kg/kg]. Wrapper around
 [`cp_m`](@extref Thermodynamics.cp_m). 
 """
 @inline specific_heat_capacity_moist_air(c::ThermodynamicConstants, q) = Thermodynamics.cp_m(c, q)
+
 """
     celsius_to_kelvin(c::ThermodynamicConstants, T)
 
@@ -91,3 +94,11 @@ over ice for `T <= 0°C` and over liquid water otherwise. Wrapper around
         Thermodynamics.q_vap_saturation(c, T_K, ρ, Thermodynamics.Liquid())
     )
 end
+
+"""
+    stefan_boltzmann(c::UniversalConstants, T, ϵ)
+
+Stefan-Boltzmann law ``M = \\epsilon \\sigma T^4`` where T is the surface temperature in Kelvin
+and ϵ is the emissivity and σ is the Stefan-Boltzmann constant.
+"""
+@inline stefan_boltzmann(c::UniversalConstants, T, ϵ) = ϵ * c.stefan_boltzmann_constant * T^4

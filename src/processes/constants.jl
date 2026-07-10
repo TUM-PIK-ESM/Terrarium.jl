@@ -104,14 +104,6 @@ end
 
 UniversalConstants(::Type{NF}; kwargs...) where {NF} = UniversalConstants{NF}(; kwargs...)
 
-"""
-    stefan_boltzmann(c::UniversalConstants, T, ϵ)
-
-Stefan-Boltzmann law ``M = \\epsilon \\sigma T^4`` where T is the surface temperature in Kelvin
-and ϵ is the emissivity and σ is the Stefan-Boltzmann constant.
-"""
-@inline stefan_boltzmann(c::UniversalConstants, T, ϵ) = ϵ * c.stefan_boltzmann_constant * T^4
-
 # Container type
 
 """
