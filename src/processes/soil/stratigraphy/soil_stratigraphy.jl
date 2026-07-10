@@ -190,7 +190,7 @@ end
 """
     $SIGNATURES
 
-Construct a `SoilVolume` object summarizing the material composition of the soil volume
+Construct a `SoilComposition` object summarizing the material composition of the soil volume
 at the given indices `i, j, k` on `grid`.
 """
 @propagate_inbounds function soil_volume(
@@ -205,7 +205,7 @@ at the given indices `i, j, k` on `grid`.
     # compute porosity and solid fractions
     por = porosity(i, j, k, grid, fields, strat, bgc)
     solid = soil_matrix(i, j, k, grid, fields, strat, bgc)
-    return SoilVolume(por, sat, liq, solid)
+    return SoilComposition(por, sat, liq, solid)
 end
 
 """

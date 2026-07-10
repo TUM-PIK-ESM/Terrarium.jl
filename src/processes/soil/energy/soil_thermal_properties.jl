@@ -117,7 +117,7 @@ end
 
 Compute the bulk thermal conductivity of the given soil volume.
 """
-@inline function compute_thermal_conductivity(props::SoilThermalProperties, soil::SoilVolume)
+@inline function compute_thermal_conductivity(props::SoilThermalProperties, soil::SoilComposition)
     c = props.conductivities
     # the bulk mineral conductivity depends on soil texture; build the constituent conductivities
     # explicitly so the (texture-derived) `mineral` value enters the weighting and the auxiliary
@@ -134,7 +134,7 @@ end
 
 Compute the bulk heat capacity of the given soil volume.
 """
-@inline function compute_heat_capacity(props::SoilThermalProperties, soil::SoilVolume)
+@inline function compute_heat_capacity(props::SoilThermalProperties, soil::SoilComposition)
     cs = getproperties(props.heat_capacities)
     fracs = volumetric_fractions(soil)
     # for heat capacity, we just do a weighted average
