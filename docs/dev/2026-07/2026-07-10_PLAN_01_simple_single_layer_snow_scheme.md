@@ -206,10 +206,18 @@ T_snow  = energy_to_temperature(FreeWater(), U_v, Lθ_v, C_v)
 
 This is the identical enthalpy map used for soil with `sat·por → 1` (snow is "fully saturated" with
 water substance in the lumped sense). It is implemented as a `closure!`/`invclosure!` pair so that
-`T_snow`/`θ_liq` are recovered from `U_v` exactly as soil temperature is recovered from soil energy.
-The only division by `d_s` lives here, inside the closure (guarded with `safediv`), rather than in the
-prognostic tendency. `invclosure!` (initialization from a prescribed `T_snow`) sets
-`E = (T·C_v − Lθ_v·(1−θ_liq))·d_s`, so `W` must be initialized before `snow_energy`.
+`T_snow`/`θ_liq` are recovered from `U_v` exactly as soil temperature is recovered from soil energy,
+reusing the shared `energy_to_temperature`/`temperature_to_energy` methods (dispatched on the snow
+closure type). The only division by `d_s` lives here, inside the closure, and is regularized with a
+finite `eps` offset (`U_v = E/(d_s+eps)`) rather than `safediv`: `safediv` returns `Inf` at exactly
+`d_s = 0` (even for `E = 0`), which would give `NaN` when multiplied by `f_snow = 0` in the SEB blend.
+`invclosure!` (initialization from a prescribed `T_snow ≤ 0`) sets `E = (T·C_v − Lθ_v·(1−θ_liq))·d_s`,
+so `W` must be initialized before `snow_energy`.
+
+**Temperature clip.** Snow temperature cannot exceed 0 °C, so `T_snow = min(T_freewater, 0)`. The
+free-water map only returns `T > 0` when `U_v > 0` (the pack is fully melted at 0 °C plus sensible
+excess); this positive part is *not* stored — the excess energy available to drive melt and sublimation
+is derived on demand from `U_v > 0` in the mass/energy tendencies. `snow_energy` itself is unaffected.
 
 ### Mass balance (continuous)
 

@@ -43,10 +43,13 @@ Bulk snow thermal conductivity via the density power law `κ_snow = a·(ρ_s/ρ_
     $TYPEDSIGNATURES
 
 Volumetric snow internal energy `U_v = E/d_s` [J/m³] from the depth-integrated energy `E` [J/m²] and the
-snow depth `d_s` [m]. Guarded with [`safediv`](@ref); the indeterminate `W → 0` limit is masked
-downstream by `f_snow → 0`.
+snow depth `d_s` [m]. The denominator is regularized with a machine-`eps` offset so the result stays
+finite (and differentiable) as `W → 0`: with `E → 0` and `d_s → 0` together, `U_v → 0`. The thin-snow
+indeterminacy is additionally masked downstream by `f_snow → 0`. A finite offset is used rather than
+[`safediv`](@ref) because `safediv` returns `Inf` at exactly `d_s = 0` (even for `E = 0`), which would
+produce `NaN` when multiplied by `f_snow = 0` in the surface energy balance blend.
 """
-@inline volumetric_snow_energy(E::NF, d_s::NF) where {NF} = safediv(E, d_s)
+@inline volumetric_snow_energy(E::NF, d_s::NF) where {NF} = E / (d_s + eps(NF))
 
 # Field-level accessors
 
