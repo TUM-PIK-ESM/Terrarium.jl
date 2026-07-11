@@ -71,6 +71,8 @@ include("snow/snow_density.jl")
 export SingleLayerSnow, NoSnow
 include("snow/snow.jl")
 include("snow/snow_properties.jl")
+export SnowEnergyTemperatureClosure
+include("snow/snow_energy.jl")
 
 # Vegetation
 
