@@ -10,6 +10,7 @@ include("thermodynamics/abstract_types.jl")
 include("atmosphere/abstract_types.jl")
 include("surface/abstract_types.jl")
 include("soil/abstract_types.jl")
+include("snow/abstract_types.jl")
 include("vegetation/abstract_types.jl")
 
 # Thermodynamics
@@ -62,6 +63,14 @@ include("soil/energy/soil_energy_closures.jl")
 
 export SoilEnergyWaterCarbon
 include("soil/soil_coupled.jl")
+
+# Snow
+
+export ConstantSnowDensity
+include("snow/snow_density.jl")
+export SingleLayerSnow, NoSnow
+include("snow/snow.jl")
+include("snow/snow_properties.jl")
 
 # Vegetation
 
