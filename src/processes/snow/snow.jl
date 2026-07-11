@@ -41,6 +41,12 @@ $FIELDS
     "Exponent `b` in the thermal conductivity power law `κ = a·(ρ_s/ρ_w)^b` ([yen1981review](@cite))"
     @param conductivity_exponent::NF = 1.885 (bounds = Positive,)
 
+    "Capillary retention `L_c`: liquid fraction held against gravity before meltwater drains"
+    @param capillary_retention::NF = 0.05 (bounds = UnitInterval)
+
+    "Saturated hydraulic conductivity `K_sat` of the snowpack, setting the meltwater outflow rate"
+    @param saturated_conductivity::NF = 1.0e-4 (units = u"m/s", bounds = Positive)
+
     "Bulk snow density scheme"
     @param density::Density = ConstantSnowDensity(typeof(cover_reference))
 end
@@ -53,6 +59,12 @@ variables(snow::SingleLayerSnow) = (
     auxiliary(:snow_depth, XY(); units = u"m", desc = "Snow layer depth"),
     auxiliary(:snow_cover_fraction, XY(); bounds = UnitInterval, desc = "Sub-grid snow-covered area fraction"),
     auxiliary(:snow_thermal_conductivity, XY(); units = u"W/m/K", desc = "Bulk snow thermal conductivity"),
+    # Surface forcing consumed by the energy/mass tendencies. In coupling these are provided by the
+    # surface energy balance (`surface_heat_flux`, `sublimation`) and the snow→soil conduction
+    # (`basal_heat_flux`); the standalone `SnowModel` prescribes them directly.
+    input(:surface_heat_flux, XY(); units = u"W/m^2", desc = "Net heat flux at the snow surface (positive upward)"),
+    input(:basal_heat_flux, XY(); units = u"W/m^2", desc = "Conductive heat flux at the snow base (positive upward, soil → snow)"),
+    input(:sublimation, XY(); units = u"m/s", desc = "Sublimation/evaporation rate from the snow surface (SWE)"),
 )
 
 """
@@ -74,8 +86,26 @@ function compute_auxiliary!(
     return nothing
 end
 
-# No snow tendencies yet: the mass and depth-integrated energy tendencies are added in a later phase.
-@inline compute_tendencies!(state, grid, snow::SingleLayerSnow, args...) = nothing
+"""
+    $TYPEDSIGNATURES
+
+Compute the snow water-equivalent and depth-integrated energy tendencies (see [`compute_snow_tendencies!`](@ref)),
+driven by the atmospheric precipitation inputs and the prescribed surface/basal heat fluxes and
+sublimation.
+"""
+function compute_tendencies!(
+        state, grid,
+        snow::SingleLayerSnow,
+        constants::PhysicalConstants,
+        atmos::AbstractAtmosphere,
+        args...
+    )
+    tendencies = tendency_fields(state, snow)
+    # pass the closure so `snow_liquid_fraction` (needed for meltwater outflow) is collected
+    fields = get_fields(state, get_closure(snow), snow, atmos; except = tendencies)
+    launch!(grid, XY, compute_tendencies_kernel!, tendencies, fields, snow, atmos, constants)
+    return nothing
+end
 
 # Kernel functions
 

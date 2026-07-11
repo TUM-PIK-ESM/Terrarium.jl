@@ -50,6 +50,7 @@ if MAIN_TESTS
     @testset "Snow processes" begin
         include("snow/snow_properties_tests.jl")
         include("snow/snow_energy_tests.jl")
+        include("snow/snow_model_tests.jl")
     end
 
     @testset "Vegetation model and processes" begin

@@ -11,6 +11,11 @@ export SoilInitializer, ConstantSoilTemperature, QuasiThermalSteadyState,
     PiecewiseLinearInitialSoilTemperature, SaturationWaterTable, ConstantSaturation
 include("soil/soil_model_init.jl")
 
+# Snow
+
+export SnowModel
+include("snow/snow_model.jl")
+
 # Vegetation
 
 export VegetationModel
