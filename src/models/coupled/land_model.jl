@@ -58,11 +58,14 @@ function StateVariables(
     # Initialize BC fields for coupling
     ground_heat_flux = initialize(vars.auxiliary.ground_heat_flux, grid, clock, boundary_conditions, fields)
     infiltration = initialize(vars.auxiliary.infiltration, grid, clock, boundary_conditions, fields)
-    ground_heat_flux_bc = GroundHeatFlux(ground_heat_flux)
+    # Without snow, the heat flux into the soil top equals the surface energy balance closure flux
+    # (`ground_heat_flux`); wire the soil-top BC directly to it. When a snow component is added,
+    # the soil BC will instead be wired to a distinct `soil_heat_flux`.
+    soil_heat_flux_bc = SoilHeatFlux(ground_heat_flux)
     # Note that the hydrology module computes infiltration as positive so we need to negate it here
     # since fluxes are by convention positive upwards
     infiltration_bc = InfiltrationFlux(-infiltration)
-    bcs = merge_boundary_conditions(boundary_conditions, ground_heat_flux_bc, infiltration_bc)
+    bcs = merge_boundary_conditions(boundary_conditions, soil_heat_flux_bc, infiltration_bc)
     # Merge user-defined fields with BC fields
     fields = merge((; ground_heat_flux, infiltration), fields)
     return StateVariables(vars, grid; clock, timestepper = get_timestepper(model), model, boundary_conditions = bcs, fields)

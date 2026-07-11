@@ -272,7 +272,7 @@ The SEB must "optionally accept an `AbstractSnow`". Plan:
    and reads it back to derive `Ts = Tg − G·Δz/(2κ)` ([`skin_temperature.jl:159-172`](../../src/processes/surface_energy/skin_temperature.jl#L159-L172)).
    This is the *conductive flux from the skin into the medium immediately below it*.
 2. *Soil coupling.* `initialize(model::LandModel)` wraps the same field as a `FluxBoundaryCondition`
-   on soil `internal_energy` (top), via `GroundHeatFlux(...)`
+   on soil `internal_energy` (top), via `SoilHeatFlux(...)`
    ([`land_model.jl:55-65`](../../src/models/coupled/land_model.jl#L55-L65),
    [`soil_model_bcs.jl:6`](../../src/models/soil/soil_model_bcs.jl#L6)); the soil energy tendency
    consumes it through `compute_z_bcs!` ([`boundary_conditions.jl:36-38`](../../src/boundary_conditions.jl#L36-L38)).
@@ -319,7 +319,7 @@ passes, before the SEB), so there is no circular dependency with the skin-temper
 
 Strategy (A) is preferred. Either way, the `surface_heat_flux` rename is a small, **snow-independent**
 change that is best landed as a preliminary PR (see below), as it touches the SEB, the
-`GroundHeatFlux`/`PrescribedSurfaceTemperature` aliases, and the `LandModel`/`SurfaceEnergyModel` wiring.
+`SoilHeatFlux`/`PrescribedSurfaceTemperature` aliases, and the `LandModel`/`SurfaceEnergyModel` wiring.
 
 ### Water-flux analogue (`infiltration`)
 

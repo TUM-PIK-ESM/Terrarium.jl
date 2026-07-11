@@ -27,7 +27,7 @@ The drafting of this standalone document was requested in:
 - The initial plan split the dual-role field into `surface_heat_flux` (SEB closure flux) and
   `ground_heat_flux` (soil-top BC). On the author's direction the naming was swapped: `ground_heat_flux`
   is retained for the SEB closure flux (standard terminology) and the *soil-top BC* is renamed
-  `soil_heat_flux` (alias `GroundHeatFlux` → `SoilHeatFlux`). Net effect: the SEB source is unchanged;
+  `soil_heat_flux` (alias `SoilHeatFlux` → `SoilHeatFlux`). Net effect: the SEB source is unchanged;
   only the soil BC alias, its export, and the `LandModel` wiring changed.
 
 ## The ambiguity
@@ -43,7 +43,7 @@ The drafting of this standalone document was requested in:
    ([`surface_energy_balance.jl:130`](../../src/processes/surface/surface_energy_balance.jl#L130)).
    This role is the *conductive flux from the skin into the medium immediately below it*.
 2. **Soil-top boundary condition.** `initialize(model::LandModel)` wraps the same field as a
-   `FluxBoundaryCondition` on soil `internal_energy` via `GroundHeatFlux(...)`
+   `FluxBoundaryCondition` on soil `internal_energy` via `SoilHeatFlux(...)`
    ([`land_model.jl:58-67`](../../src/models/coupled/land_model.jl#L58-L67),
    [`soil_model_bcs.jl:6`](../../src/models/soil/soil_model_bcs.jl#L6)); the soil energy tendency
    consumes it through the top-boundary handling.
@@ -100,15 +100,15 @@ closure flux (the standard SEB `G`). The disambiguation is achieved by renaming 
 condition* only, so the diff is small.
 
 - [`soil_model_bcs.jl`](../../src/models/soil/soil_model_bcs.jl): the soil-top energy BC alias
-  `GroundHeatFlux` → **`SoilHeatFlux`**, its default variable `:ground_heat_flux` → `:soil_heat_flux`,
+  `SoilHeatFlux` → **`SoilHeatFlux`**, its default variable `:ground_heat_flux` → `:soil_heat_flux`,
   and docstring updated ("net heat flux into the top of the soil column").
-- [`models.jl`](../../src/models/models.jl): export `GroundHeatFlux` → `SoilHeatFlux`.
+- [`models.jl`](../../src/models/models.jl): export `SoilHeatFlux` → `SoilHeatFlux`.
 - [`land_model.jl:58-68`](../../src/models/coupled/land_model.jl#L58-L68): wire the soil-top BC with
   `SoilHeatFlux(ground_heat_flux)` (strategy A, single field). The SEB `ground_heat_flux` field feeds the
   soil BC directly in the no-snow case, so results are bit-for-bit unchanged. The snow PR will create a
   distinct `soil_heat_flux` field (the blended flux) and wire the BC to it.
 - Docs: [`docs/src/models/soil_model.md`](../../docs/src/models/soil_model.md) `@docs` reference
-  `GroundHeatFlux` → `SoilHeatFlux`.
+  `SoilHeatFlux` → `SoilHeatFlux`.
 
 The SEB source (`skin_temperature.jl`, `surface_energy_balance.jl`, `surface/abstract_types.jl`) and the
 surface / skin-temperature / coupled tests are **unchanged**: `ground_heat_flux` remains the SEB closure
