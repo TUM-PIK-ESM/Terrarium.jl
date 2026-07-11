@@ -47,6 +47,10 @@ if MAIN_TESTS
         include("soil/soil_model_tests.jl")
     end
 
+    @testset "Snow processes" begin
+        include("snow/snow_properties_tests.jl")
+    end
+
     @testset "Vegetation model and processes" begin
         include("vegetation/vegetation_model_tests.jl")
     end
