@@ -73,6 +73,7 @@ include("snow/snow.jl")
 include("snow/snow_properties.jl")
 export SnowEnergyTemperatureClosure
 include("snow/snow_energy.jl")
+include("snow/snow_mass.jl")
 
 # Vegetation
 
