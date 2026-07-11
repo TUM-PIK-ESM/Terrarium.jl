@@ -1,6 +1,7 @@
 # Simple single-layer snow scheme
 
-> Status: **planned**. Initial design
+> Status: **planned**. Design complete and reconciled with the current codebase; the prerequisite
+> refactors (PR-A, PR-B) have landed, so the scheme is ready to implement.
 
 Date of initial draft: 2026-07-01
 
@@ -40,9 +41,23 @@ Follow-up prompt (revision 2), verbatim:
 Resolutions adopted in this revision: (i) the prognostic snow energy is the **depth-integrated**
 (column) energy content (J/m²); the volumetric energy seen by the closure is computed by a **method**
 with no auxiliary field (see "Physical formulation"). (ii) The `ground_heat_flux` dual-role ambiguity
-is addressed by splitting it into `surface_heat_flux` and `ground_heat_flux` (see "Boundary-condition
-disambiguation"). (iii) The soil→ground refactor is adopted as a scoped, abstraction-first preliminary
-work item (see "Preliminary refactoring work items").
+is addressed by a heat-flux split (see "Boundary-condition disambiguation"). (iii) The soil/ground
+refactor is adopted as a scoped, abstraction-first preliminary work item (see "Preliminary refactoring
+work items").
+
+Revision 3 (2026-07-11) — **plan reconciliation** after the preliminary PRs landed. PR-A and PR-B are
+now **complete**; this plan is reconciled to their outcomes (physics unchanged):
+
+- The generic energy machinery lives in a top-level `thermodynamics/` module: `AbstractThermodynamics`,
+  the `ExplicitTwoPhaseHeatConduction` operator, and the medium-agnostic `FreeWater` enthalpy maps
+  (`liquid_water_fraction` / `energy_to_temperature`, in `thermodynamics/enthalpy.jl`). The snow closure
+  reuses these directly.
+- The soil energy process is `SoilThermodynamics` (was `SoilEnergyBalance`) under `soil/energy/`; the
+  `soil/` tree was **kept** (not renamed to `ground/`).
+- The heat-flux split (PR-B) keeps `ground_heat_flux` as the SEB closure flux `G` and introduces
+  `soil_heat_flux` (alias `SoilHeatFlux`) as the soil-top BC. **The snow blend therefore writes
+  `soil_heat_flux`, not `ground_heat_flux`.**
+- Surface processes now live under a single `surface/` tree (was `surface_energy/` + `surface_hydrology/`).
 
 ## Resolved design decisions
 
@@ -52,8 +67,8 @@ The following forks were resolved with the model author before drafting:
    (revised).** The prognostic snow energy is the **depth-integrated (column) energy content** `E`
    (J/m²), which is the conserved quantity and keeps the energy tendency free of the moving-boundary
    `1/d_s` factor that the original volumetric prognostic introduced. The **volumetric** energy
-   `U_v = E/d_s` is exposed to the existing soil enthalpy closure (`FreeWater`,
-   [`soil_energy_closures.jl`](../../src/processes/soil/energy/soil_energy_closures.jl)) via a
+   `U_v = E/d_s` is exposed to the shared `FreeWater` enthalpy maps
+   ([`thermodynamics/enthalpy.jl`](../../src/processes/thermodynamics/enthalpy.jl)) via a
    **method**, with no auxiliary field allocated for `U_v`. Snow layer depth `d_s` is a diagnostic
    derived from SWE and a homogeneous bulk density. This realizes the original intent (reuse the
    volumetric phase-change closure) while fixing the conservation/regularization concern raised in
@@ -96,8 +111,8 @@ in excess of capillary retention (eqns 23–24).
   snow↔soil exchange is an explicit conductive flux at the snow base. This is a deliberate departure.
 - UEB's equilibrium surface-temperature parameterization is realized by Terrarium's existing
   **skin-temperature solve** in the surface energy balance, which already solves the same equilibrium
-  balance via a Newton iteration ([`skin_temperature.jl`](../../src/processes/surface_energy/skin_temperature.jl),
-  [`surface_energy_balance.jl`](../../src/processes/surface_energy/surface_energy_balance.jl)). The
+  balance via a Newton iteration ([`skin_temperature.jl`](../../src/processes/surface/skin_temperature.jl),
+  [`surface_energy_balance.jl`](../../src/processes/surface/surface_energy_balance.jl)). The
   snow scheme supplies the *sub-surface* side of that balance (temperature, conductance, layer
   thickness) instead of the soil top layer.
 - Precipitation phase partitioning is already available upstream: `RainSnow`
@@ -110,35 +125,44 @@ in excess of capillary retention (eqns 23–24).
 These are the integration points the scheme attaches to (verified against current source):
 
 - **Skin temperature / SEB.** `SurfaceEnergyBalance{NF, SkinTemperature, TurbulentFluxes,
-  RadiativeFluxes, Albedo}`. The `ImplicitSkinTemperature` solve closes
-  `R_net(T_s) + H_s(T_s) + H_l(T_s) − G(T_s, T_g) = 0` (positive-upward convention). The conduction
-  term uses `compute_skin_temperature(skinT, Tg, G, Δz) = Tg − G·Δz/(2κₛ)`, where `Tg` is the
-  `ground_temperature` input and `Δz` is the **topmost soil cell** thickness
-  ([`skin_temperature.jl:159-172`](../../src/processes/surface_energy/skin_temperature.jl#L159-L172)).
-  An in-code TODO at line 85 already anticipates pulling `κₛ`/thickness from snow/canopy.
-- **Ground temperature source.** `SoilEnergyBalance` registers `ground_temperature` as a `view` of the
+  RadiativeFluxes, Albedo}` ([`surface/surface_energy_balance.jl`](../../src/processes/surface/surface_energy_balance.jl)).
+  The `ImplicitSkinTemperature` solve closes `R_net(T_s) + H_s(T_s) + H_l(T_s) − G(T_s, T_g) = 0`
+  (positive-upward convention). The conduction term uses
+  `compute_skin_temperature(skinT, Tg, G, Δz) = Tg − G·Δz/(2κₛ)`, where `Tg` is the `ground_temperature`
+  input and `Δz` is the **topmost soil cell** thickness
+  ([`surface/skin_temperature.jl`](../../src/processes/surface/skin_temperature.jl)). An in-code TODO in
+  `compute_skin_temperature` already anticipates pulling `κₛ`/thickness from snow/canopy.
+- **Ground temperature source.** `SoilThermodynamics` registers `ground_temperature` as a `view` of the
   uppermost soil layer, with the TODO "Revisit this if/when we extend the vertical layers to include
-  snow and canopy" ([`soil_energy.jl:51-57`](../../src/processes/soil/energy/soil_energy.jl#L51-L57)).
+  snow and canopy" ([`soil/energy/soil_energy.jl`](../../src/processes/soil/energy/soil_energy.jl)).
   The snow scheme is the resolution of that TODO.
-- **Soil top boundary fluxes.** `initialize(model::LandModel)` wires the `ground_heat_flux` auxiliary
-  as a `FluxBoundaryCondition` on soil `internal_energy`, and `infiltration` (negated) as a flux on
-  `saturation_water_ice` ([`land_model.jl:55-65`](../../src/models/coupled/land_model.jl#L55-L65),
-  [`soil_model_bcs.jl`](../../src/models/soil/soil_model_bcs.jl)). The snow scheme reuses these two
-  fields unchanged — it only changes *how their values are computed* when snow is present.
+- **Soil top boundary fluxes.** `StateVariables(model::LandModel)` wires the `soil_heat_flux` BC (alias
+  `SoilHeatFlux`, fed by the SEB `ground_heat_flux` field in the no-snow case) as a
+  `FluxBoundaryCondition` on soil `internal_energy`, and `infiltration` (negated) as a flux on
+  `saturation_water_ice` ([`land_model.jl`](../../src/models/coupled/land_model.jl),
+  [`soil_model_bcs.jl`](../../src/models/soil/soil_model_bcs.jl)). The snow scheme changes *how the
+  `soil_heat_flux` and `infiltration` BC values are computed* when snow is present (the blend below).
 - **Coupling order.** `LandModel.compute_auxiliary!` runs atmos → soil → vegetation →
   surface_hydrology → SEB; `compute_tendencies!` runs surface_hydrology → soil → vegetation
-  ([`land_model.jl:80-96`](../../src/models/coupled/land_model.jl#L80-L96)).
-- **Enthalpy closure to reuse.** `FreeWater` provides `liquid_water_fraction(fc, U, Lθ, sat)` and
-  `energy_to_temperature(fc, U, Lθ, C)` operating on volumetric energy `U`, latent-heat content `Lθ`,
-  and heat capacity `C` ([`soil_energy_closures.jl:135-163`](../../src/processes/soil/energy/soil_energy_closures.jl#L135-L163)).
-  The snow closure is the same enthalpy map with snow-specific `Lθ` and `C`.
-- **Constants.** `PhysicalConstants` exposes `latent_heat_fusion`, `latent_heat_sublimation`,
-  `specific_heat_capacity_ice`, `specific_heat_capacity_liquid_water`, `density_water`, `density_ice`,
-  and the Stefan–Boltzmann constant ([`physical_constants.jl`](../../src/processes/physical_constants.jl)).
+  ([`land_model.jl`](../../src/models/coupled/land_model.jl)).
+- **Enthalpy closure to reuse.** The medium-agnostic `FreeWater` maps `liquid_water_fraction(fc, U, Lθ, sat)`
+  and `energy_to_temperature(fc, U, Lθ, C)` operate on volumetric energy `U`, latent-heat content `Lθ`,
+  and heat capacity `C` ([`thermodynamics/enthalpy.jl`](../../src/processes/thermodynamics/enthalpy.jl)).
+  The snow closure is the same enthalpy map with snow-specific `Lθ` and `C` (this shared home is the
+  payoff of PR-A).
+- **Constants.** `PhysicalConstants` exposes thermodynamic constants via `constants.thermodynamics`
+  (`latent_heat_fusion`, `latent_heat_sublimation`, `specific_heat_capacity_ice`,
+  `specific_heat_capacity_liquid_water`) and material constants via `constants.material`
+  (`density_water`, `density_ice`); the Stefan–Boltzmann constant is under `constants.universal`
+  ([`constants.jl`](../../src/processes/constants.jl)).
 - **Process template.** `BareGroundEvaporation`
-  ([`bare_ground_evaporation.jl`](../../src/processes/surface_hydrology/evapotranspiration/bare_ground_evaporation.jl))
+  ([`surface/evapotranspiration/bare_ground_evaporation.jl`](../../src/processes/surface/evapotranspiration/bare_ground_evaporation.jl))
   and the degree-day example ([`examples/extending/simple_snow_ddm.jl`](../../examples/extending/simple_snow_ddm.jl))
-  are the structural patterns for a new `XY()`-fielded process and its kernels.
+  are the structural patterns for a new `XY()`-fielded process and its kernels. `NoCanopyInterception`
+  ([`surface/canopy_interception/canopy_interception.jl`](../../src/processes/surface/canopy_interception/canopy_interception.jl))
+  is the template for the inert `NoSnow` default, and the SEB already threads an
+  `Optional{AbstractSurfaceHydrology} = nothing` component argument — the exact pattern the optional
+  `snow` argument will mirror.
 
 ## Physical formulation
 
@@ -164,7 +188,8 @@ properties follow from it.
   `tanh(W/W_ref)`; differentiable, → 0 as `W → 0`.
 - `snow_thermal_conductivity` `κ_snow` (W/m/K) — from `ρ_s` (e.g. Sturm/Yen power law `κ = a·ρ_s^b`),
   constant for fixed `ρ_s`.
-- `ground_heat_flux` (reused), `infiltration` (reused) — see soil coupling below.
+- `ground_heat_flux` (SEB closure flux `G`, reused), `soil_heat_flux` (soil-top BC, written by the
+  blend), `infiltration` (reused) — see soil coupling below.
 
 ### Enthalpy closure (reusing `FreeWater`)
 
@@ -220,10 +245,11 @@ moving-boundary term:
 dE/dt = Q_top − Q_base + Q_precip − Q_melt
 ```
 
-- `Q_top` — conductive flux delivered to the snow surface, equal to the SEB surface heat flux over the
-  snow-covered fraction (sign set so energy leaving the snow top reduces `E`); see "Boundary-condition
-  disambiguation".
-- `Q_base` — snow→soil basal conduction (below); equals the soil-top `ground_heat_flux`.
+- `Q_top` — conductive flux delivered to the snow surface, equal to the SEB `ground_heat_flux` (`G`)
+  over the snow-covered fraction (sign set so energy leaving the snow top reduces `E`); see
+  "Boundary-condition disambiguation".
+- `Q_base` — snow→soil basal conduction (below); this is the (snow-covered part of the) soil-top
+  `soil_heat_flux`.
 - `Q_precip` — advected heat of `P_s` (at `min(T_air,0)`) and `R_on_snow` (latent + sensible relative
   to 0 °C ice reference), UEB eqn 13.
 - `Q_melt = ρ_w·L_f·M_r` — heat advected out with meltwater at 0 °C (UEB eqn 25).
@@ -249,9 +275,9 @@ The SEB must "optionally accept an `AbstractSnow`". Plan:
    Δz_eff = f_snow·d_s     + (1−f_snow)·Δz_soil_top
    ```
    The default method (`snow === nothing`) returns today's soil-only values, so non-snow behavior is
-   byte-for-byte unchanged. This also resolves the `κₛ`/thickness TODO at `skin_temperature.jl:85`.
-   The SEB writes its closure flux into `surface_heat_flux` (renamed from `ground_heat_flux` in
-   preliminary PR-B); the snow energy balance reads it as `Q_top`.
+   byte-for-byte unchanged. This also resolves the `κₛ`/thickness TODO in `compute_skin_temperature`.
+   The SEB writes its closure flux into `ground_heat_flux` (unchanged by PR-B); the snow energy balance
+   reads it as `Q_top`.
 3. **Snow-aware albedo/emissivity.** Add a `SnowAlbedo <: AbstractAlbedo` (or make the SEB blend),
    returning `f_snow`-weighted snow vs underlying albedo/emissivity. A first pass uses constant snow
    albedo/emissivity (UEB Table 2: `A_bg = 0.25`, snow `ε_s = 0.99`); snow-age decay (UEB / BATS) is
@@ -261,129 +287,70 @@ The SEB must "optionally accept an `AbstractSnow`". Plan:
    energy-balance tiles. This is the pragmatic single-layer realization; independent snow/bare tiles
    are noted as future work.
 
-## Boundary-condition disambiguation (surface vs ground heat flux)
+## Boundary-condition disambiguation (ground vs soil heat flux)
 
-### Investigation of the current ambiguity
+> **Resolved by PR-B** ([`2026-07-10_PLAN_01B_surface_ground_heat_flux_split.md`](2026-07-10_PLAN_01B_surface_ground_heat_flux_split.md)).
+> The original single `ground_heat_flux` field served two roles — the SEB skin-temperature closure flux
+> `G` (conduction from the skin into the medium below) *and* the soil-top `internal_energy` BC. Without
+> snow these coincide; **with snow they are distinct** (the SEB closes against the *snow surface*, while
+> the soil sees conduction across the *snow base* `Q_base(T_snow, T_soil_top)`, differing by snowpack
+> storage and advected meltwater heat). PR-B split them: `ground_heat_flux` stays the SEB closure flux,
+> and `soil_heat_flux` (alias `SoilHeatFlux`) is the soil-top BC. In the no-snow case the soil BC is
+> wired directly to `ground_heat_flux`.
 
-`ground_heat_flux` is a single `XY` auxiliary `Field` that currently serves **two distinct roles**:
+What remains **for the snow PR** is the snow-present blend and its wiring (static strategy A):
 
-1. *SEB-internal.* The skin-temperature solve writes it as `G = R_net + H_s + H_l`
-   ([`skin_temperature.jl:98-101,179-191`](../../src/processes/surface_energy/skin_temperature.jl#L98-L101))
-   and reads it back to derive `Ts = Tg − G·Δz/(2κ)` ([`skin_temperature.jl:159-172`](../../src/processes/surface_energy/skin_temperature.jl#L159-L172)).
-   This is the *conductive flux from the skin into the medium immediately below it*.
-2. *Soil coupling.* `initialize(model::LandModel)` wraps the same field as a `FluxBoundaryCondition`
-   on soil `internal_energy` (top), via `SoilHeatFlux(...)`
-   ([`land_model.jl:55-65`](../../src/models/coupled/land_model.jl#L55-L65),
-   [`soil_model_bcs.jl:6`](../../src/models/soil/soil_model_bcs.jl#L6)); the soil energy tendency
-   consumes it through `compute_z_bcs!` ([`boundary_conditions.jl:36-38`](../../src/boundary_conditions.jl#L36-L38)).
+- **No snow** (`NoSnow`): `soil_heat_flux ≡ ground_heat_flux` (already wired).
+- **Snow present**: `soil_heat_flux = f_snow·Q_base + (1−f_snow)·ground_heat_flux`, where `Q_base` is the
+  snow→soil conduction (Fourier between `T_snow` and `T_soil_top` across series snow+soil conductances).
+  `Q_base` depends only on `T_snow` and `T_soil_top` (both available after the soil and snow auxiliary
+  passes, before the SEB), so there is no circular dependency with the skin-temperature solve.
 
-Without snow these two roles describe the **same interface** (the skin sits directly on the soil top),
-so one field is consistent. **With snow they are two different fluxes:** the SEB closes the balance
-against the *snow surface*, so `G` is the flux into the *top* of the snowpack, whereas the soil sees
-the conduction across the *snow base*, `Q_base(T_snow, T_soil_top)`. The two differ by snowpack energy
-storage `dE/dt` plus advected meltwater heat. Feeding the SEB's `G` into the soil BC would inject the
-surface flux directly into the soil, bypass the snowpack, and break energy conservation.
-
-### Recommended design change: split the field by semantics
-
-Decouple the two roles into two named `XY` fluxes with unambiguous meaning:
-
-- **`surface_heat_flux`** — the SEB skin-temperature closure flux: conduction from the skin into the
-  medium directly beneath it (snow top, or ground top when no snow). Owned and written by the SEB; it
-  is the `G` of the skin-temperature equation and the top boundary of the uppermost sub-surface medium.
-- **`ground_heat_flux`** — the conductive flux into the top of the soil/ground column; feeds the soil
-  energy BC (wiring otherwise unchanged). This name now aligns with the soil→ground refactor below
-  ("flux into the ground").
-
-Coupling rule (dispatched on the uppermost medium):
-
-- **No snow** (`NoSnow`): `ground_heat_flux ≡ surface_heat_flux`.
-- **Snow present**: `ground_heat_flux = f_snow·Q_base + (1−f_snow)·surface_heat_flux`, where `Q_base`
-  is the snow→soil conduction (Fourier between `T_snow` and `T_soil_top` across series snow+soil
-  conductances). `surface_heat_flux` is the top boundary of the **snow** energy balance (`Q_top`).
-
-`Q_base` depends only on `T_snow` and `T_soil_top` (both available after the soil and snow auxiliary
-passes, before the SEB), so there is no circular dependency with the skin-temperature solve.
-
-### Two implementation strategies for selecting the soil-BC source
-
-- **(A) Static wiring by model type (recommended).** The snow component type is known at
-  `initialize(model::LandModel)` time. Wire the soil-top energy BC to `surface_heat_flux` when the
-  component is `NoSnow`, and to `ground_heat_flux` (written by the snow scheme) otherwise. No
-  dual-writer field, no runtime branch, and the no-snow path is byte-for-byte identical to today (only
-  the field is renamed).
-- **(B) Single writer via an explicit coupling step.** Always wire the soil BC to `ground_heat_flux`
-  and add `compute_ground_heat_flux_coupling!(state, grid, snow, seb, ...)` after both the snow and SEB
-  auxiliary passes, dispatching on the `snow` type to copy `surface_heat_flux` (NoSnow) or the blended
-  `Q_base` (snow). More uniform, at the cost of one extra pass.
-
-Strategy (A) is preferred. Either way, the `surface_heat_flux` rename is a small, **snow-independent**
-change that is best landed as a preliminary PR (see below), as it touches the SEB, the
-`SoilHeatFlux`/`PrescribedSurfaceTemperature` aliases, and the `LandModel`/`SurfaceEnergyModel` wiring.
+Wiring (strategy A): the snow component type is known at `StateVariables(model::LandModel)` time, so the
+soil-top BC is wired to a distinct `soil_heat_flux` field (holding the blend) when snow is present, and
+directly to `ground_heat_flux` when `NoSnow` (today's behavior). No dual-writer field, no runtime branch.
 
 ### Water-flux analogue (`infiltration`)
 
-`infiltration` (feeds soil `saturation_water_ice` top BC) has the same dual-role structure and is
-handled identically: with snow, `infiltration = f_snow·M_r + (1−f_snow)·(rainfall + throughfall)` plus
-the existing surface-hydrology contributions, so meltwater and rain-through reach the soil as a
-continuous flux. The energy flux is the headline ambiguity; the water flux is resolved by the same
-split-and-blend pattern and should be addressed in the same preliminary PR for consistency.
+`infiltration` (feeds the soil `saturation_water_ice` top BC) has no dual-role structure until snow
+exists (single producer = surface hydrology, single consumer = soil BC), so PR-B left it untouched. The
+snow PR introduces the blend: `infiltration = f_snow·M_r + (1−f_snow)·(rainfall + throughfall)` plus the
+existing surface-hydrology contributions, so meltwater and rain-through reach the soil as a continuous
+flux.
 
-## Preliminary refactoring work items
+## Preliminary refactoring work items (completed)
 
-Two structural changes should land as their own PRs **before** the snow scheme, to keep each change
-reviewable and to avoid bundling unrelated churn (cf. `AGENTS.md` "scope creep in PRs").
+Two structural changes landed as their own PRs **before** the snow scheme, to keep each change
+reviewable (cf. `AGENTS.md` "scope creep in PRs"). Both are now **complete**.
 
-### PR-A: soil/substrate abstraction (soil → ground, scoped)
+### PR-A: energy/thermodynamics abstraction — **done**
 
-> Detailed design and revised recommendation: [`pr_a_ground_abstraction.md`](pr_a_ground_abstraction.md).
-> That document supersedes the "additive vs full rename" recommendation below — the author has opted for
-> the directory rename `soil/` → `soil/` with an `AbstractGround…` abstraction layer.
+> [`2026-07-10_PLAN_01A_ground_abstraction.md`](2026-07-10_PLAN_01A_ground_abstraction.md)
 
-I agree with the direction: much of the soil **energy** machinery is medium-agnostic and the snow
-scheme reuses it. However, a blanket directory/type rename of everything under `processes/soil` would
-be both too wide and partly incorrect, because several subsystems are intrinsically soil-specific.
-Recommended scoping:
+The medium-agnostic energy machinery was lifted into a top-level `thermodynamics/` module so the snow
+scheme can reuse it without depending on soil:
 
-- **Generalize (move under a `ground`/`substrate` abstraction):**
-  - the 1D heat-conduction operator `ExplicitTwoPhaseHeatConduction` (Fourier divergence);
-  - the `FreeWater` enthalpy closure and the scalar maps `energy_to_temperature` /
-    `liquid_water_fraction` (water/ice phase change — reused verbatim by snow);
-  - an `AbstractGround` supertype and the shared conductive-coupling interface (`ground_temperature`
-    accessor and the snow-aware conduction accessors the SEB dispatches on).
-- **Keep soil-specific (as the soil *parameterization* of a ground medium):** stratigraphy
-  (`SoilTexture`, `SoilHorizon`, porosity, `soil_volume`), Richards hydrology and hydraulic closures,
-  the thermal *constituent* properties (mineral/organic/quartz conductivities, texture-dependent λ —
-  cf. [`texture_dependent_thermal_conductivity.md`](texture_dependent_thermal_conductivity.md)), and
-  soil biogeochemistry.
+- `AbstractThermodynamics{NF}` (the internal-energy balance supertype), the `ExplicitTwoPhaseHeatConduction`
+  operator, and the `FreeWater` enthalpy maps `liquid_water_fraction` / `energy_to_temperature`
+  ([`thermodynamics/`](../../src/processes/thermodynamics/)).
+- The soil energy process is `SoilThermodynamics <: AbstractThermodynamics` under `soil/energy/`; soil
+  stratigraphy (`SoilComposition`, texture, porosity), Richards hydrology, thermal *constituent*
+  properties, and biogeochemistry stay soil-specific. The `soil/` tree was **kept** (the originally
+  proposed `soil → ground` rename was dropped as unnecessary once the generic physics moved to
+  `thermodynamics/`). The speculative `AbstractGround` coupled-process supertype was not introduced.
 
-Two ways to realize this, in increasing churn:
+Snow reuse: the snow closure calls the `FreeWater` scalar maps directly; `SingleLayerSnow` is its own
+coupled process (`AbstractSnow <: AbstractCoupledProcesses`), **not** an `AbstractThermodynamics` (its
+depth-integrated energy gives a flux-sum tendency, not a conduction divergence).
 
-- **Additive (recommended first step):** introduce `AbstractGround{NF}` with `AbstractSoil <:
-  AbstractGround`, and lift only the generic energy operator + closure into a shared location, leaving
-  public types (`SoilModel`, `SoilEnergyWaterCarbon`, `SoilEnergyBalance`) and the `soil/` tree in
-  place. This unlocks snow reuse with minimal disruption to imports (ExplicitImports tests), docs,
-  examples, and the public API.
-- **Full rename:** rename the `soil` module/tree to `ground`. Higher cost (wide import/doc/export/API
-  churn) for largely cosmetic benefit beyond the additive step; defer unless there is a concrete need.
+### PR-B: ground/soil heat-flux split — **done**
 
-Recommendation: do the **additive** abstraction extraction now; treat a full cosmetic rename as
-optional later work. This still satisfies the goal (snow reuses the ground energy/closure machinery)
-without a sweeping rename.
+> [`2026-07-10_PLAN_01B_surface_ground_heat_flux_split.md`](2026-07-10_PLAN_01B_surface_ground_heat_flux_split.md)
 
-### PR-B: surface/ground heat-flux split
-
-> Detailed design: [`pr_b_surface_ground_heat_flux_split.md`](pr_b_surface_ground_heat_flux_split.md).
-> Note the refinement there: the `infiltration` blend is deferred to the snow PR (no dual-role exists
-> for the water flux until snow is present), so PR-B is scoped to the energy-flux split only.
-
-Implement the `surface_heat_flux` / `ground_heat_flux` disambiguation (and the `infiltration`
-analogue) described above, using static wiring strategy (A). Snow-independent; verifiable by a
-no-snow regression (current results unchanged).
-
-Suggested order: **PR-A then PR-B** (PR-B's `ground_heat_flux` naming and the shared conductive-coupling
-interface read more naturally on top of the ground abstraction), though the two are largely
-independent and could be reordered. The snow PR depends on both.
+The dual-role flux was split: `ground_heat_flux` remains the SEB closure flux `G`; the soil-top BC is
+`soil_heat_flux` (alias `SoilHeatFlux`). No-snow wiring feeds the soil BC directly from `ground_heat_flux`
+(byte-for-byte unchanged). The `infiltration` analogue was deferred to this snow PR (no dual role until
+snow exists). Verified by a no-snow regression.
 
 ## Module structure (new and modified files)
 
@@ -402,49 +369,44 @@ src/processes/snow/
 src/models/snow/
 └── snow_model.jl         # minimal standalone SnowModel for unit + AD testing
 
-modified (snow PR — builds on preliminary PR-A and PR-B):
-src/processes/surface_energy/skin_temperature.jl     # snow-aware conduction accessors
-src/processes/surface_energy/surface_energy_balance.jl # optional snow arg threading
-src/processes/surface_energy/albedo.jl               # SnowAlbedo (or blend)
+modified (snow PR — builds on the completed PR-A and PR-B):
+src/processes/surface/skin_temperature.jl            # snow-aware conduction accessors
+src/processes/surface/surface_energy_balance.jl      # optional snow arg threading
+src/processes/surface/albedo.jl                      # SnowAlbedo (or blend)
 src/models/coupled/land_model.jl                     # @component snow (default NoSnow), ordering,
-                                                     #   pass snow to SEB, blend ground_heat_flux +
+                                                     #   pass snow to SEB, blend soil_heat_flux +
                                                      #   infiltration
 src/Terrarium.jl                                     # includes + exports
-
-(The surface_heat_flux/ground_heat_flux split and the AbstractGround abstraction land earlier in the
-preliminary PRs; see "Preliminary refactoring work items".)
 ```
+
+Reuse (no changes, imported by the snow module): `thermodynamics/enthalpy.jl` (`FreeWater` maps),
+`constants.jl` (thermodynamic/material constants).
 
 Naming: concrete type `SingleLayerSnow` (UEB-inspired); `NoSnow` is the inert default analogous to
 `NoCanopyInterception`. `AbstractSnow{NF} <: AbstractCoupledProcesses{NF}`.
 
 ## Implementation phases
 
-**Preliminary (separate PRs, before snow):**
-
-- **PR-A — soil/substrate abstraction.** Additive `AbstractGround` supertype + extraction of the
-  generic heat-conduction operator and `FreeWater` closure into a shared location; soil-specific
-  parameterizations stay put. No behavior change.
-- **PR-B — surface/ground heat-flux split.** Rename the SEB closure flux to `surface_heat_flux`,
-  reserve `ground_heat_flux` for the soil-top BC, static wiring strategy (A); same for `infiltration`.
-  Verified by a no-snow regression.
+**Preliminary (separate PRs, before snow) — both complete:** PR-A (`thermodynamics/` abstraction) and
+PR-B (`ground_heat_flux` / `soil_heat_flux` split). See "Preliminary refactoring work items".
 
 **Snow scheme:**
 
 1. **Process skeleton + properties.** `AbstractSnow`/`NoSnow`/`SingleLayerSnow`, `variables`,
    `snow_properties.jl` (depth, density, conductivity, cover fraction, `volumetric_snow_energy` method).
    No coupling yet.
-2. **Energy closure.** `closure!`/`invclosure!` reusing `FreeWater` via `U_v = E/d_s` (guarded);
-   verify `T_snow`/`θ_liq` recovery and round-trip `invclosure!`→`closure!`.
+2. **Energy closure.** `closure!`/`invclosure!` reusing the `FreeWater` maps from `thermodynamics/` via
+   `U_v = E/d_s` (guarded); verify `T_snow`/`θ_liq` recovery and round-trip `invclosure!`→`closure!`.
 3. **Tendencies.** Mass balance + Darcy outflow + depth-integrated energy tendency `dE/dt`, driven by
    prescribed top/base fluxes (standalone `SnowModel`).
 4. **SEB interface change.** Thread optional `snow`; snow-aware conduction accessors; `SnowAlbedo`;
    confirm non-snow path unchanged.
 5. **LandModel integration.** Add `@component snow = NoSnow(...)`; insert snow auxiliary (closure +
-   `Q_base`) before SEB and snow tendencies after surface hydrology; blend `ground_heat_flux` and
-   `infiltration`.
+   `Q_base`) before SEB and snow tendencies after surface hydrology; write the blended `soil_heat_flux`
+   and `infiltration`, and wire the soil-top BC to `soil_heat_flux` in the snow branch of strategy A.
 6. **Docs.** A `docs/` page following the AGENTS.md process-page template (Overview / Implementations /
-   Methods / Kernel functions), with a "scheme under development" warning.
+   Methods / Kernel functions), with a "scheme under development" warning. Add an implementation-plan
+   entry per the `docs/dev` workflow.
 
 ## Testing
 
@@ -479,6 +441,34 @@ Naming: concrete type `SingleLayerSnow` (UEB-inspired); `NoSnow` is the inert de
    biased.
 6. **Stability corrections.** Like UEB, neutral turbulent transfer is assumed; Richardson/Monin–Obukhov
    corrections are out of scope.
+
+## Readiness assessment
+
+**Ready to proceed.** The physics is fully specified (UEB-based, depth-integrated energy prognostic,
+Darcy meltwater, fractional cover), the design decisions are resolved, and both prerequisite refactors
+(PR-A, PR-B) have landed. Every integration point was re-verified against the current source: the
+`FreeWater` maps are medium-agnostic in `thermodynamics/`, the SEB already threads an
+`Optional{…} = nothing` component argument (the pattern the optional `snow` mirrors), `ground_temperature`
+is a `SoilThermodynamics` accessor, and the `soil_heat_flux` BC seam exists.
+
+Recommended sequencing (each a reviewable increment; the first three are snow-independent and can be
+tested in isolation):
+
+1. Phases 1–3 (process skeleton + `snow_properties` → enthalpy closure → tendencies) behind a standalone
+   `SnowModel`, with unit + conservation + Enzyme tests. This is the bulk of the new physics and carries
+   the least coupling risk.
+2. Phase 4 (SEB optional-`snow` threading + snow-aware conduction accessors + `SnowAlbedo`), guarded by
+   the no-snow regression.
+3. Phase 5 (`LandModel` integration: `@component snow = NoSnow`, coupling order, `soil_heat_flux` /
+   `infiltration` blend and snow-branch BC wiring), then phase 6 (docs).
+
+Two design points to confirm before/while implementing (neither blocks starting phase 1):
+
+- **`f_snow` functional form and `W_ref`.** The plan lists `W/(W+W₀)` or `tanh(W/W_ref)`; pick one and a
+  default reference SWE. Both are differentiable and → 0 as `W → 0`; this only affects the blend weights.
+- **Snow-base conductance for `Q_base`.** The plan specifies a series snow+soil Fourier conductance
+  between `T_snow` and `T_soil_top`; confirm the discretization (half-cell thicknesses `d_s/2` and
+  `Δz_soil_top/2`) and that it reuses the soil-side `κ` from `SoilThermodynamics`' thermal properties.
 
 ## References
 
