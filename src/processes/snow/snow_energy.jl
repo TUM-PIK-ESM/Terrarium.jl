@@ -19,6 +19,17 @@ variables(::SnowEnergyTemperatureClosure) = (
 
 @inline get_closure(::SingleLayerSnow) = SnowEnergyTemperatureClosure()
 
+# The SEB conduction target blends snow and ground; supply the snow depth, cover fraction, and closure
+# temperature so they are available in the SEB kernel (the conductivity is recovered lazily there).
+@inline seb_conduction_fields(state, snow::SingleLayerSnow) = get_fields(state, snow, get_closure(snow))
+
+# Process-level closure entry points (dispatch on the snow process, mirroring the soil interface).
+@inline closure!(state, grid, snow::SingleLayerSnow, constants::PhysicalConstants) =
+    closure!(state, grid, get_closure(snow), snow, constants)
+
+@inline invclosure!(state, grid, snow::SingleLayerSnow, constants::PhysicalConstants) =
+    invclosure!(state, grid, get_closure(snow), snow, constants)
+
 """
     $TYPEDSIGNATURES
 
@@ -45,7 +56,7 @@ function closure!(
     kernel_args = (closure, snow, constants)
     out = closure_fields(state, snow)
     fields = get_fields(state, kernel_args...; except = out)
-    launch!(grid, XY, energy_to_temperature_kernel!, out, fields, kernel_args...)
+    launch!(grid, XY, snow_energy_to_temperature_kernel!, out, fields, kernel_args...)
     return nothing
 end
 
@@ -67,7 +78,7 @@ function invclosure!(
     # snow_energy is the prognostic variable, so collect the output fields manually
     out = (snow_energy = state.snow_energy, snow_liquid_fraction = state.snow_liquid_fraction)
     fields = get_fields(state, kernel_args...; except = out)
-    launch!(grid, XY, temperature_to_energy_kernel!, out, fields, kernel_args...)
+    launch!(grid, XY, snow_temperature_to_energy_kernel!, out, fields, kernel_args...)
     return nothing
 end
 
@@ -90,8 +101,8 @@ Recover the snow temperature and liquid water fraction from the depth-integrated
     c_i = constants.thermodynamics.specific_heat_capacity_ice
     c_w = constants.thermodynamics.specific_heat_capacity_liquid_water
     ρ_w = constants.material.density_water
-    ρ_s = snow_density(i, j, grid, fields, snow.density)
-    d_s = compute_snow_depth(snow, W, ρ_w)
+    ρ_s = compute_snow_density(i, j, grid, fields, snow.density)
+    d_s = compute_snow_depth(snow, W, ρ_s, ρ_w)
     # Volumetric latent heat of fusion and volumetric energy (bulk snow treated as water substance)
     Lθ = ρ_s * L_f
     U_v = volumetric_snow_energy(E, d_s)
@@ -100,7 +111,7 @@ Recover the snow temperature and liquid water fraction from the depth-integrated
     C = ρ_s * (liq * c_w + (one(liq) - liq) * c_i)
     # Snow temperature cannot exceed 0°C, so clip the free-water temperature at zero. The energy above
     # the fully-melted (0°C, all-liquid) reference, i.e. the positive part `U_v > 0`, is not stored; it
-    # is derived on demand where needed to drive melt and sublimation in the tendencies (later phase).
+    # is derived on demand where needed to determine snow melt.
     T = energy_to_temperature(FreeWater(), U_v, Lθ, C)
     out.snow_temperature[i, j, 1] = min(T, zero(T))
     return nothing
@@ -123,8 +134,8 @@ Compute the depth-integrated snow energy from a prescribed temperature at grid c
     c_i = constants.thermodynamics.specific_heat_capacity_ice
     c_w = constants.thermodynamics.specific_heat_capacity_liquid_water
     ρ_w = constants.material.density_water
-    ρ_s = snow_density(i, j, grid, fields, snow.density)
-    d_s = compute_snow_depth(snow, W, ρ_w)
+    ρ_s = compute_snow_density(i, j, grid, fields, snow.density)
+    d_s = compute_snow_depth(snow, W, ρ_s, ρ_w)
     Lθ = ρ_s * L_f
     # N.B. For the free-water characteristic the liquid fraction is indeterminate at T = 0; assume
     # frozen for T < 0 and thawed otherwise. This mapping is for initialization only and must **not**
@@ -137,17 +148,30 @@ Compute the depth-integrated snow energy from a prescribed temperature at grid c
     return nothing
 end
 
+"""
+    $TYPEDSIGNATURES
+
+Snow→soil basal conductive heat flux `Q_base` [W/m²], positive upward (soil → snow). The snowpack is a
+strong insulator, so only its resistance is retained (snow-resistance-only closure):
+`Q_base = 2·κ_snow·(T_soil − T_snow)/d_s`. The depth is regularized with a machine-`eps` offset so the
+flux stays finite as the pack vanishes.
+"""
+@inline compute_snow_basal_heat_flux(κ_snow::NF, T_soil::NF, T_snow::NF, d_s::NF) where {NF} =
+    2 * κ_snow * (T_soil - T_snow) / (d_s + eps(NF))
+
 # Kernels
 #
-# These dispatch on the snow closure type so they coexist with the soil (3D, XYZ) methods of the same
-# generic kernel names without ambiguity.
+# These wrap the shared `energy_to_temperature!` / `temperature_to_energy!` kernel functions (dispatched
+# on the snow closure type) in 2D (XY) kernels. They use snow-specific names because KernelAbstractions
+# `@kernel` does not support multiple methods of one kernel — the soil energy closures define 3D (XYZ)
+# kernels under the base names.
 
-@kernel inbounds = true function energy_to_temperature_kernel!(out, grid, fields, closure::SnowEnergyTemperatureClosure, args...)
+@kernel inbounds = true function snow_energy_to_temperature_kernel!(out, grid, fields, closure::SnowEnergyTemperatureClosure, args...)
     i, j = @index(Global, NTuple)
     energy_to_temperature!(out, i, j, grid, fields, closure, args...)
 end
 
-@kernel inbounds = true function temperature_to_energy_kernel!(out, grid, fields, closure::SnowEnergyTemperatureClosure, args...)
+@kernel inbounds = true function snow_temperature_to_energy_kernel!(out, grid, fields, closure::SnowEnergyTemperatureClosure, args...)
     i, j = @index(Global, NTuple)
     temperature_to_energy!(out, i, j, grid, fields, closure, args...)
 end

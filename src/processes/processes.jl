@@ -8,9 +8,10 @@ include("unit_conversions.jl")
 
 include("thermodynamics/abstract_types.jl")
 include("atmosphere/abstract_types.jl")
+# snow abstract types precede surface so the surface energy balance can dispatch on `AbstractSnow`
+include("snow/abstract_types.jl")
 include("surface/abstract_types.jl")
 include("soil/abstract_types.jl")
-include("snow/abstract_types.jl")
 include("vegetation/abstract_types.jl")
 
 # Thermodynamics
@@ -68,9 +69,8 @@ include("soil/soil_coupled.jl")
 
 export ConstantSnowDensity
 include("snow/snow_density.jl")
-export SingleLayerSnow, NoSnow
-include("snow/snow.jl")
-include("snow/snow_properties.jl")
+export SingleLayerSnow
+include("snow/snow_single_layer.jl")
 export SnowEnergyTemperatureClosure
 include("snow/snow_energy.jl")
 include("snow/snow_mass.jl")
@@ -106,7 +106,7 @@ include("vegetation/vegetation_carbon.jl")
 
 # Surface
 
-export PrescribedAlbedo, ConstantAlbedo
+export PrescribedAlbedo, ConstantAlbedo, DiagnosticAlbedo
 include("surface/albedo.jl")
 export PrescribedRadiativeFluxes, DiagnosedRadiativeFluxes
 include("surface/radiative_fluxes.jl")

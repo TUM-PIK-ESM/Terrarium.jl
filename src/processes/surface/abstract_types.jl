@@ -128,6 +128,10 @@ Return the current emissivity at the given indices.
 """
 @propagate_inbounds emissivity(i, j, grid, fields, ::AbstractAlbedo) = fields.emissivity[i, j]
 
+# Albedo schemes that read prescribed/constant values (e.g. `PrescribedAlbedo`, `ConstantAlbedo`) require
+# no auxiliary pass. Diagnostic schemes override this to compute their fields (optionally using snow).
+@inline compute_auxiliary!(state, grid, ::AbstractAlbedo, args...) = nothing
+
 # Surface hydrology process types
 
 """

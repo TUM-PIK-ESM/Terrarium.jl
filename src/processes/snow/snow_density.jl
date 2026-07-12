@@ -21,4 +21,4 @@ Return the constant bulk snow density `ρ_s` [kg/m³].
 """
 @inline snow_density(density::ConstantSnowDensity) = density.density
 
-@propagate_inbounds snow_density(i, j, grid, fields, density::ConstantSnowDensity) = snow_density(density)
+@propagate_inbounds compute_snow_density(i, j, grid, fields, density::ConstantSnowDensity) = snow_density(density)

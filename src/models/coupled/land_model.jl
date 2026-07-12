@@ -12,6 +12,7 @@ $(TYPEDFIELDS)
         GridType <: AbstractLandGrid{NF},
         Vegetation <: Optional{AbstractVegetation{NF}},
         Soil <: AbstractSoil{NF},
+        Snow <: Optional{AbstractSnow{NF}},
         SEB <: AbstractSurfaceEnergyBalance,
         Hydrology <: AbstractSurfaceHydrology,
         Atmosphere <: AbstractAtmosphere,
@@ -26,6 +27,9 @@ $(TYPEDFIELDS)
 
     "Soil processes"
     @component soil::Soil = default_soil(grid, vegetation)
+
+    "Snow processes (default `nothing`: no snowpack)"
+    @component snow::Snow = nothing
 
     "Surface energy balance"
     @component surface_energy_balance::SEB = default_surface_energy_balance(grid, vegetation, soil)
@@ -54,22 +58,35 @@ function StateVariables(
         input_variables = ()
     ) where {NF}
     grid = get_grid(model)
-    vars = Variables(variables(model)..., input_variables...)
+    interface_vars = interface_variables(model)
+    # Snow adds a blended `soil_heat_flux` coupling auxiliary to the state when present
+    vars = Variables(variables(model)..., interface_vars..., input_variables...)
     # Initialize BC fields for coupling
     ground_heat_flux = initialize(vars.auxiliary.ground_heat_flux, grid, clock, boundary_conditions, fields)
     infiltration = initialize(vars.auxiliary.infiltration, grid, clock, boundary_conditions, fields)
-    # Without snow, the heat flux into the soil top equals the surface energy balance closure flux
-    # (`ground_heat_flux`); wire the soil-top BC directly to it. When a snow component is added,
-    # the soil BC will instead be wired to a distinct `soil_heat_flux`.
-    soil_heat_flux_bc = SoilHeatFlux(ground_heat_flux)
+    # Initialize soil heat flux
+    soil_heat_flux = if isnothing(model.snow)
+        ground_heat_flux
+    else
+        initialize(vars.auxiliary.soil_heat_flux, grid, clock, boundary_conditions, fields)
+    end
+    soil_heat_flux_bc = SoilHeatFlux(soil_heat_flux)
     # Note that the hydrology module computes infiltration as positive so we need to negate it here
     # since fluxes are by convention positive upwards
     infiltration_bc = InfiltrationFlux(-infiltration)
     bcs = merge_boundary_conditions(boundary_conditions, soil_heat_flux_bc, infiltration_bc)
+    # The snow energy tendency reads its boundary heat fluxes from the `surface_heat_flux`/`basal_heat_flux`
+    # input fields; alias them to the surface energy balance closure flux (`ground_heat_flux`) and the
+    # blended soil-top flux (`soil_heat_flux`) so no additional state fields are allocated (no-op without snow).
+    snow_flux_aliases = isnothing(model.snow) ? (;) : (; surface_heat_flux = ground_heat_flux, basal_heat_flux = soil_heat_flux)
     # Merge user-defined fields with BC fields
-    fields = merge((; ground_heat_flux, infiltration), fields)
+    fields = merge((; ground_heat_flux, infiltration, soil_heat_flux), snow_flux_aliases, fields)
     return StateVariables(vars, grid; clock, timestepper = get_timestepper(model), model, boundary_conditions = bcs, fields)
 end
+
+interface_variables(::LandModel) = (
+    auxiliary(:soil_heat_flux, XY(); units = u"W/m^2", desc = "Blended heat flux into the soil top (snow base + bare ground)"),
+)
 
 function initialize!(state, model::LandModel)
     initialize!(state, model, model.initializer)
@@ -78,6 +95,8 @@ function initialize!(state, model::LandModel)
     # TODO: change when refactoring model/process types
     initialize!(state, grid, model.vegetation, model.constants, model.atmosphere)
     initialize!(state, grid, model.soil, model.constants)
+    # Initialize the snow (invclosure: T, W -> E) after the soil; no-op without snow (`nothing`)
+    initialize!(state, grid, model.snow, model.constants)
     # Initialize the SEB after the soil so that ground_temperature is available
     initialize!(state, grid, model.surface_energy_balance)
     return nothing
@@ -87,9 +106,12 @@ function compute_auxiliary!(state, model::LandModel)
     grid = get_grid(model)
     compute_auxiliary!(state, grid, model.atmosphere)
     compute_auxiliary!(state, grid, model.soil, model.constants)
+    compute_auxiliary!(state, grid, model.snow, model.constants)
     compute_auxiliary!(state, grid, model.vegetation, model.constants, model.atmosphere, model.soil)
     compute_auxiliary!(state, grid, model.surface_hydrology, model.constants, model.atmosphere, model.soil, model.vegetation)
-    compute_auxiliary!(state, grid, model.surface_energy_balance, model.constants, model.atmosphere, model.surface_hydrology)
+    compute_auxiliary!(state, grid, model.surface_energy_balance, model.constants, model.atmosphere, model.surface_hydrology, model.snow)
+    # Blend the soil-top heat flux from the snow base and bare ground after the SEB; no-op without snow
+    compute_soil_snow_fluxes!(state, grid, model.snow, model.constants)
     return nothing
 end
 
@@ -98,18 +120,22 @@ function compute_tendencies!(state, model::LandModel)
     compute_tendencies!(state, grid, model.surface_hydrology)
     compute_tendencies!(state, grid, model.soil, model.constants)
     compute_tendencies!(state, grid, model.vegetation)
+    # Snow tendencies after surface hydrology; no-op without snow (`nothing`)
+    compute_tendencies!(state, grid, model.snow, model.constants, model.atmosphere)
     return nothing
 end
 
 function closure!(state, model::LandModel)
     grid = get_grid(model)
     closure!(state, grid, model.soil, model.constants)
+    closure!(state, grid, model.snow, model.constants)
     return nothing
 end
 
 function invclosure!(state, model::LandModel)
     grid = get_grid(model)
     invclosure!(state, grid, model.soil, model.constants)
+    invclosure!(state, grid, model.snow, model.constants)
     return nothing
 end
 

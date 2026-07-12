@@ -69,3 +69,35 @@ end
     @test all(isfinite.(integrator.state.carbon_vegetation))
     # TODO: also check ET and veg processes once they are working...
 end
+
+@testset "LandModel: Snow-coupled soil" begin
+    grid = ColumnGrid(CPU(), ExponentialSpacing(Δz_max = 1.0, N = 50))
+    swrc = VanGenuchten(α = 2.0, n = 2.0)
+    hydraulic_properties = ConstantSoilHydraulics(eltype(grid); swrc, unsat_hydraulic_cond = UnsatKVanGenuchten(eltype(grid)))
+    hydrology = SoilHydrology(eltype(grid), RichardsEq(); hydraulic_properties)
+    soil = SoilEnergyWaterCarbon(eltype(grid); hydrology)
+    land = LandModel(grid; soil, snow = SingleLayerSnow(eltype(grid)), vegetation = nothing)
+    @test land.snow isa SingleLayerSnow
+    # Frozen soil beneath a cold snowpack
+    initializers = (
+        temperature = (x, z) -> -1.0 - 0.02 * z,
+        saturation_water_ice = (x, z) -> min(1, 0.8 - 0.05 * z),
+        snow_water_equivalent = 0.2,
+        snow_temperature = -5.0,
+    )
+    integrator = initialize(land; initializers)
+    # With snow, the soil-top energy BC reads the blended `soil_heat_flux`, not `ground_heat_flux` directly
+    energy_top_bc = integrator.state.internal_energy.boundary_conditions.top
+    @test isa(energy_top_bc, BoundaryCondition{<:Flux})
+    @test energy_top_bc.condition === integrator.state.soil_heat_flux
+    # Advance one timestep
+    timestep!(integrator, 60.0)
+    # A 0.2 m SWE pack should be essentially fully snow-covered (cover fraction is diagnosed in compute_auxiliary!)
+    @test all(integrator.state.snow_cover_fraction .> 0.9)
+    @test all(isfinite.(integrator.state.snow_energy))
+    @test all(isfinite.(integrator.state.snow_water_equivalent))
+    @test all(isfinite.(integrator.state.snow_temperature))
+    @test all(isfinite.(integrator.state.basal_heat_flux))
+    @test all(isfinite.(integrator.state.soil_heat_flux))
+    @test all(isfinite.(integrator.state.internal_energy))
+end
