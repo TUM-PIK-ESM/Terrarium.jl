@@ -59,6 +59,7 @@ if MAIN_TESTS
 
     @testset "Surface energy balance" begin
         include("surface/seb_tests.jl")
+        include("surface/diagnostic_albedo_tests.jl")
     end
 
     @testset "Surface hydrology" begin

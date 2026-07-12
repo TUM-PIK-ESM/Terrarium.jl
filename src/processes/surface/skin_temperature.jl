@@ -83,15 +83,47 @@ end
 """
     $TYPEDSIGNATURES
 
-Compute the implicit update of the skin temperature from the given ground surface temperature
-`Tg`, ground heat flux `G`, and distance `Δz`.
+Compute the implicit update of the skin temperature from the sub-surface temperature `Tg`, ground heat
+flux `G`, half-cell distance `Δz`, and effective conductivity `κ`, by equating `G` to the half-cell
+conductive flux `2κ(Tg − Ts)/Δz`.
 """
-@inline function compute_skin_temperature(skinT::ImplicitSkinTemperature, Tg, G, Δz)
-    # Compute new skin temperature T₀ by setting G equal to the half-cell heat flux
-    # TODO: use thermal conductivity from the soil and/or canopy?
-    κₛ = skinT.κₛ
-    Ts = Tg - G * Δz / (2 * κₛ)
+@inline function compute_skin_temperature(::ImplicitSkinTemperature, Tg, G, Δz, κ)
+    Ts = Tg - G * Δz / (2 * κ)
     return Ts
+end
+
+"""
+    $TYPEDSIGNATURES
+
+Return the effective conduction target `(Tg, κ, Δz)` seen by the skin-temperature solve: the temperature
+of the medium directly beneath the skin, its thermal conductivity, and the half-cell thickness. Without
+snow (`snow === nothing`) these are the uppermost ground layer's `ground_temperature`, the assumed
+surface conductivity `κₛ`, and the top ground cell thickness — i.e. the snow-free behavior is unchanged.
+"""
+@propagate_inbounds function ground_thermal_interface(i, j, grid, fields, skinT::ImplicitSkinTemperature, ::Nothing, constants = nothing)
+    field_grid = get_field_grid(grid)
+    Δz₁ = Δzᵃᵃᶜ(i, j, field_grid.Nz, field_grid)
+    Tg = fields.ground_temperature[i, j]
+    return (Tg, skinT.κₛ, Δz₁)
+end
+
+"""
+    $TYPEDSIGNATURES
+
+Snow-covered variant: the conduction target is the snow-cover-fraction-weighted blend of the snow layer
+and the underlying ground, `x_eff = (1 − f_snow)·x_ground + f_snow·x_snow` for the temperature,
+conductivity, and half-cell thickness.
+"""
+@propagate_inbounds function ground_thermal_interface(i, j, grid, fields, skinT::ImplicitSkinTemperature, snow::AbstractSnow, constants::PhysicalConstants)
+    field_grid = get_field_grid(grid)
+    Δz_ground = Δzᵃᵃᶜ(i, j, field_grid.Nz, field_grid)
+    f = snow_cover_fraction(i, j, grid, fields, snow)
+    # bulk snow thermal conductivity recovered lazily from the density scheme (not stored as a field)
+    κ_snow = compute_snow_thermal_conductivity(snow, constants.material.density_water)
+    Tg = (one(f) - f) * fields.ground_temperature[i, j] + f * snow_temperature(i, j, grid, fields, snow)
+    κ = (one(f) - f) * skinT.κₛ + f * κ_snow
+    Δz = (one(f) - f) * Δz_ground + f * snow_depth(i, j, grid, fields, snow)
+    return (Tg, κ, Δz)
 end
 
 """
@@ -160,21 +192,20 @@ end
 """
     $TYPEDSIGNATURES
 
-Estimate the skin temperature from the current `ground_heat_flux` at grid cell `i, j`.
+Estimate the skin temperature from the current `ground_heat_flux` at grid cell `i, j`, using the
+effective conduction target of the medium below the skin. The optional `snow` argument enables the
+snow-covered blend (see [`ground_thermal_interface`](@ref)); with `snow === nothing` this is the snow-free soil
+conduction.
 """
 @propagate_inbounds function compute_skin_temperature(
         i, j, grid, fields,
-        skinT::ImplicitSkinTemperature
+        skinT::ImplicitSkinTemperature,
+        snow = nothing,
+        constants = nothing
     )
-    # Get thickness of topmost soil/ground grid cell
-    field_grid = get_field_grid(grid)
-    Δz₁ = Δzᵃᵃᶜ(i, j, field_grid.Nz, field_grid)
-    # Get ground heat flux
+    Tg, κ, Δz = ground_thermal_interface(i, j, grid, fields, skinT, snow, constants)
     G = fields.ground_heat_flux[i, j]
-    # Get ground temperature
-    Tg = fields.ground_temperature[i, j]
-    Ts = compute_skin_temperature(skinT, Tg, G, Δz₁)
-    return Ts
+    return compute_skin_temperature(skinT, Tg, G, Δz, κ)
 end
 
 """
@@ -206,11 +237,13 @@ based on the resulting ground heat flux.
         out, i, j, grid, fields,
         skinT::ImplicitSkinTemperature,
         seb::AbstractSurfaceEnergyBalance,
+        snow,
+        constants,
         seb_args...
     )
     # Compute all fluxes based on current skin temperature (this includes ground heat flux already)
-    compute_surface_energy_fluxes!(out, i, j, grid, fields, seb, seb_args...)
-    out.skin_temperature[i, j, 1] = compute_skin_temperature(i, j, grid, fields, skinT)
+    compute_surface_energy_fluxes!(out, i, j, grid, fields, seb, constants, seb_args...)
+    out.skin_temperature[i, j, 1] = compute_skin_temperature(i, j, grid, fields, skinT, snow, constants)
     return nothing
 end
 
@@ -223,12 +256,14 @@ Same as [`compute_skin_temperature!`](@ref) but returns the residual instead of 
         out, i, j, grid, fields,
         skinT::ImplicitSkinTemperature,
         seb::AbstractSurfaceEnergyBalance,
+        snow,
+        constants,
         seb_args...
     )
     # Compute all fluxes based on current skin temperature (this includes ground heat flux already)
-    compute_surface_energy_fluxes!(out, i, j, grid, fields, seb, seb_args...)
-    # Compute skin temperature
-    Ts_implicit = compute_skin_temperature(i, j, grid, fields, skinT)
+    compute_surface_energy_fluxes!(out, i, j, grid, fields, seb, constants, seb_args...)
+    # Compute skin temperature using the (optionally snow-aware) conduction target
+    Ts_implicit = compute_skin_temperature(i, j, grid, fields, skinT, snow, constants)
     Ts_prev = out.skin_temperature[i, j, 1]
     return Ts_prev - Ts_implicit
 end
@@ -242,10 +277,12 @@ Run a full nonlinear solve to determine the `skin_temperature` at grid cell `i, 
         out, i, j, grid, fields,
         skinT::ImplicitSkinTemperature,
         seb::AbstractSurfaceEnergyBalance,
+        snow,
         seb_args...
     )
     objective = ObjectiveFunction(compute_skin_temperature_residual!, :skin_temperature)
-    return solve!(out, (i, j), grid, fields, objective, skinT.solver, skinT, seb, seb_args...)
+    # `snow` is forwarded (after `seb`) so the residual's conduction target can be snow-aware
+    return solve!(out, (i, j), grid, fields, objective, skinT.solver, skinT, seb, snow, seb_args...)
 end
 
 # Kernels

@@ -61,7 +61,7 @@ compute_auxiliary!(state, grid, skinT::ImplicitSkinTemperature, seb::AbstractSur
 ## Methods
 
 ```@docs; canonical = false
-compute_skin_temperature(skinT::ImplicitSkinTemperature, Tg, G, Δz)
+compute_skin_temperature(::ImplicitSkinTemperature, Tg, G, Δz, κ)
 compute_ground_heat_flux(::AbstractSkinTemperature, R_net, H_s, H_l)
 compute_skin_temperature!(state, grid, skinT::ImplicitSkinTemperature)
 compute_ground_heat_flux!(state, grid, skinT::AbstractSkinTemperature, seb::AbstractSurfaceEnergyBalance)

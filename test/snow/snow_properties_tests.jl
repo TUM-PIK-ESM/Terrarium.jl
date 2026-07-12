@@ -19,10 +19,11 @@ using Terrarium: compute_snow_depth, compute_snow_cover_fraction, compute_snow_t
 
     @testset "snow depth" begin
         # d_s = W·ρ_w/ρ_s: zero at W=0, increasing in W, negative W clamped to zero
-        @test compute_snow_depth(snow, NF(0), ρ_w) == 0
-        @test compute_snow_depth(snow, NF(-1), ρ_w) == 0
-        d1 = compute_snow_depth(snow, NF(0.1), ρ_w)
-        d2 = compute_snow_depth(snow, NF(0.2), ρ_w)
+        ρ_s = snow_density(snow)
+        @test compute_snow_depth(snow, NF(0), ρ_s, ρ_w) == 0
+        @test compute_snow_depth(snow, NF(-1), ρ_s, ρ_w) == 0
+        d1 = compute_snow_depth(snow, NF(0.1), ρ_s, ρ_w)
+        d2 = compute_snow_depth(snow, NF(0.2), ρ_s, ρ_w)
         @test d1 ≈ 0.1 * ρ_w / snow_density(snow)
         @test d2 > d1 > 0
     end
@@ -56,7 +57,7 @@ using Terrarium: compute_snow_depth, compute_snow_cover_fraction, compute_snow_t
 
     @testset "Float32 type stability" begin
         snow32 = SingleLayerSnow(Float32)
-        @test compute_snow_depth(snow32, 0.1f0, 1000.0f0) isa Float32
+        @test compute_snow_depth(snow32, 0.1f0, snow_density(snow32), 1000.0f0) isa Float32
         @test compute_snow_cover_fraction(snow32, 0.02f0) isa Float32
         @test compute_snow_thermal_conductivity(snow32, 1000.0f0) isa Float32
     end
@@ -69,9 +70,8 @@ using Terrarium: compute_snow_depth, compute_snow_cover_fraction, compute_snow_t
         set!(state.snow_water_equivalent, W)
         compute_auxiliary!(state, grid, snow, constants)
         ρ_w = constants.material.density_water
-        @test all(state.snow_depth .≈ compute_snow_depth(snow, W, ρ_w))
+        @test all(state.snow_depth .≈ compute_snow_depth(snow, W, snow_density(snow), ρ_w))
         @test all(state.snow_cover_fraction .≈ compute_snow_cover_fraction(snow, W))
-        @test all(state.snow_thermal_conductivity .≈ compute_snow_thermal_conductivity(snow, ρ_w))
         @test all(isfinite.(state.snow_depth))
     end
 end

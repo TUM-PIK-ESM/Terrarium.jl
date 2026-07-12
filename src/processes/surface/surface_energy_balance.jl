@@ -50,9 +50,12 @@ variables(seb::SurfaceEnergyBalance) = tuplejoin(
         constants::PhysicalConstants,
         atmos::AbstractAtmosphere,
         hydrology::Optional{AbstractSurfaceHydrology} = nothing,
+        snow::Optional{AbstractSnow} = nothing,
         args...
     )
-    solve_surface_energy_balance!(state, grid, seb, constants, atmos, hydrology)
+    # diagnose the (optionally snow-aware) albedo, then solve the surface energy balance
+    compute_auxiliary!(state, grid, seb.albedo, snow)
+    solve_surface_energy_balance!(state, grid, seb, constants, atmos, hydrology, snow)
     return nothing
 end
 
@@ -71,13 +74,15 @@ function solve_surface_energy_balance!(
         constants::PhysicalConstants,
         atmos::AbstractAtmosphere,
         hydrology::Optional{AbstractSurfaceHydrology} = nothing,
+        snow::Optional{AbstractSnow} = nothing,
         args...
     ) where {NF}
     evtr = isnothing(hydrology) ? nothing : get_evapotranspiration(hydrology)
     # Construct outputs as auxiliaries + skin temperature (which is prognostic)
     out = (skin_temperature = state.skin_temperature, auxiliary_fields(state, seb)...)
-    fields = get_fields(state, seb, atmos, evtr)
-    launch!(grid, XY, solve_surface_energy_balance_kernel!, out, fields, seb, constants, atmos, evtr, args...)
+    # Merge the snow thermal auxiliaries so the (optionally snow-aware) conduction target can be evaluated
+    fields = merge(get_fields(state, seb, atmos, evtr), seb_conduction_fields(state, snow))
+    launch!(grid, XY, solve_surface_energy_balance_kernel!, out, fields, seb, constants, atmos, evtr, snow, args...)
     return nothing
 end
 
@@ -139,18 +144,19 @@ end
         constants::PhysicalConstants,
         atmos::AbstractAtmosphere,
         evtr::Optional{AbstractEvapotranspiration} = nothing,
+        snow::Optional{AbstractSnow} = nothing,
         args...
     )
     i, j = @index(Global, NTuple)
 
-    # Compute fluxes based on current skin temperature
-    solve_skin_temperature!(out, i, j, grid, fields, seb.skin_temperature, seb, constants, atmos, args...)
+    # Solve for skin temperature; `snow` (after `seb`) makes the conduction target snow-aware
+    solve_skin_temperature!(out, i, j, grid, fields, seb.skin_temperature, seb, snow, constants, atmos, args...)
     if !isnothing(evtr)
         # Recompute evapotranspiration component fluxes from final skin temperature
         out_ET = auxiliary_fields(fields, evtr)
         compute_evapotranspiration_fluxes!(out_ET, i, j, grid, fields, evtr, constants, atmos, args...)
     end
-    # Recompute fluxes from final skin temperature
+    # Recompute fluxes from final skin temperature (albedo already diagnosed; snow affects only conduction)
     compute_surface_energy_fluxes!(out, i, j, grid, fields, seb, constants, atmos, args...)
 end
 
