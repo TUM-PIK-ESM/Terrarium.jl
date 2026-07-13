@@ -32,13 +32,18 @@
 > - The Phase-0 premise ("eager KA launches fail on ReactantBackend outside a compiled region") is
 >   **stale**: eager `set!(field,f)`, `fill_halo_regions!`, and the full `initialize!(integrator)`
 >   (incl. `compute_auxiliary!`'s closure kernels) all run **eagerly** on a device-allocated state now.
-> - So the CPU **twin model** is unnecessary. New `transfer.jl` (89 → 31 lines): allocate the state
->   directly on the device grid, build a traced `Clock(field_grid)`, and delegate to the generic
->   `Terrarium.initialize` via `@invoke` (a direct call would recurse into the `ReactantModel`
->   method). Removed `rebuild_model`/`to_device`/`copy_state_data!`/`_copy_group!`/`_copy_clock!`/
->   `_scalar` and the now-dead ext imports. Verified: device-vs-CPU initial state **bit-identical**
->   (`max_abs_diff = 0.0`) for column + global configs; full suite still **45/45 + 6/6**. AGENTS.md
->   Reactant-compat design paragraph updated to "eager device initialization".
+> - So the CPU **twin model** is unnecessary. Removed `rebuild_model`/`to_device`/
+>   `copy_state_data!`/`_copy_group!`/`_copy_clock!`/`_scalar` and the now-dead ext imports. Verified:
+>   device-vs-CPU initial state **bit-identical** (`max_abs_diff = 0.0`) for column + global configs.
+> - **Final design (the `default_clock` hook the plan anticipated, §2.1/Phase B).** The ext no longer
+>   specializes `initialize` at all. `src/timesteppers/model_integrator.jl` gains
+>   `default_clock(model) = Clock(time = zero(NF))`, and `initialize`'s `clock` default is now
+>   `default_clock(model)`. `TerrariumReactantExt` overrides just
+>   `Terrarium.default_clock(::ReactantModel) = Clock(get_field_grid(get_grid(model)))` (the traced
+>   `ConcreteRNumber` clock), so the generic `Terrarium.initialize` transparently produces a device
+>   integrator. `transfer.jl` is now a single one-line method (no `@invoke`, no recursion hazard).
+>   CPU regression (timestepping + state_variables): 42/42; full Reactant suite still **45/45 + 6/6**.
+>   AGENTS.md Reactant-compat design paragraph updated to "eager device initialization".
 >
 > ## Session 3 plan (2026-07-06) — hybrid ML example
 >
