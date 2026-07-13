@@ -181,6 +181,7 @@ makedocs(
             "Initialization" => "running/initialization.md",
             "Time stepping" => "running/time_stepping.md",
             "Input sources" => "running/input_sources.md",
+            "Reactant acceleration" => "running/reactant.md",
             running_example_docpages...,
         ],
         "Extending Terrarium" => [
