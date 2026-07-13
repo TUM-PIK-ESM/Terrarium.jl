@@ -138,7 +138,7 @@ end
     return P - melt(snow_melt, T)
 end
 
-# ### Tendencies for the neural process
+# ### Tendencies for the NN-trained process
 
 function Terrarium.compute_tendencies!(state, grid, snow_melt::NeuralSnowMelt)
     fields = get_fields(state, snow_melt)
@@ -159,7 +159,7 @@ end
     return P - M
 end
 
-# ### Tendencies for the *batched* neural process (no kernel launch)
+# ### Tendencies for the *batched* NN-based process (no kernel launch)
 #
 # This is the second demonstration approach. Instead of launching a kernel that evaluates the MLP
 # once per grid point, we gather all the columns' temperatures into a single `(1, N)` batch, run
@@ -227,7 +227,7 @@ end
 println("Training the neural melt law (Reactant + Enzyme):")
 tstate = train_mlp(mlp, ps, st, data)
 
-# ## Assemble the trained neural process
+# ## Assemble the trained NN-based process
 #
 # We move the trained parameters back to the CPU (we run the hybrid model on the CPU below) and
 # build the `NeuralSnowMelt` process.
