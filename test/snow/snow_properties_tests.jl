@@ -33,6 +33,7 @@ using Terrarium: compute_snow_depth, compute_snow_cover_fraction, compute_therma
         # f_snow = W/(W+W_ref): in [0,1), zero at W=0, increasing, → 1 as W → ∞
         cover = snow.cover
         @test compute_snow_cover_fraction(cover, NF(0)) == 0
+        @test compute_snow_cover_fraction(cover, NF(-1)) == 0
         f_small = compute_snow_cover_fraction(cover, NF(0.005))
         f_large = compute_snow_cover_fraction(cover, NF(0.05))
         @test 0 < f_small < f_large < 1

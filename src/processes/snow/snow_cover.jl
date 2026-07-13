@@ -24,7 +24,8 @@ end
 FractionalSnowCover(::Type{NF}; kwargs...) where {NF} = FractionalSnowCover{NF}(; kwargs...)
 
 @inline function compute_snow_cover_fraction(cover::FractionalSnowCover{NF}, swe::NF) where {NF}
-    W = swe
+    # clamp negative SWE (which can occur transiently in the prognostic state) to zero cover
+    W = max(swe, zero(NF))
     W_ref = cover.half_coverage
     return W / (W + W_ref)
 end
