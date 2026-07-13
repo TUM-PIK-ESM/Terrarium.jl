@@ -202,8 +202,18 @@ default_dt(integrator::ModelIntegrator) = default_dt(get_timestepper(integrator.
 """
     $TYPEDSIGNATURES
 
+Return the default `Clock` used by [`initialize`](@ref) for the given `model`. The generic method
+returns a plain host clock starting at time zero; architecture extensions may specialize on the
+model's grid to return an architecture-specific clock (e.g. `TerrariumReactantExt` returns a
+traced `ConcreteRNumber`-backed clock so that time advances inside the compiled step).
+"""
+default_clock(model::AbstractModel{NF}) where {NF} = Clock(time = zero(NF))
+
+"""
+    $TYPEDSIGNATURES
+
 Creates and initializes a `ModelIntegrator` for the given `model` with input variables populated by
-the given `inputs` and optionally `params` . `InputSource`s can be specified via the `inputs` keyword argument. 
+the given `inputs` and optionally `params` . `InputSource`s can be specified via the `inputs` keyword argument.
 This method allocates all necessary `Field`s for the state variables and subsequently calls
 `initialize!(::ModelIntegrator)`.
 
@@ -215,7 +225,7 @@ See the docstring for [`initialize(::AbstractModel)`](@ref) for further details.
 function initialize(
         model::AbstractModel{NF},
         params = nothing;
-        clock::Clock = Clock(time = zero(NF)),
+        clock::Clock = default_clock(model),
         inputs::InputSource = InputSources(NF),
         boundary_conditions = (;),
         initializers = (;),
