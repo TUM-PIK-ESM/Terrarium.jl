@@ -298,7 +298,7 @@ println("Max |S_ddm − S_nn| after offline training: ", snow_diff, " m  (mean s
 #
 # ### Two ways to evaluate the network — same result
 #
-# We run the online finetuning **twice**, with the two processes defined above, to show to both them
+# We run the online fine-tuning **twice**, with the two processes defined above, to show to both them
 # as they both have possible applicaations for hybrid land modelling with Terrarium.
 #
 # 1. **In-kernel** (`NeuralSnowMelt`): the network is evaluated per grid point inside a
@@ -385,14 +385,14 @@ function finetune_and_run(device_process, cpu_process_from; label)
     compiled_grad! = Reactant.@compile raise = true raise_first = true sync = true snow_grad!(
         integrator, dintegrator, S0, S_ref, Nt_ft
     )
-    println("Online finetuning through the full SnowModel [$label] (Reactant + Enzyme):")
+    println("Online fine-tuning through the full SnowModel [$label] (Reactant + Enzyme):")
     finetune!(compiled_grad!, integrator, S0, S_ref; label)
     cpu_process = cpu_process_from(integrator.model.snow_melt.ps, integrator.model.snow_melt.st)
     return run_snow(cpu_process)
 end
 
 # Each approach starts from an independent copy of the offline-trained weights (a device→host→device
-# round trip), so finetuning one does not disturb the other. The in-kernel CPU process uses
+# round trip), so fine-tuning one does not disturb the other. The in-kernel CPU process uses
 # `kernelize`d parameters; the batched CPU process uses plain arrays (ordinary `Lux.apply`).
 fresh_offline_ps() = rdev(cdev(tstate.parameters))
 
@@ -407,8 +407,8 @@ snow_nn_ft_batched = finetune_and_run(
     label = "batched",
 )
 
-println("Max |S_ddm − S_nn| after online finetuning [in-kernel]: ", maximum(abs, snow_ddm .- snow_nn_ft_kernel), " m")
-println("Max |S_ddm − S_nn| after online finetuning [batched]:   ", maximum(abs, snow_ddm .- snow_nn_ft_batched), " m")
+println("Max |S_ddm − S_nn| after online fine-tuning [in-kernel]: ", maximum(abs, snow_ddm .- snow_nn_ft_kernel), " m")
+println("Max |S_ddm − S_nn| after online fine-tuning [batched]:   ", maximum(abs, snow_ddm .- snow_nn_ft_batched), " m")
 println("Max |S_in-kernel − S_batched| between the two approaches: ", maximum(abs, snow_nn_ft_kernel .- snow_nn_ft_batched), " m")
 
 # The physics-based melt law has been replaced by a trained neural network — fit offline and then
