@@ -232,9 +232,9 @@ tstate = train_mlp(mlp, ps, st, data)
 # We move the trained parameters back to the CPU (we run the hybrid model on the CPU below) and
 # build the `NeuralSnowMelt` process.
 cdev = MLDD.cpu_device()
-neural_process(model, ps, st) =
+neural_melt(model, ps, st) =
     NeuralSnowMelt(model, kernelize(cdev(ps)), cdev(st), T_mean, T_std, M_scale)
-neural = neural_process(mlp, tstate.parameters, tstate.states)
+neural = neural_melt(mlp, tstate.parameters, tstate.states)
 
 # Quick check of the learned melt law against the analytic one, via the same `apply_in_kernel`:
 function nn_melt(p::NeuralSnowMelt, T)
@@ -398,7 +398,7 @@ fresh_offline_ps() = rdev(cdev(tstate.parameters))
 
 snow_nn_ft_kernel = finetune_and_run(
     NeuralSnowMelt(mlp, fresh_offline_ps(), tstate.states, T_mean, T_std, M_scale),
-    (ps, st) -> neural_process(mlp, ps, st);
+    (ps, st) -> neural_melt(mlp, ps, st);
     label = "in-kernel",
 )
 snow_nn_ft_batched = finetune_and_run(
