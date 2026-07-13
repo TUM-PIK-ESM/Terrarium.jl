@@ -101,7 +101,7 @@ SoilPorositySURFEX
 ## Soil volume
 
 ```@docs; canonical = false
-SoilVolume
+SoilComposition
 ```
 
 ## Solid matrix

@@ -186,7 +186,7 @@ UnsatKLinear(::Type{NF}) where {NF} = UnsatKLinear{NF}()
 
 function hydraulic_conductivity(
         hydraulics::AbstractSoilHydraulics{NF, RC, UnsatKLinear{NF}},
-        soil::SoilVolume
+        soil::SoilComposition
     ) where {NF, RC}
     let fracs = volumetric_fractions(soil)
         θw = fracs.water # unfrozen water content
@@ -219,7 +219,7 @@ UnsatKVanGenuchten(::Type{NF}; impedance::NF = NF(7)) where {NF} = UnsatKVanGenu
 
 function hydraulic_conductivity(
         hydraulics::AbstractSoilHydraulics{NF, <:VanGenuchten, UnsatKVanGenuchten{NF}},
-        soil::SoilVolume
+        soil::SoilComposition
     ) where {NF}
     # TODO: The SWRC parameters will need to also be spatially varying at some point
     let n = hydraulics.swrc.n # van Genuchten parameter `n`

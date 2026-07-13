@@ -90,7 +90,7 @@ function soil_matrix end
 """
     soil_volume(i, j, k, grid, fields, ::AbstractStratigraphy, args...)
 
-Return a [`SoilVolume`](@ref) describing the full material composition of the soil volume at index
+Return a [`SoilComposition`](@ref) describing the full material composition of the soil volume at index
 `i, j, k` for the given stratigraphy parameterization.
 """
 function soil_volume end

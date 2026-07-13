@@ -3,7 +3,7 @@
 
 Compute an evapotranspiration flux [m/s] (positive upwards) as the product of a vapor
 conductance `g` [m/s] and a specific humidity difference `Δq` [kg/kg]. All evapotranspiration components
-— ground/canopy evaporation and transpiration — share the functional form ``E = Δq · g``,
+— soil/canopy evaporation and transpiration — share the functional form ``E = Δq · g``,
 differing only in which conductance and humidity difference are supplied.
 """
 @inline compute_evaporation_flux(::AbstractEvapotranspiration, Δq, g) = Δq * g

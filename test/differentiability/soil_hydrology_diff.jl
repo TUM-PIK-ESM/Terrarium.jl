@@ -75,7 +75,7 @@ end
     hydraulic_properties = ConstantSoilHydraulics(Float64; swrc, unsat_hydraulic_cond)
     # wrapper function for evaluating hydraulic conductivity
     function eval_hydraulic_cond((por, sat, liq))
-        soil = SoilVolume(porosity = por, saturation = sat, liquid = liq, solid = MineralOrganic())
+        soil = SoilComposition(porosity = por, saturation = sat, liquid = liq, solid = MineralOrganic())
         return Terrarium.hydraulic_conductivity(hydraulic_properties, soil)
     end
 
