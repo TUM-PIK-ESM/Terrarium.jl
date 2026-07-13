@@ -4,8 +4,6 @@
 # main test suite):
 #
 #     julia --project=test/reactant test/reactant/runtests.jl
-#
-# See PLAN_reactant.md for the overall design.
 
 # Reactant raising requires @inbounds elision: with --check-bounds=yes (as e.g. Pkg.test
 # forces by default) every kernel retains its bounds-check throw paths, which lower to
