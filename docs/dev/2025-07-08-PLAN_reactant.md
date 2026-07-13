@@ -77,7 +77,7 @@
 >   tstate)` with params on `MLDataDevices.reactant_device()` (it wraps the optimizer as a
 >   `ReactantCompatibleOptimisers.ReactantOptimiser`). Fits `M(T)=max(0,k(T−T_melt))`: loss
 >   0.69→2e-5, melt error 2.9e-8.
-> - **Online finetuning (differentiable simulation):** a `single_train_step!` with a **custom
+> - **Online fine-tuning (differentiable simulation):** a `single_train_step!` with a **custom
 >   rollout loss** that steps the snow dynamics with the NN melt and matches the analytic
 >   trajectory. Gotcha: a `TrainState` caches its compiled step for **one** loss — reusing the
 >   offline tstate with a different loss errors ("no method for this Thunk"); build a **fresh
@@ -91,7 +91,7 @@
 >   `RingGrids.Field`, not a plain vector.
 > - Env: `examples/hybrid_models/{Project.toml, neural_snow_melt.jl}` (Manifest gitignored),
 >   pinned via the shared Reactant 0.2.270. Example not part of CI.
-> - **Online finetuning THROUGH THE FULL MODEL (revised per request).** The final example
+> - **Online fine-tuning THROUGH THE FULL MODEL (revised per request).** The final example
 >   differentiates through the actual `SnowModel(NeuralSnowMelt)` (not a hand-written rollout):
 >   `Enzyme.autodiff(ReverseWithPrimal, loss, Active, Duplicated(integrator, dintegrator), …)`
 >   over `run_timesteps!`, compiled with `@compile raise=true …` — the full input-driven model

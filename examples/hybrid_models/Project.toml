@@ -17,4 +17,3 @@ cuDNN = "02a925ec-e4fe-4b08-9a7e-0d78e3d38ccd"
 [sources]
 KernelLux = {url = "https://github.com/maximilian-gelbrecht/KernelLux.jl"}
 Terrarium = {path = "../.."}
-Oceananigans = {url = "https://github.com/CliMA/Oceananigans.jl.git", rev = "main"}
