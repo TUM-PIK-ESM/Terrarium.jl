@@ -136,8 +136,6 @@ Calculate the unfrozen water content from the given internal energy, latent heat
     # Case 1: U ≥ 0 -> thawed (liq = 1)
     # Case 2a: -Lθ ≤ U < 0 -> phase change (liq = 1 - U/(-Lθ))
     # Case 2b: U < -Lθ -> frozen (liq = 0), enforced by the (U ≥ -Lθ) factor.
-    # Result is identical to the previous `if/else`: `ifelse` merely also evaluates the
-    # unselected branch, which stays exception-free (Lθ = 0 yields a discarded Inf/NaN).
     return ifelse(
         U >= zero(U),
         one(sat),
