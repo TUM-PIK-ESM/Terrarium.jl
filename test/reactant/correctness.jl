@@ -8,16 +8,21 @@
 using Statistics: mean
 
 import Oceananigans
-using Oceananigans: interior, architecture
+using Oceananigans: interior, architecture, on_architecture
+using Oceananigans.Architectures: CPU
 using Oceananigans.Fields: AbstractField
 
 # --- scalar/array materialization to plain CPU ------------------------------------------
+#
+# Field/array data crosses architectures via `on_architecture(CPU(), …)` — Terrarium's canonical
+# transfer primitive (AGENTS.md: never manual `Array()`/`CuArray()`). Clock scalars are the one
+# case it does not cover: a traced `ConcreteRNumber` is unwrapped with `Reactant.to_number`.
 
 _scalar(x::Number) = x
 _scalar(x) = Reactant.to_number(x)   # ConcreteRNumber -> Julia number
 
-_cpu_array(f::AbstractField) = Array(interior(f))
-_cpu_array(a::AbstractArray) = Array(a)
+_cpu_array(f::AbstractField) = Array(interior(on_architecture(CPU(), f)))
+_cpu_array(a::AbstractArray) = Array(on_architecture(CPU(), a))
 _cpu_array(::Any) = nothing          # skip non-array auxiliary entries (e.g. scalar refs)
 
 # --- state traversal --------------------------------------------------------------------
@@ -65,7 +70,9 @@ function _sync_group!(dst_nt::NamedTuple, src_nt::NamedTuple)
         # Only mutable Fields are synced directly; views (e.g. ground_temperature) track their
         # parent field and update automatically once the parent is synced.
         dst isa AbstractField || continue
-        copyto!(interior(dst), _cpu_array(src_nt[name]))
+        # Move the source field onto the destination's architecture via `on_architecture`, then
+        # copy interiors. `dst` is always a CPU field here (we sync Reactant → CPU).
+        copyto!(interior(dst), interior(on_architecture(CPU(), src_nt[name])))
     end
     return dst_nt
 end
@@ -107,14 +114,11 @@ function report(results; label = "")
     return results
 end
 
-# --- advancement (identical call on both architectures) ---------------------------------
-#
-# The architecture is the only difference: `TerrariumReactantExt` overrides `run!` for
-# `ReactantState` to compile the step once and drive a host loop; on CPU it is the plain loop.
-
-advance!(integrator, Δt, nsteps) = Terrarium.run!(integrator; steps = nsteps, Δt = Δt)
-
 # --- top-level per-model test -----------------------------------------------------------
+#
+# Advancement uses `Terrarium.run!` directly and identically on both architectures — the only
+# difference is the grid: `TerrariumReactantExt` overrides `run!` for `ReactantState` to compile
+# the step once and drive a host loop; on CPU it is the plain loop.
 
 """
     test_model(config; nsteps, rtol, atol)
@@ -145,8 +149,8 @@ function test_model(config::Symbol; nsteps = NSTEPS, rtol = RTOL, atol = ATOL, N
         sync_state!(cpu.state, rea.state)
 
         Δt = cpu_dt(Val(config), NF)
-        advance!(cpu, Δt, nsteps)
-        advance!(rea, Δt, nsteps)
+        Terrarium.run!(cpu; steps = nsteps, Δt)
+        Terrarium.run!(rea; steps = nsteps, Δt)
 
         @testset "after $nsteps steps" begin
             stepped = compare_states(cpu.state, rea.state; rtol, atol)
