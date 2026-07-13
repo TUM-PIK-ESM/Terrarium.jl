@@ -26,8 +26,7 @@ using Reactant
 using CUDA   # required by Reactant's KernelAbstractions integration, even on CPU
 using Test
 
-# Tolerances: XLA reorders floating-point ops, so exact equality is not expected. Start loose
-# and tighten empirically per model (pure heat conduction should be far quieter than this).
+# Tolerances: XLA reorders floating-point ops, so exact equality is not expected
 const DEFAULT_NF = Float32
 const NSTEPS = 100
 const RTOL = 1.0e-3
