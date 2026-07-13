@@ -415,7 +415,7 @@ on CUDA today.) Consequently the search is for *reachable throw sites*, not for 
 > - **Bonus bug found & fixed by the widened test run:** the PR2 `findfirst_z` rewrite returned
 >   `ifelse(idx > 0, z_nodes[idx], z_nodes[n])` — `ifelse` evaluates *both* branches, so the
 >   not-found case (`idx = -1`) read `z_nodes[-1]` (BoundsError on CPU, silent OOB under
->   `@inbounds` on GPU). Fixed by selecting the *index*, not the loads:
+>   `@inbounds` on GPU). Fixed by selecting the *index*, not the nodes:
 >   `z_nodes[ifelse(idx > 0, idx, n)]`. Lesson for all ifelse rewrites: never index in an
 >   unselected branch.
 > - Verification: Reactant drive passes (above) AND 288/288 CPU tests (composition incl. assert
