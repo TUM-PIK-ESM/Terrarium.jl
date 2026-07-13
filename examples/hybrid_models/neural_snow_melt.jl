@@ -287,7 +287,7 @@ println("Max |S_ddm − S_nn| after offline training: ", snow_diff, " m  (mean s
 # The training above was *offline*: we fit the melt law `M(T)` pointwise, independently of the
 # simulation. *Online* training instead differentiates through the model's own time integration.
 # Here we do this with the full `SnowModel`, which contains the neural network,
-# stepped by `run_timesteps!` — on the Reactant device: we roll the model forward, compare the
+# on the Reactant device: we roll the model forward, compare the
 # simulated snow to a reference trajectory, and let Enzyme backpropagate through the compiled
 # rollout to the network weights. This is the differentiable-simulation idea, and it is what
 # Reactant + Enzyme make possible.
