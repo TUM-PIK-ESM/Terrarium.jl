@@ -14,37 +14,38 @@ $FIELDS
 # References
 * [tarbotonSpatiallyDistributedEnergy1994](@cite) Tarboton, Chowdhury and Jackson (1994)
 """
-@parameterized @kwdef struct SingleLayerSnow{NF, Density, Closure} <: AbstractSnow{NF}
-    "Reference snow water equivalent `W_ref` for the fractional snow-cover diagnostic `f_snow = W/(W + W_ref)`"
-    @param cover_reference::NF = 0.01 (units = u"m", bounds = Positive)
+@parameterized struct SingleLayerSnow{NF, Cover, Density, Conductivity, Hydraulics, Closure} <: AbstractSnow{NF}
+    "Snow areal coverage parameterization"
+    @component cover::Cover
 
-    "Coefficient `a` in the thermal conductivity power law `κ = a·(ρ_s/ρ_w)^b` ([yen1981review](@cite))"
-    @param conductivity_coefficient::NF = 2.22362 (units = u"W/m/K", bounds = Positive)
+    "Bulk snow density parameterization"
+    @component density::Density
 
-    "Exponent `b` in the thermal conductivity power law `κ = a·(ρ_s/ρ_w)^b` ([yen1981review](@cite))"
-    @param conductivity_exponent::NF = 1.885 (bounds = Positive,)
+    "Snow thermal conductivity parameterization"
+    @component thermal_conductivity::Conductivity
 
-    "Capillary retention `L_c`: liquid fraction held against gravity before meltwater drains"
-    @param capillary_retention::NF = 0.05 (bounds = UnitInterval)
-
-    "Saturated hydraulic conductivity `K_sat` of the snowpack, setting the meltwater outflow rate"
-    @param saturated_conductivity::NF = 1.0e-4 (units = u"m/s", bounds = Positive)
-
-    "Bulk snow density scheme"
-    @component density::Density = ConstantSnowDensity(typeof(cover_reference))
+    "Snow hydraulic properties"
+    @component hydraulic_properties::Hydraulics
 
     "Snow energy-temperature closure"
-    @component closure::Closure = SnowEnergyTemperatureClosure()
+    @component closure::Closure
 end
 
 function SingleLayerSnow(
         ::Type{NF};
+        cover = FractionalSnowCover(NF),
         density = ConstantSnowDensity(NF),
-        closure = SnowEnergyTemperatureClosure(),
-        kwargs...
+        thermal_conductivity = PowerLawSnowThermalConductivity(NF),
+        hydraulic_properties = ConstantSnowHydraulics(NF),
+        closure = SnowEnergyTemperatureClosure()
     ) where {NF}
-    return SingleLayerSnow{NF, typeof(density), typeof(closure)}(; density, closure, kwargs...)
+    # `NF` is not carried by any field, so it must be supplied explicitly to the type constructor
+    return SingleLayerSnow{NF, typeof(cover), typeof(density), typeof(thermal_conductivity), typeof(hydraulic_properties), typeof(closure)}(
+        cover, density, thermal_conductivity, hydraulic_properties, closure
+    )
 end
+
+# Top-level interface
 
 """
     $TYPEDSIGNATURES
@@ -57,17 +58,6 @@ snow depth using the water density `ρ_w` and the bulk snow density `ρ_s`.
 """
     $TYPEDSIGNATURES
 
-Sub-grid snow-covered area fraction `f_snow = W/(W + W_ref)` ∈ [0,1). Smooth and differentiable, with
-`f_snow → 0` as `W → 0` and `f_snow → 1` as `W → ∞`.
-"""
-@inline function compute_snow_cover_fraction(snow::SingleLayerSnow, W::NF) where {NF}
-    Wp = max(W, zero(NF))
-    return Wp / (Wp + snow.cover_reference)
-end
-
-"""
-    $TYPEDSIGNATURES
-
 Bulk snow density `ρ_s` [kg/m³] of the snowpack, delegating to the process's density scheme.
 """
 @inline snow_density(snow::SingleLayerSnow) = snow_density(snow.density)
@@ -75,35 +65,35 @@ Bulk snow density `ρ_s` [kg/m³] of the snowpack, delegating to the process's d
 """
     $TYPEDSIGNATURES
 
-Bulk snow thermal conductivity via the density power law `κ_snow = a·(ρ_s/ρ_w)^b`
-([yen1981review](@cite)), constant for a fixed bulk density `ρ_s`.
+Bulk snow thermal conductivity `κ_snow` [W/m/K], delegating to the process's thermal conductivity scheme
+with the bulk density `ρ_s`.
 """
-@inline compute_snow_thermal_conductivity(snow::SingleLayerSnow, ρ_w::NF) where {NF} =
-    snow.conductivity_coefficient * (snow_density(snow) / ρ_w)^snow.conductivity_exponent
+@inline compute_thermal_conductivity(snow::SingleLayerSnow, constants::MaterialConstants, ρ_s) =
+    compute_thermal_conductivity(snow.thermal_conductivity, constants, ρ_s)
+
+"""$TYPEDSIGNATURES"""
+@inline get_closure(snow::SingleLayerSnow) = snow.closure
 
 """
     $TYPEDSIGNATURES
 
-Volumetric snow internal energy `U_v = E/d_s` [J/m³] from the depth-integrated energy `E` [J/m²] and the
-snow depth `d_s` [m]. The denominator is regularized with a machine-`eps` offset so the result stays
-finite (and differentiable) as `W → 0`: with `E → 0` and `d_s → 0` together, `U_v → 0`. The thin-snow
-indeterminacy is additionally masked downstream by `f_snow → 0`. A finite offset is used rather than
-[`safediv`](@ref) because `safediv` returns `Inf` at exactly `d_s = 0` (even for `E = 0`), which would
-produce `NaN` when multiplied by `f_snow = 0` in the surface energy balance blend.
+Launch [`compute_snow_soil_heat_flux!`](@ref) to diagnose the blended soil-top heat flux (`soil_heat_flux`)
+from the snow state and the surface energy balance closure flux. Must run after the surface energy
+balance (which sets `ground_heat_flux`). No-op when there is no snowpack (`snow === nothing`).
 """
-@inline volumetric_snow_energy(E::NF, d_s::NF) where {NF} = E / (d_s + eps(NF))
-
-# Field-level accessors
-
-@propagate_inbounds snow_water_equivalent(i, j, grid, fields, ::SingleLayerSnow) = fields.snow_water_equivalent[i, j]
-
-@propagate_inbounds snow_energy(i, j, grid, fields, ::SingleLayerSnow) = fields.snow_energy[i, j]
-
-@propagate_inbounds snow_depth(i, j, grid, fields, ::SingleLayerSnow) = fields.snow_depth[i, j]
-
-@propagate_inbounds snow_cover_fraction(i, j, grid, fields, ::SingleLayerSnow) = fields.snow_cover_fraction[i, j]
-
-@propagate_inbounds snow_temperature(i, j, grid, fields, ::SingleLayerSnow) = fields.snow_temperature[i, j]
+compute_snow_soil_heat_flux!(state, grid, ::Nothing, constants::PhysicalConstants) = nothing
+function compute_snow_soil_heat_flux!(state, grid, snow::SingleLayerSnow, constants::PhysicalConstants)
+    out = (; soil_heat_flux = state.soil_heat_flux)
+    fields = (;
+        ground_heat_flux = state.ground_heat_flux,
+        ground_temperature = state.ground_temperature,
+        snow_temperature = state.snow_temperature,
+        snow_depth = state.snow_depth,
+        snow_cover_fraction = state.snow_cover_fraction,
+    )
+    launch!(grid, XY, compute_soil_snow_fluxes_kernel!, out, fields, snow, constants)
+    return nothing
+end
 
 # Process methods
 
@@ -112,10 +102,6 @@ variables(snow::SingleLayerSnow) = (
     prognostic(:snow_water_equivalent, XY(); units = u"m", desc = "Snow water equivalent (ice + retained liquid)"),
     auxiliary(:snow_depth, XY(); units = u"m", desc = "Snow layer depth"),
     auxiliary(:snow_cover_fraction, XY(); bounds = UnitInterval, desc = "Sub-grid snow-covered area fraction"),
-    # Boundary heat fluxes consumed by the energy tendency. The standalone `SnowModel` prescribes them
-    # directly; in the coupled `LandModel` they are aliased to the surface energy balance closure flux
-    # (`surface_heat_flux ← ground_heat_flux`) and the blended soil-top flux (`basal_heat_flux ← soil_heat_flux`),
-    # so no additional state fields are allocated (see the `LandModel` `StateVariables` constructor).
     input(:surface_heat_flux, XY(); units = u"W/m^2", desc = "Net heat flux at the snow surface (positive upward)"),
     input(:basal_heat_flux, XY(); units = u"W/m^2", desc = "Conductive heat flux at the snow base (positive upward, soil → snow)"),
     input(:sublimation, XY(); units = u"m/s", desc = "Sublimation/evaporation rate from the snow surface (SWE)"),
@@ -163,6 +149,18 @@ end
 
 # Kernel functions
 
+## Field-level accessors
+
+@propagate_inbounds snow_water_equivalent(i, j, grid, fields, ::SingleLayerSnow) = fields.snow_water_equivalent[i, j]
+
+@propagate_inbounds snow_energy(i, j, grid, fields, ::SingleLayerSnow) = fields.snow_energy[i, j]
+
+@propagate_inbounds snow_depth(i, j, grid, fields, ::SingleLayerSnow) = fields.snow_depth[i, j]
+
+@propagate_inbounds snow_cover_fraction(i, j, grid, fields, ::SingleLayerSnow) = fields.snow_cover_fraction[i, j]
+
+@propagate_inbounds snow_temperature(i, j, grid, fields, ::SingleLayerSnow) = fields.snow_temperature[i, j]
+
 """
     $TYPEDSIGNATURES
 
@@ -177,7 +175,7 @@ Compute the snow depth, cover fraction, and thermal conductivity at grid cell `i
     ρ_w = constants.material.density_water
     ρ_s = compute_snow_density(i, j, grid, fields, snow.density)
     out.snow_depth[i, j, 1] = compute_snow_depth(snow, W, ρ_s, ρ_w)
-    out.snow_cover_fraction[i, j, 1] = compute_snow_cover_fraction(snow, W)
+    out.snow_cover_fraction[i, j, 1] = compute_snow_cover_fraction(snow.cover, W)
     return nothing
 end
 
@@ -192,13 +190,13 @@ surface energy balance closure flux (`ground_heat_flux`). The snow surface and b
 energy tendency are the `ground_heat_flux` and `soil_heat_flux` fields themselves (aliased as the snow's
 `surface_heat_flux`/`basal_heat_flux` inputs in the coupled model), so only `soil_heat_flux` is written here.
 """
-@propagate_inbounds function compute_soil_snow_fluxes!(
+@propagate_inbounds function compute_snow_soil_heat_flux!(
         out, i, j, grid, fields,
         snow::SingleLayerSnow,
         constants::PhysicalConstants
     )
-    ρ_w = constants.material.density_water
-    κ_snow = compute_snow_thermal_conductivity(snow, ρ_w)
+    ρ_s = compute_snow_density(i, j, grid, fields, snow.density)
+    κ_snow = compute_thermal_conductivity(snow, constants.material, ρ_s)
     G = fields.ground_heat_flux[i, j]
     f = fields.snow_cover_fraction[i, j]
     d_s = fields.snow_depth[i, j]
@@ -212,36 +210,17 @@ end
 
 # Kernels
 
+@kernel inbounds = true function compute_soil_snow_fluxes_kernel!(out, grid, fields, snow::SingleLayerSnow, constants)
+    i, j = @index(Global, NTuple)
+    compute_snow_soil_heat_flux!(out, i, j, grid, fields, snow, constants)
+end
+
 @kernel inbounds = true function compute_auxiliary_kernel!(out, grid, fields, snow::AbstractSnow, args...)
     i, j = @index(Global, NTuple)
     compute_snow_properties!(out, i, j, grid, fields, snow, args...)
 end
 
-@kernel inbounds = true function compute_soil_snow_fluxes_kernel!(out, grid, fields, snow::SingleLayerSnow, constants)
+@kernel inbounds = true function compute_tendencies_kernel!(tendencies, grid, fields, snow::SingleLayerSnow, args...)
     i, j = @index(Global, NTuple)
-    compute_soil_snow_fluxes!(out, i, j, grid, fields, snow, constants)
-end
-
-# Top-level interface
-
-"""
-    $TYPEDSIGNATURES
-
-Launch [`compute_soil_snow_fluxes!`](@ref) to diagnose the blended soil-top heat flux (`soil_heat_flux`)
-from the snow state and the surface energy balance closure flux. Must run after the surface energy
-balance (which sets `ground_heat_flux`). No-op when there is no snowpack (`snow === nothing`).
-"""
-compute_soil_snow_fluxes!(state, grid, ::Nothing, constants::PhysicalConstants) = nothing
-
-function compute_soil_snow_fluxes!(state, grid, snow::SingleLayerSnow, constants::PhysicalConstants)
-    out = (; soil_heat_flux = state.soil_heat_flux)
-    fields = (;
-        ground_heat_flux = state.ground_heat_flux,
-        ground_temperature = state.ground_temperature,
-        snow_temperature = state.snow_temperature,
-        snow_depth = state.snow_depth,
-        snow_cover_fraction = state.snow_cover_fraction,
-    )
-    launch!(grid, XY, compute_soil_snow_fluxes_kernel!, out, fields, snow, constants)
-    return nothing
+    compute_snow_tendencies!(tendencies, i, j, grid, fields, snow, args...)
 end

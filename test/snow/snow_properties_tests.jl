@@ -1,12 +1,13 @@
 using Terrarium
 using Test
 
-using Terrarium: compute_snow_depth, compute_snow_cover_fraction, compute_snow_thermal_conductivity,
+using Terrarium: compute_snow_depth, compute_snow_cover_fraction, compute_thermal_conductivity,
     volumetric_snow_energy, snow_density
 
 @testset "Snow properties" begin
     NF = Float64
     snow = SingleLayerSnow(NF)
+    constants = PhysicalConstants(NF)
     ρ_w = NF(1000)
 
     @testset "density" begin
@@ -29,37 +30,40 @@ using Terrarium: compute_snow_depth, compute_snow_cover_fraction, compute_snow_t
     end
 
     @testset "cover fraction" begin
-        # f_snow = W/(W+W_ref): in [0,1), zero at W=0, increasing, → 1 as W → ∞, negative W clamped
-        @test compute_snow_cover_fraction(snow, NF(0)) == 0
-        @test compute_snow_cover_fraction(snow, NF(-1)) == 0
-        f_small = compute_snow_cover_fraction(snow, NF(0.005))
-        f_large = compute_snow_cover_fraction(snow, NF(0.05))
+        # f_snow = W/(W+W_ref): in [0,1), zero at W=0, increasing, → 1 as W → ∞
+        cover = snow.cover
+        @test compute_snow_cover_fraction(cover, NF(0)) == 0
+        f_small = compute_snow_cover_fraction(cover, NF(0.005))
+        f_large = compute_snow_cover_fraction(cover, NF(0.05))
         @test 0 < f_small < f_large < 1
-        @test compute_snow_cover_fraction(snow, NF(1e6)) ≈ 1 atol = 1e-3
+        @test compute_snow_cover_fraction(cover, NF(1.0e6)) ≈ 1 atol = 1.0e-3
         # at W = W_ref the fraction is exactly one half
-        @test compute_snow_cover_fraction(snow, snow.cover_reference) ≈ 0.5
+        @test compute_snow_cover_fraction(cover, cover.half_coverage) ≈ 0.5
     end
 
     @testset "thermal conductivity" begin
         # κ = a·(ρ_s/ρ_w)^b: positive and increasing with bulk density
-        κ = compute_snow_thermal_conductivity(snow, ρ_w)
+        ρ_s = snow_density(snow)
+        κ = compute_thermal_conductivity(snow, constants.material, ρ_s)
+        cond = snow.thermal_conductivity
         @test κ > 0
-        @test κ ≈ snow.conductivity_coefficient * (snow_density(snow) / ρ_w)^snow.conductivity_exponent
+        @test κ ≈ cond.conductivity_coefficient * (ρ_s / ρ_w)^cond.conductivity_exponent
         denser = SingleLayerSnow(NF; density = ConstantSnowDensity(NF; density = NF(400)))
-        @test compute_snow_thermal_conductivity(denser, ρ_w) > κ
+        @test compute_thermal_conductivity(denser, constants.material, snow_density(denser)) > κ
     end
 
     @testset "volumetric energy" begin
         # U_v = E/d_s for d_s > 0
-        @test volumetric_snow_energy(NF(-1000), NF(0.5)) ≈ -2000 rtol = 1e-6
+        @test volumetric_snow_energy(NF(-1000), NF(0.5)) ≈ -2000 rtol = 1.0e-6
         @test volumetric_snow_energy(NF(0), NF(0.5)) == 0
     end
 
     @testset "Float32 type stability" begin
         snow32 = SingleLayerSnow(Float32)
+        material32 = PhysicalConstants(Float32).material
         @test compute_snow_depth(snow32, 0.1f0, snow_density(snow32), 1000.0f0) isa Float32
-        @test compute_snow_cover_fraction(snow32, 0.02f0) isa Float32
-        @test compute_snow_thermal_conductivity(snow32, 1000.0f0) isa Float32
+        @test compute_snow_cover_fraction(snow32.cover, 0.02f0) isa Float32
+        @test compute_thermal_conductivity(snow32, material32, snow_density(snow32)) isa Float32
     end
 
     @testset "compute_auxiliary! diagnoses properties" begin
@@ -71,7 +75,7 @@ using Terrarium: compute_snow_depth, compute_snow_cover_fraction, compute_snow_t
         compute_auxiliary!(state, grid, snow, constants)
         ρ_w = constants.material.density_water
         @test all(state.snow_depth .≈ compute_snow_depth(snow, W, snow_density(snow), ρ_w))
-        @test all(state.snow_cover_fraction .≈ compute_snow_cover_fraction(snow, W))
+        @test all(state.snow_cover_fraction .≈ compute_snow_cover_fraction(snow.cover, W))
         @test all(isfinite.(state.snow_depth))
     end
 end

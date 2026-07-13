@@ -63,7 +63,7 @@ using Test
         set!(state.snow_energy, NF(1000))                            # E > 0 -> θ_liq = 1 (fully melted)
         step_tendencies!(state)
         @test all(state.snow_liquid_fraction .≈ 1)
-        M_r = snow.saturated_conductivity                           # S* = 1 at θ_liq = 1
+        M_r = snow.hydraulic_properties.saturated_conductivity      # S* = 1 at θ_liq = 1
         @test all(state.tendencies.snow_water_equivalent .≈ -M_r)   # meltwater drains
         @test all(state.tendencies.snow_energy .≈ -ρ_w * L_f * M_r) # latent heat leaves with meltwater
     end
@@ -73,10 +73,10 @@ using Test
         set!(state.snow_water_equivalent, W0)
         Lθ = ρ_s * L_f
         # choose θ_liq just below L_c via a phase-change energy: θ_liq = 1 + U_v/Lθ
-        θ_target = snow.capillary_retention / 2
+        θ_target = snow.hydraulic_properties.capillary_retention / 2
         set!(state.snow_energy, (θ_target - 1) * Lθ * d_s)
         step_tendencies!(state)
-        @test all(0 .< state.snow_liquid_fraction .< snow.capillary_retention)
+        @test all(0 .< state.snow_liquid_fraction .< snow.hydraulic_properties.capillary_retention)
         @test all(state.tendencies.snow_water_equivalent .≈ 0)      # retained, no outflow
     end
 

@@ -74,11 +74,11 @@ $TYPEDFIELDS
     "Soil water retention curve"
     @component swrc::RC
 
-    "Unsaturated hydraulic conductivity formulation; defaults to `sat_hydraulic_cond`"
+    "Unsaturated hydraulic conductivity formulation; defaults to `saturated_conductivity`"
     @component unsat_hydraulic_cond::UnsatK
 
     "Hydraulic conductivity at saturation"
-    @param sat_hydraulic_cond::NF = 1.0e-5 (units = u"m/s", bounds = Positive, scale = 1.0e-5)
+    @param saturated_conductivity::NF = 1.0e-5 (units = u"m/s", bounds = Positive, scale = 1.0e-5)
 
     "Constant field capacity"
     @param field_capacity::NF = 0.25 (bounds = UnitInterval,)
@@ -100,7 +100,7 @@ function ConstantSoilHydraulics(
     return ConstantSoilHydraulics{NF, typeof(swrc), typeof(unsat_hydraulic_cond)}(; swrc, unsat_hydraulic_cond, kwargs...)
 end
 
-@inline saturated_hydraulic_conductivity(hydraulics::ConstantSoilHydraulics, args...) = hydraulics.sat_hydraulic_cond
+@inline saturated_hydraulic_conductivity(hydraulics::ConstantSoilHydraulics, args...) = hydraulics.saturated_conductivity
 
 @inline wilting_point(hydraulics::ConstantSoilHydraulics, args...) = hydraulics.wilting_point
 
@@ -125,11 +125,11 @@ $TYPEDFIELDS
     "Soil water retention curve"
     @component swrc::RC
 
-    "Unsaturated hydraulic conductivity formulation; defaults to `sat_hydraulic_cond`"
+    "Unsaturated hydraulic conductivity formulation; defaults to `saturated_conductivity`"
     @component unsat_hydraulic_cond::UnsatK
 
     "Hydraulic conductivity at saturation"
-    @param sat_hydraulic_cond::NF = 1.0e-5 (units = u"m/s", bounds = Positive, scale = 1.0e-5)
+    @param saturated_conductivity::NF = 1.0e-5 (units = u"m/s", bounds = Positive, scale = 1.0e-5)
 
     "Linear coefficient of wilting point adjustment due to clay content"
     @param wilting_point_effect::NF = 37.13e-3 (bounds = Positive,)
@@ -155,7 +155,7 @@ function SoilHydraulicsSURFEX(
 end
 
 # TODO: this is not quite correct, SURFEX uses a hydraulic conductivity function that decreases exponentially with depth
-@inline saturated_hydraulic_conductivity(hydraulics::SoilHydraulicsSURFEX, args...) = hydraulics.sat_hydraulic_cond
+@inline saturated_hydraulic_conductivity(hydraulics::SoilHydraulicsSURFEX, args...) = hydraulics.saturated_conductivity
 
 @inline residual_saturation(hydraulics::SoilHydraulicsSURFEX, args...) = hydraulics.residual
 

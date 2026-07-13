@@ -67,8 +67,14 @@ include("soil/soil_coupled.jl")
 
 # Snow
 
+export FractionalSnowCover
+include("snow/snow_cover.jl")
 export ConstantSnowDensity
 include("snow/snow_density.jl")
+export ConstantSnowHydraulics
+include("snow/snow_hydraulic_properties.jl")
+export PowerLawSnowThermalConductivity, LogarithmicSnowThermalConductivity, QuadraticSnowThermalConductivity
+include("snow/snow_thermal_conductivity.jl")
 export SingleLayerSnow
 include("snow/snow_single_layer.jl")
 export SnowEnergyTemperatureClosure

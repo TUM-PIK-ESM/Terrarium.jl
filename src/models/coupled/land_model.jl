@@ -111,7 +111,7 @@ function compute_auxiliary!(state, model::LandModel)
     compute_auxiliary!(state, grid, model.surface_hydrology, model.constants, model.atmosphere, model.soil, model.vegetation)
     compute_auxiliary!(state, grid, model.surface_energy_balance, model.constants, model.atmosphere, model.surface_hydrology, model.snow)
     # Blend the soil-top heat flux from the snow base and bare ground after the SEB; no-op without snow
-    compute_soil_snow_fluxes!(state, grid, model.snow, model.constants)
+    compute_snow_soil_heat_flux!(state, grid, model.snow, model.constants)
     return nothing
 end
 
