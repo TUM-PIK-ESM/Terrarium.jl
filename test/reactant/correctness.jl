@@ -1,7 +1,7 @@
 # Generic CPU-vs-Reactant correctness machinery.
 #
 # The design mirrors `SpeedyWeather/test/reactant/`: build the *same* model on two
-# architectures, sync one state onto the other so both start bit-identical, advance both,
+# architectures, sync one state onto the other so both start identical, then advance both
 # and compare every prognostic/auxiliary field within a tolerance (XLA reorders
 # floating-point math, so bitwise equality is not expected).
 #
