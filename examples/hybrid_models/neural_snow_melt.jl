@@ -200,7 +200,7 @@ M_norm = M_train ./ M_scale
 
 # ## Train the MLP with Reactant + Enzyme
 #
-# We build a small MLP, move it (and the data) to the Reactant device, and train with
+# We build a small MLP, move it (and the data) to the Reactant device `rdev`, and train with
 # `Lux.Training.single_train_step!` using the Enzyme AD backend. On the Reactant device this
 # compiles the train step with XLA; each step computes the loss and its gradient with Enzyme and
 # updates the parameters with Adam.
@@ -210,8 +210,8 @@ mlp = Lux.Chain(Lux.Dense(1 => H, tanh), Lux.Dense(H => 1))
 
 rdev = MLDD.reactant_device()
 rng = Random.Xoshiro(0)
-ps, st = Lux.setup(rng, mlp) |> rdev
-data = (rdev(T_norm), rdev(M_norm))
+ps, st = Lux.setup(rng, mlp) |> rdev # move the parameters and state to the device
+data = (rdev(T_norm), rdev(M_norm)) # move the data to the device
 
 function train_mlp(mlp, ps, st, data; epochs = 2000, lr = NF(1.0e-2))
     tstate = Lux.Training.TrainState(mlp, ps, st, Optimisers.Adam(lr))
