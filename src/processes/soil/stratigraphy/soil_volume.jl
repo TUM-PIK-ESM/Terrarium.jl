@@ -21,7 +21,6 @@ struct SoilVolume{NF, Solid <: AbstractSoilMatrix{NF}}
     "Parameterization of the solid phase (matrix) of the soil"
     solid::Solid
 
-    # Positional constructor
     function SoilVolume(porosity::NF, saturation::NF, liquid::NF, solid::AbstractSoilMatrix{NF}) where {NF <: Number}
         return new{NF, typeof(solid)}(porosity, saturation, liquid, solid)
     end
@@ -98,7 +97,6 @@ struct MineralOrganic{NF} <: AbstractSoilMatrix{NF}
     "Organic soil fraction"
     organic::NF
 
-    # Positional constructor
     function MineralOrganic(texture::SoilTexture{NF}, organic::NF) where {NF}
         return new{NF}(texture, organic)
     end
