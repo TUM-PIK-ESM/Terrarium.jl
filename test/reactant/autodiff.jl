@@ -4,7 +4,7 @@
 # sensitivity of the loss w.r.t. the initial internal energy is finite and nonzero. Also exercises
 # the extension's `checkpointing` argument: the gradient must be identical whether the traced loop
 # stores every state (`checkpointing=false`) or only periodic checkpoints (`Periodic(n)`) — the
-# checkpointing scheme changes memory use, not the math. 
+# checkpointing scheme changes memory use, not the math.
 
 using Enzyme
 using Statistics: mean
