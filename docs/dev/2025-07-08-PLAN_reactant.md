@@ -17,8 +17,10 @@
 > - **Coverage.** Added a `:soil_heat_column_stretched` (`ExponentialSpacing`) config to
 >   `test/reactant/`; the full suite is green (**45/45** correctness incl. the new stretched
 >   config + **6/6** autodiff) against Oceananigans `main`.
-> - **Env pin.** `test/reactant/Project.toml` gains `[sources] Oceananigans = {rev = "main"}` (the
->   fix is unreleased). Drop it and rely on `[compat]` once a tagged release carries the fix.
+> - **Env pin.** `test/reactant/Project.toml` initially gained `[sources] Oceananigans = {rev =
+>   "main"}` while the fix was unreleased. **Update (2026-07-13):** Oceananigans **0.110.9** was
+>   released with the fix; the `[sources]` pin was dropped and `[compat]` bumped to
+>   `Oceananigans = "0.110.9"`. Suite re-verified green (45/45 + 6/6) on the tagged release.
 >
 > **Also this session — build-on-CPU initialization removed (simplification).** Investigated whether
 > the CPU-twin build/transfer in `transfer.jl` was still needed, or whether `@jit initialize!` would

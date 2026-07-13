@@ -33,7 +33,7 @@ end
 
 # --- :soil_heat_column_stretched — single-column SoilModel on an ExponentialSpacing grid -
 # Same physics as :soil_heat_column but with array-valued (stretched) vertical coordinates,
-# which exercise the upstream fix (Oceananigans ≥ 0.110.8 main) that lets array z trace under
+# which exercise the upstream fix (Oceananigans ≥ 0.110.9) that lets array z trace under
 # Reactant.
 function build_model(::Val{:soil_heat_column_stretched}, arch, NF)
     grid = ColumnGrid(arch, NF, ExponentialSpacing(Δz_min = NF(0.05), Δz_max = NF(1), N = 10))

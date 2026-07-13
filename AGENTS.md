@@ -83,12 +83,6 @@ on the device (eager KernelAbstractions launches run on the Reactant backend; Oc
 - **Closures compiled into kernels must capture only `isbits` values.** A boundary-condition
   function that closes over a `Type` (e.g. `NF`/`Float32`) becomes a non-`isbits` kernel argument
   and fails to compile — hoist numeric constants out (`amplitude = NF(5); bc(x, t) = amplitude * …`).
-- **All vertical spacings trace under Reactant** (Oceananigans ≥ the `main` commit adapting the
-  `RectilinearGrid` extents; not yet in a tagged release). Array-valued vertical coordinates — as
-  produced by every `AbstractVerticalSpacing` including `ExponentialSpacing`/`PrescribedSpacing` —
-  now trace through kernel launches; the earlier uniform-only workaround (an endpoint-tuple `z` for
-  `UniformSpacing`) was removed once the upstream Oceananigans gap was fixed. `test/reactant`
-  pins Oceananigans to `main` via `[sources]` until a release carries the fix.
 - **Reverse-mode AD**: differentiate `run_timesteps!` with `Enzyme.autodiff(set_strong_zero(ReverseWithPrimal),
   …, Duplicated(integrator, dintegrator), …)` inside `@compile raise=true raise_first=true sync=true`.
   Pass a `checkpointing` scheme (`Reactant.Periodic(n)`) to `run!`/`run_timesteps!` to bound reverse-pass
