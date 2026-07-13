@@ -1,13 +1,9 @@
 # Generic CPU-vs-Reactant correctness machinery.
 #
-# The design mirrors `SpeedyWeather/test/reactant/`: build the *same* model on two
+# Build the *same* model on two
 # architectures, sync one state onto the other so both start identical, then advance both
 # and compare every prognostic/auxiliary field within a tolerance (XLA reorders
-# floating-point math, so bitwise equality is not expected).
-#
-# Everything here is written against the *target* user API (`initialize`, `timestep!`) so
-# that once `TerrariumReactantExt` provides a compiled `timestep!`/`run!`, the Reactant
-# branch of `advance!` collapses to the same call as the CPU branch.
+# floating-point math, so exact equality is not expected).
 
 using Statistics: mean
 
