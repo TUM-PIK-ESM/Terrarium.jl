@@ -17,10 +17,8 @@ variables(::SnowEnergyTemperatureClosure) = (
     auxiliary(:snow_liquid_fraction, XY(), bounds = UnitInterval, desc = "Liquid (unfrozen) fraction of the snow water substance"),
 )
 
-@inline get_closure(::SingleLayerSnow) = SnowEnergyTemperatureClosure()
-
 # The SEB conduction target blends snow and ground; supply the snow depth, cover fraction, and closure
-# temperature so they are available in the SEB kernel (the conductivity is recovered lazily there).
+# temperature so they are available in the SEB kernel.
 @inline seb_conduction_fields(state, snow::SingleLayerSnow) = get_fields(state, snow, get_closure(snow))
 
 # Process-level closure entry points (dispatch on the snow process, mirroring the soil interface).
@@ -175,3 +173,17 @@ end
     i, j = @index(Global, NTuple)
     temperature_to_energy!(out, i, j, grid, fields, closure, args...)
 end
+
+# Helper functions
+
+"""
+    $TYPEDSIGNATURES
+
+Volumetric snow internal energy `U_v = E/d_s` [J/m³] from the depth-integrated energy `E` [J/m²] and the
+snow depth `d_s` [m]. The denominator is regularized with a machine-`eps` offset so the result stays
+finite (and differentiable) as `W → 0`: with `E → 0` and `d_s → 0` together, `U_v → 0`. The thin-snow
+indeterminacy is additionally masked downstream by `f_snow → 0`. A finite offset is used rather than
+[`safediv`](@ref) because `safediv` returns `Inf` at exactly `d_s = 0` (even for `E = 0`), which would
+produce `NaN` when multiplied by `f_snow = 0` in the surface energy balance blend.
+"""
+@inline volumetric_snow_energy(E::NF, d_s::NF) where {NF} = E / (d_s + eps(NF))

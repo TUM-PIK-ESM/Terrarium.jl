@@ -10,11 +10,11 @@ using Oceananigans
     # match what was set.
     hydraulic_props = ConstantSoilHydraulics(
         Float64;
-        sat_hydraulic_cond = 1.0e-6,
+        saturated_conductivity = 1.0e-6,
         field_capacity = 0.1,
         wilting_point = 0.02,
     )
-    @test saturated_hydraulic_conductivity(hydraulic_props) == hydraulic_props.sat_hydraulic_cond
+    @test saturated_hydraulic_conductivity(hydraulic_props) == hydraulic_props.saturated_conductivity
     @test field_capacity(hydraulic_props) == hydraulic_props.field_capacity
     @test wilting_point(hydraulic_props) == hydraulic_props.wilting_point
 end
@@ -48,12 +48,12 @@ end
     # saturated case
     soil = SoilComposition()
     K = hydraulic_conductivity(hydraulics, soil)
-    @test K ≈ hydraulics.sat_hydraulic_cond
+    @test K ≈ hydraulics.saturated_conductivity
 
     # unsaturated
     soil = SoilComposition(saturation = 0.5)
     K = hydraulic_conductivity(hydraulics, soil)
-    @test 0 < K < hydraulics.sat_hydraulic_cond
+    @test 0 < K < hydraulics.saturated_conductivity
 
     # dry
     soil = SoilComposition(saturation = 0.0)
@@ -72,12 +72,12 @@ end
     # saturated case
     soil = SoilComposition()
     K = hydraulic_conductivity(hydraulics, soil)
-    @test K ≈ hydraulics.sat_hydraulic_cond
+    @test K ≈ hydraulics.saturated_conductivity
 
     # unsaturated
     soil = SoilComposition(saturation = 0.5)
     K = hydraulic_conductivity(hydraulics, soil)
-    @test 0 < K < hydraulics.sat_hydraulic_cond
+    @test 0 < K < hydraulics.saturated_conductivity
 
     # dry
     soil = SoilComposition(saturation = 0.0)
@@ -141,7 +141,7 @@ end
     compute_auxiliary!(state, model)
     # check that all hydraulic conductivities are finite and equal to K_sat
     @test all(isfinite.(state.hydraulic_conductivity))
-    @test all(state.hydraulic_conductivity .≈ hydraulic_properties.sat_hydraulic_cond)
+    @test all(state.hydraulic_conductivity .≈ hydraulic_properties.saturated_conductivity)
     compute_tendencies!(state, model)
     # check that all tendencies are zero
     @test all(iszero.(state.tendencies.saturation_water_ice))

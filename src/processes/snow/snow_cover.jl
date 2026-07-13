@@ -1,0 +1,30 @@
+"""
+    $TYPEDEF
+
+Base type for snow areal-coverage parameterizations.
+"""
+abstract type AbstractSnowCover{NF} end
+
+"""
+    $TYPEDEF
+
+Simple fractional snow cover parameterization `f_snow = W/(W + W_ref)` where `W` is the
+current snow water equivalent (SWE) within any given finite area and `W_ref` is the reference
+SWE at which the are would be expected to be 50% covered. The function is smooth and differentiable,
+with `f_snow → 0` as `W → 0` and `f_snow → 1` as `W → ∞`.
+
+Properties:
+$TYPEDFIELDS
+"""
+@parameterized @kwdef struct FractionalSnowCover{NF} <: AbstractSnowCover{NF}
+    "Reference snow water equivalent level `W_ref`"
+    @param half_coverage::NF = 0.01 (units = u"m", bounds = Positive)
+end
+
+FractionalSnowCover(::Type{NF}; kwargs...) where {NF} = FractionalSnowCover{NF}(; kwargs...)
+
+@inline function compute_snow_cover_fraction(cover::FractionalSnowCover{NF}, swe::NF) where {NF}
+    W = swe
+    W_ref = cover.half_coverage
+    return W / (W + W_ref)
+end

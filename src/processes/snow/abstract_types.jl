@@ -48,7 +48,7 @@ function snow_thermal_conductivity end
 
 Base type for snow density schemes.
 """
-abstract type AbstractSnowDensity end
+abstract type AbstractSnowDensity{NF} end
 
 """
     snow_density(i, j, grid, fields, ::AbstractSnowDensity)

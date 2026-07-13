@@ -9,10 +9,11 @@ form): `M_r = K_sat · S*³` with `S* = max(θ_liq − L_c, 0) / (1 − L_c)`, w
 fraction of the water substance. Outflow vanishes smoothly as `θ_liq → L_c` and saturates at `K_sat` as
 `θ_liq → 1`.
 """
-@inline function compute_meltwater_outflow(snow::SingleLayerSnow, θ_liq::NF) where {NF}
-    L_c = snow.capillary_retention
+@inline function compute_meltwater_outflow(hydraulics::ConstantSnowHydraulics, θ_liq::NF) where {NF}
+    L_c = hydraulics.capillary_retention
+    K_sat = hydraulics.saturated_conductivity
     Sstar = max(θ_liq - L_c, zero(NF)) / (one(NF) - L_c)
-    return snow.saturated_conductivity * Sstar^3
+    return K_sat * Sstar^3
 end
 
 """
@@ -22,7 +23,7 @@ Advected heat flux [W/m²] carried into the snowpack by precipitation (UEB eqn 1
 0 °C: snowfall `P_s` arrives as ice at `min(T_air, 0)`, while rain-on-snow `R_on_snow` arrives as liquid
 carrying its latent heat of fusion plus sensible heat at `max(T_air, 0)`.
 """
-@inline function compute_precip_heat(P_s::NF, R_on_snow::NF, T_air::NF, constants::PhysicalConstants) where {NF}
+@inline function compute_rain_heat_flux(P_s::NF, R_on_snow::NF, T_air::NF, constants::PhysicalConstants) where {NF}
     ρ_w = constants.material.density_water
     L_f = constants.thermodynamics.latent_heat_fusion
     c_i = constants.thermodynamics.specific_heat_capacity_ice
@@ -70,17 +71,10 @@ heat leaving with meltwater at 0 °C.
     L_f = constants.thermodynamics.latent_heat_fusion
     # rainfall intercepted by the snow-covered fraction adds to the pack; the rest bypasses to the soil
     R_on_snow = f_snow * rain
-    M_r = compute_meltwater_outflow(snow, θ_liq)
-    Q_precip = compute_precip_heat(P_s, R_on_snow, T_air, constants)
+    M_r = compute_meltwater_outflow(snow.hydraulic_properties, θ_liq)
+    Q_precip = compute_rain_heat_flux(P_s, R_on_snow, T_air, constants)
     Q_melt = ρ_w * L_f * M_r
     tendencies.snow_water_equivalent[i, j, 1] += P_s + R_on_snow - M_r - E_subl
     tendencies.snow_energy[i, j, 1] += G_base - G_top + Q_precip - Q_melt
     return nothing
-end
-
-# Kernels
-
-@kernel inbounds = true function compute_tendencies_kernel!(tendencies, grid, fields, snow::SingleLayerSnow, args...)
-    i, j = @index(Global, NTuple)
-    compute_snow_tendencies!(tendencies, i, j, grid, fields, snow, args...)
 end

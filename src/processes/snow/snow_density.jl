@@ -7,7 +7,7 @@ density scheme for [`SingleLayerSnow`](@ref).
 Properties:
 $TYPEDFIELDS
 """
-@parameterized @kwdef struct ConstantSnowDensity{NF} <: AbstractSnowDensity
+@parameterized @kwdef struct ConstantSnowDensity{NF} <: AbstractSnowDensity{NF}
     "Bulk snow density `ρ_s`"
     @param density::NF = 250.0 (units = u"kg/m^3", bounds = Positive)
 end
