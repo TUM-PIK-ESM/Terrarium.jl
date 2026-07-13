@@ -51,7 +51,7 @@ where $L_{\text{sl}}$ (J/kg) and $c_{\text{w}}$ (J/(kg K)) represent the specifi
     The current implementation does not yet consider the advective heat flux, but this will be added soon!
 
 ```@docs; canonical = false
-SoilEnergyBalance
+SoilThermodynamics
 ```
 
 As for [Soil hydrology](@ref), only the vertical fluxes are currently considered. This simplifies the notation of ``\eqref{eq:energyconservation}`` to
@@ -64,11 +64,11 @@ As for [Soil hydrology](@ref), only the vertical fluxes are currently considered
 ## [Process interface](@id soilenergy.dispatches)
 
 ```@docs; canonical = false
-initialize!(state, grid, energy::SoilEnergyBalance, soil::AbstractSoil, constants::PhysicalConstants, args...)
+initialize!(state, grid, energy::SoilThermodynamics, soil::AbstractSoil, constants::PhysicalConstants, args...)
 
-compute_auxiliary!(state, grid, energy::SoilEnergyBalance, soil::AbstractSoil, args...)
+compute_auxiliary!(state, grid, energy::SoilThermodynamics, soil::AbstractSoil, args...)
 
-compute_tendencies!(state, grid, energy::SoilEnergyBalance, soil::AbstractSoil, args...)
+compute_tendencies!(state, grid, energy::SoilThermodynamics, soil::AbstractSoil, args...)
 ```
 
 ## Closures

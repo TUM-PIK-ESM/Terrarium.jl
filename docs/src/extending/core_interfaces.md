@@ -175,7 +175,7 @@ These methods provide a unified interface that can be used by timesteppers, call
 
 ### Soil energy: temperature–enthalpy closure
 
-The [`SoilEnergyBalance`](@ref) process uses the [`SoilEnergyTemperatureClosure`](@ref) to relate volumetric internal energy $U$ (J/m³) to temperature $T$ (°C) and the liquid water fraction $l$ (-):
+The [`SoilThermodynamics`](@ref) process uses the [`SoilEnergyTemperatureClosure`](@ref) to relate volumetric internal energy $U$ (J/m³) to temperature $T$ (°C) and the liquid water fraction $l$ (-):
 
 $$U(T) = T \cdot C(T) - L_{\text{sl}} \, \theta \, (1 - l(T))$$
 
@@ -211,7 +211,7 @@ See the [Soil hydrology](@ref) doc page for further details and the full list of
 To add a closure relation to a new process:
 
 1. Define a concrete subtype of `AbstractClosureRelation` (or a process-specific abstract
-   subtype, e.g. `AbstractSoilEnergyClosure`)
+   subtype, e.g. `AbstractEnergyClosure`)
 2. Implement `variables(::MyClosureRelation)` which should, at minimum, define the relevant `auxiliary`
    variable for the closure (`temperature` and `pressure_head` for soil energy and hydrology respectively)
 3. Implement `closure!` and `invclosure!` dispatching on the process type

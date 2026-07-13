@@ -8,7 +8,7 @@ and a mixture of organic and mineral solid material.
 Properties:
 $FIELDS
 """
-struct SoilVolume{NF, Solid <: AbstractSoilMatrix{NF}}
+struct SoilComposition{NF, Solid <: AbstractSoilMatrix{NF}}
     "Natural porosity or void space of the soil"
     porosity::NF
 
@@ -21,7 +21,7 @@ struct SoilVolume{NF, Solid <: AbstractSoilMatrix{NF}}
     "Parameterization of the solid phase (matrix) of the soil"
     solid::Solid
 
-    function SoilVolume(porosity::NF, saturation::NF, liquid::NF, solid::AbstractSoilMatrix{NF}) where {NF <: Number}
+    function SoilComposition(porosity::NF, saturation::NF, liquid::NF, solid::AbstractSoilMatrix{NF}) where {NF <: Number}
         return new{NF, typeof(solid)}(porosity, saturation, liquid, solid)
     end
 end
@@ -32,7 +32,7 @@ end
 Validating keyword constructor for `SoilVolume`; enforces that `porosity`, `saturation`,
 and `liquid` lie in the unit interval.
 """
-function SoilVolume(;
+function SoilComposition(;
         porosity = 0.5,
         saturation = 1.0,
         liquid = 1.0,
@@ -41,22 +41,22 @@ function SoilVolume(;
     @assert zero(porosity) <= porosity <= one(porosity)
     @assert zero(saturation) <= saturation <= one(saturation)
     @assert zero(liquid) <= liquid <= one(liquid)
-    return SoilVolume(porosity, saturation, liquid, solid)
+    return SoilComposition(porosity, saturation, liquid, solid)
 end
 
-@inline porosity(soil::SoilVolume) = soil.porosity
+@inline porosity(soil::SoilComposition) = soil.porosity
 
-@inline saturation(soil::SoilVolume) = soil.saturation
+@inline saturation(soil::SoilComposition) = soil.saturation
 
-@inline liquid_fraction(soil::SoilVolume) = soil.liquid
+@inline liquid_fraction(soil::SoilComposition) = soil.liquid
 
-@inline water_ice(soil::SoilVolume) = soil.porosity * soil.saturation
+@inline water_ice(soil::SoilComposition) = soil.porosity * soil.saturation
 
-@inline water(soil::SoilVolume) = soil.liquid * soil.porosity * soil.saturation
+@inline water(soil::SoilComposition) = soil.liquid * soil.porosity * soil.saturation
 
-@inline organic_fraction(soil::SoilVolume) = organic_fraction(soil.solid)
+@inline organic_fraction(soil::SoilComposition) = organic_fraction(soil.solid)
 
-@inline mineral_texture(soil::SoilVolume) = mineral_texture(soil.solid)
+@inline mineral_texture(soil::SoilComposition) = mineral_texture(soil.solid)
 
 """
     $TYPEDSIGNATURES
@@ -65,7 +65,7 @@ Calculates the volumetric fractions of all constituents in the given soil volume
 and returns them as a named tuple of the form `(; water, ice, air, solids...)`, where
 `solids` corresponds to the volumetric fractions defined by the solid phase `soil.solid`.
 """
-@inline function volumetric_fractions(soil::SoilVolume)
+@inline function volumetric_fractions(soil::SoilComposition)
     # unpack relevant quantities
     let por = soil.porosity,
             sat = soil.saturation,
@@ -114,9 +114,9 @@ function MineralOrganic(; texture = SoilTexture(), organic = zero(eltype(texture
 end
 
 """
-Alias for `SoilVolume{T, MineralOrganic{T}}`
+Alias for `SoilComposition{T, MineralOrganic{T}}`
 """
-const MineralOrganicSoil{NF} = SoilVolume{NF, MineralOrganic{NF}}
+const MineralOrganicSoil{NF} = SoilComposition{NF, MineralOrganic{NF}}
 
 @inline mineral_texture(solid::MineralOrganic) = solid.texture
 

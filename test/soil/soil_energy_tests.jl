@@ -18,19 +18,19 @@ import Oceananigans.BoundaryConditions: ValueBoundaryCondition, FluxBoundaryCond
     @test all(>(0), getproperties(thermal_props.heat_capacities))
 
     # sanity checks for bulk thermal properties
-    @test Terrarium.compute_thermal_conductivity(thermal_props, SoilVolume(porosity = 1.0, saturation = 1.0, liquid = 1.0)) ≈ thermal_props.conductivities.water
-    @test Terrarium.compute_thermal_conductivity(thermal_props, SoilVolume(porosity = 1.0, saturation = 1.0, liquid = 0.0)) ≈ thermal_props.conductivities.ice
-    @test Terrarium.compute_thermal_conductivity(thermal_props, SoilVolume(porosity = 1.0, saturation = 0.0, liquid = 0.0)) ≈ thermal_props.conductivities.air
+    @test Terrarium.compute_thermal_conductivity(thermal_props, SoilComposition(porosity = 1.0, saturation = 1.0, liquid = 1.0)) ≈ thermal_props.conductivities.water
+    @test Terrarium.compute_thermal_conductivity(thermal_props, SoilComposition(porosity = 1.0, saturation = 1.0, liquid = 0.0)) ≈ thermal_props.conductivities.ice
+    @test Terrarium.compute_thermal_conductivity(thermal_props, SoilComposition(porosity = 1.0, saturation = 0.0, liquid = 0.0)) ≈ thermal_props.conductivities.air
     # pure mineral soil: the bulk mineral conductivity is the quartz-weighted geometric mean of the
     # quartz and non-quartz endpoints, recovered at the pure-sand and pure-clay limits respectively
-    @test Terrarium.compute_thermal_conductivity(thermal_props, SoilVolume(porosity = 0.0, saturation = 0.0, solid = MineralOrganic(texture = SoilTexture(:sand), organic = 0.0))) ≈ thermal_props.conductivities.quartz
-    @test Terrarium.compute_thermal_conductivity(thermal_props, SoilVolume(porosity = 0.0, saturation = 0.0, solid = MineralOrganic(texture = SoilTexture(:clay), organic = 0.0))) ≈ thermal_props.conductivities.mineral
-    @test Terrarium.compute_thermal_conductivity(thermal_props, SoilVolume(porosity = 0.0, saturation = 0.0, solid = MineralOrganic(organic = 1.0))) ≈ thermal_props.conductivities.organic
+    @test Terrarium.compute_thermal_conductivity(thermal_props, SoilComposition(porosity = 0.0, saturation = 0.0, solid = MineralOrganic(texture = SoilTexture(:sand), organic = 0.0))) ≈ thermal_props.conductivities.quartz
+    @test Terrarium.compute_thermal_conductivity(thermal_props, SoilComposition(porosity = 0.0, saturation = 0.0, solid = MineralOrganic(texture = SoilTexture(:clay), organic = 0.0))) ≈ thermal_props.conductivities.mineral
+    @test Terrarium.compute_thermal_conductivity(thermal_props, SoilComposition(porosity = 0.0, saturation = 0.0, solid = MineralOrganic(organic = 1.0))) ≈ thermal_props.conductivities.organic
 end
 
 @testset "Soil energy: initialize!" begin
     grid = ColumnGrid(CPU(), Float64, ExponentialSpacing())
-    energy = SoilEnergyBalance(eltype(grid))
+    energy = SoilThermodynamics(eltype(grid))
     soil = SoilEnergyWaterCarbon(eltype(grid); energy)
     constants = PhysicalConstants(eltype(grid))
     state = StateVariables(soil, grid)
@@ -53,7 +53,7 @@ end
 
 @testset "Soil energy: compute_tendencies!" begin
     grid = ColumnGrid(CPU(), Float64, ExponentialSpacing(N = 10))
-    energy = SoilEnergyBalance(eltype(grid))
+    energy = SoilThermodynamics(eltype(grid))
     soil = SoilEnergyWaterCarbon(eltype(grid); energy)
     constants = PhysicalConstants(eltype(grid))
     state = StateVariables(soil, grid)
@@ -65,7 +65,7 @@ end
 
 @testset "Soil energy: closure!" begin
     grid = ColumnGrid(CPU(), Float64, ExponentialSpacing(N = 10))
-    energy = SoilEnergyBalance(eltype(grid))
+    energy = SoilThermodynamics(eltype(grid))
     soil = SoilEnergyWaterCarbon(eltype(grid); energy)
     constants = PhysicalConstants(eltype(grid))
     state = StateVariables(soil, grid)
@@ -115,7 +115,7 @@ end
         conductivities = SoilThermalConductivities(mineral = k),
         heat_capacities = SoilHeatCapacities(mineral = c),
     )
-    energy = SoilEnergyBalance(eltype(grid); thermal_properties)
+    energy = SoilThermodynamics(eltype(grid); thermal_properties)
     soil = SoilEnergyWaterCarbon(eltype(grid); energy, strat, biogeochem)
     initializer = DefaultInitializer(eltype(grid))
     model = SoilModel(grid; soil, initializer)

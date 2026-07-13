@@ -18,15 +18,15 @@ The main advantage of indirect coupling is that the implementations of processes
 
 ### Example: Ground surface temperature
 
-A concrete example of indirect coupling in Terrarium is the `ground_temperature` variable which represents the temperature of the uppermost subsurface layer (not to be confused with [skin temperature](@ref "Skin temperature and ground heat flux")). The `ground_temperature` is defined as a derived auxiliary variable by [`SoilEnergyBalance`](@ref), with the resulting `Field` being simply a view of the uppermost soil `temperature` layer:
+A concrete example of indirect coupling in Terrarium is the `ground_temperature` variable which represents the temperature of the uppermost subsurface layer (not to be confused with [skin temperature](@ref "Skin temperature and ground heat flux")). The `ground_temperature` is defined as a derived auxiliary variable by [`SoilThermodynamics`](@ref), with the resulting `Field` being simply a view of the uppermost soil `temperature` layer:
 
 ```julia
-variables(energy::SoilEnergyBalance) = (
+variables(energy::SoilThermodynamics) = (
     prognostic(:internal_energy, XYZ(); closure = energy.closure, units = u"J/m^3", desc = "Internal energy of the soil volume, including both latent and sensible components"),
     auxiliary(:ground_temperature, XY(), ground_temperature, energy, units = u"°C", desc = "Temperature of the uppermost ground or soil grid cell in °C"),
 )
 
-function ground_temperature(energy::SoilEnergyBalance, grid, clock, fields)
+function ground_temperature(energy::SoilThermodynamics, grid, clock, fields)
     fgrid = get_field_grid(grid)
     # Use uppermost soil layer as ground temperature
     return @view fields.temperature[:, :, fgrid.Nz]
@@ -45,7 +45,7 @@ When used standalone, processes declaring `ground_temperature` as an input in th
 
 The primary strength of the indirect coupling approach is its flexibility and ability to maintain a strict separation of concerns. However, many (if not most) physical processes are not so easy to cleanly separate. This is especially the case when defining multiple processes that operate within the same physical domain, e.g. the transport of energy, water, and carbon within the soil or vegetation canopy. Coupling such processes together may require entirely new implementations of functions with new sets of equations. In Terrarium, this is referred to as **direct coupling**.
 
-More concretely, direct coupling is preferred when processes need to access each others parameters or share kernel function dispatches in their call graphs. An example of the latter is the coupling between [`SoilEnergyBalance`](@ref) and [`SoilHydrology`](@ref); both processes depend on common methods like [`soil_volume`](@ref) to compute the volumetric fractions of each constituent material in the soil volume. These methods require access to the parameters and state variables for both processes, as well as the [`AbstractStratigraphy`](@ref), and thus require direct coupling.
+More concretely, direct coupling is preferred when processes need to access each others parameters or share kernel function dispatches in their call graphs. An example of the latter is the coupling between [`SoilThermodynamics`](@ref) and [`SoilHydrology`](@ref); both processes depend on common methods like [`soil_volume`](@ref) to compute the volumetric fractions of each constituent material in the soil volume. These methods require access to the parameters and state variables for both processes, as well as the [`AbstractStratigraphy`](@ref), and thus require direct coupling.
 
 !!! note "Why not just make everything a state variable?"
     You might wonder why we can't just make the aforementioned soil volumetric fractions themselves state variables, thereby enabling the use of indirect coupling. This is indeed possible; however, it comes with a cost. Every state variable included in the coupled system adds memory and kernel launching overhead. This will become especially problematic for high resolution simulations where each `Field` might consist of millions of grid cells. Since Terrarium is primarily oriented towards spatially distributed land simulations at both regional and global scales, we mitigate this problem by adopting the Oceananigans "lazy computation" philosophy where recomputation (in kernel functions) is preferred over excessive caching of intermediate outputs. This approach tends to favor direct over indirect coupling.

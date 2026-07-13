@@ -1,8 +1,8 @@
-# Surface energy balance processes
+# Surface energy processes
 
 """
 Base type for surface energy balance schemes which couple together the relevant processes
-for radiative and turbulent surface energy fluxes.
+for radiative and turbulent surface fluxes.
 """
 abstract type AbstractSurfaceEnergyBalance{NF} <: AbstractCoupledProcesses{NF} end
 
@@ -63,8 +63,6 @@ Return the current ground heat flux at the given indices.
 @propagate_inbounds ground_heat_flux(i, j, grid, fields, ::AbstractSkinTemperature) = fields.ground_heat_flux[i, j]
 
 """
-    $TYPEDEF
-
 Base type for radiative flux parameterizations.
 """
 abstract type AbstractRadiativeFluxes{NF} <: AbstractProcess{NF} end
@@ -109,7 +107,7 @@ Return the current latent heat flux at the given indices.
 """
 @propagate_inbounds latent_heat_flux(i, j, grid, fields, ::AbstractTurbulentFluxes) = fields.latent_heat_flux[i, j]
 
-# Surface energy balance parameterizations
+# Surface albedo parameterizations
 
 """
 Base type for surface albedo and emissivity parameterizations.
@@ -129,3 +127,16 @@ Return the current albedo at the given indices.
 Return the current emissivity at the given indices.
 """
 @propagate_inbounds emissivity(i, j, grid, fields, ::AbstractAlbedo) = fields.emissivity[i, j]
+
+# Surface hydrology process types
+
+"""
+Base type for coupled surface hydrology processes.
+"""
+abstract type AbstractSurfaceHydrology{NF} <: AbstractCoupledProcesses{NF} end
+
+@inline get_evapotranspiration(hydrology::AbstractSurfaceHydrology) = hydrology.evapotranspiration
+
+include("canopy_interception/abstract_types.jl")
+include("evapotranspiration/abstract_types.jl")
+include("runoff/abstract_types.jl")
