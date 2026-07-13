@@ -5,7 +5,8 @@
 # volumetric heat capacity `C` (J/m³/K).
 
 """
-($TYPEDSIGNATURES)
+    $TYPEDSIGNATURES
+
 Calculate the unfrozen water content from the given internal energy, latent heat content, and saturation.
 """
 @inline function liquid_water_fraction(::FreeWater, U::NF, Lθ::NF, sat::NF) where {NF}
@@ -20,7 +21,8 @@ Calculate the unfrozen water content from the given internal energy, latent heat
 end
 
 """
-($TYPEDSIGNATURES)
+    $TYPEDSIGNATURES
+    
 Calculate the inverse enthalpy function given the internal energy, latent heat content, and heat
 capacity under the free water freezing characteristic.
 """
