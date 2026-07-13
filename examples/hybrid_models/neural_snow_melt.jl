@@ -282,7 +282,7 @@ snow_diff = maximum(abs, snow_ddm .- snow_nn)
 println("Ran both snow models for 30 days on $(length(_lats)) columns.")
 println("Max |S_ddm − S_nn| after offline training: ", snow_diff, " m  (mean snow ", mean(snow_ddm), " m)")
 
-# ## Online finetuning: training *through* the full Terrarium model
+# ## Online fine-tuning: training *through* the full Terrarium model
 #
 # The training above was *offline*: we fit the melt law `M(T)` pointwise, independently of the
 # simulation. *Online* training instead differentiates through the model's own time integration.
