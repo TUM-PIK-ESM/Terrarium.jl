@@ -1,7 +1,9 @@
 # Simple single-layer snow scheme
 
-> Status: **planned**. Design complete and reconciled with the current codebase; the prerequisite
-> refactors (PR-A, PR-B) have landed, so the scheme is ready to implement.
+> Status: **in progress**. Phases 1–5 (process, closure, mass/energy tendencies, standalone `SnowModel`,
+> SEB coupling, and `LandModel` integration) are implemented and tested; the process parameters have been
+> decomposed into composable sub-parameterizations (see Revision 5). Water/sublimation coupling and an
+> Enzyme differentiability test remain deferred (see Revision 4).
 
 Date of initial draft: 2026-07-01
 
@@ -58,6 +60,65 @@ now **complete**; this plan is reconciled to their outcomes (physics unchanged):
   `soil_heat_flux` (alias `SoilHeatFlux`) as the soil-top BC. **The snow blend therefore writes
   `soil_heat_flux`, not `ground_heat_flux`.**
 - Surface processes now live under a single `surface/` tree (was `surface_energy/` + `surface_hydrology/`).
+
+Revision 4 (2026-07-12) — **implementation record** (phases 1–5 complete and tested). Delivered:
+
+- Phases 1–4 as planned: `SingleLayerSnow`/`NoSnow` process, `ConstantSnowDensity` scheme, the
+  depth-integrated enthalpy closure (`SnowEnergyTemperatureClosure`, temperature clipped at 0°C with the
+  excess derived on demand from `U_v > 0`), the mass/energy tendencies (`compute_snow_tendencies!` with
+  Darcy meltwater outflow), the standalone `SnowModel`, and the snow-aware SEB path (`DiagnosticAlbedo`
+  blending albedo/emissivity by `f_snow`, and the snow-weighted `ground_thermal_interface`).
+- Phase 5 `LandModel` integration in two steps. **5a** added `@component snow = NoSnow` and threaded the
+  snow through `initialize!`/`compute_auxiliary!`/`compute_tendencies!`/`closure!`/`invclosure!`; the
+  no-snow model is byte-for-byte unchanged. **5b** added the snow↔surface/soil **energy** coupling in
+  `src/models/coupled/snow_coupling.jl`:
+  - `Q_base` uses the **snow-resistance-only** closure `Q_base = 2·κ_snow·(T_soil − T_snow)/d_s`
+    (author's decision; the snowpack dominates the series resistance, so the soil-side conductivity need
+    not be threaded into the snow coupling). Written to `basal_heat_flux` before the SEB.
+  - After the SEB: `surface_heat_flux ← ground_heat_flux` (the snow's top loss `G`) and the soil-top BC
+    flux `soil_heat_flux = f_snow·Q_base + (1 − f_snow)·G`. `soil_heat_flux` is a declared coupling
+    auxiliary (via `snow_coupling_variables`) so it is accessible in the state and backs the soil BC.
+  - Static **strategy A** BC wiring: `NoSnow` wires the soil-top BC to `ground_heat_flux` directly;
+    `SingleLayerSnow` wires it to the blended `soil_heat_flux` (`snow_soil_bc_flux`).
+  - The SEB field-gather now merges the snow thermal auxiliaries (`seb_conduction_fields`) so the
+    snow-aware `ground_thermal_interface` can be evaluated.
+- Verification: coupled land tests 30/30 (incl. a new snow-coupled testset), standalone snow tests 51/51,
+  skin-temperature tests 30/30. No regressions.
+
+**Deferred to a follow-up** (not part of this energy-coupling milestone): (i) the **water** coupling —
+routing snow meltwater outflow into soil infiltration and partitioning rain-on-snow vs. bare-ground
+throughfall; (ii) **sublimation** driven by the SEB latent-heat flux (currently the `sublimation` input
+defaults to zero in the coupled model); (iii) an **Enzyme** differentiability test for the snow
+tendencies/closure.
+
+Revision 5 (2026-07-13) — **parameterization decomposition.** The `SingleLayerSnow` process was refactored
+from a flat set of scalar parameters into composable sub-parameterization components, mirroring the soil
+hydraulics/thermal-properties pattern and consistent with Terrarium's modularity principle (each component
+is independently swappable):
+
+- `SingleLayerSnow{NF, Cover, Density, Conductivity, Hydraulics, Closure}` now holds five `@component`
+  fields: `cover`, `density`, `thermal_conductivity`, `hydraulic_properties`, and `closure`. The former
+  scalar parameters moved into the corresponding schemes.
+- **Cover** ([snow_cover.jl](../../src/processes/snow/snow_cover.jl)): `AbstractSnowCover{NF}` with
+  `FractionalSnowCover` (`f_snow = W/(W + W_ref)`, parameter `half_coverage`, negative-SWE clamped to zero).
+  `compute_snow_cover_fraction` now dispatches on the cover scheme.
+- **Density** ([snow_density.jl](../../src/processes/snow/snow_density.jl)): `AbstractSnowDensity{NF}` with
+  `ConstantSnowDensity` (parameter `density`).
+- **Thermal conductivity** ([snow_thermal_conductivity.jl](../../src/processes/snow/snow_thermal_conductivity.jl)):
+  `AbstractSnowThermalConductivity{NF}` with `PowerLawSnowThermalConductivity` (default),
+  `LogarithmicSnowThermalConductivity`, and `QuadraticSnowThermalConductivity`. All expose the shared
+  (exported) generic `compute_thermal_conductivity(cond, constants::MaterialConstants, ρ_s)` — the snow
+  conductivity is recovered lazily at the call sites (SEB conduction target, basal flux) rather than stored
+  as an auxiliary field.
+- **Hydraulic properties** ([snow_hydraulic_properties.jl](../../src/processes/snow/snow_hydraulic_properties.jl)):
+  `AbstractSnowHydraulics{NF}` with `ConstantSnowHydraulics` (parameters `saturated_conductivity`,
+  `capillary_retention`). `compute_meltwater_outflow` now dispatches on the hydraulics scheme.
+- **Closure**: `SnowEnergyTemperatureClosure` (unchanged), retrieved via `get_closure(snow) = snow.closure`.
+
+The snow `@kernel`s that wrap the shared `energy_to_temperature!`/`temperature_to_energy!` kernel functions
+were given snow-specific names (`snow_energy_to_temperature_kernel!`, `snow_temperature_to_energy_kernel!`)
+because KernelAbstractions `@kernel` does not support multiple dispatch on one kernel name — the soil energy
+closures define 3D (XYZ) kernels under the base names.
 
 ## Resolved design decisions
 
