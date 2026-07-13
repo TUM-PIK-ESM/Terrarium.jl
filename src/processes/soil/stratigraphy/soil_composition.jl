@@ -8,26 +8,40 @@ and a mixture of organic and mineral solid material.
 Properties:
 $FIELDS
 """
-@kwdef struct SoilComposition{NF, Solid <: AbstractSoilMatrix{NF}}
+struct SoilComposition{NF, Solid <: AbstractSoilMatrix{NF}}
     "Natural porosity or void space of the soil"
-    porosity::NF = 0.5
+    porosity::NF
 
     "Fraction of the soil pores occupied by water or ice"
-    saturation::NF = 1.0
+    saturation::NF
 
     "Liquid (unfrozen) fraction of pore water"
-    liquid::NF = 1.0
+    liquid::NF
 
     "Parameterization of the solid phase (matrix) of the soil"
-    solid::Solid = MineralOrganic(texture = SoilTexture(), organic = 0.0)
+    solid::Solid
 
-    # Scalar constructor
     function SoilComposition(porosity::NF, saturation::NF, liquid::NF, solid::AbstractSoilMatrix{NF}) where {NF <: Number}
-        @assert zero(NF) <= porosity <= one(NF)
-        @assert zero(NF) <= saturation <= one(NF)
-        @assert zero(NF) <= liquid <= one(NF)
         return new{NF, typeof(solid)}(porosity, saturation, liquid, solid)
     end
+end
+
+"""
+    $SIGNATURES
+
+Validating keyword constructor for `SoilVolume`; enforces that `porosity`, `saturation`,
+and `liquid` lie in the unit interval.
+"""
+function SoilComposition(;
+        porosity = 0.5,
+        saturation = 1.0,
+        liquid = 1.0,
+        solid = MineralOrganic(texture = SoilTexture(), organic = 0.0)
+    )
+    @assert zero(porosity) <= porosity <= one(porosity)
+    @assert zero(saturation) <= saturation <= one(saturation)
+    @assert zero(liquid) <= liquid <= one(liquid)
+    return SoilComposition(porosity, saturation, liquid, solid)
 end
 
 @inline porosity(soil::SoilComposition) = soil.porosity
@@ -76,17 +90,27 @@ Soil matrix consisting of a simple, homogeneous mixture of mineral and organic m
 Properties:
 $TYPEDFIELDS
 """
-@kwdef struct MineralOrganic{NF} <: AbstractSoilMatrix{NF}
+struct MineralOrganic{NF} <: AbstractSoilMatrix{NF}
     "Mineral soil texture"
-    texture::SoilTexture{NF} = SoilTexture()
+    texture::SoilTexture{NF}
 
     "Organic soil fraction"
-    organic::NF = zero(eltype(texture))
+    organic::NF
 
     function MineralOrganic(texture::SoilTexture{NF}, organic::NF) where {NF}
-        @assert zero(NF) <= organic <= one(NF) "organic content must be between zero and one"
         return new{NF}(texture, organic)
     end
+end
+
+"""
+    $SIGNATURES
+
+Validating keyword constructor for `MineralOrganic`; enforces that `organic` lies in the
+unit interval.
+"""
+function MineralOrganic(; texture = SoilTexture(), organic = zero(eltype(texture)))
+    @assert zero(organic) <= organic <= one(organic) "organic content must be between zero and one"
+    return MineralOrganic(texture, organic)
 end
 
 """

@@ -103,6 +103,24 @@ function Oceananigans.Simulations.run!(
     return integrator
 end
 
+"""
+    run_timesteps!(integrator, Δt, Nt, checkpointing = false)
+
+Advance `integrator` by `Nt` steps of size `Δt`.
+
+The generic (host) implementation is a plain loop and ignores `checkpointing`. `ReactantState`
+integrators override this method in `TerrariumReactantExt`, compiling the loop into a single
+traced program in which `checkpointing` selects the reverse-mode-AD checkpointing scheme
+(`false`, or a scheme such as `Reactant.Periodic(n)`).
+"""
+function run_timesteps!(integrator::ModelIntegrator, Δt, Nt, checkpointing = false)
+    for _ in 1:Nt
+        timestep!(integrator, Δt)
+    end
+    compute_auxiliary!(integrator.state, integrator.model)
+    return nothing
+end
+
 # Terrarium method interfaces
 
 """
@@ -184,8 +202,18 @@ default_dt(integrator::ModelIntegrator) = default_dt(get_timestepper(integrator.
 """
     $TYPEDSIGNATURES
 
+Return the default `Clock` used by [`initialize`](@ref) for the given `model`. The generic method
+returns a plain host clock starting at time zero; architecture extensions may specialize on the
+model's grid to return an architecture-specific clock (e.g. `TerrariumReactantExt` returns a
+traced `ConcreteRNumber`-backed clock so that time advances inside the compiled step).
+"""
+default_clock(model::AbstractModel{NF}) where {NF} = Clock(time = zero(NF))
+
+"""
+    $TYPEDSIGNATURES
+
 Creates and initializes a `ModelIntegrator` for the given `model` with input variables populated by
-the given `inputs` and optionally `params` . `InputSource`s can be specified via the `inputs` keyword argument. 
+the given `inputs` and optionally `params` . `InputSource`s can be specified via the `inputs` keyword argument.
 This method allocates all necessary `Field`s for the state variables and subsequently calls
 `initialize!(::ModelIntegrator)`.
 
@@ -197,7 +225,7 @@ See the docstring for [`initialize(::AbstractModel)`](@ref) for further details.
 function initialize(
         model::AbstractModel{NF},
         params = nothing;
-        clock::Clock = Clock(time = zero(NF)),
+        clock::Clock = default_clock(model),
         inputs::InputSource = InputSources(NF),
         boundary_conditions = (;),
         initializers = (;),
