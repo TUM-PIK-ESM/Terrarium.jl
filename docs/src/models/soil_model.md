@@ -108,7 +108,7 @@ Terrarium provides a set of named boundary condition aliases for the most common
 ### Energy boundary conditions
 
 ```@docs; canonical = false
-GroundHeatFlux
+SoilHeatFlux
 ```
 
 ```@docs; canonical = false
