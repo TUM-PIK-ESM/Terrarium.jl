@@ -146,7 +146,11 @@ links = InterLinks(
     "KernelAbstractions" => "https://juliagpu.github.io/KernelAbstractions.jl/stable/",
     "SpeedyWeather" => "https://speedyweather.github.io/SpeedyWeatherDocumentation/stable/",
     "FreezeCurves" => "https://cryogrid.github.io/FreezeCurves.jl/stable/",
+    "Thermodynamics" => "https://clima.github.io/Thermodynamics.jl/stable/",
 )
+
+# Always have `using Terrarium` available in doctests
+DocMeta.setdocmeta!(Terrarium, :DocTestSetup, :(using Terrarium); recursive = true)
 
 
 makedocs(
@@ -177,6 +181,7 @@ makedocs(
             "Initialization" => "running/initialization.md",
             "Time stepping" => "running/time_stepping.md",
             "Input sources" => "running/input_sources.md",
+            "Reactant acceleration" => "running/reactant.md",
             running_example_docpages...,
         ],
         "Extending Terrarium" => [
@@ -232,6 +237,7 @@ makedocs(
                 "Physics" => "processes/utils/physics_utils.md",
             ],
         ],
+        "Numerical solvers" => "solvers/solvers.md",
         "Contributing" => "contributing.md",
         "Index of API" => "api_index.md",
         "References" => "references.md",

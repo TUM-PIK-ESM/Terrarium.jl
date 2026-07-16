@@ -7,7 +7,7 @@ vegetation, and soil processes.
 Properties:
 $(TYPEDFIELDS)
 """
-@kwdef struct LandModel{
+@parameterized @kwdef struct LandModel{
         NF,
         GridType <: AbstractLandGrid{NF},
         Vegetation <: Optional{AbstractVegetation{NF}},
@@ -15,35 +15,38 @@ $(TYPEDFIELDS)
         SEB <: AbstractSurfaceEnergyBalance,
         Hydrology <: AbstractSurfaceHydrology,
         Atmosphere <: AbstractAtmosphere,
-        Constants <: PhysicalConstants{NF},
         Initializer <: AbstractInitializer,
+        Timestepper <: AbstractTimeStepper{NF},
     } <: AbstractLandModel{NF, GridType}
     "Spatial discretization"
     grid::GridType
 
     "Vegetation processes"
-    vegetation::Vegetation = VegetationCarbon(eltype(grid))
+    @component vegetation::Vegetation = VegetationCarbon(eltype(grid))
 
     "Soil processes"
-    soil::Soil = default_soil(grid, vegetation)
+    @component soil::Soil = default_soil(grid, vegetation)
 
     "Surface energy balance"
-    surface_energy_balance::SEB = default_surface_energy_balance(grid, vegetation, soil)
+    @component surface_energy_balance::SEB = default_surface_energy_balance(grid, vegetation, soil)
 
     "Surface hydrology scheme"
-    surface_hydrology::Hydrology = default_surface_hydrology(grid, vegetation, soil)
+    @component surface_hydrology::Hydrology = default_surface_hydrology(grid, vegetation, soil)
 
     "Near-surface atmospheric conditions"
-    atmosphere::Atmosphere = PrescribedAtmosphere(eltype(grid))
+    @component atmosphere::Atmosphere = PrescribedAtmosphere(eltype(grid))
 
     "Physical constants"
-    constants::Constants = PhysicalConstants(eltype(grid))
+    @component constants::PhysicalConstants{NF} = PhysicalConstants(eltype(grid))
 
     "State variable initializer"
-    initializer::Initializer = DefaultInitializer(eltype(grid))
+    @component initializer::Initializer = DefaultInitializer(eltype(grid))
+
+    "Time stepper: a single `AbstractTimeStepper` (e.g. `ForwardEuler`, `Heun`) or an `IMEX`"
+    @component timestepper::Timestepper = default_timestepper(eltype(grid))
 end
 
-function initialize(
+function StateVariables(
         model::LandModel{NF};
         clock = Clock(time = zero(NF)),
         boundary_conditions = (;),
@@ -55,24 +58,28 @@ function initialize(
     # Initialize BC fields for coupling
     ground_heat_flux = initialize(vars.auxiliary.ground_heat_flux, grid, clock, boundary_conditions, fields)
     infiltration = initialize(vars.auxiliary.infiltration, grid, clock, boundary_conditions, fields)
-    ground_heat_flux_bc = GroundHeatFlux(ground_heat_flux)
+    # Without snow, the heat flux into the soil top equals the surface energy balance closure flux
+    # (`ground_heat_flux`); wire the soil-top BC directly to it. When a snow component is added,
+    # the soil BC will instead be wired to a distinct `soil_heat_flux`.
+    soil_heat_flux_bc = SoilHeatFlux(ground_heat_flux)
     # Note that the hydrology module computes infiltration as positive so we need to negate it here
     # since fluxes are by convention positive upwards
     infiltration_bc = InfiltrationFlux(-infiltration)
-    bcs = merge_boundary_conditions(boundary_conditions, ground_heat_flux_bc, infiltration_bc)
+    bcs = merge_boundary_conditions(boundary_conditions, soil_heat_flux_bc, infiltration_bc)
     # Merge user-defined fields with BC fields
     fields = merge((; ground_heat_flux, infiltration), fields)
-    return initialize(vars, grid; clock, boundary_conditions = bcs, fields)
+    return StateVariables(vars, grid; clock, timestepper = get_timestepper(model), model, boundary_conditions = bcs, fields)
 end
 
 function initialize!(state, model::LandModel)
     initialize!(state, model, model.initializer)
     grid = get_grid(model)
-    initialize!(state, grid, model.surface_energy_balance)
     initialize!(state, grid, model.surface_hydrology)
     # TODO: change when refactoring model/process types
     initialize!(state, grid, model.vegetation, model.constants, model.atmosphere)
     initialize!(state, grid, model.soil, model.constants)
+    # Initialize the SEB after the soil so that ground_temperature is available
+    initialize!(state, grid, model.surface_energy_balance)
     return nothing
 end
 
@@ -83,7 +90,6 @@ function compute_auxiliary!(state, model::LandModel)
     compute_auxiliary!(state, grid, model.vegetation, model.constants, model.atmosphere, model.soil)
     compute_auxiliary!(state, grid, model.surface_hydrology, model.constants, model.atmosphere, model.soil, model.vegetation)
     compute_auxiliary!(state, grid, model.surface_energy_balance, model.constants, model.atmosphere, model.surface_hydrology)
-    compute_surface_energy_fluxes!(state, grid, model.surface_energy_balance, model.constants, model.atmosphere, model.surface_hydrology)
     return nothing
 end
 

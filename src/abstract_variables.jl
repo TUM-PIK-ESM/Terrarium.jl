@@ -139,7 +139,7 @@ struct AuxiliaryVariable{
         VD <: VarDims,
         UT <: Units,
         Var <: Variable{name, VD, UT},
-        DT <: AbstractInterval,
+        BT <: DomainSets.AbstractInterval,
         FC <: Union{Nothing, Function},
     } <: AbstractProcessVariable{name, VD, UT}
     "State variable"
@@ -148,8 +148,8 @@ struct AuxiliaryVariable{
     "Field constructor"
     ctor::FC
 
-    "Variable domain"
-    domain::DT
+    "Bounds for numerical bounds of the variable"
+    bounds::BT
 
     "Variable description"
     desc::String
@@ -166,7 +166,7 @@ struct InputVariable{
         VD <: VarDims,
         UT <: Units,
         Var <: Variable{name, VD, UT},
-        DT <: AbstractInterval,
+        BT <: DomainSets.AbstractInterval,
         Def <: Union{Nothing, Number, Function},
     } <: AbstractProcessVariable{name, VD, UT}
     "State variable"
@@ -175,12 +175,14 @@ struct InputVariable{
     "Default value or function initializer"
     default::Def
 
-    "Variable domain"
-    domain::DT
+    "Variable bounds"
+    bounds::BT
 
     "Variable description"
     desc::String
 end
+
+Adapt.adapt_structure(to, var::InputVariable) = var.var
 
 """
     $TYPEDEF
@@ -199,7 +201,7 @@ struct PrognosticVariable{
         Var <: Variable{name, VD, UT},
         CL <: Union{Nothing, AbstractClosureRelation},
         TV <: Union{Nothing, AuxiliaryVariable},
-        DT <: AbstractInterval,
+        BT <: DomainSets.AbstractInterval,
     } <: AbstractProcessVariable{name, VD, UT}
     "State variable"
     var::Var
@@ -210,8 +212,8 @@ struct PrognosticVariable{
     "Variable corresponding to the tendency for prognostic variables"
     tendency::TV
 
-    "Variable domain"
-    domain::DT
+    "Variable bounds"
+    bounds::BT
 
     "Variable description"
     desc::String
@@ -243,10 +245,43 @@ Represents a new variable namespace, typically from a subcomponent of the model.
 struct Namespace{name, Vars}
     vars::Vars
 
-    Namespace(name::Symbol, vars::Variables) = new{name, typeof(vars)}(vars)
+    Namespace(name::Symbol, vars) = new{name, typeof(vars)}(vars)
 end
 
-@inline varname(::Namespace{name}) where {name} = name
+@inline varname(ns::Namespace{name}) where {name} = varname(typeof(ns))
+@inline varname(::Type{<:Namespace{name}}) where {name} = name
+
+"""
+    VarPath
+
+Type alias for namespaced variable paths of the form `(namespace_1, ..., namespace_N, varname)`.
+Used to specify the location of variables in nested namespaces.
+"""
+const VarPath = Tuple{Vararg{Symbol}}
+
+"""
+    varpath(name::Symbol)
+    varpath(path::Pair)
+    varpath(path::Tuple{Vararg{Symbol}})
+
+Normalize the given variable name into a path of the form `(namespace_1, ..., namespace_N, varname)`.
+Plain `Symbol` names correspond to variables in the root namespace, i.e. the path `(varname,)`. Namespaced
+variables can be specified either as `Pair`s, e.g. `:ns1 => :ns2 => :varname`, or directly as a tuple of
+`Symbol`s, e.g. `(:ns1, :ns2, :varname)`.
+"""
+varpath(name::Symbol) = (name,)
+varpath(path::VarPath) = path
+varpath(path::Pair) = (Symbol(first(path)), varpath(last(path))...)
+
+"""
+    $SIGNATURES
+
+Wrap the given variable `var` in nested `Namespace`s according to the `path`, where `path` is the
+namespace scope (i.e. the sequence of enclosing namespace names, *excluding* the variable's own name).
+An empty `path` returns `var` unwrapped.
+"""
+with_scope(path::VarPath, var::AbstractVariable) =
+    isempty(path) ? var : namespace(first(path), (with_scope(Base.tail(path), var),))
 
 Variables(obj) = Variables(variables(obj))
 Variables(vars::Union{AbstractProcessVariable, Namespace}...) = Variables(vars)
@@ -260,7 +295,7 @@ function Variables(@nospecialize(vars::Tuple{Vararg{Union{AbstractProcessVariabl
     prognostic_vars = deduplicate(varinfo, filter(var -> isa(var, PrognosticVariable), vars))
     auxiliary_vars = deduplicate(varinfo, filter(var -> isa(var, AuxiliaryVariable), vars))
     input_vars = deduplicate(varinfo, filter(var -> isa(var, InputVariable), vars))
-    namespaces = deduplicate(varinfo, filter(var -> isa(var, Namespace), vars))
+    namespaces = merge_namespaces(filter(var -> isa(var, Namespace), vars))
     # get tendencies from prognostic variables
     tendency_vars = map(var -> var.tendency, prognostic_vars)
     # create closure variables and prepend to tuple of auxiliary variables;
@@ -277,7 +312,7 @@ function Variables(@nospecialize(vars::Tuple{Vararg{Union{AbstractProcessVariabl
     tendency_nt = (; map(var -> varname(var) => var, tendency_vars)...)
     auxiliary_nt = (; map(var -> varname(var) => var, auxiliary_vars)...)
     input_nt = (; map(var -> varname(var) => var, input_vars)...)
-    namespace_nt = (; map(var -> varname(var) => var, namespaces)...)
+    namespace_nt = (; map(ns -> varname(ns) => Namespace(varname(ns), Variables(ns.vars)), namespaces)...)
     return Variables(
         prognostic_nt,
         tendency_nt,
@@ -288,11 +323,11 @@ function Variables(@nospecialize(vars::Tuple{Vararg{Union{AbstractProcessVariabl
 end
 
 """
-    deduplicate_vars(vars::Tuple{Vararg{AbstractVariable}})
+    deduplicate_vars(vars::Tuple{Vararg{Union{AbstractVariable, Namespace}}})
 
-Type-stable equivalent of [`deduplicate`](@ref) for tuples of `AbstractVariable`s.
+Type-stable equivalent of [`deduplicate`](@ref) for tuples of `AbstractVariable`s and `Namespace`s.
 """
-@generated function deduplicate_vars(vars::Tuple{Vararg{AbstractVariable}})
+@generated function deduplicate_vars(vars::Tuple{Vararg{Union{AbstractVariable, Namespace}}})
     names = map(varname, vars.parameters)
     unique_idx = unique(i -> names[i], eachindex(vars.parameters))
     accessors = map(i -> :(vars[$i]), unique_idx)
@@ -311,6 +346,21 @@ function check_duplicates(vars::Union{AbstractVariable, Namespace}...)
         end
     end
     return
+end
+
+"""
+    $SIGNATURES
+
+Merge all `Namespace`s with matching names into a single `Namespace` containing the union
+of their variables.
+"""
+function merge_namespaces(namespaces::Tuple{Vararg{Namespace}})
+    names = unique(map(varname, namespaces))
+    merged = map(names) do name
+        group = filter(ns -> varname(ns) == name, namespaces)
+        length(group) == 1 ? group[1] : Namespace(name, tuplejoin(map(ns -> ns.vars, group)...))
+    end
+    return Tuple(merged)
 end
 
 """
@@ -377,25 +427,25 @@ Convenience constructor for `Variable`.
 
 Convenience constructors for `PrognosticVariable`.
 """
-@inline prognostic(name::Symbol, dims::VarDims; units = NoUnits, closure = nothing, domain = RealLine(), desc = "") = prognostic(var(name, dims, units); closure, domain, desc)
-@inline prognostic(var::Variable; closure = nothing, domain = RealLine(), desc = "") = PrognosticVariable(var, closure, tendency(var), domain, desc)
+@inline prognostic(name::Symbol, dims::VarDims; units = NoUnits, closure = nothing, bounds = Unbounded, desc = "") = prognostic(var(name, dims, units); closure, bounds, desc)
+@inline prognostic(var::Variable; closure = nothing, bounds = Unbounded, desc = "") = PrognosticVariable(var, closure, tendency(var), bounds, desc)
 
 """
     $SIGNATURES
 
 Convenience constructor method for `AuxiliaryVariable`.
 """
-@inline auxiliary(name::Symbol, dims::VarDims, ctor = nothing, params = nothing; units = NoUnits, domain = RealLine(), desc = "") = auxiliary(var(name, dims, units), ctor, params; domain, desc)
-@inline auxiliary(var::Variable, ::Nothing, ::Nothing; domain = RealLine(), desc = "") = AuxiliaryVariable(var, nothing, domain, desc)
-@inline auxiliary(var::Variable, ctor::Function, params; domain = RealLine(), desc = "") = AuxiliaryVariable(var, (args...) -> ctor(params, args...), domain, desc)
+@inline auxiliary(name::Symbol, dims::VarDims, ctor = nothing, params = nothing; units = NoUnits, bounds = Unbounded, desc = "") = auxiliary(var(name, dims, units), ctor, params; bounds, desc)
+@inline auxiliary(var::Variable, ::Nothing, ::Nothing; bounds = Unbounded, desc = "") = AuxiliaryVariable(var, nothing, bounds, desc)
+@inline auxiliary(var::Variable, ctor::Function, params; bounds = Unbounded, desc = "") = AuxiliaryVariable(var, (args...) -> ctor(params, args...), bounds, desc)
 
 """
     $SIGNATURES
 
 Convenience constructor method for `InputVariable`.
 """
-@inline input(name::Symbol, dims::VarDims; default = nothing, units = NoUnits, domain = RealLine(), desc = "") = input(var(name, dims, units); default, domain, desc)
-@inline input(var::Variable; default = nothing, domain = RealLine(), desc = "") = InputVariable(var, default, domain, desc)
+@inline input(name::Symbol, dims::VarDims; default = nothing, units = NoUnits, bounds = Unbounded, desc = "") = input(var(name, dims, units); default, bounds, desc)
+@inline input(var::Variable; default = nothing, bounds = Unbounded, desc = "") = InputVariable(var, default, bounds, desc)
 
 """
     $SIGNATURES
@@ -410,8 +460,14 @@ This constructor is primarily used internally by other constructors and does not
 
 Convenience constructor method for variable `Namespace`s.
 """
-@inline namespace(name::Symbol, vars::Variables) = Namespace(name, vars)
-@inline namespace(name::Symbol, vars::Tuple) = Namespace(name, Variables(vars...))
+@inline namespace(name::Symbol, vars::Union{Tuple, Variables}) = Namespace(name, vars)
+
+"""
+    $SIGNATURES
+
+Convert the given `NamedTuple` of variables into a tuple of `Namespace`s.
+"""
+@inline namespaces(nt::NamedTuple{names}) where {names} = map((nm, vars) -> namespace(nm, vars), names, values(nt))
 
 """
 Alias for `Variables(vars...)`
@@ -422,18 +478,21 @@ Alias for `Variables(vars...)`
 Helper method that selects only prognostic variables declared on `obj`.
 """
 @inline prognostic_variables(obj) = prognostic_variables(variables(obj))
+@inline prognostic_variables(vars::Variables) = vars.prognostic
 @inline prognostic_variables(vars::Tuple) = deduplicate_vars(Tuple(filter(var -> isa(var, PrognosticVariable), vars)))
 
 """
 Helper method that selects only auxiliary variables declared on `obj`.
 """
 @inline auxiliary_variables(obj) = auxiliary_variables(variables(obj))
+@inline auxiliary_variables(vars::Variables) = vars.auxiliary
 @inline auxiliary_variables(vars::Tuple) = deduplicate_vars(Tuple(filter(var -> isa(var, AuxiliaryVariable), vars)))
 
 """
 Helper method that selects only input variables declared on `obj`.
 """
 @inline input_variables(obj) = input_variables(variables(obj))
+@inline input_variables(vars::Variables) = vars.inputs
 @inline input_variables(vars::Tuple) = deduplicate_vars(Tuple(filter(var -> isa(var, InputVariable), vars)))
 
 """

@@ -1,34 +1,42 @@
 # Utilities
 
-export PhysicalConstants
-include("physical_constants.jl")
-include("physics_utils.jl")
+export PhysicalConstants, ThermodynamicConstants, MaterialConstants, UniversalConstants
+include("constants.jl")
+include("unit_conversions.jl")
 
 # Abstract types and methods
 
+include("thermodynamics/abstract_types.jl")
 include("atmosphere/abstract_types.jl")
-include("surface_energy/abstract_types.jl")
-include("surface_hydrology/abstract_types.jl")
+include("surface/abstract_types.jl")
 include("soil/abstract_types.jl")
 include("vegetation/abstract_types.jl")
 
+# Thermodynamics
+
+include("thermodynamics/thermodynamics.jl")
+include("thermodynamics/enthalpy.jl")
+include("thermodynamics/heat_conduction.jl")
+
 # Atmosphere
 
-export ConstantAerodynamicResistance
+export ConstantAerodynamics
 include("atmosphere/aerodynamics.jl")
 export PrescribedAtmosphere, RainSnow, LongShortWaveRadiation, TracerGas, TracerGases, AmbientCO2
 include("atmosphere/prescribed_atmosphere.jl")
 
-# Soil
+# Ground (soil and other subsurface media)
 
-export SoilTexture
+export SoilTexture, normalize_texture!
 include("soil/stratigraphy/soil_texture.jl")
 export ConstantSoilPorosity, SoilPorositySURFEX
 include("soil/stratigraphy/soil_porosity.jl")
-export SoilVolume, MineralOrganic, volumetric_fractions
-include("soil/stratigraphy/soil_volume.jl")
-export HomogeneousStratigraphy
-include("soil/stratigraphy/homogeneous_strat.jl")
+export SoilComposition, MineralOrganic, volumetric_fractions
+include("soil/stratigraphy/soil_composition.jl")
+export ConstantSoilHorizon, PrescribedSoilHorizon
+include("soil/stratigraphy/soil_horizon.jl")
+export SoilStratigraphy, HomogeneousSoilStratigraphy, SoilGridsStratigraphy
+include("soil/stratigraphy/soil_stratigraphy.jl")
 
 export ConstantSoilCarbonDensity
 include("soil/biogeochem/constant_soil_carbon.jl")
@@ -48,7 +56,7 @@ export SoilThermalConductivities, SoilHeatCapacities, SoilThermalProperties, Inv
 export compute_thermal_conductivity, heat_capacity
 include("soil/energy/soil_thermal_properties.jl")
 
-export SoilEnergyBalance, SoilEnergyTemperatureClosure
+export SoilThermodynamics, SoilEnergyTemperatureClosure
 include("soil/energy/soil_energy.jl")
 include("soil/energy/soil_energy_closures.jl")
 
@@ -58,70 +66,57 @@ include("soil/soil_coupled.jl")
 # Vegetation
 
 export PALADYNCarbonDynamics
-include("vegetation/carbon_dynamics.jl")
+include("vegetation/dynamics/carbon_dynamics.jl")
 
 export PALADYNVegetationDynamics
-include("vegetation/vegetation_dynamics.jl")
+include("vegetation/dynamics/vegetation_dynamics.jl")
 
 export PALADYNPhenology
-include("vegetation/phenology.jl")
+include("vegetation/phenology/phenology.jl")
 
 export StaticExponentialRootDistribution
-include("vegetation/root_distribution.jl")
+include("vegetation/hydraulics/root_distribution.jl")
 
 export FieldCapacityLimitedPAW
-include("vegetation/plant_available_water.jl")
+include("vegetation/hydraulics/plant_available_water.jl")
 
 export LUEPhotosynthesis
-include("vegetation/photosynthesis.jl")
+include("vegetation/photosynthesis/lue_photosynthesis.jl")
 
 export MedlynStomatalConductance
-include("vegetation/stomatal_conductance.jl")
+include("vegetation/stomatal_conductance/medlyn_stomatal_conductance.jl")
 
 export PALADYNAutotrophicRespiration
-include("vegetation/autotrophic_respiration.jl")
+include("vegetation/respiration/autotrophic_respiration.jl")
 
 export VegetationCarbon
 include("vegetation/vegetation_carbon.jl")
 
-# Surface Energy Balance
+# Surface
 
 export PrescribedAlbedo, ConstantAlbedo
-include("surface_energy/albedo.jl")
-
+include("surface/albedo.jl")
 export PrescribedRadiativeFluxes, DiagnosedRadiativeFluxes
-include("surface_energy/radiative_fluxes.jl")
-
+include("surface/radiative_fluxes.jl")
 export PrescribedSkinTemperature, ImplicitSkinTemperature
-include("surface_energy/skin_temperature.jl")
-
+include("surface/skin_temperature.jl")
 export PrescribedTurbulentFluxes, DiagnosedTurbulentFluxes
-include("surface_energy/turbulent_fluxes.jl")
-
+include("surface/turbulent_fluxes.jl")
 export SurfaceEnergyBalance
-include("surface_energy/surface_energy_balance.jl")
-
-# Surface Hydrology
-
+include("surface/surface_energy_balance.jl")
 export NoCanopyInterception, PALADYNCanopyInterception
-include("surface_hydrology/canopy_interception/canopy_interception.jl")
-
-include("surface_hydrology/evapotranspiration/evapotranspiration_base.jl")
-
+include("surface/canopy_interception/canopy_interception.jl")
+include("surface/evapotranspiration/evapotranspiration_base.jl")
 export SoilMoistureResistanceFactor, ConstantEvaporationResistanceFactor
-include("surface_hydrology/evapotranspiration/ground_resistance_factor.jl")
-
+include("surface/evapotranspiration/ground_resistance_factor.jl")
 export BareGroundEvaporation
-include("surface_hydrology/evapotranspiration/bare_ground_evaporation.jl")
-
+include("surface/evapotranspiration/bare_ground_evaporation.jl")
 export PALADYNCanopyEvapotranspiration
-include("surface_hydrology/evapotranspiration/canopy_evapotranspiration.jl")
-
+include("surface/evapotranspiration/canopy_evapotranspiration.jl")
 export DirectSurfaceRunoff
-include("surface_hydrology/runoff/direct_surface_runoff.jl")
-
+include("surface/runoff/direct_surface_runoff.jl")
 export SurfaceHydrology
-include("surface_hydrology/surface_hydrology.jl")
+include("surface/surface_hydrology.jl")
 
 # Default debug hooks
 @inline debughook!(::typeof(compute_auxiliary_kernel!), out, args...) = checkfinite!(out)

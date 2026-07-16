@@ -17,7 +17,7 @@ initializers = (
     saturation_water_ice = (x, z) -> min(1, 0.5 - 0.1 * z),
     C_veg = 0.1,
 )
-integrator = @time initialize(land, ForwardEuler(); initializers);
+integrator = @time initialize(land; initializers);
 
 using BenchmarkTools
 

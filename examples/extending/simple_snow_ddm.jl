@@ -60,13 +60,15 @@ Terrarium.variables(model::DegreeDaySnow{NF}) where {NF} = (
     Terrarium.prognostic(:snow_storage, XY(), units = u"m", desc = "Snow water equivalent in m"),
 )
 
-@kwdef struct SnowModel{NF, Grid <: Terrarium.AbstractLandGrid{NF}, Pro, Init} <: Terrarium.AbstractModel{NF, Grid}
+@kwdef struct SnowModel{NF, Grid <: Terrarium.AbstractLandGrid{NF}, Pro, Init, TS <: Terrarium.AbstractTimeStepper} <: Terrarium.AbstractModel{NF, Grid}
     "Spatial grid on which state variables are discretized"
     grid::Grid
     "Snow melting process"
     snow_melt::Pro = DegreeDaySnow()
     "Model initializer"
     initializer::Init = DefaultInitializer(eltype(grid))
+    "Time stepper (e.g. `ForwardEuler`, `Heun`, or `IMEX`)"
+    timestepper::TS = ForwardEuler(eltype(grid))
 end
 #
 Terrarium.variables(model::SnowModel) = (
@@ -138,8 +140,8 @@ global_grid = FullGaussianGrid(22) # we define the global grid we model on as a 
 # Now, we get all the input data. We can use the input data provided by `RingGrids` / `SpeedyWeather` in this case using `get_asset`:
 
 seconds_per_month = 30 * 24 * 60 * 60
-water_density = 1000 # kg/m^3
-snow_climatology = RingGrids.get_asset("data/boundary_conditions/snow.nc", from_assets = true, name = "snow", ArrayType = FullGaussianField, FileFormat = NCDataset, output_grid = global_grid) ./ (seconds_per_month * water_density); # ~ conversion from kg/(month * m^2) to m^3/(s * m^2)
+density_water = 1000 # kg/m^3
+snow_climatology = RingGrids.get_asset("data/boundary_conditions/snow.nc", from_assets = true, name = "snow", ArrayType = FullGaussianField, FileFormat = NCDataset, output_grid = global_grid) ./ (seconds_per_month * density_water); # ~ conversion from kg/(month * m^2) to m^3/(s * m^2)
 lst_climatology = RingGrids.get_asset("data/boundary_conditions/land_surface_temperature.nc", from_assets = true, name = "lst", ArrayType = FullGaussianField, FileFormat = NCDataset, output_grid = global_grid) .- 273.15; # data is in K, we want C
 land_sea_mask = isfinite.(snow_climatology[:, 1])
 @assert all(land_sea_mask .== isfinite.(lst_climatology[:, 1]))
@@ -165,7 +167,7 @@ heatmap(snow_climatology[:, 1], title = "Snowfall (m/s)")
 # Now, we just need to define initialize everything correctly. As we are working with globally gridded data, we will define [`ColumnRingGrid`](@ref) based on the `global_grid` we already initialized. Then, we will load our inputs. For this, we will choose the January (so the first element) of our climatology files. When using them in [`InputSource`](@ref) be sure to choose the same name and units as used in the definitions of the dynamics before.
 
 snow_grid = ColumnRingGrid(UniformSpacing(N = 1), global_grid, land_sea_mask);
-snow_input = InputSource(snow_grid, snow_climatology[:, 1], name = :snow_fall, units = u"m/s");
+sf_input = InputSource(snow_grid, snow_climatology[:, 1], name = :snow_fall, units = u"m/s");
 lst_input = InputSource(snow_grid, lst_climatology[:, 1], name = :air_temperature, units = u"°C")
 
 # As an initial condition, we just cover the whole Earth in deep snow (everywhere the same)!
@@ -174,8 +176,9 @@ snow_initializers = (snow_storage = 0.5,)
 
 # Now, we initialize our model and the integrator. As in the first example, we use a `Heun` time stepper
 
-snow_model = SnowModel(snow_grid);
-snow_integrator = initialize(snow_model, Heun(Δt = Float32(1.0)), snow_input, lst_input; initializers = snow_initializers)
+snow_model = SnowModel(snow_grid; timestepper = Heun(Δt = Float32(1.0)));
+snow_inputs = InputSources(sf_input, lst_input)
+snow_integrator = initialize(snow_model; inputs = snow_inputs, initializers = snow_initializers)
 
 # ... and we can finally run the model. As before, by wrapping it in an `Oceananigans.Simulation` to output our results
 snow_sim = Simulation(snow_integrator; stop_time = 80days, Δt = 3600.0)

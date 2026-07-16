@@ -11,6 +11,9 @@ import SpeedyWeather
 # run on GPU if available
 arch = CPU() #CUDA.functional() ? GPU() : CPU()
 
+ring_grid = RingGrids.FullGaussianGrid(72)
+lon, lat = RingGrids.get_londlatds(ring_grid)
+
 # Load land-sea mask at ~1° resolution
 land_sea_frac = convert.(Float32, dropdims(Raster("inputs/era5-land_land_sea_mask_N72.nc"), dims = Ti))
 land_sea_frac_field = RingGrids.FullGaussianField(Matrix(land_sea_frac), input_as = Matrix)
@@ -30,7 +33,7 @@ grid = ColumnRingGrid(arch, ExponentialSpacing(N = Nz), land_mask)
 Tair_forcing = InputSource(grid, rebuild(Tair_raster, name = :Tair))
 Tsurf_0 = Tair_raster[Ti(1)][findall(land_mask)]
 
-model = SoilModel(grid)
+model = SoilModel(grid, timestepper = ForwardEuler(eltype(grid)))
 boundary_conditions = PrescribedSurfaceTemperature(:Tair)
 # Initial conditions
 initializers = (
@@ -39,7 +42,8 @@ initializers = (
     # dry soil
     saturation_water_ice = 1.0,
 )
-integrator = initialize(model, ForwardEuler(eltype(grid)), Tair_forcing; initializers, boundary_conditions)
+inputs = InputSources(Tair_forcing)
+integrator = initialize(model; inputs, initializers, boundary_conditions)
 @time timestep!(integrator)
 @time run!(integrator, period = Hour(1), Δt = 120.0)
 

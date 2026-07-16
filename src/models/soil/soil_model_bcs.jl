@@ -1,9 +1,9 @@
 # Energy BCs
 
 """
-Alias for `FluxBoundaryCondition` on `internal_energy` with name `ground_heat_flux` representing the net ground heat flux at the soil surface.
+Alias for `FluxBoundaryCondition` on `internal_energy` with name `soil_heat_flux` representing the net heat flux into the top of the soil column. Without snow this equals the surface energy balance `ground_heat_flux`; with snow it is the (blended) conductive flux across the snow base.
 """
-GroundHeatFlux(value = var(:ground_heat_flux, XY(), u"W/m^2"); kwargs...) = (internal_energy = (top = FluxBoundaryCondition(value; kwargs...),),)
+SoilHeatFlux(value = var(:soil_heat_flux, XY(), u"W/m^2"); kwargs...) = (internal_energy = (top = FluxBoundaryCondition(value; kwargs...),),)
 
 """
 Alias for `FluxBoundaryCondition` on `internal_energy` with name `geothermal_heat_flux` representing the geothermal heat flux at the bottom

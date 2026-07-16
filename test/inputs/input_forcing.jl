@@ -9,6 +9,7 @@ DEFAULT_NF = Float32
 @kwdef struct TestModel{NF, Grid <: AbstractLandGrid{NF}} <: Terrarium.AbstractModel{NF, Grid}
     grid::Grid
     initializer = DefaultInitializer(eltype(grid))
+    timestepper = ForwardEuler(eltype(grid))
 end
 
 Terrarium.variables(model::TestModel) = (
@@ -29,7 +30,7 @@ end
     F = Field(grid, XY())
     F_in = InputSource(grid, F; name = :F)
     @test isa(F_in, FieldInputSource)
-    integrator = initialize(model, ForwardEuler(eltype(grid)), F_in)
+    integrator = initialize(model, inputs = F_in)
     # check that state variable is defined
     @test hasproperty(integrator.state.inputs, :F)
 end
@@ -42,7 +43,7 @@ end
     F.data .= ones(size(F))
     F_in = InputSource(F; name = :F)
     @test isa(F_in, FieldTimeSeriesInputSource)
-    integrator = initialize(model, ForwardEuler(eltype(grid)), F_in)
+    integrator = initialize(model, inputs = F_in)
     # check initial values
     @test all(integrator.state.x .≈ 0)
     @test all(integrator.state.F .≈ 1)

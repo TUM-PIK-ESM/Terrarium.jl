@@ -18,7 +18,7 @@ using Oceananigans.BoundaryConditions: BoundaryCondition, Flux
         temperature = (x, z) -> 5.0 - 0.02 * z,
         saturation_water_ice = (x, z) -> min(1, 0.8 - 0.05 * z),
     )
-    integrator = initialize(land, ForwardEuler(); initializers)
+    integrator = initialize(land; initializers)
     # Check that infiltration is correctly coupled to soil hydrology
     set!(integrator.state.infiltration, 1.0e-8)
     sat_top_bc = integrator.state.saturation_water_ice.boundary_conditions.top
@@ -51,7 +51,7 @@ end
         saturation_water_ice = (x, z) -> min(1, 0.8 - 0.05 * z),
         carbon_vegetation = 0.1,
     )
-    integrator = initialize(land, ForwardEuler(); initializers)
+    integrator = initialize(land; initializers)
     # Check that infiltration is correctly coupled to soil hydrology
     set!(integrator.state.infiltration, 1.0e-8)
     sat_top_bc = integrator.state.saturation_water_ice.boundary_conditions.top

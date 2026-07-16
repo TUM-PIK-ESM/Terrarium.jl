@@ -1,0 +1,19 @@
+[deps]
+CUDA = "052768ef-5323-5732-b1bb-66c8b64840ba"
+Enzyme = "7da242da-08ed-463a-9acd-ee780be4f1d9"
+KernelAbstractions = "63c18a36-062a-441e-b654-da1e3ab1ce7c"
+KernelLux = "e26bb6b9-3827-4043-93f0-e025cf914469"
+Lux = "b2108857-7c20-44ae-9111-449ecde12c47"
+Oceananigans = "9e8cae18-63c1-5223-a75c-80ca9d6e9a09"
+Optimisers = "3bd65402-5787-11e9-1adc-39752487f4e2"
+Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
+Reactant = "3c362404-f566-11ee-1572-e11a4b42c853"
+RingGrids = "d1845624-ad4f-453b-8ff4-a8db365bf3a7"
+StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
+Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
+Terrarium = "80418d68-07fa-499d-ae2b-c12e531f5cd8"
+cuDNN = "02a925ec-e4fe-4b08-9a7e-0d78e3d38ccd"
+
+[sources]
+KernelLux = {url = "https://github.com/maximilian-gelbrecht/KernelLux.jl"}
+Terrarium = {path = "../.."}

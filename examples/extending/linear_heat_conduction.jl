@@ -172,18 +172,20 @@ end
 # ## Defining a model
 #
 # To run a simulation, the process must be embedded in an `AbstractModel`. We define a minimal
-# wrapper following the same convention as other Terrarium models: positional `grid`, and any
-# process and initializer keyword arguments with sensible defaults.
+# wrapper following the same convention as other Terrarium models: positional `grid`, timestepper,
+# and any process and initializer keyword arguments with sensible defaults.
 
 @kwdef struct HeatModel{
         NF,
         Grid <: Terrarium.AbstractLandGrid{NF},
         Cond <: AbstractHeatConduction{NF},
         Init <: Terrarium.AbstractInitializer{NF},
+        TS <: Terrarium.AbstractTimeStepper,
     } <: Terrarium.AbstractModel{NF, Grid}
     grid::Grid
     conduction::Cond = LinearHeatConduction(eltype(grid))
     initializer::Init = DefaultInitializer(eltype(grid))
+    timestepper::TS = ForwardEuler(eltype(grid))
 end
 
 # Forward the `AbstractModel` methods to the process:
@@ -217,7 +219,7 @@ model = HeatModel(grid)
 initializers = (
     temperature = (x, z) -> ifelse(z < -0.5, 0, 10),
 )
-integrator = initialize(model, ForwardEuler(eltype(grid)); initializers)
+integrator = initialize(model; initializers)
 T_init = copy(vec(interior(integrator.state.temperature)))
 
 # Run for 2 days to let the step front diffuse:

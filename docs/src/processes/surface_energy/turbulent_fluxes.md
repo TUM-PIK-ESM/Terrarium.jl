@@ -37,7 +37,7 @@ H_s = c_a \rho_a \frac{\Delta T}{r_a}
 \end{equation}
 ```
 
-where $c_a$ is the specific heat capacity of air (J/kg/K), $\rho_a$ is the air density (kg/m³), $\Delta T = T_s - T_a$ is the temperature difference (K) (positive if surface warmer than air), and $r_a$ is the aerodynamic resistance (s/m). $H_s$ is **positive when surface is warmer than air** (heat flows upward), and **negative when surface is cooler** (heat flows downward).
+where $c_a$ is the specific heat capacity of moist air (J/kg/K) and $\rho_a$ is the moist air density (kg/m³), both computed dynamically based on the local atmosphere state using `Thermodynamics.jl`. $\Delta T = T_s - T_a$ is the temperature difference (K) (positive if surface warmer than air), and $r_a$ is the aerodynamic resistance (s/m). $H_s$ is **positive when surface is warmer than air** (heat flows upward), and **negative when surface is cooler** (heat flows downward).
 
 
 ### Latent heat flux
@@ -50,13 +50,14 @@ Evaporation and sublimation remove heat from the surface through the latent heat
 \end{equation}
 ```
 
-with $T_s$ the skin temperature. The corresponding specific humidity difference is
+with $T_s$ the skin temperature. The specific humidity difference $\Delta q$ is 
 
 ```math
 \begin{equation}
-\Delta q = \frac{\varepsilon \Delta e}{p}.
+\Delta q = q_s - q_a = q_{\text{sat}}(T_s) - q_a
 \end{equation}
 ```
+with $q_{\text{sat}}$ the saturation specific humidity at the surface temperature and $q_a$ the specific humidity of the atmosphere. 
 
 The latent heat flux is then computed as:
 
@@ -66,7 +67,7 @@ H_l = L \rho_a \frac{\Delta q}{r_a}
 \end{equation}
 ```
 
-where $L$ is the latent heat of vaporization or sublimation (J/kg). $H_l$ is **always non-negative** (≥ 0) and represents energy lost due to evaporation, transpiration, or sublimation. Currently, condensation (dew formation) is neglected so $\Delta q \geq 0$ and negative latent heat fluxes cannot occur.
+where $L$ is the latent heat of vaporization or sublimation (J/kg). $H_l$ represents energy lost due to evaporation, transpiration, or sublimation. While negative values of $H_l$ are theoretically possible when $\Delta q$ is negative, condensation is currently neglected so mass will not be conserved under such conditions.
 
 The latent heat flux is directly tied to:
 - **Vegetation**: Transpiration through stomata (see [Photosynthesis](@ref))
@@ -93,13 +94,33 @@ compute_auxiliary!(state, grid, tur::DiagnosedTurbulentFluxes, seb::AbstractSurf
 
 ## Methods
 
+### Sensible heat flux
+
 ```@docs; canonical = false
 compute_sensible_heat_flux
 ```
 
+### Latent heat flux
+
+The latent heat flux is computed via a unified interface for both standalone flux calculations as well as coupling with [`evapotranpsiration`](@ref "Evapotranspiration"):
+
 ```@docs; canonical = false
-compute_latent_heat_flux
+compute_latent_heat_flux(i, j, grid, fields, tur::DiagnosedTurbulentFluxes, skinT::AbstractSkinTemperature, constants::PhysicalConstants, atmos::AbstractAtmosphere, evtr::Optional{AbstractEvapotranspiration})
 ```
+
+```@docs; canonical = false
+compute_latent_heat_flux(::DiagnosedTurbulentFluxes, Q_h, ρₐ, L)
+```
+
+```@docs; canonical = false
+vapor_pressure_difference
+```
+
+```@docs; canonical = false
+specific_humidity_difference
+```
+
+## Kernel functions
 
 ```@docs; canonical = false
 compute_vapor_pressure_difference(i, j, grid, fields, atmos::AbstractAtmosphere, c::PhysicalConstants, Ts)

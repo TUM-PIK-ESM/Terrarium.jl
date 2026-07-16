@@ -18,19 +18,22 @@ import Oceananigans.BoundaryConditions: ValueBoundaryCondition, FluxBoundaryCond
     @test all(>(0), getproperties(thermal_props.heat_capacities))
 
     # sanity checks for bulk thermal properties
-    @test Terrarium.compute_thermal_conductivity(thermal_props, SoilVolume(porosity = 1.0, saturation = 1.0, liquid = 1.0)) ≈ thermal_props.conductivities.water
-    @test Terrarium.compute_thermal_conductivity(thermal_props, SoilVolume(porosity = 1.0, saturation = 1.0, liquid = 0.0)) ≈ thermal_props.conductivities.ice
-    @test Terrarium.compute_thermal_conductivity(thermal_props, SoilVolume(porosity = 1.0, saturation = 0.0, liquid = 0.0)) ≈ thermal_props.conductivities.air
-    @test Terrarium.compute_thermal_conductivity(thermal_props, SoilVolume(porosity = 0.0, saturation = 0.0)) ≈ thermal_props.conductivities.mineral
-    @test Terrarium.compute_thermal_conductivity(thermal_props, SoilVolume(porosity = 0.0, saturation = 0.0, solid = MineralOrganic(organic = 1.0))) ≈ thermal_props.conductivities.organic
+    @test Terrarium.compute_thermal_conductivity(thermal_props, SoilComposition(porosity = 1.0, saturation = 1.0, liquid = 1.0)) ≈ thermal_props.conductivities.water
+    @test Terrarium.compute_thermal_conductivity(thermal_props, SoilComposition(porosity = 1.0, saturation = 1.0, liquid = 0.0)) ≈ thermal_props.conductivities.ice
+    @test Terrarium.compute_thermal_conductivity(thermal_props, SoilComposition(porosity = 1.0, saturation = 0.0, liquid = 0.0)) ≈ thermal_props.conductivities.air
+    # pure mineral soil: the bulk mineral conductivity is the quartz-weighted geometric mean of the
+    # quartz and non-quartz endpoints, recovered at the pure-sand and pure-clay limits respectively
+    @test Terrarium.compute_thermal_conductivity(thermal_props, SoilComposition(porosity = 0.0, saturation = 0.0, solid = MineralOrganic(texture = SoilTexture(:sand), organic = 0.0))) ≈ thermal_props.conductivities.quartz
+    @test Terrarium.compute_thermal_conductivity(thermal_props, SoilComposition(porosity = 0.0, saturation = 0.0, solid = MineralOrganic(texture = SoilTexture(:clay), organic = 0.0))) ≈ thermal_props.conductivities.mineral
+    @test Terrarium.compute_thermal_conductivity(thermal_props, SoilComposition(porosity = 0.0, saturation = 0.0, solid = MineralOrganic(organic = 1.0))) ≈ thermal_props.conductivities.organic
 end
 
 @testset "Soil energy: initialize!" begin
     grid = ColumnGrid(CPU(), Float64, ExponentialSpacing())
-    energy = SoilEnergyBalance(eltype(grid))
+    energy = SoilThermodynamics(eltype(grid))
     soil = SoilEnergyWaterCarbon(eltype(grid); energy)
     constants = PhysicalConstants(eltype(grid))
-    state = initialize(soil, grid)
+    state = StateVariables(soil, grid)
     # Test initialization with 0°C temperature
     set!(state.temperature, 0.0)
     Terrarium.initialize!(state, grid, energy, soil, constants)
@@ -50,10 +53,10 @@ end
 
 @testset "Soil energy: compute_tendencies!" begin
     grid = ColumnGrid(CPU(), Float64, ExponentialSpacing(N = 10))
-    energy = SoilEnergyBalance(eltype(grid))
+    energy = SoilThermodynamics(eltype(grid))
     soil = SoilEnergyWaterCarbon(eltype(grid); energy)
     constants = PhysicalConstants(eltype(grid))
-    state = initialize(soil, grid)
+    state = StateVariables(soil, grid)
     set!(state.temperature, (x, z) -> 0.0 - 0.01 * z)
     Terrarium.initialize!(state, grid, energy, soil, constants)
     compute_tendencies!(state, grid, energy, soil)
@@ -62,10 +65,10 @@ end
 
 @testset "Soil energy: closure!" begin
     grid = ColumnGrid(CPU(), Float64, ExponentialSpacing(N = 10))
-    energy = SoilEnergyBalance(eltype(grid))
+    energy = SoilThermodynamics(eltype(grid))
     soil = SoilEnergyWaterCarbon(eltype(grid); energy)
     constants = PhysicalConstants(eltype(grid))
-    state = initialize(soil, grid)
+    state = StateVariables(soil, grid)
     set!(state.internal_energy, 1.0e6)
     Terrarium.closure!(state, grid, energy.closure, energy, soil, constants)
     @test all(state.temperature .> 0)
@@ -103,14 +106,16 @@ end
     # set porosity to zero to remove influence of pore space;
     # this is just a hack to configure the model to simulate heat conduction in a fully solid medium
     soil_porosity = ConstantSoilPorosity(mineral_porosity = 0.0)
-    strat = HomogeneousStratigraphy(Float64; porosity = soil_porosity)
+    # use a pure-clay (non-quartz) texture so the bulk solid conductivity equals the `mineral`
+    # endpoint, isolating the analytical conduction comparison from the texture weighting
+    strat = HomogeneousSoilStratigraphy(Float64; texture = SoilTexture(Float64, :clay), porosity = soil_porosity)
     # set thermal properties
     thermal_properties = SoilThermalProperties(
         eltype(grid);
         conductivities = SoilThermalConductivities(mineral = k),
         heat_capacities = SoilHeatCapacities(mineral = c),
     )
-    energy = SoilEnergyBalance(eltype(grid); thermal_properties)
+    energy = SoilThermodynamics(eltype(grid); thermal_properties)
     soil = SoilEnergyWaterCarbon(eltype(grid); energy, strat, biogeochem)
     initializer = DefaultInitializer(eltype(grid))
     model = SoilModel(grid; soil, initializer)
@@ -119,7 +124,7 @@ end
     bcs = PrescribedSurfaceTemperature(:Tsurf, upperbc)
     # temperature initial condition
     initializers = (temperature = (x, z) -> T_sol(-z, 0.0), saturation_water_ice = 0.0)
-    integrator = initialize(model, ForwardEuler(); initializers, boundary_conditions = bcs)
+    integrator = initialize(model; initializers, boundary_conditions = bcs)
     # TODO: Rewrite this part once we have a proper output handling system
     Ts_buf = [deepcopy(integrator.state.temperature)]
     ts = [0.0]
@@ -152,12 +157,14 @@ end
     # set porosity to zero to remove influence of pore space;
     # this is just a hack to configure the model to simulate heat conduction in a fully solid medium
     soil_porosity = ConstantSoilPorosity(mineral_porosity = 0.0)
-    strat = HomogeneousStratigraphy(Float64; porosity = soil_porosity)
+    # use a pure-clay (non-quartz) texture so the bulk solid conductivity equals the `mineral`
+    # endpoint, isolating the analytical conduction comparison from the texture weighting
+    strat = HomogeneousSoilStratigraphy(Float64; texture = SoilTexture(Float64, :clay), porosity = soil_porosity)
     soil = SoilEnergyWaterCarbon(eltype(grid); strat, biogeochem)
     model = SoilModel(grid; soil, initializer)
     # constant upper boundary temperature set to T₁
     bcs = (temperature = (top = ValueBoundaryCondition(T₁),),)
-    integrator = initialize(model, ForwardEuler(), boundary_conditions = bcs)
+    integrator = initialize(model, boundary_conditions = bcs)
     # TODO: Rewrite this part once we have a proper output handling system
     Ts_buf = [deepcopy(integrator.state.temperature)]
     ts = [0.0]

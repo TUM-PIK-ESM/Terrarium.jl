@@ -46,22 +46,22 @@ end
     hydraulics = ConstantSoilHydraulics(Float64; unsat_hydraulic_cond = UnsatKLinear(Float64))
 
     # saturated case
-    soil = SoilVolume()
+    soil = SoilComposition()
     K = hydraulic_conductivity(hydraulics, soil)
     @test K ≈ hydraulics.sat_hydraulic_cond
 
     # unsaturated
-    soil = SoilVolume(saturation = 0.5)
+    soil = SoilComposition(saturation = 0.5)
     K = hydraulic_conductivity(hydraulics, soil)
     @test 0 < K < hydraulics.sat_hydraulic_cond
 
     # dry
-    soil = SoilVolume(saturation = 0.0)
+    soil = SoilComposition(saturation = 0.0)
     K = hydraulic_conductivity(hydraulics, soil)
     @test iszero(K)
 
     # frozen
-    soil = SoilVolume(liquid = 0.0)
+    soil = SoilComposition(liquid = 0.0)
     K = hydraulic_conductivity(hydraulics, soil)
     @test iszero(K)
 end
@@ -70,22 +70,22 @@ end
     hydraulics = ConstantSoilHydraulics(Float64; swrc = VanGenuchten(), unsat_hydraulic_cond = UnsatKVanGenuchten(Float64))
 
     # saturated case
-    soil = SoilVolume()
+    soil = SoilComposition()
     K = hydraulic_conductivity(hydraulics, soil)
     @test K ≈ hydraulics.sat_hydraulic_cond
 
     # unsaturated
-    soil = SoilVolume(saturation = 0.5)
+    soil = SoilComposition(saturation = 0.5)
     K = hydraulic_conductivity(hydraulics, soil)
     @test 0 < K < hydraulics.sat_hydraulic_cond
 
     # dry
-    soil = SoilVolume(saturation = 0.0)
+    soil = SoilComposition(saturation = 0.0)
     K = hydraulic_conductivity(hydraulics, soil)
     @test iszero(K)
 
     # frozen
-    soil = SoilVolume(liquid = 0.0)
+    soil = SoilComposition(liquid = 0.0)
     K = hydraulic_conductivity(hydraulics, soil)
     @test iszero(K)
 end
@@ -95,7 +95,7 @@ end
     swrc = VanGenuchten(α = 2.0, n = 2.0)
     hydraulic_properties = ConstantSoilHydraulics(Float64; swrc, unsat_hydraulic_cond = UnsatKVanGenuchten(Float64))
     hydrology = SoilHydrology(eltype(grid), RichardsEq(); hydraulic_properties)
-    state = initialize(hydrology, grid)
+    state = StateVariables(hydrology, grid)
 
     # Case 1: Oversaturation at surface
     set!(state.saturation_water_ice, (x, z) -> max(1.1 + z, 1.0))
@@ -132,7 +132,7 @@ end
     model = SoilModel(grid; soil, initializer)
     # Fully saturated, steady state
     initializers = (saturation_water_ice = (x, z) -> 1.0,)
-    integrator = initialize(model, ForwardEuler(); initializers)
+    integrator = initialize(model; initializers)
     state = integrator.state
     # check that initial water table depth is correctly calculated from initial condition
     @test all(isapprox.(state.water_table, 0, atol = 1.0e-12))
@@ -151,7 +151,7 @@ end
 
     # Variably saturated with water table
     initializers = (saturation_water_ice = (x, z) -> min(1, 0.5 - 0.1 * z),)
-    integrator = initialize(model, ForwardEuler(); initializers)
+    integrator = initialize(model; initializers)
     state = integrator.state
     water_table = state.water_table
     hydraulic_cond = state.hydraulic_conductivity
@@ -197,7 +197,7 @@ end
     grid = ColumnGrid(UniformSpacing(Δz = 0.1, N = Nz))
     swrc = VanGenuchten(α = 2.0, n = 2.0)
     porosity = ConstantSoilPorosity(eltype(grid))
-    strat = HomogeneousStratigraphy(eltype(grid); porosity)
+    strat = HomogeneousSoilStratigraphy(eltype(grid); porosity)
     hydraulic_properties = ConstantSoilHydraulics(eltype(grid); swrc, unsat_hydraulic_cond = UnsatKVanGenuchten(Float64))
     forcing_value = ForcingValue(0.0)
     vwc_forcing = Forcing(parameters = forcing_value, discrete_form = true) do i, j, k, grid, clock, fields, params
@@ -211,7 +211,7 @@ end
         temperature = 10.0, # positive soil temperature
         saturation_water_ice = 1.0, # fully saturated
     )
-    integrator = initialize(model, ForwardEuler(); initializers)
+    integrator = initialize(model; initializers)
     state = integrator.state
     fields = get_fields(state, hydrology)
     # check that forcing_ET is zero when no latent heat flux is supplied

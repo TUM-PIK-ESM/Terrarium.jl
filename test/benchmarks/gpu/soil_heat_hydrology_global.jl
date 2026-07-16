@@ -40,13 +40,13 @@ function set_up_model(arch, ::Type{NF}, ring_grid::RingGrids.AbstractGrid) where
     grid = ColumnRingGrid(arch, NF, ExponentialSpacing(N = 30), ring_grid)
     # Initial conditions
     initializer = SoilInitializer(eltype(grid))
-    energy = SoilEnergyBalance(NF)
+    energy = SoilThermodynamics(NF)
     hydrology = SoilHydrology(NF, RichardsEq())
     # Periodic surface temperature with annual cycle
     T_ub = PrescribedTemperature((x, t) -> 30 * sin(2π * t / (24 * 3600 * 365)))
     boundary_conditions = SoilBoundaryConditions(eltype(grid), energy, hydrology, top = T_ub)
     model = SoilModel(grid; initializer, boundary_conditions, energy, hydrology)
-    state = initialize(model)
+    state = StateVariables(model)
     return state
 end
 

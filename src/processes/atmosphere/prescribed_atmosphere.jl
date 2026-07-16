@@ -87,6 +87,8 @@ function PrescribedAtmosphere(
     return PrescribedAtmosphere(altitude, min_windspeed, precip, radiation, humidity, aerodynamics, tracers)
 end
 
+ParameterEditing.parameters(::PrescribedAtmosphere) = (;)
+
 variables(atmos::PrescribedAtmosphere{NF}) where {NF} = (
     input(:air_temperature, XY(), default = NF(10), units = u"°C", desc = "Near-surface air temperature in °C"),
     input(:air_pressure, XY(), default = NF(101_325), units = u"Pa", desc = "Atmospheric pressure at the surface in Pa"),
@@ -105,24 +107,16 @@ variables(atmos::PrescribedAtmosphere{NF}) where {NF} = (
 
 """
     $SIGNATURES
-
-Computes the vapor pressure deficit for an air parcel at temperature `T` with surface pressure `pres`
-and specific humidity of air `q_air`. Assumes that air parcel is over water when `T > 0°C` and over 
-ice when `T < 0°C`.
+Computes the vapor pressure deficit for an air parcel at temperature `T` [°C] with 
+pressure `pres` [Pa] and specific humidity `q_air` [kg/kg].
+Assumes that air parcel is over water when `T > 0°C` and over ice when `T < 0°C`.
+Wrapper around [`vapor_pressure_deficit`](@extref Thermodynamics.vapor_pressure_deficit).
 """
-@inline function vapor_pressure_deficit(c::PhysicalConstants{NF}, pres, q_air, T) where {NF}
-    # Compute saturation vapor pressure of air parcel at temperature T
-    e_sat = saturation_vapor_pressure(T)
-
-    # Convert air specific humidity to vapor pressure [Pa]
-    e_air = specific_humidity_to_vapor_pressure(q_air, pres, c.ε)
-
-    # Compute vapor pressure deficit [Pa]
-    vpd = max(e_sat - e_air, NF(0.1))
-
+@inline function vapor_pressure_deficit(c::ThermodynamicConstants, T, pres, q_air)
+    T_K = celsius_to_kelvin(c, T)
+    vpd = Thermodynamics.vapor_pressure_deficit(c, T_K, pres, q_air)
     return vpd
 end
-
 """
     aerodynamic_resistance(i, j, grid, fields, atmos::PrescribedAtmosphere)
 
@@ -179,13 +173,13 @@ Retrieve or compute the specific_humidity at the current time step.
 """
     $TYPEDSIGNATURES
 
-Computes the vapor pressure deficit (VPD) at atmospheric reference level given the current atmospheric fields
+Computes the vapor pressure deficit (VPD) [Pa] at atmospheric reference level given the current atmospheric fields
 """
 @propagate_inbounds function compute_vapor_pressure_deficit(i, j, grid, fields, atmos::AbstractAtmosphere, c::PhysicalConstants)
     T_air = air_temperature(i, j, grid, fields, atmos)
     q_air = specific_humidity(i, j, grid, fields, atmos)
     p = air_pressure(i, j, grid, fields, atmos)
-    vpd = vapor_pressure_deficit(c, p, q_air, T_air)
+    vpd = vapor_pressure_deficit(c.thermodynamics, T_air, p, q_air)
     return vpd
 end
 

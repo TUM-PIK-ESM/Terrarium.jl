@@ -12,15 +12,13 @@ using DataStructures: OrderedDict
 
 using Dates: Dates, TimeType, Period, Year, Month, Day, Hour, Minute, Second
 
-using DomainSets: RealLine, HalfLine, PositiveRealLine, UnitInterval, AbstractInterval
-
 using Flatten: flatten, flattenable, reconstruct
 
 using KernelAbstractions: @kernel, @index
 
 # Oceananigans numerics
 using Oceananigans.AbstractOperations: Average, Integral, ConditionalOperation, KernelFunctionOperation
-using Oceananigans.Architectures: Architectures, AbstractArchitecture, CPU, GPU, architecture, on_architecture, array_type
+using Oceananigans.Architectures: Architectures, AbstractArchitecture, CPU, GPU, ReactantState, architecture, on_architecture, array_type
 using Oceananigans.Fields: Field, FunctionField, AbstractField, Center, Face, set!, compute!, interior, location
 using Oceananigans.Forcings: Forcing, ContinuousForcing, DiscreteForcing
 using Oceananigans.Grids: Periodic, Flat, Bounded, znodes, znode, zspacings
@@ -47,24 +45,37 @@ using Unitful: 𝐋, 𝐌, 𝐓
 using Unitful: Units, Quantity, AbstractQuantity, NoUnits
 using Unitful: @u_str, uconvert, ustrip, upreferred
 
+# Parameter handling (imported from SpeedyWeatherInternals for now)
+using SpeedyWeatherInternals.ParameterEditing: ParameterEditing, ParameterTable, ComponentVector,
+    Positive, Nonnegative, Unbounded, parameters, @parameterized
+
 # Explicit imports
+import DomainSets
 import Interpolations
+import ModelParameters
 import Oceananigans
 import Oceananigans.Diagnostics
 import RingGrids
+import RootSolvers
+import Thermodynamics
 
 """
-Alias for numeric `Quantity` with type `NF` and units `U`.
+Alias for `DomainSets.UnitInterval()`
+"""
+const UnitInterval = DomainSets.UnitInterval()
+
+"""
+Alias for numeric `Quantity` with type `NF` and units `U`
 """
 const LengthQuantity{NF, U} = Quantity{NF, 𝐋, U} where {NF, U <: Units}
 
 """
-Alias for Oceananigans `AbstractBoundaryConditionClassification`.
+Alias for Oceananigans `AbstractBoundaryConditionClassification`
 """
 const BCType = AbstractBoundaryConditionClassification
 
 # Re-export selected types and methods from Oceananigans
-export Simulation, Field, FieldTimeSeries, CPU, GPU, Clock, Center, Face
+export Simulation, Field, FieldTimeSeries, CPU, GPU, ReactantState, Clock, Center, Face
 export Value, Flux, Gradient, ValueBoundaryCondition, GradientBoundaryCondition, FluxBoundaryCondition, NoFluxBoundaryCondition
 export run!, time_step!, set!, reset!, compute!, interior, architecture, on_architecture, znodes, zspacings, location
 
@@ -97,7 +108,7 @@ export ColumnGrid, ColumnRingGrid, get_field_grid
 include("grids/grids.jl")
 
 export InputSource, InputSources, FieldInputSource, FieldTimeSeriesInputSource
-export update_inputs!
+export update_inputs!, varpath, varpath, VarPath
 include("input_output/input_sources.jl")
 
 # process/model interface
@@ -121,11 +132,14 @@ export Forcings
 include("forcings.jl")
 
 # timestepping
-export timestep!, default_dt, is_adaptive
+export timestep!, default_dt, is_adaptive, get_timestepper, timestepping, Timestepping, Explicit, Implicit
 include("timesteppers/abstract_timestepper.jl")
 
 # abstract model types
 include("models/abstract_types.jl")
+
+# numerical solvers
+include("solvers/solvers.jl")
 
 # physical processes
 include("processes/processes.jl")
@@ -134,7 +148,7 @@ include("processes/processes.jl")
 include("models/models.jl")
 
 # model integrator/simulation types and methods
-export ModelIntegrator, initialize, current_time, iteration
+export ModelIntegrator, initialize, current_time, iteration, run_timesteps!
 include("timesteppers/model_integrator.jl")
 
 # Concrete timestepper implementations
@@ -142,5 +156,7 @@ export ForwardEuler
 include("timesteppers/forward_euler.jl")
 export Heun
 include("timesteppers/heun.jl")
+export IMEX, AbstractIMEX
+include("timesteppers/imex.jl")
 
 end # module Terrarium

@@ -17,6 +17,7 @@ struct StateVariables{
         NF,
         prognames, closurenames, auxnames, inputnames, nsnames,
         ProgFields, TendFields, AuxFields, InputFields, Namespaces,
+        Cache,
         ClockType,
     } <: AbstractStateVariables
     prognostic::NamedTuple{prognames, ProgFields}
@@ -24,6 +25,7 @@ struct StateVariables{
     auxiliary::NamedTuple{auxnames, AuxFields}
     inputs::NamedTuple{inputnames, InputFields}
     namespaces::NamedTuple{nsnames, Namespaces}
+    timestepper_cache::Cache
     clock::ClockType
 
     function StateVariables(
@@ -34,23 +36,26 @@ struct StateVariables{
             auxiliary::NamedTuple{auxnames, AuxFields},
             inputs::NamedTuple{inputnames, InputFields},
             namespaces::NamedTuple{nsnames, Namespaces},
-            clock::ClockType
+            timestepper_cache::Cache,
+            clock::ClockType,
         ) where {
             NF, prognames, auxnames, inputnames, nsnames,
-            ProgFields, TendFields, AuxFields, InputFields, Namespaces, ClockType,
+            ProgFields, TendFields, AuxFields, InputFields, Namespaces, Cache, ClockType,
         }
         return new{
             NF, prognames, closurenames, auxnames, inputnames, nsnames,
-            ProgFields, TendFields, AuxFields, InputFields, Namespaces, ClockType,
+            ProgFields, TendFields, AuxFields, InputFields, Namespaces, Cache, ClockType,
         }(
             prognostic,
             tendencies,
             auxiliary,
             inputs,
             namespaces,
-            clock
+            timestepper_cache,
+            clock,
         )
     end
+
 end
 
 # Name getters (always type-stable, inlined constant propagation)
@@ -61,7 +66,7 @@ end
 @inline closure_names(::StateVariables{NF, pnames, cnames}) where {NF, pnames, cnames} = cnames
 
 # Allow reconstruction from properties
-ConstructionBase.constructorof(::Type{StateVariables{NF, pnames, cnames}}) where {NF, pnames, cnames} = (args...) -> StateVariables(NF, cnames, args...)
+ConstructionBase.constructorof(::Type{<:StateVariables{NF, pnames, cnames}}) where {NF, pnames, cnames} = (args...) -> StateVariables(NF, cnames, args...)
 
 """
     update_state!(state::StateVariables, model::AbstractModel, inputs::InputSources; compute_tendencies = true)
@@ -137,27 +142,31 @@ function reset_tendencies!(state::StateVariables)
 end
 
 """
-Initialize input variables from the given input `sources`.
+Initialize input variables from the given input `sources`. The `scope` corresponds to the
+path of namespace names from the root namespace to `state` and is used to match namespaced
+input sources to their target variables; see [`varpath`](@ref).
 """
-function initialize!(state::StateVariables, sources::InputSources)
+function initialize!(state::StateVariables, sources::InputSources, scope::Tuple{Vararg{Symbol}} = ())
     # initialize inputs in current namespace
-    initialize!(state.inputs, sources, state.clock)
+    initialize!(state.inputs, sources, state.clock, scope)
     # recursively initialize namespaces
-    for ns in state.namespaces
-        initialize!(ns, sources)
+    fastiterate(namespace_names(state)) do nsname
+        initialize!(getproperty(getfield(state, :namespaces), nsname), sources, (scope..., nsname))
     end
     return nothing
 end
 
 """
-Update input variables from the given input `sources`.
+Update input variables from the given input `sources`. The `scope` corresponds to the
+path of namespace names from the root namespace to `state` and is used to match namespaced
+input sources to their target variables; see [`varpath`](@ref).
 """
-function update_inputs!(state::StateVariables, sources::InputSources)
+function update_inputs!(state::StateVariables, sources::InputSources, scope::Tuple{Vararg{Symbol}} = ())
     # update inputs in current namespace
-    update_inputs!(state.inputs, sources, state.clock)
+    update_inputs!(state.inputs, sources, state.clock, scope)
     # recursively update namespaces
-    for ns in state.namespaces
-        update_inputs!(ns, sources)
+    fastiterate(namespace_names(state)) do nsname
+        update_inputs!(getproperty(getfield(state, :namespaces), nsname), sources, (scope..., nsname))
     end
     return
 end
@@ -176,8 +185,8 @@ tuple of queries from that namespace.
     type-stable variants instead.
 
 ```julia
-# initialize model
-state = initialize(model)
+# initialize model state
+state = StateVariables(model)
 # get the temperature and saturation_water_ice fields
 fields = get_fields(state, :temperature, :saturation_water_ice)
 # extract temperature as well as variables from a namespace
@@ -203,21 +212,24 @@ end
 
 Retrieves the `Field` from `state` matching the `name` of the given variable.
 """
-@inline get_field(state, var::AbstractVariable{name}) where {name} = getproperty(state, name)
+@inline get_field(state, ::Union{AbstractVariable{name}, Namespace{name}}) where {name} = getproperty(state, name)
 
 """
     $TYPEDSIGNATURES
 
-Retrieves all `Field`s from `state` matching the names of the given variables.
+Retrieves all `Field`s from `state` matching the names of the given variables. Any `Namespace`s
+in `vars` are resolved recursively and their fields are merged into the returned `NamedTuple`
+keyed by namespace name, with the namespace's own fields collected into a nested `NamedTuple`.
 """
-@inline function get_fields(state, vars::Tuple{Vararg{AbstractVariable}})
-    vars = deduplicate_vars(vars)
-    matched_fields = fastmap(vars) do var
-        get_field(state, var)
-    end
-    names = map(varname, vars)
-    return NamedTuple{names}(matched_fields)
-end
+@generated get_fields(state, vars::Tuple{Vararg{Union{AbstractVariable, Namespace}}}) = _get_fields_expr(:state, :vars, vars)
+
+"""
+    $TYPEDSIGNATURES
+
+Retrieves all `Field`s declared by the given `Namespace` from `state`, where `state` is assumed
+to correspond to the (nested) `StateVariables` of the namespace itself.
+"""
+@inline get_fields(state, ns::Namespace) = get_fields(state, ns.vars)
 
 """
     $SIGNATURES
@@ -231,7 +243,8 @@ Retrieves all non-tendency `Field`s from `state` defined on the given `component
         tuplejoin(allvars, closurevars)
     end
     vars = tuplejoin(component_vars...)
-    return ntdiff(get_fields(state, vars), except)
+    component_fields = get_fields(state, vars)
+    return ntdiff(component_fields, except)
 end
 
 """
@@ -290,7 +303,6 @@ Retrieves all `Field`s from `state` corresponding to input variables defined on 
 end
 
 # Initialization of StateVariables from models and processes
-
 """
     $TYPEDSIGNATURES
 
@@ -299,18 +311,20 @@ associated `grid`. The `clock` specifies the initial simulation time and is muta
 `boundary_conditions` and `initializers` can be provided as `NamedTuple`s with keys corresponding to the names of state
 variables to which they should be applied. If the state variables are defined within namespaces, the given `NamedTuple`
 must follow the same structure. The `fields` argument allows for manual preconstruction of `Field`s for the named state
-variables.
+variables. The time stepper cache is allocated from the model's `timestepper`.
 """
-function initialize(
-        model::AbstractModel{NF};
+function StateVariables(
+        model::AbstractModel{NF},
+        params = nothing;
         clock = Clock(time = zero(NF)),
         input_variables = (),
         boundary_conditions = (;),
         initializers = (;),
         fields = (;)
     ) where {NF}
-    vars = Variables(tuplejoin(variables(model), input_variables))
-    state = initialize(vars, model.grid; clock, boundary_conditions, initializers, fields)
+    model_rec = isnothing(params) ? model : ParameterEditing.reconstruct(model, params)
+    vars = Variables(tuplejoin(variables(model_rec), input_variables))
+    state = StateVariables(vars, model_rec.grid; clock, timestepper = get_timestepper(model), model = model_rec, boundary_conditions, initializers, fields)
     return state
 end
 
@@ -321,17 +335,20 @@ Initialize a `StateVariables` data structure containing `Field`s defined on the 
 for all variables defined by `process`. Any predefined `boundary_conditions` and `fields` will
 be passed through to `initialize` for each variable.
 """
-function initialize(
+function StateVariables(
         process::AbstractProcess{NF},
-        grid::AbstractLandGrid{NF};
+        grid::AbstractLandGrid{NF},
+        params = nothing;
         clock = Clock(time = zero(NF)),
         input_variables = (),
+        timestepper = default_timestepper(NF),
         boundary_conditions = (;),
         initializers = (;),
         fields = (;)
     ) where {NF}
-    vars = Variables(tuplejoin(variables(process), input_variables))
-    state = initialize(vars, grid; clock, boundary_conditions, initializers, fields)
+    process_rec = isnothing(params) ? process : ParameterEditing.reconstruct(process, params)
+    vars = Variables(tuplejoin(variables(process_rec), input_variables))
+    state = StateVariables(vars, grid; clock, timestepper, boundary_conditions, initializers, fields)
     return state
 end
 
@@ -342,12 +359,15 @@ end
 
 Initialize a `StateVariables` data structure containing `Field`s defined on the given `grid`
 for all variables in `vars`. Any predefined `boundary_conditions` and `fields` will be passed
-through to `initialize` for each variable.
+through to `initialize` for each variable. The `timestepper`'s cache is allocated via
+`initialize(timestepper, state, progvars)`.
 """
-function initialize(
+function StateVariables(
         @nospecialize(vars::Variables),
         grid::AbstractLandGrid{NF};
         clock::Clock = Clock(time = 0.0),
+        timestepper = default_timestepper(NF),
+        model = nothing,
         boundary_conditions = (;),
         initializers = (;),
         fields = (;)
@@ -361,11 +381,25 @@ function initialize(
     namespaces = map(vars.namespaces) do ns
         ns_bcs = get(boundary_conditions, varname(ns), (;))
         ns_fields = get(fields, varname(ns), (;))
-        initialize(ns.vars, grid; clock, boundary_conditions = ns_bcs, fields = ns_fields)
+        StateVariables(ns.vars, grid; clock, boundary_conditions = ns_bcs, fields = ns_fields)
     end
     # get closure variable names
     closurenames = map(varname, closure_variables(values(vars.prognostic)))
-    # construct and return StateVariables
+    # construct StateVariables with an empty cache; the timestepper-specific cache
+    # is allocated below now that all other state variables have been initialized
+    initial_state = StateVariables(
+        NF,
+        closurenames,
+        prognostic_fields,
+        tendency_fields,
+        auxiliary_fields,
+        input_fields,
+        namespaces,
+        EmptyCache{NF}(),
+        clock,
+    )
+    # allocate the timestepper's cache
+    cache = initialize(timestepper, initial_state, vars.prognostic, model)
     state = StateVariables(
         NF,
         closurenames,
@@ -374,7 +408,8 @@ function initialize(
         auxiliary_fields,
         input_fields,
         namespaces,
-        clock
+        cache,
+        clock,
     )
     # Apply Field initializers
     initialize!(state, initializers)
@@ -460,6 +495,7 @@ function Adapt.adapt_structure(to, state::StateVariables{NF}) where {NF}
         Adapt.adapt_structure(to, state.auxiliary),
         Adapt.adapt_structure(to, state.inputs),
         Adapt.adapt_structure(to, state.namespaces),
+        Adapt.adapt_structure(to, state.timestepper_cache),
         Adapt.adapt_structure(to, state.clock),
     )
 end
@@ -525,7 +561,7 @@ end
 
 function Base.summary(state::StateVariables{NF}) where {NF}
     clockstr = summary(state.clock)
-    str = "StateVariables{$NF}(clock = $clockstr, prognostic = $(keys(state.prognostic)), auxiliary = $(keys(state.auxiliary)), inputs = $(keys(state.inputs)), namespaces = $(keys(state.namespaces)))"
+    str = "StateVariables{$NF}(clock = $clockstr, prognostic = $(keys(state.prognostic)), auxiliary = $(keys(state.auxiliary)), inputs = $(keys(state.inputs)), namespaces = $(keys(state.namespaces)), timestepper_cache = $(nameof(typeof(state.timestepper_cache))))"
     return str
 end
 
@@ -542,5 +578,42 @@ function Base.show(io::IO, state::StateVariables{NF}) where {NF}
     print(io, "├─ Inputs: ")
     show(io, state.inputs)
     println(io)
-    return print(io, "├─ Namespaces: $(keys(state.namespaces))")
+    print(io, "├─ Namespaces: $(keys(state.namespaces))")
+    println(io)
+    return print(io, "└─ Timestepper cache: $(nameof(typeof(state.timestepper_cache)))")
+end
+
+"""
+Generation-time helper for [`get_fields`](@ref). Given the type `Vars` of a tuple of
+`AbstractVariable`s and `Namespace`s, builds an expression that retrieves all matching fields
+from `state_ex` (an expression evaluating to the state container) and `vars_ex` (an expression
+evaluating to the variable tuple). The recursion over namespaces is performed here, at expansion
+time, so that the generated body for `get_fields` contains no self-call. This is what makes the
+method type stable: a runtime self-recursive `get_fields` would otherwise trigger inference's
+recursion limiting and widen the return type of the nested namespace lookups to an abstract
+`NamedTuple`.
+"""
+function _get_fields_expr(state_ex, vars_ex, ::Type{Vars}) where {Vars}
+    types = collect(Vars.parameters)
+    names = map(varname, types)
+    # deduplicate by name (keep first occurrence), as in `deduplicate_vars`
+    unique_idx = unique(i -> names[i], eachindex(types))
+    plain_idx = filter(i -> types[i] <: AbstractVariable, unique_idx)
+    ns_idx = filter(i -> types[i] <: Namespace, unique_idx)
+    plain_names = Tuple(names[i] for i in plain_idx)
+    plain_fields = map(i -> :(get_field($state_ex, $vars_ex[$i])), plain_idx)
+    fields = :(NamedTuple{$plain_names}(tuple($(plain_fields...))))
+    isempty(ns_idx) && return fields
+    ns_names = Tuple(names[i] for i in ns_idx)
+    ns_fields = map(ns_idx) do i
+        substate, subvars = gensym(:state), gensym(:vars)
+        # `Namespace{name, Vars}` => recurse on the nested variable tuple type `Vars`
+        inner = _get_fields_expr(substate, subvars, Vars.parameters[i].parameters[2])
+        quote
+            let $substate = getproperty($state_ex, $(QuoteNode(names[i]))), $subvars = $vars_ex[$i].vars
+                $inner
+            end
+        end
+    end
+    return :(merge($fields, NamedTuple{$ns_names}(tuple($(ns_fields...)))))
 end
