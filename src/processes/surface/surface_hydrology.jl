@@ -40,11 +40,13 @@ function compute_auxiliary!(
         atmos::AbstractAtmosphere,
         soil::Optional{AbstractSoil} = nothing,
         vegetation::Optional{AbstractVegetation} = nothing,
+        snow::Optional{AbstractSnow} = nothing,
         args...
     )
     compute_auxiliary!(state, grid, hydrology.canopy_interception, atmos)
     compute_auxiliary!(state, grid, hydrology.evapotranspiration, hydrology.canopy_interception, constants, atmos, soil, vegetation)
-    compute_auxiliary!(state, grid, hydrology.surface_runoff, hydrology.canopy_interception, soil)
+    # `snow` makes the surface runoff scheme's water input snow-aware (meltwater + bare-ground throughfall)
+    compute_auxiliary!(state, grid, hydrology.surface_runoff, hydrology.canopy_interception, soil, snow)
     return nothing
 end
 

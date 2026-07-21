@@ -57,15 +57,6 @@ Compute or retrieve the bulk snow density `ρ_s` [kg/m³].
 """
 function compute_snow_density end
 
-"""
-    $TYPEDSIGNATURES
-
-Extra state fields the surface energy balance must gather so its (optionally snow-aware) conduction
-target can be evaluated. The fallback contributes nothing (no snow, or a snow scheme needing no extra
-fields); concrete snow schemes override this to supply their thermal auxiliaries.
-"""
-seb_conduction_fields(state, snow) = (;)
-
 # Defaults for snow = nothing
 
 # No snow component present (`snow === nothing`): treat as zero snow cover, so surface processes that
@@ -81,3 +72,5 @@ seb_conduction_fields(state, snow) = (;)
 @propagate_inbounds snow_depth(i, j, grid, fields, ::Nothing) = zero(eltype(grid))
 
 @propagate_inbounds snow_thermal_conductivity(i, j, grid, fields, ::Nothing) = zero(eltype(grid))
+
+@propagate_inbounds snow_meltwater_flux(i, j, grid, fields, ::Nothing) = zero(eltype(grid))

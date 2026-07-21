@@ -108,10 +108,10 @@ function compute_auxiliary!(state, model::LandModel)
     compute_auxiliary!(state, grid, model.soil, model.constants)
     compute_auxiliary!(state, grid, model.snow, model.constants)
     compute_auxiliary!(state, grid, model.vegetation, model.constants, model.atmosphere, model.soil)
-    compute_auxiliary!(state, grid, model.surface_hydrology, model.constants, model.atmosphere, model.soil, model.vegetation)
+    compute_auxiliary!(state, grid, model.surface_hydrology, model.constants, model.atmosphere, model.soil, model.vegetation, model.snow)
     compute_auxiliary!(state, grid, model.surface_energy_balance, model.constants, model.atmosphere, model.surface_hydrology, model.snow)
-    # Blend the soil-top heat flux from the snow base and bare ground after the SEB; no-op without snow
-    compute_snow_soil_heat_flux!(state, grid, model.snow, model.constants)
+    # Diagnose the snow↔soil coupling fluxes (soil-top heat blend + sublimation) after the SEB; no-op without snow
+    compute_snow_soil_boundary_fluxes!(state, grid, model.snow, model.constants)
     return nothing
 end
 

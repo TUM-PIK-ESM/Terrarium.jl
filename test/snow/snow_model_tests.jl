@@ -102,4 +102,20 @@ using Test
         step_tendencies!(state)
         @test all(state.tendencies.snow_water_equivalent .≈ -E_subl)
     end
+
+    @testset "conservation: meltwater couples energy and mass" begin
+        # A partially melted pack (θ_liq above capillary retention, no other forcing) drains meltwater.
+        # The heat leaving with the meltwater must equal ρ_w·L_f per unit SWE drained, i.e. dE = ρ_w·L_f·dW,
+        # so melt does not spuriously create or destroy energy relative to mass.
+        state = fresh_state()
+        set!(state.snow_water_equivalent, W0)
+        Lθ = ρ_s * L_f
+        θ_target = NF(0.5)  # > default capillary retention (0.05) -> outflow
+        set!(state.snow_energy, (θ_target - 1) * Lθ * d_s)  # U_v = (θ-1)·Lθ -> θ_liq = θ_target
+        step_tendencies!(state)
+        dW = Array(interior(state.tendencies.snow_water_equivalent))
+        dE = Array(interior(state.tendencies.snow_energy))
+        @test all(dW .< 0)                       # meltwater drains from the pack
+        @test all(dE .≈ ρ_w * L_f .* dW)         # energy leaves with meltwater at ρ_w·L_f per unit SWE
+    end
 end

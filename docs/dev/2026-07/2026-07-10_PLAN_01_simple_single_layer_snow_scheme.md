@@ -2,8 +2,10 @@
 
 > Status: **in progress**. Phases 1–5 (process, closure, mass/energy tendencies, standalone `SnowModel`,
 > SEB coupling, and `LandModel` integration) are implemented and tested; the process parameters have been
-> decomposed into composable sub-parameterizations (see Revision 5). Water/sublimation coupling and an
-> Enzyme differentiability test remain deferred (see Revision 4).
+> decomposed into composable sub-parameterizations (see Revision 5); and the snow→soil water coupling,
+> sublimation, and differentiability/Reactant/conservation tests have landed (see Revision 6). Remaining:
+> partitioning the surface latent flux between snow and soil/canopy evapotranspiration, and a snow
+> documentation page.
 
 Date of initial draft: 2026-07-01
 
@@ -119,6 +121,36 @@ The snow `@kernel`s that wrap the shared `energy_to_temperature!`/`temperature_t
 were given snow-specific names (`snow_energy_to_temperature_kernel!`, `snow_temperature_to_energy_kernel!`)
 because KernelAbstractions `@kernel` does not support multiple dispatch on one kernel name — the soil energy
 closures define 3D (XYZ) kernels under the base names.
+
+Revision 6 (2026-07-21) — **water/sublimation coupling and test coverage** (previously deferred in
+Revision 4). Delivered:
+
+- **Water coupling** (author's choice: route through the existing infiltration/runoff partition). The
+  surface runoff scheme's water input is now snow-aware: `influx = (1 − f_snow)·rainfall_ground + M_r`,
+  where the snow-covered fraction intercepts rain into the pack and `M_r` is the meltwater outflow draining
+  from the pack base (`soil_surface_water_flux` in `snow_mass.jl`). `snow` is threaded (optional arg) through
+  `SurfaceHydrology`→`DirectSurfaceRunoff`, mirroring the SEB. Meltwater is therefore subject to the
+  infiltration capacity limit, with the remainder becoming surface runoff.
+- **Sublimation** driven by the SEB latent-heat flux: the post-SEB coupling (renamed
+  `compute_snow_soil_boundary_fluxes!`) now sets `sublimation = f_snow·H_l/(ρ_w·L_s)` alongside the blended
+  `soil_heat_flux`. Known limitation: the latent flux is not yet partitioned between snow sublimation and
+  soil/canopy evapotranspiration, so the two over-count when both are active.
+- The snow-field gather helper `seb_conduction_fields` was removed
+- **Tests**: standalone melt energy↔mass conservation (`snow_model_tests.jl`); coupled water-conservation
+  (`infiltration + surface_runoff ≈ M_r`, `land_model_tests.jl`); function-level Enzyme adjoints of the
+  snow-specific physics — meltwater outflow, cover fraction, depth, thermal conductivity, basal flux
+  (`differentiability/snow_model_diff.jl`, registered under the Enzyme suite); a CPU-vs-Reactant
+  `:snow_column` correctness case (`test/reactant/setup.jl` + `runtests.jl`).
+
+Known AD limitation: reverse-mode autodiff of the *full* `SnowModel` timestep currently fails to compile
+under Enzyme with an internal `LLVM error: Canonicalization failed` (in `EnzymeCreateAugmentedPrimal`).
+The snow closure reuses the `FreeWater` maps (adjoints covered in `soil_energy_diff.jl`) and the
+snow-specific physics is differentiable in isolation, so the failure is isolated to the full-model
+reverse pass; it is documented in `snow_model_diff.jl` for separate investigation.
+
+Still deferred: partitioning the surface latent flux between snow sublimation and soil/canopy ET; a snow
+process documentation page; resolving the full-timestep Enzyme limitation; a real Reactant CI run of the
+`:snow_column` case (the `test/reactant` environment was not instantiated in the dev session).
 
 ## Resolved design decisions
 

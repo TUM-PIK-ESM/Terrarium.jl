@@ -25,8 +25,8 @@ DirectSurfaceRunoff(::Type{NF}; kwargs...) where {NF} = DirectSurfaceRunoff{NF}(
 Compute surface drainage flux from the current `surface_excess_water` resevoir state.
 """
 @inline function compute_surface_drainage(runoff::DirectSurfaceRunoff{NF}, surface_excess_water) where {NF}
-    let S = max(surface_excess_water, zero(NF)),
-            τ = runoff.τ_r
+    let S = max(surface_excess_water, zero(NF))
+        τ = runoff.τ_r
         ∂S∂t = S / τ
         return ∂S∂t
     end
@@ -51,12 +51,13 @@ end
 
 Compute surface runoff as `precipitation + surface_drainage - infiltration`.
 """
-@inline function compute_surface_runoff(runoff::DirectSurfaceRunoff, rain, surface_drainage, infil)
-    return let P = rain,
+@inline function compute_surface_runoff(runoff::DirectSurfaceRunoff, influx, surface_drainage, infil)
+    let F = influx,
             ∂S∂t = surface_drainage,
             I = infil
         # Compute runoff as residual of precipitation + drainage - infiltration
-        surface_runoff = P + ∂S∂t - I
+        surface_runoff = F + ∂S∂t - I
+        return surface_runoff
     end
 end
 
@@ -73,12 +74,14 @@ function compute_auxiliary!(
         runoff::DirectSurfaceRunoff,
         canopy_interception::AbstractCanopyInterception,
         soil::AbstractSoil,
+        snow::Optional{AbstractSnow} = nothing,
         args...
     )
     soil_hydrology = get_hydrology(soil)
     out = auxiliary_fields(state, runoff)
-    fields = get_fields(state, runoff, canopy_interception, soil_hydrology; except = out)
-    launch!(grid, XY, compute_auxiliary_kernel!, out, fields, runoff, canopy_interception, soil_hydrology)
+    # merge the snow fields (cover fraction, liquid fraction) needed for the snow-aware surface water input
+    fields = merge(get_fields(state, runoff, canopy_interception, soil_hydrology; except = out), get_fields(state, snow))
+    launch!(grid, XY, compute_auxiliary_kernel!, out, fields, runoff, canopy_interception, soil_hydrology, snow)
     return nothing
 end
 
@@ -88,12 +91,14 @@ end
         out, i, j, grid, fields,
         runoff::DirectSurfaceRunoff{NF},
         canopy_interception::AbstractCanopyInterception,
-        soil_hydrology::AbstractSoilHydrology
+        soil_hydrology::AbstractSoilHydrology,
+        snow::Optional{AbstractSnow} = nothing
     ) where {NF}
     fgrid = get_field_grid(grid)
 
-    # Get inputs
-    rain = rainfall_ground(i, j, grid, fields, canopy_interception)
+    # Get inputs. With snow, the surface water input is the snow-adjusted rainfall plus meltwater outflow
+    # (the snow-covered fraction of rain is intercepted by the pack); without snow it is the ground rainfall.
+    influx = soil_surface_water_flux(i, j, grid, fields, canopy_interception, snow)
     excess_water = surface_excess_water(i, j, grid, fields, soil_hydrology)
     k_unsat = hydraulic_conductivity(i, j, fgrid.Nz, grid, fields, soil_hydrology)
     sat_top = saturation_water_ice(i, j, fgrid.Nz, grid, fields, soil_hydrology)
@@ -108,11 +113,11 @@ end
         # Case 2: No excess water -> rainfall is routed directly to infiltration
     else
         surface_drainage = zero(NF)
-        infil = out.infiltration[i, j, 1] = compute_infiltration(runoff, rain, sat_top, k_unsat)
+        infil = out.infiltration[i, j, 1] = compute_infiltration(runoff, influx, sat_top, k_unsat)
     end
 
     # Compute surface runoff
-    out.surface_runoff[i, j, 1] = compute_surface_runoff(runoff, rain, surface_drainage, infil)
+    out.surface_runoff[i, j, 1] = compute_surface_runoff(runoff, influx, surface_drainage, infil)
     return out
 end
 

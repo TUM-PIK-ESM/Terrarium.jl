@@ -26,6 +26,25 @@ passthrough_rainfall(::NoCanopyInterception, grid, clock, fields) = fields.rainf
 @propagate_inbounds rainfall_ground(i, j, grid, fields, ::AbstractCanopyInterception) = fields.rainfall_ground[i, j]
 
 """
+    $TYPEDSIGNATURES
+
+Meltwater flux `[m/s]` reaching the soil surface, accounting for the snowpack. Without snow this is
+just the rainfall reaching the ground; with snow the snow-covered fraction `f_snow` intercepts rain into
+the pack, so only the bare-ground fraction `(1 − f_snow)·rain_ground` reaches the soil directly, plus the
+snow meltwater outflow `M` draining from the pack base.
+"""
+@propagate_inbounds function soil_surface_water_flux(
+        i, j, grid, fields,
+        canopy_interception::AbstractCanopyInterception,
+        snow::Optional{AbstractSnow} = nothing
+    )
+    f = snow_cover_fraction(i, j, grid, fields, snow)
+    M = snow_meltwater_flux(i, j, grid, fields, snow)
+    rain = rainfall_ground(i, j, grid, fields, canopy_interception)
+    return (one(f) - f) * rain + M
+end
+
+"""
     $TYPEDEF
 
 Canopy interception and storage implementation following PALADYN ([willeitPALADYNV10Comprehensive2016](@cite)) considering only liquid water (no snow).

@@ -9,6 +9,7 @@ if FLAG_ENZYME_TESTS
         include("differentiability/soil_energy_diff.jl")
         include("differentiability/soil_hydrology_diff.jl")
         include("differentiability/vegetation_model_diff.jl")
+        include("differentiability/snow_model_diff.jl")
     end
 end
 

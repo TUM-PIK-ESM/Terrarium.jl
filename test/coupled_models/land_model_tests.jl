@@ -101,3 +101,34 @@ end
     @test all(isfinite.(integrator.state.soil_heat_flux))
     @test all(isfinite.(integrator.state.internal_energy))
 end
+
+@testset "LandModel: snow meltwater reaches the soil surface" begin
+    # Water-conservation check for the snow→soil coupling (Option A): with a melting snowpack and no
+    # rain, the meltwater outflow M_r is the sole surface water input, so the runoff scheme must
+    # partition exactly M_r into infiltration + surface runoff (no drainage when the surface reservoir
+    # is empty): infiltration + surface_runoff ≈ M_r.
+    grid = ColumnGrid(CPU(), ExponentialSpacing(Δz_max = 1.0, N = 50))
+    soil = SoilEnergyWaterCarbon(eltype(grid); hydrology = SoilHydrology(eltype(grid), RichardsEq()))
+    snow = SingleLayerSnow(eltype(grid))
+    land = LandModel(grid; soil, snow, vegetation = nothing)
+    # Fully-liquid (melting) pack over unsaturated soil; no rainfall
+    initializers = (
+        temperature = (x, z) -> 1.0 - 0.02 * z,
+        saturation_water_ice = (x, z) -> 0.5,
+        snow_water_equivalent = 0.2,
+        snow_temperature = 0.0,   # invclosure -> fully-liquid pack (θ_liq = 1)
+    )
+    integrator = initialize(land; initializers)
+    state = integrator.state
+    set!(state.rainfall, 0.0)
+    Terrarium.closure!(state, land)
+    compute_auxiliary!(state, land)
+    # meltwater outflow implied by the diagnosed liquid fraction
+    θ_liq = Array(interior(state.snow_liquid_fraction))
+    M_r = Terrarium.compute_meltwater_outflow.(Ref(snow.hydraulic_properties), θ_liq)
+    @test all(θ_liq .≈ 1)                    # melting pack
+    @test all(M_r .> 0)                       # meltwater draining
+    infil = Array(interior(state.infiltration))
+    runoff = Array(interior(state.surface_runoff))
+    @test all(isapprox.(infil .+ runoff, M_r; rtol = 1.0e-6))
+end

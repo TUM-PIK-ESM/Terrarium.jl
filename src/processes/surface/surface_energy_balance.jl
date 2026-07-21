@@ -81,7 +81,7 @@ function solve_surface_energy_balance!(
     # Construct outputs as auxiliaries + skin temperature (which is prognostic)
     out = (skin_temperature = state.skin_temperature, auxiliary_fields(state, seb)...)
     # Merge the snow thermal auxiliaries so the (optionally snow-aware) conduction target can be evaluated
-    fields = merge(get_fields(state, seb, atmos, evtr), seb_conduction_fields(state, snow))
+    fields = merge(get_fields(state, seb, atmos, evtr), get_fields(state, snow))
     launch!(grid, XY, solve_surface_energy_balance_kernel!, out, fields, seb, constants, atmos, evtr, snow, args...)
     return nothing
 end

@@ -63,3 +63,20 @@ function build_model(::Val{:soil_heat_global}, arch, NF)
     inits = (temperature = (x, z) -> NF(2) * cos(NF(x)) - NF(0.05) * z,)
     return (; model, boundary_conditions = bcs, initializers = inits, Δt = NF(600))
 end
+
+# --- :snow_column — minimal single-column standalone SnowModel --------------------------
+# Exercises the snow closure (energy↔temperature) and the mass/energy tendencies under Reactant.
+# Boundary heat fluxes and SWE/temperature are prescribed as constant input/initial fields.
+
+function build_model(::Val{:snow_column}, arch, NF)
+    grid = ColumnGrid(arch, NF, UniformSpacing(Δz = NF(0.2), N = 10))
+    model = SnowModel(grid)
+    # frozen pack with steady conductive gain at the base and loss at the surface (no melt)
+    inits = (
+        snow_water_equivalent = NF(0.3),
+        snow_temperature = NF(-5),
+        basal_heat_flux = NF(2),
+        surface_heat_flux = NF(10),
+    )
+    return (; model, boundary_conditions = (;), initializers = inits, Δt = NF(600))
+end

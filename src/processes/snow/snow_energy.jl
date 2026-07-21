@@ -17,10 +17,6 @@ variables(::SnowEnergyTemperatureClosure) = (
     auxiliary(:snow_liquid_fraction, XY(), bounds = UnitInterval, desc = "Liquid (unfrozen) fraction of the snow water substance"),
 )
 
-# The SEB conduction target blends snow and ground; supply the snow depth, cover fraction, and closure
-# temperature so they are available in the SEB kernel.
-@inline seb_conduction_fields(state, snow::SingleLayerSnow) = get_fields(state, snow, get_closure(snow))
-
 # Process-level closure entry points (dispatch on the snow process, mirroring the soil interface).
 @inline closure!(state, grid, snow::SingleLayerSnow, constants::PhysicalConstants) =
     closure!(state, grid, get_closure(snow), snow, constants)
