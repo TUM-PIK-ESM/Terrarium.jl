@@ -152,6 +152,33 @@ Still deferred: partitioning the surface latent flux between snow sublimation an
 process documentation page; resolving the full-timestep Enzyme limitation; a real Reactant CI run of the
 `:snow_column` case (the `test/reactant` environment was not instantiated in the dev session).
 
+Revision 7 (2026-07-21) — **enthalpy-reference correction of the advective flux terms.** The `FreeWater`
+closure references internal energy to liquid water at 0 °C (`U = 0`; the phase-change band is
+`U ∈ [-Lθ, 0]` with ice at 0 °C = `-Lθ`), consistent with the soil energy. The snow mass/energy
+tendencies, however, had computed the advective (mass-carrying) heat terms against an *ice* reference,
+an inconsistency of `ρ_w·L_f` per unit mass. Corrected in `snow_mass.jl` (`compute_precip_heat_flux`,
+renamed from `compute_rain_heat_flux`):
+
+- **Meltwater** drains as liquid water at 0 °C (`U = 0`), so it carries no enthalpy — the previous
+  `Q_melt = ρ_w·L_f·M_r` term is dropped. The energy tendency is now `dE/dt = G_base − G_top + Q_precip`
+  (no meltwater term). The old term spuriously refroze draining meltwater (`dW_ice/dt = +M_r`).
+- **Rain-on-snow** carries only sensible heat `c_w·max(T_air,0)` above the liquid reference; the previous
+  `+L_f` double-counted the freezing latent heat (which the enthalpy closure already captures implicitly).
+- **Fresh snowfall** is ice, `L_f` below the liquid reference, so it carries `c_i·min(T_air,0) − L_f`; the
+  previous term omitted `−L_f`, which caused fresh cold snow to be diagnosed near 0 °C instead of `T_air`.
+
+`compute_snow_tendencies!` was also split into `compute_snow_water_tendency` and
+`compute_snow_energy_tendency` helpers (equations no longer buried in the kernel function). New/updated
+tests: draining meltwater conserves energy (`dE ≈ 0`); fresh snowfall accretes at the pack's specific
+enthalpy (`dE/dW = E/W`, catching the missing `−L_f`); the standalone snowfall/melt assertions were
+updated to the liquid reference.
+
+Open follow-up (not yet resolved): the **sublimation** energy term is subject to the same reference
+subtlety. Sublimated ice mass carries `−L_f` enthalpy in the liquid reference, so under this reference the
+energy budget implies an additional `+ρ_w·L_f·E_subl` term beyond the SEB latent flux already in `G_top`;
+this is entangled with the SEB's latent-heat convention (`L_v` vs `L_s`) and the still-deferred
+latent-flux partitioning, and is left for that work item.
+
 ## Resolved design decisions
 
 The following forks were resolved with the model author before drafting:
