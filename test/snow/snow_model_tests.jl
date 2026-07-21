@@ -53,8 +53,9 @@ using Test
         set!(state.air_temperature, NF(-2))
         step_tendencies!(state)
         @test all(state.tendencies.snow_water_equivalent .≈ P_s)    # dW/dt = snowfall
-        # cold snowfall (T < 0) advects negative energy relative to ice at 0°C
-        @test all(state.tendencies.snow_energy .≈ ρ_w * P_s * c_i * NF(-2))
+        # fresh snow is ice: relative to liquid water at 0°C (U = 0) it advects the fusion deficit −L_f
+        # plus sensible heat c_i·T_air for T_air < 0
+        @test all(state.tendencies.snow_energy .≈ ρ_w * P_s * (c_i * NF(-2) - L_f))
     end
 
     @testset "fully melted pack drains (SWE + energy decrease)" begin
@@ -65,7 +66,8 @@ using Test
         @test all(state.snow_liquid_fraction .≈ 1)
         M_r = snow.hydraulic_properties.saturated_conductivity      # S* = 1 at θ_liq = 1
         @test all(state.tendencies.snow_water_equivalent .≈ -M_r)   # meltwater drains
-        @test all(state.tendencies.snow_energy .≈ -ρ_w * L_f * M_r) # latent heat leaves with meltwater
+        # meltwater is liquid at 0°C (U = 0 reference), so it carries no enthalpy: energy is conserved
+        @test all(isapprox.(interior(state.tendencies.snow_energy), 0; atol = 1.0e-9))
     end
 
     @testset "no drainage below capillary retention" begin
@@ -103,10 +105,11 @@ using Test
         @test all(state.tendencies.snow_water_equivalent .≈ -E_subl)
     end
 
-    @testset "conservation: meltwater couples energy and mass" begin
+    @testset "conservation: draining meltwater carries no enthalpy" begin
         # A partially melted pack (θ_liq above capillary retention, no other forcing) drains meltwater.
-        # The heat leaving with the meltwater must equal ρ_w·L_f per unit SWE drained, i.e. dE = ρ_w·L_f·dW,
-        # so melt does not spuriously create or destroy energy relative to mass.
+        # Meltwater is liquid water at 0 °C, which is the zero-enthalpy reference (U = 0) of the FreeWater
+        # closure, so draining it removes mass but no energy: dW < 0 while dE = 0. (An ice-referenced
+        # meltwater flux would instead give dE = ρ_w·L_f·dW, spuriously refreezing the pack.)
         state = fresh_state()
         set!(state.snow_water_equivalent, W0)
         Lθ = ρ_s * L_f
@@ -115,7 +118,28 @@ using Test
         step_tendencies!(state)
         dW = Array(interior(state.tendencies.snow_water_equivalent))
         dE = Array(interior(state.tendencies.snow_energy))
-        @test all(dW .< 0)                       # meltwater drains from the pack
-        @test all(dE .≈ ρ_w * L_f .* dW)         # energy leaves with meltwater at ρ_w·L_f per unit SWE
+        @test all(dW .< 0)          # meltwater drains from the pack
+        @test all(isapprox.(dE, 0; atol = 1.0e-9))   # but carries no enthalpy: energy is conserved
+    end
+
+    @testset "conservation: snowfall accretes at the fresh-snow enthalpy" begin
+        # Fresh snow falling at air temperature `T_air` onto a pack at `T_air` must accrete without
+        # changing the intensive state (temperature). Equivalently, the accreting snow carries the pack's
+        # specific enthalpy, so the energy tendency per unit mass equals the pack's E/W: dE/dW = E/W.
+        # (With an ice-referenced precip flux, fresh snow would carry ρ_w·c_i·T_air, missing the −ρ_w·L_f
+        # ice deficit, and the pack would spuriously warm toward 0 °C.)
+        state = fresh_state()
+        T_air = NF(-8)
+        set!(state.snow_water_equivalent, W0)
+        set!(state.snow_temperature, T_air)
+        Terrarium.initialize!(state, model.grid, snow, constants)   # invclosure: (T_air, W0) -> E
+        E0 = Array(interior(state.snow_energy))
+        set!(state.snowfall, NF(1.0e-6))
+        set!(state.air_temperature, T_air)
+        step_tendencies!(state)
+        dW = Array(interior(state.tendencies.snow_water_equivalent))
+        dE = Array(interior(state.tendencies.snow_energy))
+        @test all(dW .> 0)                       # pack accumulates
+        @test all(dE ./ dW .≈ E0 ./ W0)          # accreting snow carries the pack's specific enthalpy
     end
 end
