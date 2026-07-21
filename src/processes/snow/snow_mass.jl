@@ -44,10 +44,10 @@ end
 
 Snow water-equivalent tendency [m/s SWE] at grid cell `i, j` (continuous mass balance):
 ```
-dW/dt = P_s + R_on_snow − M_r − E_subl
+dW/dt = S + R_snow − M − E_sub
 ```
-where `P_s` is snowfall, `R_on_snow = f_snow·rainfall` the rain intercepted by the snow-covered fraction,
-`M_r` the Darcy meltwater outflow (see [`snow_meltwater_flux`](@ref)), and `E_subl` the sublimation rate.
+where `S` is snowfall, `R_snow = f_snow · rainfall` the rain intercepted by the snow-covered fraction,
+`M` the Darcy meltwater outflow (see [`snow_meltwater_flux`](@ref)), and `E_sub` the sublimation rate.
 """
 @propagate_inbounds function compute_snow_water_tendency(
         i, j, grid, fields,
@@ -57,9 +57,10 @@ where `P_s` is snowfall, `R_on_snow = f_snow·rainfall` the rain intercepted by 
     f_snow = snow_cover_fraction(i, j, grid, fields, snow)
     S = snowfall(i, j, grid, fields, atmos)
     M = snow_meltwater_flux(i, j, grid, fields, snow)
-    R = f_snow * rainfall(i, j, grid, fields, atmos)
-    E_s = fields.sublimation[i, j]
-    dWdt = S + R - M - E_s
+    R = rainfall(i, j, grid, fields, atmos)
+    R_snow = f_snow * R
+    E_sub = fields.sublimation[i, j]
+    dWdt = S + R_snow - M - E_sub
     return dWdt
 end
 
@@ -68,7 +69,7 @@ end
 
 Depth-integrated snow energy tendency [W/m²] at grid cell `i, j` (all fluxes positive upward):
 ```
-dE/dt = G_base − G_top + Q_precip
+dU/dt = G_base − G_top + Q_precip
 ```
 where `G_top`/`G_base` are the surface/basal heat fluxes and `Q_precip` the advected precipitation heat
 (see [`compute_precip_heat_flux`](@ref)). No explicit meltwater energy term appears: meltwater drains as
@@ -85,10 +86,12 @@ carries no enthalpy out of the pack.
     G_base = fields.basal_heat_flux[i, j]    # positive upward: energy entering the snow base from soil
     f_snow = snow_cover_fraction(i, j, grid, fields, snow)
     P_s = snowfall(i, j, grid, fields, atmos)
-    R_on_snow = f_snow * rainfall(i, j, grid, fields, atmos)
+    R = rainfall(i, j, grid, fields, atmos)
     T_air = air_temperature(i, j, grid, fields, atmos)
-    Q_precip = compute_precip_heat_flux(P_s, R_on_snow, T_air, constants)
-    return G_base - G_top + Q_precip
+    R_snow = f_snow * R
+    Q_prcp = compute_precip_heat_flux(P_s, R_snow, T_air, constants)
+    dUdt = G_base - G_top + Q_prcp
+    return dUdt
 end
 
 """
