@@ -1,3 +1,42 @@
+struct KernelFunction{autonomous, Func, Args}
+    func::Func
+    args::Args
+end
+
+function (op::KernelFunction{true})(var, grid, clock, fields, args...)
+    loc = location(vardims(var))
+    return KernelFunctionOperation{loc...}(op.func, grid, clock, fields, args..., op.args...)
+end
+
+function (op::KernelFunction{true})(var, grid, clock, fields, args...)
+    loc = location(vardims(var))
+    return KernelFunctionOperation{loc...}(op.func, grid, fields, args..., op.args...)
+end
+
+"""
+    kernel(func, args...; clock = false)
+
+Return a `KernelFunction` that lazily constructs a `KernelFunctionOperation` from the given
+`func` and tuple of `args` when invoked, i.e:
+
+```juila
+ctor = kerenl(my_function, arg1, arg2)
+...
+kfo = ctor(grid, clock, fields)
+```
+
+This is intended to be used as a constructor for `AuxiliaryVariable`s:
+
+```julia
+myvar(i, j, k, grid, fields) = clamp(fields.x[i, j, k], zero(eltype(grid)), one(eltype(grid)))
+
+auxvar = auxiliary(:myvar, XYZ(), kernel(myvar))
+```
+"""
+function kernel(func, args...; clock = false)
+    return KernelFunction{clock, typeof(func), typeof(args)}(func, args)
+end
+
 """
     findfirst_z(i, j, condition_func, z_nodes, field)
 
