@@ -13,8 +13,8 @@ end
 
 PrescribedPhenology(::Type{NF}; kwargs...) where {NF} = PrescribedPhenology{NF}(; kwargs...)
 
-variables(::PrescribedPhenology) = (
-    auxiliary(:phenology_factor, XY(), kernel(phenology_factor)),
+variables(phenol::PrescribedPhenology) = (
+    auxiliary(:phenology_factor, XY(), kernel(phenology_factor, phenol)),
     input(:leaf_area_index, XY()), # Leaf Area Index [m²/m²]
 )
 
@@ -25,6 +25,6 @@ function phenology_factor(i, j, grid, fields, phenology::PrescribedPhenology{NF}
     return ϕ
 end
 
-@inline compute_auxiliary!(state, grid, phenology::PrescribedPhenology) = nothing
+@inline compute_auxiliary!(state, grid, phenology::PrescribedPhenology, args...) = nothing
 
-@inline compute_tendencies!(state, grid, phenology::PrescribedPhenology) = nothing
+@inline compute_tendencies!(state, grid, phenology::PrescribedPhenology, args...) = nothing

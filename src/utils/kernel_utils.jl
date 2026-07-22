@@ -4,13 +4,13 @@ struct KernelFunction{autonomous, Func, Args}
 end
 
 function (op::KernelFunction{false})(var, grid, clock, fields, args...)
-    loc = location(vardims(var))
-    return KernelFunctionOperation{loc...}(op.func, grid, clock, fields, args..., op.args...)
+    loc = map(typeof, location(vardims(var)))
+    return KernelFunctionOperation{loc...}(op.func, get_field_grid(grid), clock, fields, args..., op.args...)
 end
 
 function (op::KernelFunction{true})(var, grid, clock, fields, args...)
-    loc = location(vardims(var))
-    return KernelFunctionOperation{loc...}(op.func, grid, fields, args..., op.args...)
+    loc = map(typeof, location(vardims(var)))
+    return KernelFunctionOperation{loc...}(op.func, get_field_grid(grid), fields, args..., op.args...)
 end
 
 """
@@ -34,7 +34,7 @@ auxvar = auxiliary(:myvar, XYZ(), kernel(myvar))
 ```
 """
 function kernel(func, args...; clock = false)
-    return KernelFunction{clock, typeof(func), typeof(args)}(func, args)
+    return KernelFunction{!clock, typeof(func), typeof(args)}(func, args)
 end
 
 """
