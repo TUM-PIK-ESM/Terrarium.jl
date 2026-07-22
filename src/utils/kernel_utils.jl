@@ -3,7 +3,7 @@ struct KernelFunction{autonomous, Func, Args}
     args::Args
 end
 
-function (op::KernelFunction{true})(var, grid, clock, fields, args...)
+function (op::KernelFunction{false})(var, grid, clock, fields, args...)
     loc = location(vardims(var))
     return KernelFunctionOperation{loc...}(op.func, grid, clock, fields, args..., op.args...)
 end
