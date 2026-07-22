@@ -35,7 +35,8 @@ StaticExponentialRootDistribution(::Type{NF}; kwargs...) where {NF} = StaticExpo
 Compute the continuous density function of the root distirbution as a function of depth `z`.
 """
 @inline function root_density(rd::StaticExponentialRootDistribution{NF}, z) where {NF}
-    ∂R∂z = NF(0.5) * (rd.a * exp(rd.a * z) + rd.b * exp(rd.b * z))
+    (; a, b) = rd
+    ∂R∂z = NF(0.5) * (a * exp(a * z) + b * exp(b * z))
     return ∂R∂z
 end
 
@@ -48,7 +49,7 @@ variables(rootdist::StaticExponentialRootDistribution) = (
 
 Returns a `FunctionField` that lazily computes the static root distribution on a 1D column grid.
 """
-function root_fraction(rootdist::StaticExponentialRootDistribution{NF}, grid::AbstractColumnGrid, clock, fields) where {NF}
+function root_fraction(::XYZ, grid::AbstractColumnGrid, clock, fields, rootdist::StaticExponentialRootDistribution{NF}) where {NF}
     fgrid = get_field_grid(grid)
     # define pdf of root distribution as a continuous function of depth
     ∂R∂z = FunctionField{Center, Center, Center}(fgrid, parameters = rootdist) do x, z, params

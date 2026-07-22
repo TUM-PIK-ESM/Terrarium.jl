@@ -12,7 +12,7 @@ variables(noop::NoCanopyInterception) = (
     auxiliary(:rainfall_ground, XY(), passthrough_rainfall, noop; desc = "Rainfall rate reaching the ground", units = u"m/s"),
 )
 
-passthrough_rainfall(::NoCanopyInterception, grid, clock, fields) = fields.rainfall # assumes existence of rainfall field
+passthrough_rainfall(grid, clock, fields, ::NoCanopyInterception) = fields.rainfall # assumes existence of rainfall field
 
 @inline compute_auxiliary!(state, grid, ::NoCanopyInterception, args...) = nothing
 
