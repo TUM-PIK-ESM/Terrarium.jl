@@ -49,7 +49,7 @@ variables(rootdist::StaticExponentialRootDistribution) = (
 
 Returns a `FunctionField` that lazily computes the static root distribution on a 1D column grid.
 """
-function root_fraction(::XYZ, grid::AbstractColumnGrid, clock, fields, rootdist::StaticExponentialRootDistribution{NF}) where {NF}
+function root_fraction(grid::AbstractColumnGrid, clock, fields, rootdist::StaticExponentialRootDistribution{NF}) where {NF}
     fgrid = get_field_grid(grid)
     # define pdf of root distribution as a continuous function of depth
     ∂R∂z = FunctionField{Center, Center, Center}(fgrid, parameters = rootdist) do x, z, params
