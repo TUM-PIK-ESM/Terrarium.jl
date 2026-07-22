@@ -47,12 +47,6 @@ Includes minimum conductance and light extinction effects based on LAI, scaled b
         photo::LUEPhotosynthesis{NF},
         vpd, An, co2, LAI, β
     ) where {NF}
-    # Preconditions
-    @assert isfinite(vpd) && abs(vpd) > zero(NF) "vapor pressure deficit must be greater than zero"
-    @assert isfinite(An) "An must be finite"
-    @assert isfinite(co2) && co2 > zero(NF) "CO2 must be positive and finite"
-    @assert isfinite(LAI) "LAI must be finite"
-    @assert isfinite(β) && 0 <= β <= 1 "β must be finite and between 0 and 1"
     # Compute stomatal conductance g_stm
     let g_min = stomcond.g_min / 1000, # convert mm/s to m/s
             g₁ = stomcond.g₁,
