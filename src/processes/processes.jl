@@ -100,7 +100,7 @@ export PALADYNVegetationDynamics
 include("vegetation/dynamics/vegetation_dynamics.jl")
 
 export PALADYNPhenology, PrescribedPhenology
-include("vegetation/phenology/phenology.jl")
+include("vegetation/phenology/paladyn_phenology.jl")
 include("vegetation/phenology/prescribed_phenology.jl")
 
 export StaticExponentialRootDistribution
