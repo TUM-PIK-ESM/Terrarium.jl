@@ -1,4 +1,3 @@
-# Note: maybe change the name later, if the PALADYN phenology approach has a more specific name
 """
     $TYPEDEF
 

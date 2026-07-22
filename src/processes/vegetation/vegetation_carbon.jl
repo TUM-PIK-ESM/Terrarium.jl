@@ -89,10 +89,10 @@ function compute_auxiliary!(
     # PAW: needs soil saturation profile and computes soil_moisture_limiting_factor
     compute_auxiliary!(state, grid, veg.plant_available_water, soil)
 
-    # Veg. carbon dynamics: needs C_veg(t-1) and computes LAI_b(t-1)
+    # Veg. carbon dynamics: needs C_veg(t) and computes LAI_b(t)
     compute_auxiliary!(state, grid, veg.carbon_dynamics)
 
-    # Phenology: needs LAI_b(t-1) and computes LAI(t-1) and phen(t-1)
+    # Phenology: needs LAI_b(t) and computes LAI(t) and phen(t)
     compute_auxiliary!(state, grid, veg.phenology)
 
     # Stomatal conductance: needs atm. inputs(t) and computes λc(t)
@@ -100,10 +100,10 @@ function compute_auxiliary!(
     # can this be refactored?
     compute_auxiliary!(state, grid, veg.stomatal_conductance, veg.photosynthesis, constants, atmos)
 
-    # Photosynthesis: needs atm. inputs(t), λc(t), LAI(t-1), and computes Rd(t) and GPP(t)
+    # Photosynthesis: needs atm. inputs(t), λc(t), LAI(t), and computes Rd(t) and GPP(t)
     compute_auxiliary!(state, grid, veg.photosynthesis, veg.stomatal_conductance, constants, atmos)
 
-    # Autotrophic respiration: needs atm. inputs(t), GPP(t), Rd(t), C_veg(t-1), phen(t-1) and computes Ra(t) and NPP(t)
+    # Autotrophic respiration: needs atm. inputs(t), GPP(t), Rd(t), C_veg(t), phen(t) and computes Ra(t) and NPP(t)
     compute_auxiliary!(state, grid, veg.autotrophic_respiration, veg.carbon_dynamics, atmos)
 
     # Note: vegetation_dynamics compute_auxiliary! does nothing for now
@@ -117,10 +117,10 @@ end
 Compute tendencies for carbon and vegetation dynamics.
 """
 function compute_tendencies!(state, grid, veg::VegetationCarbon, args...)
-    # Needs NPP(t), C_veg(t-1), LAI_b(t-1) and computes tendency for C_veg
+    # Needs NPP(t), C_veg(t), LAI_b(t) and computes tendency for C_veg
     compute_tendencies!(state, grid, veg.carbon_dynamics)
 
-    # Needs NPP(t), C_veg(t-1), LAI_b(t-1), ν(t-1) and computes tendency for ν
+    # Needs NPP(t), C_veg(t), LAI_b(t), ν(t) and computes tendency for ν
     compute_tendencies!(state, grid, veg.vegetation_dynamics, veg.carbon_dynamics)
 
     return nothing
