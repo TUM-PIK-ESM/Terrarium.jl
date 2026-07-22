@@ -45,8 +45,8 @@ end
 
 function compute_tendencies!(state, model::VegetationModel)
     # Unpack vegetation model
-    (; grid, vegetation, constants) = model
-    # Compute auxiliary variables for coupled vegetation processes
-    compute_tendencies!(state, grid, vegetation, constants)
+    (; grid, atmosphere, vegetation, constants) = model
+    # Compute tendencies for coupled vegetation processes
+    compute_tendencies!(state, grid, vegetation, constants, atmosphere)
     return nothing
 end

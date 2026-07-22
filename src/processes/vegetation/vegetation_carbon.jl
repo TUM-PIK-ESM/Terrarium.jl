@@ -92,8 +92,8 @@ function compute_auxiliary!(
     # Veg. carbon dynamics: needs C_veg(t) and computes LAI_b(t)
     compute_auxiliary!(state, grid, veg.carbon_dynamics)
 
-    # Phenology: needs LAI_b(t) and computes LAI(t) and phen(t)
-    compute_auxiliary!(state, grid, veg.phenology)
+    # Phenology: needs LAI_b(t) and air temperature(t) and computes LAI(t) and phen(t)
+    compute_auxiliary!(state, grid, veg.phenology, atmos)
 
     # Stomatal conductance: needs atm. inputs(t) and computes λc(t)
     # TODO: Note the (implicit) circular dependency between photosynthesis and stomatal conductance;
@@ -116,12 +116,15 @@ end
 
 Compute tendencies for carbon and vegetation dynamics.
 """
-function compute_tendencies!(state, grid, veg::VegetationCarbon, args...)
+function compute_tendencies!(state, grid, veg::VegetationCarbon, constants::PhysicalConstants, atmos::AbstractAtmosphere, args...)
     # Needs NPP(t), C_veg(t), LAI_b(t) and computes tendency for C_veg
     compute_tendencies!(state, grid, veg.carbon_dynamics)
 
     # Needs NPP(t), C_veg(t), LAI_b(t), ν(t) and computes tendency for ν
     compute_tendencies!(state, grid, veg.vegetation_dynamics, veg.carbon_dynamics)
+
+    # Needs air temperature(t) and computes tendency for growing degree days (prognostic phenology)
+    compute_tendencies!(state, grid, veg.phenology, atmos)
 
     return nothing
 end
