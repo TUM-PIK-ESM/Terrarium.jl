@@ -1,11 +1,14 @@
 # Simple single-layer snow scheme
 
-> Status: **in progress**. Phases 1–5 (process, closure, mass/energy tendencies, standalone `SnowModel`,
+> Status: **completed**. Phases 1–5 (process, closure, mass/energy tendencies, standalone `SnowModel`,
 > SEB coupling, and `LandModel` integration) are implemented and tested; the process parameters have been
-> decomposed into composable sub-parameterizations (see Revision 5); and the snow→soil water coupling,
-> sublimation, and differentiability/Reactant/conservation tests have landed (see Revision 6). Remaining:
-> partitioning the surface latent flux between snow and soil/canopy evapotranspiration, and a snow
-> documentation page.
+> decomposed into composable sub-parameterizations (see Revision 5); the snow→soil water coupling,
+> sublimation, and differentiability/Reactant/conservation tests have landed (see Revision 6); the surface
+> latent flux is partitioned between sublimation and evapotranspiration (see Revision 8); and the
+> sublimation energy-reference correction plus latent-heat-constant consistency have landed (see
+> Revision 9), closing the item flagged in Revision 7. The snow documentation pages are written. Two
+> non-blocking follow-ups are tracked under [Open questions / deferred work](#open-questions--deferred-work):
+> the full-timestep Enzyme autodiff LLVM failure (items 7) and a real Reactant `:snow_column` CI run (item 8).
 
 Date of initial draft: 2026-07-01
 
@@ -204,6 +207,26 @@ surface energy balance as an optional argument (author's directive):
 Test: `LandModel: latent flux partitioned` — under near-full snow cover, ground evaporation is suppressed
 to `< 10%` of the snow-free value while sublimation carries the flux. This resolves the double-counting
 noted in Revision 4/6. The sublimation energy-reference subtlety flagged in Revision 7 remains open.
+
+Revision 9 (2026-07-23) — **sublimation energy-reference correction** (closes the open item from
+Revision 7) and **thermodynamic consistency of the latent-heat constants**.
+
+- **Constants** (constants.jl): the tabulated latent heats were internally inconsistent (`L_v + L_f`
+  exceeded the tabulated `L_s` by ~400 J/kg). `latent_heat_fusion` is now the base value `3.3355e5` and
+  `latent_heat_sublimation` is derived as `L_f + L_v`, enforcing `L_s = L_f + L_v` exactly. The `show`
+  doctests and the constants documentation table were updated (fusion-first field order; `L_s = 2.83435e6`).
+- **Snow energy tendency** (`compute_snow_energy_tendency`, snow_mass.jl): added the advective sublimation
+  correction `Q_subl = ρ_w·L_f·E_subl`. `G_top` (the SEB residual) removes the full sublimation enthalpy
+  `ρ_w·L_s·E_subl` via the surface latent flux, but the mass leaving the pack departs as ice (enthalpy
+  `−L_f` relative to the liquid-water-at-0 °C reference). Adding back `ρ_w·L_f·E_subl` leaves a net pack
+  loss of exactly `ρ_w·L_v·E_subl` (the vaporization enthalpy of the departing vapor), the ice→vapor
+  analogue of the meltwater term. With the now-consistent constants, `L_f` and `(L_s − L_v)` are identical,
+  so `L_f` is used directly. The SEB latent flux and skin-temperature solve are unchanged (they correctly
+  see `L_s`).
+
+Test: `conservation: sublimation nets the vaporization enthalpy` (snow_model_tests.jl) — with `G_top`
+set to the SEB's `ρ_w·L_s·E_subl` contribution, the snow energy tendency equals `−ρ_w·L_v·E_subl`. Docs
+updated (snow.md, snow_energy.md energy-balance equations).
 
 ## Resolved design decisions
 
@@ -595,6 +618,17 @@ PR-B (`ground_heat_flux` / `soil_heat_flux` split). See "Preliminary refactoring
    biased.
 6. **Stability corrections.** Like UEB, neutral turbulent transfer is assumed; Richardson/Monin–Obukhov
    corrections are out of scope.
+7. **Full-timestep Enzyme autodiff.** Reverse-mode autodiff of the *full* `SnowModel` timestep currently
+   fails to compile under Enzyme with an internal `LLVM error: Canonicalization failed` (in
+   `EnzymeCreateAugmentedPrimal`). The snow closure reuses the `FreeWater` maps (adjoints covered in
+   `soil_energy_diff.jl`) and the snow-specific physics is differentiable in isolation (function-level
+   adjoints in `differentiability/snow_model_diff.jl`), so the failure is isolated to the full-model
+   reverse pass. Documented in `snow_model_diff.jl` for separate investigation; not required for the
+   scheme to function.
+8. **Reactant `:snow_column` CI run.** The CPU-vs-Reactant `:snow_column` correctness case is registered
+   (`test/reactant/setup.jl` + `runtests.jl`) but was not executed in the dev session because the
+   `test/reactant` environment was not instantiated. It needs a real run in CI (or a locally instantiated
+   Reactant environment) to confirm correctness.
 
 ## Readiness assessment
 

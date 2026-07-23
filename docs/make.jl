@@ -204,6 +204,12 @@ makedocs(
                 "Energy balance" => "processes/soil/soil_energy.md",
                 "Biogeochemistry" => "processes/soil/soil_biogeochemistry.md",
             ],
+            "Snow" => [
+                "Overview" => "processes/snow/snow.md",
+                "Parameterizations" => "processes/snow/snow_parameterizations.md",
+                "Energy balance" => "processes/snow/snow_energy.md",
+                "Mass balance" => "processes/snow/snow_mass.md",
+            ],
             "Vegetation" => [
                 "Overview" => "processes/vegetation/vegetation.md",
                 "Photosynthesis" => "processes/vegetation/photosynthesis.md",

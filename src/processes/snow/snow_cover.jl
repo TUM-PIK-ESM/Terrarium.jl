@@ -23,6 +23,13 @@ end
 
 FractionalSnowCover(::Type{NF}; kwargs...) where {NF} = FractionalSnowCover{NF}(; kwargs...)
 
+"""
+    $TYPEDSIGNATURES
+
+Sub-grid snow-covered area fraction `f_snow = W/(W + W_ref)` ∈ [0,1) from the snow water equivalent `W`
+[m] and the reference level `W_ref` (`half_coverage`), clamping negative SWE (which can occur transiently
+in the prognostic state) to zero cover.
+"""
 @inline function compute_snow_cover_fraction(cover::FractionalSnowCover{NF}, swe::NF) where {NF}
     # clamp negative SWE (which can occur transiently in the prognostic state) to zero cover
     W = max(swe, zero(NF))

@@ -227,6 +227,12 @@ snow's `surface_heat_flux`/`basal_heat_flux` inputs in the coupled model).
     return nothing
 end
 
+"""
+    $TYPEDSIGNATURES
+
+Snow meltwater outflow `M_r` [m/s SWE] at grid cell `i, j`: the Darcy-type drainage
+(see [`compute_meltwater_outflow`](@ref)) evaluated at the diagnosed liquid water fraction.
+"""
 @propagate_inbounds function snow_meltwater_flux(i, j, grid, fields, snow::SingleLayerSnow)
     θ_liq = liquid_water_fraction(i, j, grid, fields, snow)
     M = compute_meltwater_outflow(snow.hydraulic_properties, θ_liq)
