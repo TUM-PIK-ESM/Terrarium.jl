@@ -18,6 +18,7 @@ using Enzyme
 
 using Rasters, NCDatasets
 using CairoMakie
+using Statistics: quantile
 
 import RingGrids
 
@@ -40,12 +41,16 @@ grid = ColumnRingGrid(ReactantState(), Float32, UniformSpacing(Δz = 0.2f0, N = 
 # take the first time slice as a constant-in-time forcing field (a `FieldInputSource`, as in the
 # hybrid modeling example).
 
-Tair_raster = Raster("inputs/external/era5-land/2m_temperature/era5_land_2m_temperature_2023_N72.nc")
-Tair_raster = convert.(Float32, replace_missing(Tair_raster, NaN)) .- 273.15f0
-Tair0 = Tair_raster[Ti(1)]
+# The full-year hourly file is large (~1.5 GB, 8760 time steps); load it lazily and materialize
+# only the first time slice, which we use as a constant-in-time forcing.
+Tair_raster = Raster("inputs/era5_land_2m_temperature_2023_N72.nc"; lazy = true)
+Tair0 = convert.(Float32, replace_missing(Tair_raster[Ti(1)], NaN)) .- 273.15f0
 Tair_field = RingGrids.FullGaussianField(Matrix(Tair0), input_as = Matrix)
 Tair_forcing = InputSource(grid, Tair_field, name = :Tair, units = u"°C")
-Tsurf_0 = Tair0[findall(land_mask)]
+
+# Masked surface temperatures ordered by the grid's active (land) columns, for the initializer
+# below (column index `x` runs over the land columns).
+Tsurf_0 = Tair_field[findall(land_mask)]
 
 # ## Model setup
 #
@@ -113,28 +118,50 @@ println("Global mean surface soil temperature after 1 day: $(Reactant.to_number(
 
 dU = Array(interior(dintegrator.state.internal_energy))   # (Ncolumns, 1, Nz)
 cpu_grid = on_architecture(CPU(), grid)
+## scatter all layers back onto the rings (columns × layers), then take the top (surface) layer as
+## a horizontal field for plotting.
 dU_ring = RingGrids.Field(dU[:, 1, :], cpu_grid)
+dU_surface = dU_ring[:, end]                              # top-layer sensitivity, a horizontal field
+
+# The sensitivity is positive almost everywhere (more initial internal energy ⇒ warmer soil ⇒
+# higher global mean), but a small number of columns sitting near the freezing point have an
+# outsized response: there latent heat of fusion makes the effective heat capacity very large and
+# ``\partial T / \partial U`` spikes. Those outliers are physical, but on a linear color scale
+# they would pin every other column to one end of the colorbar. We therefore clip the color range
+# to the 2nd–98th percentile so the spatial structure of the bulk is visible.
+lo, hi = quantile(filter(isfinite, Array(dU_surface)), (0.02, 0.98))
 
 mkpath("plots")
-Makie.with_theme(fontsize = 18) do
-    fig = heatmap(
-        dU_ring[:, end],
-        title = "Sensitivity of global mean surface soil temperature to initial internal energy",
-        size = (800, 400),
-    )
-    Makie.save("plots/global_sensitivity_initialU_era5land.png", fig)
-    fig
-end
+fig = heatmap(
+    dU_surface;
+    title = "Sensitivity of global mean surface soil temperature to initial internal energy",
+    size = (900, 450),
+    colorrange = (lo, hi),
+    colormap = :viridis,
+    highclip = :magenta,
+)
+Makie.save("plots/global_sensitivity_initialU_era5land.png", fig)
+fig
 
 # The same gradient also tells us how deep into the soil a single day of surface forcing
-# "reaches": we average the magnitude of the sensitivity over all land columns by depth.
+# "reaches": we average the magnitude of the sensitivity over all land columns by depth. The
+# sensitivity falls off by many orders of magnitude within the first metre — a single day of
+# surface forcing barely perturbs the deep soil — so we plot the magnitude on a log axis.
 
 zs = znodes(integrator.state.temperature)
 dU_depth = vec(sum(abs, dU[:, 1, :], dims = 1)) ./ size(dU, 1)
+## floor at a tiny fraction of the maximum so the log axis is well-defined without flattening the
+## many-orders-of-magnitude decay with depth (values span ~1e-12 at the surface to ~1e-26 deep).
+floor_value = maximum(dU_depth) * 1.0f-20
+dU_depth_plot = max.(dU_depth, floor_value)
 
 f = Makie.Figure()
-Makie.Axis(f[1, 1], ylabel = "Soil depth / m", xlabel = "mean |∂T̄_surf/∂U₀|")
-Makie.scatterlines!(f[1, 1], dU_depth, zs)
+Makie.Axis(
+    f[1, 1], ylabel = "Soil depth / m", xlabel = "mean |∂T̄_surf/∂U₀|",
+    xscale = log10,
+)
+Makie.scatterlines!(f[1, 1], dU_depth_plot, zs)
+Makie.save("plots/global_sensitivity_depth_profile.png", f)
 f
 
 # Sensitivities with respect to *model parameters* (rather than initial conditions) are shown in
