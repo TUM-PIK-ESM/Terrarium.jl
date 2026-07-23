@@ -132,3 +132,30 @@ end
     runoff = Array(interior(state.surface_runoff))
     @test all(isapprox.(infil .+ runoff, M_r; rtol = 1.0e-6))
 end
+
+@testset "LandModel: latent flux partitioned between ground evaporation and sublimation" begin
+    # The surface latent flux is split by snow-covered fraction: ground evaporation over (1 − f_snow),
+    # snow sublimation over f_snow. The ground evaporation is scaled at its source by (1 − f_snow), so the
+    # stored `evaporation_ground` must equal (1 − f_snow)·g·Δq(T_skin) — no double-counting with sublimation.
+    grid = ColumnGrid(CPU(), ExponentialSpacing(Δz_max = 1.0, N = 50))
+    soil = SoilEnergyWaterCarbon(eltype(grid); hydrology = SoilHydrology(eltype(grid), RichardsEq()))
+    inits = (temperature = (x, z) -> 2.0 - 0.02 * z, saturation_water_ice = (x, z) -> 0.8,
+        snow_water_equivalent = 0.5, snow_temperature = -2.0)
+    land = LandModel(grid; soil, snow = SingleLayerSnow(eltype(grid)), vegetation = nothing)
+    it = initialize(land; initializers = inits)
+    Terrarium.closure!(it.state, land)
+    compute_auxiliary!(it.state, land)
+    thermo = land.constants.thermodynamics
+    f = Array(interior(it.state.snow_cover_fraction))
+    E = Array(interior(it.state.evaporation_ground))
+    g = Array(interior(it.state.ground_evaporation_conductance))
+    Ts = Array(interior(it.state.skin_temperature))
+    p = Array(interior(it.state.air_pressure))
+    q_air = Array(interior(it.state.specific_humidity))
+    # unscaled bulk-aerodynamic ground evaporation g·Δq(T_skin); the stored flux is this scaled by (1 − f)
+    Δq = Terrarium.specific_humidity_difference.(Ref(thermo), p, q_air, Ts)
+    @test all(f .> 0.95)                                     # 0.5 m SWE ≫ W_ref -> near-full cover
+    @test all(isapprox.(E, (1 .- f) .* g .* Δq; rtol = 1.0e-6))   # ground evaporation scaled by (1 − f_snow)
+    @test all(isfinite.(interior(it.state.sublimation)))
+    @test all(isfinite.(interior(it.state.latent_heat_flux)))
+end

@@ -179,6 +179,32 @@ energy budget implies an additional `+ρ_w·L_f·E_subl` term beyond the SEB lat
 this is entangled with the SEB's latent-heat convention (`L_v` vs `L_s`) and the still-deferred
 latent-flux partitioning, and is left for that work item.
 
+Revision 8 (2026-07-21) — **latent-flux partitioning between sublimation and evapotranspiration.** The
+surface latent flux is now split by snow-covered area fraction `f_snow`, threading `snow` through the
+surface energy balance as an optional argument (author's directive):
+
+- **SEB latent heat flux** (`compute_latent_heat_flux`, turbulent_fluxes.jl): `H_l = (1 − f_snow)·L_v·ρₐ·Q_h_ground
+  + ρ_w·L_s·E_subl`, i.e. ground/canopy evaporation (latent heat of vaporization) over the snow-free
+  fraction plus snow sublimation (latent heat of sublimation) over the snow-covered fraction. Reduces to
+  the original flux without snow (`f_snow = 0`).
+- **Snow sublimation** (`compute_snow_sublimation_flux`, shared helper): the snow-fraction, saturated
+  bulk-aerodynamic vapor flux `f_snow·ρₐ·Δq(T_skin)/rₐ/ρ_w`, with `Δq` taken **over ice** for the
+  sub-freezing surface (the existing `saturation_specific_humidity_vapor` already dispatches over ice for
+  `T ≤ 0`). This one flux drives both the `H_l` snow term and the snow's `sublimation` mass sink, so the
+  energy and mass are consistent. It replaces the previous `f_snow·H_l/(ρ_w·L_s)` estimate.
+- **Ground evaporation** (`bare_ground_evaporation.jl`): `evaporation_ground` is scaled by `(1 − f_snow)`
+  at its source, so both the SEB latent flux ground term and the soil-water ET sink (`forcing`) see the
+  reduced flux — no water/energy double-count over the snow-covered fraction. Canopy transpiration is left
+  unchanged over snow (a documented simplification; only bare-ground evaporation is scaled).
+- `snow` is threaded through `SurfaceHydrology`/`DirectSurfaceRunoff`/`BareGroundEvaporation` and the SEB
+  solve chain (`solve_skin_temperature!`/residual → `compute_surface_energy_fluxes!`). The snow coupling
+  (`compute_snow_soil_boundary_fluxes!`) now takes `atmos` to evaluate the sublimation flux at the
+  converged skin temperature.
+
+Test: `LandModel: latent flux partitioned` — under near-full snow cover, ground evaporation is suppressed
+to `< 10%` of the snow-free value while sublimation carries the flux. This resolves the double-counting
+noted in Revision 4/6. The sublimation energy-reference subtlety flagged in Revision 7 remains open.
+
 ## Resolved design decisions
 
 The following forks were resolved with the model author before drafting:

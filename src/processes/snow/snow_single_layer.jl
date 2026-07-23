@@ -79,22 +79,24 @@ with the bulk density `ρ_s`.
 
 Launch [`compute_snow_soil_boundary_fluxes!`](@ref) to diagnose the snow↔surface/soil coupling fluxes from the
 snow state and the surface energy balance outputs: the blended soil-top heat flux (`soil_heat_flux`) and
-the snow surface sublimation rate (`sublimation`, from the SEB latent-heat flux). Must run after the
-surface energy balance (which sets `ground_heat_flux` and `latent_heat_flux`). No-op when there is no
-snowpack (`snow === nothing`).
+the snow surface sublimation rate (`sublimation`, the snow-fraction bulk-aerodynamic vapor flux at the
+converged skin temperature). Must run after the surface energy balance (which sets `ground_heat_flux` and
+the skin temperature). No-op when there is no snowpack (`snow === nothing`).
 """
-compute_snow_soil_boundary_fluxes!(state, grid, ::Nothing, constants::PhysicalConstants) = nothing
-function compute_snow_soil_boundary_fluxes!(state, grid, snow::SingleLayerSnow, constants::PhysicalConstants)
+compute_snow_soil_boundary_fluxes!(state, grid, ::Nothing, constants::PhysicalConstants, atmos::AbstractAtmosphere) = nothing
+function compute_snow_soil_boundary_fluxes!(state, grid, snow::SingleLayerSnow, constants::PhysicalConstants, atmos::AbstractAtmosphere)
     out = (; soil_heat_flux = state.soil_heat_flux, sublimation = state.sublimation)
-    fields = (;
+    coupling_fields = (;
         ground_heat_flux = state.ground_heat_flux,
         ground_temperature = state.ground_temperature,
-        latent_heat_flux = state.latent_heat_flux,
+        skin_temperature = state.skin_temperature,
         snow_temperature = state.snow_temperature,
         snow_depth = state.snow_depth,
         snow_cover_fraction = state.snow_cover_fraction,
     )
-    launch!(grid, XY, compute_snow_coupling_fluxes_kernel!, out, fields, snow, constants)
+    # atmosphere fields (air temperature/pressure/humidity, windspeed) are needed for the sublimation flux
+    fields = merge(coupling_fields, get_fields(state, atmos))
+    launch!(grid, XY, compute_snow_coupling_fluxes_kernel!, out, fields, snow, atmos, constants)
     return nothing
 end
 
@@ -207,35 +209,21 @@ end
 """
     $TYPEDSIGNATURES
 
-Snow surface sublimation rate [m/s SWE] at grid cell `i, j`, from the snow-covered fraction of the SEB
-latent-heat flux: `E_subl = f_snow·H_l/(ρ_w·L_s)` with `L_s` the latent heat of sublimation and `H_l`
-(`latent_heat_flux`) positive upward (mass leaving). N.B. the latent flux is not yet partitioned between
-snow sublimation and soil/canopy evapotranspiration, so this over-counts when both are active.
-"""
-@propagate_inbounds function compute_snow_sublimation(i, j, grid, fields, snow::SingleLayerSnow, constants::PhysicalConstants)
-    ρ_w = constants.material.density_water
-    L_s = constants.thermodynamics.latent_heat_sublimation
-    H_l = fields.latent_heat_flux[i, j]
-    f = fields.snow_cover_fraction[i, j]
-    return f * H_l / (ρ_w * L_s)
-end
-
-"""
-    $TYPEDSIGNATURES
-
 Diagnose the snow↔surface/soil coupling fluxes at grid cell `i, j`, run after the surface energy balance:
 the blended soil-top heat flux (see [`compute_snow_soil_heat_flux`](@ref)) and the snow surface
-sublimation rate (see [`compute_snow_sublimation`](@ref)). The snow surface and basal heat fluxes seen by
-the energy tendency are the `ground_heat_flux` and `soil_heat_flux` fields themselves (aliased as the
+sublimation rate (see [`compute_snow_sublimation_flux`](@ref), the same snow-fraction vapor flux the
+surface energy balance uses for the latent-flux partition). The snow surface and basal heat fluxes seen
+by the energy tendency are the `ground_heat_flux` and `soil_heat_flux` fields themselves (aliased as the
 snow's `surface_heat_flux`/`basal_heat_flux` inputs in the coupled model).
 """
 @propagate_inbounds function compute_snow_soil_boundary_fluxes!(
         out, i, j, grid, fields,
         snow::SingleLayerSnow,
+        atmos::AbstractAtmosphere,
         constants::PhysicalConstants
     )
     out.soil_heat_flux[i, j, 1] = compute_snow_soil_heat_flux(i, j, grid, fields, snow, constants)
-    out.sublimation[i, j, 1] = compute_snow_sublimation(i, j, grid, fields, snow, constants)
+    out.sublimation[i, j, 1] = compute_snow_sublimation_flux(i, j, grid, fields, snow, atmos, constants)
     return nothing
 end
 
@@ -247,9 +235,9 @@ end
 
 # Kernels
 
-@kernel inbounds = true function compute_snow_coupling_fluxes_kernel!(out, grid, fields, snow::SingleLayerSnow, constants)
+@kernel inbounds = true function compute_snow_coupling_fluxes_kernel!(out, grid, fields, snow::SingleLayerSnow, atmos, constants)
     i, j = @index(Global, NTuple)
-    compute_snow_soil_boundary_fluxes!(out, i, j, grid, fields, snow, constants)
+    compute_snow_soil_boundary_fluxes!(out, i, j, grid, fields, snow, atmos, constants)
 end
 
 @kernel inbounds = true function compute_auxiliary_kernel!(out, grid, fields, snow::AbstractSnow, args...)

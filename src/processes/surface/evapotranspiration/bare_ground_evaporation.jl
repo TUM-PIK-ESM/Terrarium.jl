@@ -59,11 +59,14 @@ function compute_auxiliary!(
         constants::PhysicalConstants,
         atmos::AbstractAtmosphere,
         soil::Optional{AbstractSoil} = nothing,
+        vegetation = nothing,
+        snow::Optional{AbstractSnow} = nothing,
         args...
     )
     out = auxiliary_fields(state, evaporation)
-    fields = get_fields(state, evaporation, atmos, soil; except = out)
-    launch!(grid, XY, compute_auxiliary_kernel!, out, fields, evaporation, constants, atmos, soil)
+    # merge the snow cover fraction so the ground evaporation can be scaled by the snow-free fraction
+    fields = merge(get_fields(state, evaporation, atmos, soil; except = out), get_fields(state, snow))
+    launch!(grid, XY, compute_auxiliary_kernel!, out, fields, evaporation, constants, atmos, soil, snow)
     return nothing
 end
 
@@ -111,13 +114,17 @@ end
         evaporation::BareGroundEvaporation,
         constants::PhysicalConstants,
         atmos::AbstractAtmosphere,
+        snow::Optional{AbstractSnow} = nothing,
     )
     Ts = fields.skin_temperature[i, j]
     g_gnd = fields.ground_evaporation_conductance[i, j]
     # Evaporation flux at the current skin temperature. Re-running this kernel after the SEB solve
     # (see `LandModel`) refreshes it so it is consistent with the converged skin temperature.
     Δq = compute_specific_humidity_difference(i, j, grid, fields, atmos, constants, Ts)
-    out.evaporation_ground[i, j, 1] = compute_evaporation_flux(evaporation, Δq, g_gnd)
+    # Ground evaporation occurs only over the snow-free fraction (1 − f_snow); the snow-covered fraction
+    # sublimates instead (see `compute_snow_sublimation_flux`). No scaling without snow (f_snow = 0).
+    f_snow = snow_cover_fraction(i, j, grid, fields, snow)
+    out.evaporation_ground[i, j, 1] = (one(f_snow) - f_snow) * compute_evaporation_flux(evaporation, Δq, g_gnd)
     return out
 end
 
@@ -129,15 +136,15 @@ end
         constants::PhysicalConstants,
         atmos::AbstractAtmosphere,
         soil::AbstractSoil,
-        args...
+        snow = nothing,
     )
     i, j = @index(Global, NTuple)
 
     # First compute conductances
-    compute_evapotranspiration_conductances!(out, i, j, grid, fields, evapotranspiration, constants, atmos, soil, args...)
+    compute_evapotranspiration_conductances!(out, i, j, grid, fields, evapotranspiration, constants, atmos, soil)
     # TODO: Annoyingly, we need to explicitly add these to `fields`; need a better solution to this problem
     conductances = (ground_evaporation_conductance = out.ground_evaporation_conductance,)
     fields = merge(fields, conductances)
-    # Compute ET fluxes from stored conductances
-    compute_evapotranspiration_fluxes!(out, i, j, grid, fields, evapotranspiration, constants, atmos)
+    # Compute ET fluxes from stored conductances; `snow` scales ground evaporation by the snow-free fraction
+    compute_evapotranspiration_fluxes!(out, i, j, grid, fields, evapotranspiration, constants, atmos, snow)
 end

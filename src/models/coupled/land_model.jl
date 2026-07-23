@@ -111,7 +111,7 @@ function compute_auxiliary!(state, model::LandModel)
     compute_auxiliary!(state, grid, model.surface_hydrology, model.constants, model.atmosphere, model.soil, model.vegetation, model.snow)
     compute_auxiliary!(state, grid, model.surface_energy_balance, model.constants, model.atmosphere, model.surface_hydrology, model.snow)
     # Diagnose the snow↔soil coupling fluxes (soil-top heat blend + sublimation) after the SEB; no-op without snow
-    compute_snow_soil_boundary_fluxes!(state, grid, model.snow, model.constants)
+    compute_snow_soil_boundary_fluxes!(state, grid, model.snow, model.constants, model.atmosphere)
     return nothing
 end
 

@@ -242,8 +242,9 @@ based on the resulting ground heat flux.
         constants,
         seb_args...
     )
-    # Compute all fluxes based on current skin temperature (this includes ground heat flux already)
-    compute_surface_energy_fluxes!(out, i, j, grid, fields, seb, constants, seb_args...)
+    # Compute all fluxes based on current skin temperature (this includes ground heat flux already);
+    # `snow` (after evtr = nothing) partitions the latent flux by snow-covered fraction
+    compute_surface_energy_fluxes!(out, i, j, grid, fields, seb, constants, seb_args..., nothing, snow)
     out.skin_temperature[i, j, 1] = compute_skin_temperature(i, j, grid, fields, skinT, snow, constants)
     return nothing
 end
@@ -261,8 +262,9 @@ Same as [`compute_skin_temperature!`](@ref) but returns the residual instead of 
         constants,
         seb_args...
     )
-    # Compute all fluxes based on current skin temperature (this includes ground heat flux already)
-    compute_surface_energy_fluxes!(out, i, j, grid, fields, seb, constants, seb_args...)
+    # Compute all fluxes based on current skin temperature (this includes ground heat flux already);
+    # `snow` (after evtr = nothing) partitions the latent flux by snow-covered fraction
+    compute_surface_energy_fluxes!(out, i, j, grid, fields, seb, constants, seb_args..., nothing, snow)
     # Compute skin temperature using the (optionally snow-aware) conduction target
     Ts_implicit = compute_skin_temperature(i, j, grid, fields, skinT, snow, constants)
     Ts_prev = out.skin_temperature[i, j, 1]
