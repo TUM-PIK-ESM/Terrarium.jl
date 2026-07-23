@@ -142,4 +142,24 @@ using Test
         @test all(dW .> 0)                       # pack accumulates
         @test all(dE ./ dW .≈ E0 ./ W0)          # accreting snow carries the pack's specific enthalpy
     end
+
+    @testset "conservation: sublimation nets the vaporization enthalpy" begin
+        # The surface energy balance folds the full sublimation enthalpy ρ_w·L_s·E_subl into G_top
+        # (surface_heat_flux), but the departing mass leaves the pack as ice, whose enthalpy relative to
+        # liquid water at 0 °C is −L_f. The advective correction +ρ_w·L_f·E_subl therefore leaves a net
+        # pack loss of exactly ρ_w·L_v·E_subl, the vaporization enthalpy carried by the departing vapor.
+        # (Without the correction the pack would lose the full L_s and spuriously overcool.)
+        state = fresh_state()
+        set!(state.snow_water_equivalent, W0)
+        set!(state.snow_temperature, NF(-5))
+        Terrarium.initialize!(state, model.grid, snow, constants)
+        L_s = constants.thermodynamics.latent_heat_sublimation
+        L_v = constants.thermodynamics.latent_heat_vaporization
+        E_subl = NF(2.0e-7)
+        set!(state.sublimation, E_subl)
+        set!(state.surface_heat_flux, ρ_w * L_s * E_subl)   # SEB latent contribution to G_top
+        step_tendencies!(state)
+        dE = Array(interior(state.tendencies.snow_energy))
+        @test all(dE .≈ -ρ_w * L_v * E_subl)                # net loss = vaporization enthalpy only
+    end
 end

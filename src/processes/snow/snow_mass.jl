@@ -69,12 +69,20 @@ end
 
 Depth-integrated snow energy tendency [W/m²] at grid cell `i, j` (all fluxes positive upward):
 ```
-dU/dt = G_base − G_top + Q_precip
+dU/dt = G_base − G_top + Q_precip + Q_subl
 ```
-where `G_top`/`G_base` are the surface/basal heat fluxes and `Q_precip` the advected precipitation heat
-(see [`compute_precip_heat_flux`](@ref)). No explicit meltwater energy term appears: meltwater drains as
-liquid water at 0 °C, which is the zero-enthalpy reference (`U = 0`) of the `FreeWater` closure, so it
-carries no enthalpy out of the pack.
+where `G_top`/`G_base` are the surface/basal heat fluxes, `Q_precip` the advected precipitation heat
+(see [`compute_precip_heat_flux`](@ref)), and `Q_subl` an advective correction for sublimation.
+
+The sublimation correction `Q_subl = ρ_w·L_f·E_subl` is required because the latent heat flux
+carries the full sublimation enthalpy `ρ_w·L_s·E_subl`, whereas the mass leaving the pack departs as ice,
+whose specific enthalpy relative to the liquid-water reference is `−L_f`. Adding back `ρ_w·L_f·E_subl`
+leaves the pack with a net loss of `ρ_w·(L_s − L_f)·E_subl = ρ_w·L_v·E_subl`, the vaporization enthalpy
+carried by the departing vapor.
+
+Note that no explicit *meltwater* energy term appears because meltwater drains as liquid water at 0 °C,
+which is the zero-enthalpy reference (`U = 0`) of the `FreeWater` closure, so it carries no enthalpy
+out of the pack.
 """
 @propagate_inbounds function compute_snow_energy_tendency(
         i, j, grid, fields,
@@ -90,7 +98,11 @@ carries no enthalpy out of the pack.
     T_air = air_temperature(i, j, grid, fields, atmos)
     R_snow = f_snow * R
     Q_prcp = compute_precip_heat_flux(P_s, R_snow, T_air, constants)
-    dUdt = G_base - G_top + Q_prcp
+    ρ_w = constants.material.density_water
+    L_f = constants.thermodynamics.latent_heat_fusion
+    E_subl = fields.sublimation[i, j]
+    Q_subl = ρ_w * L_f * E_subl
+    dUdt = G_base - G_top + Q_prcp + Q_subl
     return dUdt
 end
 
