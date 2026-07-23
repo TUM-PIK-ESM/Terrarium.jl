@@ -44,7 +44,7 @@ Includes minimum conductance and light extinction effects based on LAI, scaled b
 """
 @inline function compute_stomatal_conductance(
         stomcond::MedlynStomatalConductance{NF},
-        photo::LUEPhotosynthesis{NF},
+        photo::AbstractPhotosynthesis{NF},
         vpd, An, co2, LAI, β
     ) where {NF}
     # Preconditions
@@ -87,7 +87,7 @@ end
 function compute_auxiliary!(
         state, grid,
         stomcond::MedlynStomatalConductance,
-        photo::LUEPhotosynthesis,
+        photo::AbstractPhotosynthesis,
         constants::PhysicalConstants,
         atmos::AbstractAtmosphere,
         args...
@@ -106,7 +106,7 @@ end
 Compute stomatal conductance (g_stm) and leaf-to-air CO₂ ratio (λc) at a grid point.
 Returns tuple (g_stm, λc) for use in photosynthesis and transpiration calculations.
 """
-@propagate_inbounds function compute_stomatal_conductance(i, j, grid, fields, stomcond::MedlynStomatalConductance{NF}, photo::LUEPhotosynthesis{NF}, constants::PhysicalConstants, atmos::AbstractAtmosphere, args...) where {NF}
+@propagate_inbounds function compute_stomatal_conductance(i, j, grid, fields, stomcond::MedlynStomatalConductance{NF}, photo::AbstractPhotosynthesis{NF}, constants::PhysicalConstants, atmos::AbstractAtmosphere, args...) where {NF}
     # Get inputs
     An = fields.net_assimilation[i, j]
     CO2 = fields.CO2[i, j]
@@ -128,7 +128,7 @@ end
 
 Calls [`compute_stomatal_conductance`](@ref) and stores the result in `out`.
 """
-@propagate_inbounds function compute_stomatal_conductance!(out, i, j, grid, fields, stomcond::MedlynStomatalConductance{NF}, photo::LUEPhotosynthesis{NF}, constants::PhysicalConstants, atmos::AbstractAtmosphere, args...) where {NF}
+@propagate_inbounds function compute_stomatal_conductance!(out, i, j, grid, fields, stomcond::MedlynStomatalConductance{NF}, photo::AbstractPhotosynthesis{NF}, constants::PhysicalConstants, atmos::AbstractAtmosphere, args...) where {NF}
     g_stm, λc = compute_stomatal_conductance(i, j, grid, fields, stomcond, photo, constants, atmos, args...)
     out.canopy_water_conductance[i, j, 1] = g_stm
     out.leaf_to_air_co2_ratio[i, j, 1] = λc

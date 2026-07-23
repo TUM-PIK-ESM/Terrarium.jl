@@ -84,7 +84,7 @@ Computes maintenance respiration `Rm` in [kgC/m²/day].
 """
 @inline function compute_Rm(
         autoresp::PALADYNAutotrophicRespiration{NF},
-        vegcarbon_dynamics::PALADYNCarbonDynamics{NF},
+        vegcarbon_dynamics::AbstractVegetationCarbonDynamics{NF},
         T_air,
         T_soil,
         Rd,
@@ -130,7 +130,7 @@ $SIGNATURES
 
 Computes autotrophic respiration `Ra` as the sum of maintenance respiration `Rm` and growth respiration `Rg` in [kgC/m²/s].
 """
-@inline function compute_Ra(autoresp::PALADYNAutotrophicRespiration, vegcarbon_dynamics::PALADYNCarbonDynamics, T_air, T_soil, Rd, phen, C_veg, GPP)
+@inline function compute_Ra(autoresp::PALADYNAutotrophicRespiration, vegcarbon_dynamics::AbstractVegetationCarbonDynamics, T_air, T_soil, Rd, phen, C_veg, GPP)
     # Compute Rm, maintenance respiration
     Rm = compute_Rm(autoresp, vegcarbon_dynamics, T_air, T_soil, Rd, phen, C_veg)
 
@@ -182,7 +182,7 @@ Compute autotrophic respiration following the scheme of [willeitPALADYNV10Compre
 @propagate_inbounds function compute_autotrophic_respiration(
         i, j, grid, fields,
         autoresp::PALADYNAutotrophicRespiration,
-        vegcarbon_dynamics::PALADYNCarbonDynamics,
+        vegcarbon_dynamics::AbstractVegetationCarbonDynamics,
         atmos::AbstractAtmosphere
     )
     # Get inputs
