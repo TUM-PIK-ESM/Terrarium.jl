@@ -262,8 +262,7 @@ println("∂T̄_col/∂κ_quartz  = $(∂T̄_∂κ_quartz) K / (W m⁻¹ K⁻¹)
 # scalar parameter ``\kappa_\text{mineral}`` perturb the soil temperature at *every* grid point and
 # depth? Reverse mode is the efficient choice for many-inputs → one-output (the initial-condition maps
 # above); forward mode is efficient for **one-input → many-outputs**, which is exactly a scalar-parameter
-# sensitivity *map*. Note that ``\kappa_\text{mineral}`` stays a single scalar — there is **no
-# per-column parameter field**; the map is the forward tangent of the output temperature field.
+# sensitivity *map*. 
 #
 # We seed a unit tangent for ``\kappa_\text{mineral}`` into an otherwise-zero shadow integrator
 # (`make_zero` gives the all-zero tangent; we set just the `mineral` component to one) and propagate it
@@ -294,6 +293,7 @@ fwd_integrator0 = initialize(
     soil_conductivity_model(SoilThermalConductivities(eltype(grid)));
     inputs, initializers, boundary_conditions,
 )
+# this reuses the traced conductivities we set up above for the global sensitivity example
 fwd_integrator = ModelIntegrator(
     fwd_integrator0.clock, soil_conductivity_model(promoted_conductivities),
     fwd_integrator0.inputs, fwd_integrator0.state, fwd_integrator0.initializers,
