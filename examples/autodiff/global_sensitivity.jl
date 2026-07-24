@@ -1,6 +1,6 @@
 # # Global sensitivity analysis with Reactant + Enzyme
 #
-# This example computes *global sensitivity maps*: Both parameter sensitivty and state sensitivty. 
+# This example computes *global sensitivity maps*: Both parameter sensitivty and state sensitivty.
 # We start by computing the sensitivity of the global mean surface
 # soil temperature after one simulated day with respect to the initial soil state at **every**
 # land grid point and soil layer. Reverse-mode AD delivers this entire map in a *single* gradient
@@ -59,7 +59,7 @@ Tsurf_0 = Tair_field[findall(land_mask)]
 # architecture differs. We give the soil a **loam** texture (sand < 1): it is a representative
 # composition and, in particular, it makes the non-quartz mineral thermal conductivity influence the
 # bulk conductivity, which the parameter sensitivity below relies on. The same soil is used
-# throughout. 
+# throughout.
 
 stratigraphy = HomogeneousSoilStratigraphy(
     eltype(grid), texture = SoilTexture(eltype(grid); sand = 0.4f0, clay = 0.3f0, silt = 0.3f0)
@@ -123,7 +123,7 @@ println("Global mean surface soil temperature after 1 day: $(Reactant.to_number(
 # ## The global sensitivity map
 #
 # A single reverse pass gave us ``\partial \bar{T}_\text{surf} / \partial U_0`` for all land
-# columns and soil layers at once. We move the shadow to the CPU and plot it. 
+# columns and soil layers at once. We move the shadow to the CPU and plot it.
 
 dU = Array(interior(dintegrator.state.internal_energy))   # (Ncolumns, 1, Nz)
 cpu_grid = on_architecture(CPU(), grid)
@@ -262,7 +262,7 @@ println("∂T̄_col/∂κ_quartz  = $(∂T̄_∂κ_quartz) K / (W m⁻¹ K⁻¹)
 # scalar parameter ``\kappa_\text{mineral}`` perturb the soil temperature at *every* grid point and
 # depth? Reverse mode is the efficient choice for many-inputs → one-output (the initial-condition maps
 # above); forward mode is efficient for **one-input → many-outputs**, which is exactly a scalar-parameter
-# sensitivity *map*. 
+# sensitivity *map*.
 #
 # We seed a unit tangent for ``\kappa_\text{mineral}`` into an otherwise-zero shadow integrator
 # (`make_zero` gives the all-zero tangent; we set just the `mineral` component to one) and propagate it
