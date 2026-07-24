@@ -19,7 +19,7 @@ using Enzyme
 
 using Rasters, NCDatasets
 using CairoMakie
-using Statistics: quantile
+using Statistics: quantile, mean
 
 import RingGrids
 
@@ -254,3 +254,107 @@ compiled_param_grad!(param_integrator, param_dintegrator, Δt, nsteps, checkpoin
 ∂T̄_∂κ_quartz = Reactant.to_number(param_dintegrator.model.soil.energy.thermal_properties.conductivities.quartz)
 println("∂T̄_col/∂κ_mineral = $(∂T̄_∂κ_mineral) K / (W m⁻¹ K⁻¹)")
 println("∂T̄_col/∂κ_quartz  = $(∂T̄_∂κ_quartz) K / (W m⁻¹ K⁻¹)")
+
+# ## Grid-point-wise parameter sensitivity: forward-mode AD
+#
+# The reverse pass above collapsed the whole soil state into one scalar objective and returned one
+# number. Forward-mode AD answers the complementary question in a single pass: how does that *one*
+# scalar parameter ``\kappa_\text{mineral}`` perturb the soil temperature at *every* grid point and
+# depth? Reverse mode is the efficient choice for many-inputs → one-output (the initial-condition maps
+# above); forward mode is efficient for **one-input → many-outputs**, which is exactly a scalar-parameter
+# sensitivity *map*. Note that ``\kappa_\text{mineral}`` stays a single scalar — there is **no
+# per-column parameter field**; the map is the forward tangent of the output temperature field.
+#
+# We seed a unit tangent for ``\kappa_\text{mineral}`` into an otherwise-zero shadow integrator
+# (`make_zero` gives the all-zero tangent; we set just the `mineral` component to one) and propagate it
+# forward through the rollout. `run_timesteps!` mutates the integrator in place, so after the forward
+# pass the shadow's temperature field holds ``\partial T / \partial \kappa_\text{mineral}`` at every
+# grid point.
+
+## Seed a unit κ_mineral tangent into an otherwise-zero shadow integrator. `make_zero` zeroes every
+## parameter and state field; `setproperties` then sets only the `mineral` conductivity tangent to one,
+## rebuilding the immutable model chain around it.
+function seed_mineral_tangent(integrator)
+    d = Enzyme.make_zero(integrator)
+    energy = d.model.soil.energy
+    thermal_properties = energy.thermal_properties
+    ## set only the mineral conductivity tangent to one; every other tangent stays zero
+    conductivities = Terrarium.setproperties(
+        thermal_properties.conductivities, (; mineral = one(thermal_properties.conductivities.mineral)),
+    )
+    thermal_properties = Terrarium.setproperties(thermal_properties, (; conductivities))
+    energy = Terrarium.setproperties(energy, (; thermal_properties))
+    soil = Terrarium.setproperties(d.model.soil, (; energy))
+    model = Terrarium.setproperties(d.model, (; soil))
+    return ModelIntegrator(d.clock, model, d.inputs, d.state, d.initializers)
+end
+
+## a fresh promoted integrator — the reverse pass above advanced its own copy to day 1
+fwd_integrator0 = initialize(
+    soil_conductivity_model(SoilThermalConductivities(eltype(grid)));
+    inputs, initializers, boundary_conditions,
+)
+fwd_integrator = ModelIntegrator(
+    fwd_integrator0.clock, soil_conductivity_model(promoted_conductivities),
+    fwd_integrator0.inputs, fwd_integrator0.state, fwd_integrator0.initializers,
+)
+fwd_dintegrator = seed_mineral_tangent(fwd_integrator)
+
+# Forward mode needs no checkpointing (there is no reverse pass to bound); `Enzyme.Duplicated` carries
+# the seed and the temperature tangent lands in `fwd_dintegrator` in place.
+forward_rollout!(integrator, Δt, nsteps) = (run_timesteps!(integrator, Δt, nsteps); nothing)
+function forward_temperature_map!(integrator, dintegrator, Δt, nsteps)
+    Enzyme.autodiff(
+        Enzyme.Forward, forward_rollout!, Enzyme.Const,
+        Enzyme.Duplicated(integrator, dintegrator), Enzyme.Const(Δt), Enzyme.Const(nsteps),
+    )
+    return nothing
+end
+
+compiled_forward_map! = @compile raise = true raise_first = true sync = true forward_temperature_map!(
+    fwd_integrator, fwd_dintegrator, Δt, nsteps
+)
+compiled_forward_map!(fwd_integrator, fwd_dintegrator, Δt, nsteps)
+
+dTdκ = Array(interior(fwd_dintegrator.state.temperature))   # (Ncolumns, 1, Nz) = ∂T/∂κ_mineral
+
+# Consistency check: averaging the map over all grid points recovers the reverse-mode global scalar,
+# because ``\partial \bar{T}_\text{col} / \partial \kappa = \frac{1}{N} \sum_\text{grid points}
+# \partial T / \partial \kappa``. The two agree to ~7 digits.
+println("mean(∂T/∂κ_mineral map) = $(mean(dTdκ))   (reverse-mode scalar: $(∂T̄_∂κ_mineral))")
+
+# The **surface** layer is held by the atmospheric boundary condition, so ``\partial T / \partial
+# \kappa \approx 0`` there (as the scalar section noted). We map the horizontal pattern at a shallow
+# subsurface level (≈0.5 m); the full vertical structure is in the depth profile below. The map is
+# signed — raising ``\kappa_\text{mineral}`` warms some columns and cools others depending on the local
+# thermal gradient and how close the soil sits to the freezing point — so we use a diverging colormap
+# centered at zero.
+zs = znodes(fwd_integrator.state.temperature)
+k_plot = argmin(abs.(zs .+ 0.5f0))                          # layer nearest 0.5 m depth
+cpu_grid = on_architecture(CPU(), grid)
+dTdκ_ring = RingGrids.Field(dTdκ[:, 1, :], cpu_grid)
+dTdκ_layer = dTdκ_ring[:, k_plot]                           # horizontal field at ≈0.5 m
+clim = quantile(filter(isfinite, abs.(Array(dTdκ_layer))), 0.98)
+
+fig_param = heatmap(
+    dTdκ_layer;
+    title = "∂(soil T at $(round(zs[k_plot], digits = 2)) m) / ∂κ_mineral  (forward-mode AD)",
+    size = (900, 450),
+    colorrange = (-clim, clim),
+    colormap = :balance,
+)
+Makie.save("plots/global_parameter_sensitivity_kappa_mineral.png", fig_param)
+fig_param
+
+# Averaging the magnitude of the map over all land columns by depth shows the vertical structure. In
+# this one-day experiment the response is small through most of the column and rises sharply toward the
+# **base**: the surface is pinned by the boundary condition while the lower boundary is insulating
+# (zero-flux), so the deep soil relaxes its (slightly super-adiabatic) initial temperature profile at a
+# rate the conductivity controls. The shallower response mapped above is smaller in magnitude but
+# carries the geographic pattern of the forcing.
+dTdκ_depth = vec(sum(abs, dTdκ[:, 1, :], dims = 1)) ./ size(dTdκ, 1)
+f_param = Makie.Figure()
+Makie.Axis(f_param[1, 1], ylabel = "Soil depth / m", xlabel = "mean |∂T/∂κ_mineral|")
+Makie.scatterlines!(f_param[1, 1], dTdκ_depth, zs)
+Makie.save("plots/global_parameter_sensitivity_depth_profile.png", f_param)
+f_param
