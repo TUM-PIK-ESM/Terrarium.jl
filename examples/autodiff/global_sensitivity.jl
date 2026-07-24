@@ -164,7 +164,60 @@ Makie.scatterlines!(f[1, 1], dU_depth_plot, zs)
 Makie.save("plots/global_sensitivity_depth_profile.png", f)
 f
 
-# Sensitivities with respect to *model parameters* (rather than initial conditions) are shown in
-# the [differentiation example](@ref); with Reactant the same `Duplicated(integrator, dintegrator)`
-# shadow carries them too, as demonstrated for the neural-network weights in the hybrid modeling
-# example (`examples/hybrid_models/neural_snow_melt.jl`).
+# ## Parameter sensitivity: soil mineral thermal conductivity
+#
+# The map above is a sensitivity to the *initial state*. The very same reverse pass also yields the
+# sensitivity to a *model parameter* — here the soil mineral (non-quartz) thermal conductivity
+# ``\kappa_\text{mineral}`` — but a scalar physical parameter needs a little extra care under
+# Reactant. On a `ReactantState` grid the state arrays and the clock are traced, but the model's
+# scalar parameters are baked into the compiled program as constants, so Enzyme cannot see them by
+# default. (Array-valued parameters such as neural-network weights are traced as device arrays and
+# *are* differentiated directly, as in the hybrid modeling example — the asymmetry is exactly that
+# arrays decouple from the grid's number type while a scalar `::NF` field does not.)
+#
+# To make ``\kappa_\text{mineral}`` a differentiable input we promote the soil thermal
+# conductivities to traced device scalars with `Reactant.to_rarray(...; track_numbers = true)`. This
+# works because `SoilThermalProperties` carries the conductivities' number type as its own type
+# parameter, decoupled from the grid's `Float32` — so the model can hold traced conductivities on an
+# otherwise `Float32` grid.
+#
+# One physical caveat sets up the soil below. The mineral endpoint only enters the bulk conductivity
+# through the *non-quartz* mineral fraction,
+# ```math
+# \kappa_\text{mineral grains} = \kappa_\text{quartz}^{\,q}\,\kappa_\text{mineral}^{\,1 - q},
+# ```
+# where ``q`` is the sand (quartz) fraction. With the default pure-sand texture (``q = 1``) the
+# ``\kappa_\text{mineral}`` term drops out entirely and the sensitivity is *exactly* zero, so here we
+# use a loamy soil (``q < 1``) for a meaningful result.
+
+## a loam texture, so the non-quartz mineral conductivity actually influences the bulk conductivity
+stratigraphy = HomogeneousSoilStratigraphy(
+    eltype(grid), texture = SoilTexture(eltype(grid); sand = 0.4f0, clay = 0.3f0, silt = 0.3f0)
+)
+
+## promote the thermal conductivities to traced device scalars so Enzyme sees κ_mineral as an input
+traced_conductivities = Reactant.to_rarray(SoilThermalConductivities(eltype(grid)); track_numbers = true)
+thermal_properties = SoilThermalProperties(eltype(grid); conductivities = traced_conductivities)
+energy = SoilThermodynamics(eltype(grid); thermal_properties)
+soil = SoilEnergyWaterCarbon(eltype(grid); strat = stratigraphy, energy)
+param_model = SoilModel(grid; soil, timestepper = ForwardEuler(eltype(grid)))
+param_integrator = initialize(param_model; inputs, initializers, boundary_conditions)
+
+# The objective and its gradient are unchanged — only the model differs — so we reuse
+# [`grad_mean_surface_temperature!`](@ref). A single reverse pass accumulates the parameter
+# sensitivity into the *model* shadow, right alongside the state sensitivities.
+
+param_dintegrator = Enzyme.make_zero(param_integrator)
+compiled_param_grad! = @compile raise = true raise_first = true sync = true grad_mean_surface_temperature!(
+    param_integrator, param_dintegrator, Δt, nsteps, checkpointing
+)
+compiled_param_grad!(param_integrator, param_dintegrator, Δt, nsteps, checkpointing)
+
+# The sensitivity of the global mean surface soil temperature to the mineral thermal conductivity is
+# a single scalar, read straight from the conductivities shadow. Every constituent conductivity
+# carries its own gradient in the same struct, so the same shadow answers "which soil thermal
+# parameter does the one-day surface response depend on most" in one pass.
+
+dκ = param_dintegrator.model.soil.energy.thermal_properties.conductivities
+∂T̄_∂κ_mineral = Reactant.to_number(dκ.mineral)
+println("∂T̄_surf/∂κ_mineral = $(∂T̄_∂κ_mineral) K / (W m⁻¹ K⁻¹)")
