@@ -31,6 +31,8 @@ SoilThermodynamics(
     thermal_properties::SoilThermalProperties{NF} = SoilThermalProperties(NF),
 ) where {NF} = SoilThermodynamics(operator, closure, thermal_properties)
 
+Adapt.@adapt_structure SoilThermodynamics
+
 variables(energy::SoilThermodynamics) = (
     prognostic(:internal_energy, XYZ(); closure = energy.closure, units = u"J/m^3", desc = "Internal energy of the soil volume, including both latent and sensible components"),
     auxiliary(:ground_temperature, XY(), ground_temperature, energy, units = u"°C", desc = "Temperature of the uppermost ground or soil grid cell in °C"),
