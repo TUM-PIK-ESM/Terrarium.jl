@@ -1,6 +1,7 @@
 # # Global sensitivity analysis with Reactant + Enzyme
 #
-# This example computes a *global sensitivity map*: the sensitivity of the global mean surface
+# This example computes *global sensitivity maps*: Both parameter sensitivty and state sensitivty. 
+# We start by computing the sensitivity of the global mean surface
 # soil temperature after one simulated day with respect to the initial soil state at **every**
 # land grid point and soil layer. Reverse-mode AD delivers this entire map in a *single* gradient
 # evaluation — the cost of the reverse pass is independent of the number of inputs, which is what
@@ -54,10 +55,19 @@ Tsurf_0 = Tair_field[findall(land_mask)]
 
 # ## Model setup
 #
-# As everywhere with Reactant in Terrarium, the model itself is unchanged — only the grid's
-# architecture differs. Initialization runs eagerly and is transferred to the device.
+# As everywhere with Reactant in Terrarium, the model construction is standard — only the grid's
+# architecture differs. We give the soil a **loam** texture (sand < 1): it is a representative
+# composition and, in particular, it makes the non-quartz mineral thermal conductivity influence the
+# bulk conductivity, which the parameter sensitivity below relies on. The same soil is used
+# throughout. 
 
-model = SoilModel(grid, timestepper = ForwardEuler(eltype(grid)))
+stratigraphy = HomogeneousSoilStratigraphy(
+    eltype(grid), texture = SoilTexture(eltype(grid); sand = 0.4f0, clay = 0.3f0, silt = 0.3f0)
+)
+model = SoilModel(
+    grid; soil = SoilEnergyWaterCarbon(eltype(grid); strat = stratigraphy),
+    timestepper = ForwardEuler(eltype(grid))
+)
 boundary_conditions = PrescribedSurfaceTemperature(:Tair)
 initializers = (
     ## steady-ish state initial condition for temperature
@@ -113,8 +123,7 @@ println("Global mean surface soil temperature after 1 day: $(Reactant.to_number(
 # ## The global sensitivity map
 #
 # A single reverse pass gave us ``\partial \bar{T}_\text{surf} / \partial U_0`` for all land
-# columns and soil layers at once. We move the shadow to the CPU and scatter it back onto the
-# ring grid for plotting.
+# columns and soil layers at once. We move the shadow to the CPU and plot it. 
 
 dU = Array(interior(dintegrator.state.internal_energy))   # (Ncolumns, 1, Nz)
 cpu_grid = on_architecture(CPU(), grid)
@@ -166,57 +175,149 @@ f
 
 # ## Parameter sensitivity: soil mineral thermal conductivity
 #
-# The map above is a sensitivity to the *initial state*. The very same reverse pass also yields the
-# sensitivity to a *model parameter* — here the soil mineral (non-quartz) thermal conductivity
-# ``\kappa_\text{mineral}`` — but a scalar physical parameter needs a little extra care under
-# Reactant. On a `ReactantState` grid the state arrays and the clock are traced, but the model's
-# scalar parameters are baked into the compiled program as constants, so Enzyme cannot see them by
-# default. (Array-valued parameters such as neural-network weights are traced as device arrays and
-# *are* differentiated directly, as in the hybrid modeling example — the asymmetry is exactly that
+# The maps above are sensitivities to the *initial state*. We now compute the sensitivity to a
+# *model parameter* — the soil mineral (non-quartz) thermal conductivity ``\kappa_\text{mineral}`` —
+# both as a global number and as a per-grid-point map. A scalar physical parameter needs a little
+# extra care under Reactant: on a `ReactantState` grid the state arrays and the clock are traced, but
+# the model's scalar parameters are baked into the compiled program as constants, so Enzyme cannot
+# see them by default. (Array-valued parameters such as neural-network weights are traced as device
+# arrays and *are* differentiated directly, as in the hybrid modeling example — the asymmetry is that
 # arrays decouple from the grid's number type while a scalar `::NF` field does not.)
 #
-# To make ``\kappa_\text{mineral}`` a differentiable input we promote the soil thermal
-# conductivities to traced device scalars with `Reactant.to_rarray(...; track_numbers = true)`. This
-# works because `SoilThermalProperties` carries the conductivities' number type as its own type
-# parameter, decoupled from the grid's `Float32` — so the model can hold traced conductivities on an
-# otherwise `Float32` grid.
+# To make ``\kappa_\text{mineral}`` a differentiable input we promote the soil thermal conductivities
+# to traced device scalars with `Reactant.to_rarray(...; track_numbers = true)`. 
 #
-# One physical caveat sets up the soil below. The mineral endpoint only enters the bulk conductivity
+# Two physical points are worth noting. First, the mineral endpoint only enters the bulk conductivity
 # through the *non-quartz* mineral fraction,
 # ```math
 # \kappa_\text{mineral grains} = \kappa_\text{quartz}^{\,q}\,\kappa_\text{mineral}^{\,1 - q},
 # ```
-# where ``q`` is the sand (quartz) fraction. With the default pure-sand texture (``q = 1``) the
-# ``\kappa_\text{mineral}`` term drops out entirely and the sensitivity is *exactly* zero, so here we
-# use a loamy soil (``q < 1``) for a meaningful result.
+# where ``q`` is the sand (quartz) fraction: with a pure-sand texture (``q = 1``) the
+# ``\kappa_\text{mineral}`` term would drop out entirely and the sensitivity would be *exactly* zero —
+# the loam soil built above (``q = 0.4``) is what makes it nonzero. Second, we differentiate the
+# **column-mean** soil temperature rather than the surface temperature: over one day the surface layer
+# is held by the atmospheric boundary condition and is essentially insensitive to soil conductivity,
+# whereas the conductivity controls how heat is redistributed *through* the column (the sensitivity
+# peaks around 0.5 m depth and again in the deep soil).
 
-## a loam texture, so the non-quartz mineral conductivity actually influences the bulk conductivity
-stratigraphy = HomogeneousSoilStratigraphy(
-    eltype(grid), texture = SoilTexture(eltype(grid); sand = 0.4f0, clay = 0.3f0, silt = 0.3f0)
-)
+## Build an integrator whose mineral conductivity `κ` is a *traced* device scalar (so Enzyme,
+## and a compiled forward evaluation, see it as a differentiable/variable input rather than a baked
+## constant). Everything else stays `Float32`; only the conductivities' number type is promoted.
+function traced_integrator(κ_mineral)
+    conductivities = Reactant.to_rarray(
+        SoilThermalConductivities(eltype(grid); mineral = κ_mineral); track_numbers = true
+    )
+    thermal_properties = SoilThermalProperties(eltype(grid); conductivities)
+    energy = SoilThermodynamics(eltype(grid); thermal_properties)
+    soil = SoilEnergyWaterCarbon(eltype(grid); strat = stratigraphy, energy)
+    model = SoilModel(grid; soil, timestepper = ForwardEuler(eltype(grid)))
+    return initialize(model; inputs, initializers, boundary_conditions)
+end
 
-## promote the thermal conductivities to traced device scalars so Enzyme sees κ_mineral as an input
-traced_conductivities = Reactant.to_rarray(SoilThermalConductivities(eltype(grid)); track_numbers = true)
-thermal_properties = SoilThermalProperties(eltype(grid); conductivities = traced_conductivities)
-energy = SoilThermodynamics(eltype(grid); thermal_properties)
-soil = SoilEnergyWaterCarbon(eltype(grid); strat = stratigraphy, energy)
-param_model = SoilModel(grid; soil, timestepper = ForwardEuler(eltype(grid)))
-param_integrator = initialize(param_model; inputs, initializers, boundary_conditions)
+## objective: column-mean soil temperature (averaged over every land column and layer)
+function mean_column_temperature(integrator, Δt, nsteps, checkpointing)
+    run_timesteps!(integrator, Δt, nsteps, checkpointing)
+    T = interior(integrator.state.temperature)
+    return sum(T) / length(T)
+end
 
-# The objective and its gradient are unchanged — only the model differs — so we reuse
-# [`grad_mean_surface_temperature!`](@ref). A single reverse pass accumulates the parameter
-# sensitivity into the *model* shadow, right alongside the state sensitivities.
+function grad_mean_column_temperature!(integrator, dintegrator, Δt, nsteps, checkpointing)
+    _, value = Enzyme.autodiff(
+        Enzyme.set_strong_zero(Enzyme.ReverseWithPrimal),
+        mean_column_temperature, Enzyme.Active,
+        Enzyme.Duplicated(integrator, dintegrator),
+        Enzyme.Const(Δt), Enzyme.Const(nsteps), Enzyme.Const(checkpointing),
+    )
+    return value
+end
 
+# ### Global sensitivity
+#
+# One reverse pass accumulates the parameter sensitivity into the *model* shadow (exactly as the
+# neural-network weights are in the hybrid modeling example); we read it straight from the
+# conductivities shadow.
+
+κ₀ = eltype(grid)(2)                       # default mineral thermal conductivity, 2 W m⁻¹ K⁻¹
+param_integrator = traced_integrator(κ₀)
 param_dintegrator = Enzyme.make_zero(param_integrator)
-compiled_param_grad! = @compile raise = true raise_first = true sync = true grad_mean_surface_temperature!(
+compiled_param_grad! = @compile raise = true raise_first = true sync = true grad_mean_column_temperature!(
     param_integrator, param_dintegrator, Δt, nsteps, checkpointing
 )
 compiled_param_grad!(param_integrator, param_dintegrator, Δt, nsteps, checkpointing)
 
-# The sensitivity of the global mean surface soil temperature to the mineral thermal conductivity is
-# a single scalar, read straight from the conductivities shadow. Every constituent conductivity
-# carries its own gradient in the same struct, so the same shadow answers "which soil thermal
-# parameter does the one-day surface response depend on most" in one pass.
+∂T̄_∂κ_mineral = Reactant.to_number(
+    param_dintegrator.model.soil.energy.thermal_properties.conductivities.mineral
+)
+println("∂T̄_col/∂κ_mineral = $(∂T̄_∂κ_mineral) K / (W m⁻¹ K⁻¹)")
+
+# ### Per-grid-point sensitivity map
+#
+# The global number is a spatial average; underneath it lies the sensitivity of *each* column's mean
+# temperature, ``\partial \bar{T}_\text{col}(x)/\partial\kappa_\text{mineral}``. Because
+# ``\kappa_\text{mineral}`` is a single scalar and the output is one value per column, *forward*-mode
+# AD is the natural tool — one forward pass propagates a unit ``\kappa_\text{mineral}`` tangent to the
+# whole temperature field at once (reverse mode would need one pass per column). We seed a shadow
+# integrator that is zero everywhere except a `1` on the mineral conductivity, differentiate the
+# rollout with `Enzyme.autodiff(Forward, …)`, and read the temperature tangent
+# ``\partial T/\partial\kappa_\text{mineral}`` straight out of that shadow — the forward-mode mirror of
+# the reverse pass above.
+
+function step_rollout!(integrator, Δt, nsteps)
+    run_timesteps!(integrator, Δt, nsteps)
+    return nothing
+end
+
+function temperature_tangent!(integrator, seed, Δt, nsteps)
+    Enzyme.autodiff(
+        Enzyme.Forward, step_rollout!,
+        Enzyme.Duplicated(integrator, seed),
+        Enzyme.Const(Δt), Enzyme.Const(nsteps),
+    )
+    return nothing
+end
+
+## a fresh integrator (the reverse pass above advanced `param_integrator` past t = 0) plus a shadow
+## seeded with a unit tangent on κ_mineral and zero everywhere else. The seed reuses the shadow's own
+## (traced) conductivities type, so `Terrarium.setproperties` only changes the mineral *value* 0 → 1.
+fwd_integrator = traced_integrator(κ₀)
+seed = Enzyme.make_zero(fwd_integrator)
+seed_conductivities = Terrarium.setproperties(
+    seed.model.soil.energy.thermal_properties.conductivities,
+    (mineral = one(seed.model.soil.energy.thermal_properties.conductivities.mineral),),
+)
+seed = Terrarium.setproperties(seed, (model = Terrarium.setproperties(seed.model,
+    (soil = Terrarium.setproperties(seed.model.soil,
+        (energy = Terrarium.setproperties(seed.model.soil.energy,
+            (thermal_properties = Terrarium.setproperties(seed.model.soil.energy.thermal_properties,
+                (conductivities = seed_conductivities,)),)),)),)),))
+
+compiled_tangent! = @compile raise = true raise_first = true sync = true temperature_tangent!(
+    fwd_integrator, seed, Δt, nsteps
+)
+compiled_tangent!(fwd_integrator, seed, Δt, nsteps)
+dT_field = Array(interior(seed.state.temperature))   # ∂T/∂κ_mineral, (Ncolumns, 1, Nz)
+
+## column-mean over layers → one sensitivity per column
+Nz_soil = size(dT_field, 3)
+dκ_column = vec(sum(dT_field[:, 1, :], dims = 2)) ./ Nz_soil
+println("map area-average = $(sum(dκ_column) / length(dκ_column))  (matches the global scalar above)")
+
+# Bring the per-column sensitivities back onto the ring grid and plot (broadcasting the
+# column-mean across layers so the top slice `[:, end]` recovers it as a horizontal field, mirroring
+# the initial-condition map).
+dκ_ring = RingGrids.Field(repeat(dκ_column, 1, Nz_soil), cpu_grid)
+dκ_map = dκ_ring[:, end]
+lo_κ, hi_κ = quantile(filter(isfinite, Array(dκ_map)), (0.02, 0.98))
+fig_κ = heatmap(
+    dκ_map;
+    title = "Sensitivity of column-mean soil temperature to mineral thermal conductivity",
+    size = (900, 450),
+    colorrange = (lo_κ, hi_κ),
+    colormap = :viridis,
+    highclip = :magenta,
+)
+Makie.save("plots/global_sensitivity_mineral_conductivity_map.png", fig_κ)
+fig_κ
 
 dκ = param_dintegrator.model.soil.energy.thermal_properties.conductivities
 ∂T̄_∂κ_mineral = Reactant.to_number(dκ.mineral)
