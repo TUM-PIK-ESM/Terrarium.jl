@@ -60,7 +60,7 @@ QuadraticSnowThermalConductivity
 compute_thermal_conductivity(snow::SingleLayerSnow, constants::MaterialConstants, ρ_s)
 ```
 
-## Hydraulic properties
+## Snow hydraulic properties
 
 The hydraulic properties set the Darcy-type meltwater outflow from the pack (see [Snow mass balance](@ref)).
 

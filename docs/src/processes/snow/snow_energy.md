@@ -38,7 +38,7 @@ of the meltwater term.
 ## Energy–temperature closure
 
 The bulk snow is treated as a water substance, and its temperature and liquid water fraction are recovered
-from the depth-integrated energy using the medium-agnostic [`FreeWater`](@ref) enthalpy relations (the
+from the depth-integrated energy using the medium-agnostic [`FreeWater`](@extref FreezeCurves.FreeWater) enthalpy relations (the
 same map used for the soil, see [Soil energy balance](@ref)) with the pore saturation set to one. The
 volumetric energy ``U_v = E / d_s`` is formed from the diagnosed snow depth ``d_s`` (see
 [`volumetric_snow_energy`](@ref)) without allocating an auxiliary field. The `FreeWater` map references

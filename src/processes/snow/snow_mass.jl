@@ -3,7 +3,7 @@
 """
     $TYPEDSIGNATURES
 
-Darcy-type meltwater outflow `M_r` [m/s] (SWE). Liquid water in excess of the capillary retention `L_c`
+Darcy-type meltwater outflow `M_r` (m/s, SWE). Liquid water in excess of the capillary retention `L_c`
 drains from the pack with a cubic conductivity (Male & Gray 1981; UEB eqns 23–24, in excess-saturation
 form): `M_r = K_sat · S*³` with `S* = max(θ_liq − L_c, 0) / (1 − L_c)`, where `θ_liq` is the liquid
 fraction of the water substance. Outflow vanishes smoothly as `θ_liq → L_c` and saturates at `K_sat` as

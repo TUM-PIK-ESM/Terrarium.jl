@@ -1,8 +1,8 @@
 """
     $TYPEDSIGNATURES
 
-Compute an evapotranspiration flux [m/s] (positive upwards) as the product of a vapor
-conductance `g` [m/s] and a specific humidity difference `Δq` [kg/kg]. All evapotranspiration components
+Compute an evapotranspiration flux (m/s, positive upwards) as the product of a vapor
+conductance `g` (m/s) and a specific humidity difference `Δq` (kg/kg). All evapotranspiration components
 — soil/canopy evaporation and transpiration — share the functional form ``E = Δq · g``,
 differing only in which conductance and humidity difference are supplied.
 """

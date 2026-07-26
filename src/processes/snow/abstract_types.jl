@@ -4,14 +4,14 @@
 Base type for coupled snow processes. Implementations should typically couple an energy balance and a
 mass (water equivalent) balance for a snowpack overlying the ground surface. Snow is modeled as
 its own coupled process (a sibling of soil), reusing the medium-agnostic `FreeWater` enthalpy relations
-from the [thermodynamics](@ref) module for the energy↔temperature closure.
+for the energy↔temperature closure (the same closure used for the soil; see [Soil energy balance](@ref)).
 """
 abstract type AbstractSnow{NF} <: AbstractCoupledProcesses{NF} end
 
 """
     snow_water_equivalent(i, j, grid, fields, ::AbstractSnow)
 
-Retrieve the snow water equivalent (SWE) `W` [m] — the total water substance (ice + retained liquid).
+Retrieve the snow water equivalent (SWE) `W` (m) — the total water substance (ice + retained liquid).
 """
 function snow_water_equivalent end
 
