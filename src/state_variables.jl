@@ -213,8 +213,11 @@ Retrieves the `Field` from `state` matching the `name` of the given variable.
 """
 @inline get_field(state, ::Union{AbstractVariable{name}, Namespace{name}}) where {name} = getproperty(state, name)
 
+# NOTE: use `$SIGNATURES` (not `$TYPEDSIGNATURES`) here. `$TYPEDSIGNATURES` performs return-type
+# inference via `Base.return_types`, which crashes with a `BoundsError` in `may_invoke_generator`
+# when applied to this `@generated` method on Julia 1.10, breaking the docs build.
 """
-    $TYPEDSIGNATURES
+    $SIGNATURES
 
 Retrieves all `Field`s from `state` matching the names of the given variables. Any `Namespace`s
 in `vars` are resolved recursively and their fields are merged into the returned `NamedTuple`

@@ -73,7 +73,7 @@ default_skin_temperature_solver
 ```@docs; canonical = false
 compute_skin_temperature(i, j, grid, fields, skinT::ImplicitSkinTemperature)
 compute_ground_heat_flux(i, j, grid, fields, skinT::AbstractSkinTemperature, ::AbstractSurfaceEnergyBalance)
-compute_skin_temperature!(out, i, j, grid, fields, skinT::ImplicitSkinTemperature, seb::AbstractSurfaceEnergyBalance, seb_args...)
+compute_skin_temperature!(out, i, j, grid, fields, skinT::ImplicitSkinTemperature, seb::AbstractSurfaceEnergyBalance, snow, constants, seb_args...)
 compute_skin_temperature_residual!
 solve_skin_temperature!
 ```

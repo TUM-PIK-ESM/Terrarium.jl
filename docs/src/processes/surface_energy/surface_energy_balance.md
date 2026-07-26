@@ -41,7 +41,7 @@ variables(SurfaceEnergyBalance(Float32))
 ## Process interface
 
 ```@docs; canonical = false
-compute_auxiliary!(state, grid, seb::SurfaceEnergyBalance, constants::PhysicalConstants, atmos::AbstractAtmosphere, hydrology::Optional{AbstractSurfaceHydrology}, args...)
+compute_auxiliary!(state, grid, seb::SurfaceEnergyBalance, constants::PhysicalConstants, atmos::AbstractAtmosphere, hydrology::Optional{AbstractSurfaceHydrology}, snow::Optional{AbstractSnow}, args...)
 ```
 
 ## Methods
@@ -53,5 +53,5 @@ compute_surface_energy_fluxes!(state, grid, seb::SurfaceEnergyBalance, constants
 ```
 
 ```@docs; canonical = false
-solve_surface_energy_balance!(state, grid, seb::SurfaceEnergyBalance{NF, <:ImplicitSkinTemperature}, constants::PhysicalConstants, atmos::AbstractAtmosphere, hydrology::Optional{AbstractSurfaceHydrology}, args...) where {NF}
+solve_surface_energy_balance!(state, grid, seb::SurfaceEnergyBalance{NF, <:ImplicitSkinTemperature}, constants::PhysicalConstants, atmos::AbstractAtmosphere, hydrology::Optional{AbstractSurfaceHydrology}, snow::Optional{AbstractSnow}, args...) where {NF}
 ```

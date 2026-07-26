@@ -72,10 +72,3 @@ compute_snow_sublimation_flux
 
 compute_snow_soil_boundary_fluxes!
 ```
-
-## [References](@id "snowenergy.refs")
-
-```@bibliography
-Pages = ["snow_energy.md"]
-Canonical = false
-```
