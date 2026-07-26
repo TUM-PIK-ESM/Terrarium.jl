@@ -139,8 +139,10 @@ end
     # stored `evaporation_ground` must equal (1 − f_snow)·g·Δq(T_skin) — no double-counting with sublimation.
     grid = ColumnGrid(CPU(), ExponentialSpacing(Δz_max = 1.0, N = 50))
     soil = SoilEnergyWaterCarbon(eltype(grid); hydrology = SoilHydrology(eltype(grid), RichardsEq()))
-    inits = (temperature = (x, z) -> 2.0 - 0.02 * z, saturation_water_ice = (x, z) -> 0.8,
-        snow_water_equivalent = 0.5, snow_temperature = -2.0)
+    inits = (
+        temperature = (x, z) -> 2.0 - 0.02 * z, saturation_water_ice = (x, z) -> 0.8,
+        snow_water_equivalent = 0.5, snow_temperature = -2.0,
+    )
     land = LandModel(grid; soil, snow = SingleLayerSnow(eltype(grid)), vegetation = nothing)
     it = initialize(land; initializers = inits)
     Terrarium.closure!(it.state, land)
