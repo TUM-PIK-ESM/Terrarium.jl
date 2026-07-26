@@ -30,8 +30,8 @@ passthrough_rainfall(::NoCanopyInterception, grid, clock, fields) = fields.rainf
 
 Meltwater flux `[m/s]` reaching the soil surface, accounting for the snowpack. Without snow this is
 just the rainfall reaching the ground; with snow the snow-covered fraction `f_snow` intercepts rain into
-the pack, so only the bare-ground fraction `(1 − f_snow)·rain_ground` reaches the soil directly, plus the
-snow meltwater outflow `M` draining from the pack base.
+the snowpack, so only the bare-ground fraction `(1 − f_snow)·rain_ground` reaches the soil directly, plus the
+snow meltwater outflow `M` draining from the snowpack base.
 """
 @propagate_inbounds function soil_surface_water_flux(
         i, j, grid, fields,

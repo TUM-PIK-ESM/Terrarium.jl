@@ -130,8 +130,8 @@ Revision 4). Delivered:
 
 - **Water coupling** (author's choice: route through the existing infiltration/runoff partition). The
   surface runoff scheme's water input is now snow-aware: `influx = (1 − f_snow)·rainfall_ground + M_r`,
-  where the snow-covered fraction intercepts rain into the pack and `M_r` is the meltwater outflow draining
-  from the pack base (`soil_surface_water_flux` in `snow_mass.jl`). `snow` is threaded (optional arg) through
+  where the snow-covered fraction intercepts rain into the snowpack and `M_r` is the meltwater outflow draining
+  from the snowpack base (`soil_surface_water_flux` in `snow_mass.jl`). `snow` is threaded (optional arg) through
   `SurfaceHydrology`→`DirectSurfaceRunoff`, mirroring the SEB. Meltwater is therefore subject to the
   infiltration capacity limit, with the remainder becoming surface runoff.
 - **Sublimation** driven by the SEB latent-heat flux: the post-SEB coupling (renamed
@@ -172,7 +172,7 @@ renamed from `compute_rain_heat_flux`):
 
 `compute_snow_tendencies!` was also split into `compute_snow_water_tendency` and
 `compute_snow_energy_tendency` helpers (equations no longer buried in the kernel function). New/updated
-tests: draining meltwater conserves energy (`dE ≈ 0`); fresh snowfall accretes at the pack's specific
+tests: draining meltwater conserves energy (`dE ≈ 0`); fresh snowfall accretes at the snowpack's specific
 enthalpy (`dE/dW = E/W`, catching the missing `−L_f`); the standalone snowfall/melt assertions were
 updated to the liquid reference.
 
@@ -217,7 +217,7 @@ Revision 7) and **thermodynamic consistency of the latent-heat constants**.
   doctests and the constants documentation table were updated (fusion-first field order; `L_s = 2.83435e6`).
 - **Snow energy tendency** (`compute_snow_energy_tendency`, snow_mass.jl): added the advective sublimation
   correction `Q_subl = ρ_w·L_f·E_subl`. `Q_gnd` (the SEB residual) removes the full sublimation enthalpy
-  `ρ_w·L_s·E_subl` via the surface latent flux, but the mass leaving the pack departs as ice (enthalpy
+  `ρ_w·L_s·E_subl` via the surface latent flux, but the mass leaving the snowpack departs as ice (enthalpy
   `−L_f` relative to the liquid-water-at-0 °C reference). Adding back `ρ_w·L_f·E_subl` leaves a net pack
   loss of exactly `ρ_w·L_v·E_subl` (the vaporization enthalpy of the departing vapor), the ice→vapor
   analogue of the meltwater term. With the now-consistent constants, `L_f` and `(L_s − L_v)` are identical,
@@ -384,7 +384,7 @@ finite `eps` offset (`U_v = E/(d_s+eps)`) rather than `safediv`: `safediv` retur
 so `W` must be initialized before `snow_energy`.
 
 **Temperature clip.** Snow temperature cannot exceed 0 °C, so `T_snow = min(T_freewater, 0)`. The
-free-water map only returns `T > 0` when `U_v > 0` (the pack is fully melted at 0 °C plus sensible
+free-water map only returns `T > 0` when `U_v > 0` (the snowpack is fully melted at 0 °C plus sensible
 excess); this positive part is *not* stored — the excess energy available to drive melt and sublimation
 is derived on demand from `U_v > 0` in the mass/energy tendencies. `snow_energy` itself is unaffected.
 
@@ -396,7 +396,7 @@ dW/dt = f_snow·0 + P_s + R_on_snow − M_r − E_subl
 
 - `P_s` snowfall (mass source; can initiate a pack from `W = 0`).
 - `R_on_snow = f_snow·rainfall` — rainfall intercepted by the snow-covered fraction (adds to `W`,
-  advects sensible/latent heat into `U`). Rainfall on the bare fraction bypasses the pack (→ soil).
+  advects sensible/latent heat into `U`). Rainfall on the bare fraction bypasses the snowpack (→ soil).
 - `M_r` meltwater outflow (Darcy, below).
 - `E_subl` sublimation/evaporation from the snow surface, supplied by the latent-heat flux of the SEB
   over the snow-covered fraction (couples to the existing latent-flux machinery).

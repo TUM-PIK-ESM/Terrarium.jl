@@ -4,7 +4,7 @@
     $TYPEDSIGNATURES
 
 Darcy-type meltwater outflow `M_r` (m/s, SWE). Liquid water in excess of the capillary retention `L_c`
-drains from the pack with a cubic conductivity (Male & Gray 1981; UEB eqns 23–24, in excess-saturation
+drains from the snowpack with a cubic conductivity (Male & Gray 1981; UEB eqns 23–24, in excess-saturation
 form): `M_r = K_sat · S*³` with `S* = max(θ_liq − L_c, 0) / (1 − L_c)`, where `θ_liq` is the liquid
 fraction of the water substance. Outflow vanishes smoothly as `θ_liq → L_c` and saturates at `K_sat` as
 `θ_liq → 1`.
@@ -75,14 +75,14 @@ where `Q_gnd`/`Q_base` are the surface/basal heat fluxes, `Q_precip` the advecte
 (see [`compute_precip_heat_flux`](@ref)), and `Q_subl` an advective correction for sublimation.
 
 The sublimation correction `Q_subl = ρ_w·L_f·E_subl` is required because the latent heat flux
-carries the full sublimation enthalpy `ρ_w·L_s·E_subl`, whereas the mass leaving the pack departs as ice,
+carries the full sublimation enthalpy `ρ_w·L_s·E_subl`, whereas the mass leaving the snowpack departs as ice,
 whose specific enthalpy relative to the liquid-water reference is `−L_f`. Adding back `ρ_w·L_f·E_subl`
-leaves the pack with a net loss of `ρ_w·(L_s − L_f)·E_subl = ρ_w·L_v·E_subl`, the vaporization enthalpy
+leaves the snowpack with a net loss of `ρ_w·(L_s − L_f)·E_subl = ρ_w·L_v·E_subl`, the vaporization enthalpy
 carried by the departing vapor.
 
 Note that no explicit *meltwater* energy term appears because meltwater drains as liquid water at 0 °C,
 which is the zero-enthalpy reference (`U = 0`) of the `FreeWater` closure, so it carries no enthalpy
-out of the pack.
+out of the snowpack.
 """
 @propagate_inbounds function compute_snow_energy_tendency(
         i, j, grid, fields,

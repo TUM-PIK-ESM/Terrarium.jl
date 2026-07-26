@@ -109,7 +109,7 @@ using Test
         # A partially melted pack (θ_liq above capillary retention, no other forcing) drains meltwater.
         # Meltwater is liquid water at 0 °C, which is the zero-enthalpy reference (U = 0) of the FreeWater
         # closure, so draining it removes mass but no energy: dW < 0 while dE = 0. (An ice-referenced
-        # meltwater flux would instead give dE = ρ_w·L_f·dW, spuriously refreezing the pack.)
+        # meltwater flux would instead give dE = ρ_w·L_f·dW, spuriously refreezing the snowpack.)
         state = fresh_state()
         set!(state.snow_water_equivalent, W0)
         Lθ = ρ_s * L_f
@@ -118,16 +118,16 @@ using Test
         step_tendencies!(state)
         dW = Array(interior(state.tendencies.snow_water_equivalent))
         dE = Array(interior(state.tendencies.snow_energy))
-        @test all(dW .< 0)          # meltwater drains from the pack
+        @test all(dW .< 0)          # meltwater drains from the snowpack
         @test all(isapprox.(dE, 0; atol = 1.0e-9))   # but carries no enthalpy: energy is conserved
     end
 
     @testset "conservation: snowfall accretes at the fresh-snow enthalpy" begin
         # Fresh snow falling at air temperature `T_air` onto a pack at `T_air` must accrete without
-        # changing the intensive state (temperature). Equivalently, the accreting snow carries the pack's
-        # specific enthalpy, so the energy tendency per unit mass equals the pack's E/W: dE/dW = E/W.
+        # changing the intensive state (temperature). Equivalently, the accreting snow carries the snowpack's
+        # specific enthalpy, so the energy tendency per unit mass equals the snowpack's E/W: dE/dW = E/W.
         # (With an ice-referenced precip flux, fresh snow would carry ρ_w·c_i·T_air, missing the −ρ_w·L_f
-        # ice deficit, and the pack would spuriously warm toward 0 °C.)
+        # ice deficit, and the snowpack would spuriously warm toward 0 °C.)
         state = fresh_state()
         T_air = NF(-8)
         set!(state.snow_water_equivalent, W0)
@@ -140,15 +140,15 @@ using Test
         dW = Array(interior(state.tendencies.snow_water_equivalent))
         dE = Array(interior(state.tendencies.snow_energy))
         @test all(dW .> 0)                       # pack accumulates
-        @test all(dE ./ dW .≈ E0 ./ W0)          # accreting snow carries the pack's specific enthalpy
+        @test all(dE ./ dW .≈ E0 ./ W0)          # accreting snow carries the snowpack's specific enthalpy
     end
 
     @testset "conservation: sublimation nets the vaporization enthalpy" begin
         # The surface energy balance folds the full sublimation enthalpy ρ_w·L_s·E_subl into Q_gnd
-        # (surface_heat_flux), but the departing mass leaves the pack as ice, whose enthalpy relative to
+        # (surface_heat_flux), but the departing mass leaves the snowpack as ice, whose enthalpy relative to
         # liquid water at 0 °C is −L_f. The advective correction +ρ_w·L_f·E_subl therefore leaves a net
         # pack loss of exactly ρ_w·L_v·E_subl, the vaporization enthalpy carried by the departing vapor.
-        # (Without the correction the pack would lose the full L_s and spuriously overcool.)
+        # (Without the correction the snowpack would lose the full L_s and spuriously overcool.)
         state = fresh_state()
         set!(state.snow_water_equivalent, W0)
         set!(state.snow_temperature, NF(-5))

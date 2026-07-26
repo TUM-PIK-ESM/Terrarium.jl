@@ -97,7 +97,7 @@ end
     fgrid = get_field_grid(grid)
 
     # Get inputs. With snow, the surface water input is the snow-adjusted rainfall plus meltwater outflow
-    # (the snow-covered fraction of rain is intercepted by the pack); without snow it is the ground rainfall.
+    # (the snow-covered fraction of rain is intercepted by the snowpack); without snow it is the ground rainfall.
     influx = soil_surface_water_flux(i, j, grid, fields, canopy_interception, snow)
     excess_water = surface_excess_water(i, j, grid, fields, soil_hydrology)
     k_unsat = hydraulic_conductivity(i, j, fgrid.Nz, grid, fields, soil_hydrology)

@@ -148,7 +148,7 @@ end
 Snow→soil basal conductive heat flux `Q_base` [W/m²], positive upward (soil → snow). The snowpack is a
 strong insulator, so only its resistance is retained (snow-resistance-only closure):
 `Q_base = 2·κ_snow·(T_soil − T_snow)/d_s`. The depth is regularized with a machine-`eps` offset so the
-flux stays finite as the pack vanishes.
+flux stays finite as the snowpack vanishes.
 """
 @inline compute_snow_basal_heat_flux(κ_snow::NF, T_soil::NF, T_snow::NF, d_s::NF) where {NF} =
     2 * κ_snow * (T_soil - T_snow) / (d_s + eps(NF))
