@@ -69,9 +69,9 @@ end
 
 Depth-integrated snow energy tendency [W/m²] at grid cell `i, j` (all fluxes positive upward):
 ```
-dU/dt = G_base − G_top + Q_precip + Q_subl
+dU/dt = Q_base − Q_gnd + Q_precip + Q_subl
 ```
-where `G_top`/`G_base` are the surface/basal heat fluxes, `Q_precip` the advected precipitation heat
+where `Q_gnd`/`Q_base` are the surface/basal heat fluxes, `Q_precip` the advected precipitation heat
 (see [`compute_precip_heat_flux`](@ref)), and `Q_subl` an advective correction for sublimation.
 
 The sublimation correction `Q_subl = ρ_w·L_f·E_subl` is required because the latent heat flux
@@ -90,8 +90,8 @@ out of the pack.
         atmos::AbstractAtmosphere,
         constants::PhysicalConstants
     )
-    G_top = fields.surface_heat_flux[i, j]   # positive upward: energy leaving the snow top
-    G_base = fields.basal_heat_flux[i, j]    # positive upward: energy entering the snow base from soil
+    Q_gnd = fields.surface_heat_flux[i, j]   # positive upward: energy leaving the snow top
+    Q_base = fields.basal_heat_flux[i, j]    # positive upward: energy entering the snow base from soil
     f_snow = snow_cover_fraction(i, j, grid, fields, snow)
     P_s = snowfall(i, j, grid, fields, atmos)
     R = rainfall(i, j, grid, fields, atmos)
@@ -102,7 +102,7 @@ out of the pack.
     L_f = constants.thermodynamics.latent_heat_fusion
     E_subl = fields.sublimation[i, j]
     Q_subl = ρ_w * L_f * E_subl
-    dUdt = G_base - G_top + Q_prcp + Q_subl
+    dUdt = Q_base - Q_gnd + Q_prcp + Q_subl
     return dUdt
 end
 

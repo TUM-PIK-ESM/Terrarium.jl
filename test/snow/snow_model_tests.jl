@@ -90,7 +90,7 @@ using Test
         set!(state.basal_heat_flux, NF(10))                         # soil -> snow: gain
         set!(state.surface_heat_flux, NF(30))                       # snow -> sky: loss
         step_tendencies!(state)
-        @test all(state.tendencies.snow_energy .≈ NF(10) - NF(30))  # dE/dt = G_base - G_top
+        @test all(state.tendencies.snow_energy .≈ NF(10) - NF(30))  # dE/dt = Q_base - Q_gnd
         @test all(state.tendencies.snow_water_equivalent .≈ 0)
     end
 
@@ -144,7 +144,7 @@ using Test
     end
 
     @testset "conservation: sublimation nets the vaporization enthalpy" begin
-        # The surface energy balance folds the full sublimation enthalpy ρ_w·L_s·E_subl into G_top
+        # The surface energy balance folds the full sublimation enthalpy ρ_w·L_s·E_subl into Q_gnd
         # (surface_heat_flux), but the departing mass leaves the pack as ice, whose enthalpy relative to
         # liquid water at 0 °C is −L_f. The advective correction +ρ_w·L_f·E_subl therefore leaves a net
         # pack loss of exactly ρ_w·L_v·E_subl, the vaporization enthalpy carried by the departing vapor.
@@ -157,7 +157,7 @@ using Test
         L_v = constants.thermodynamics.latent_heat_vaporization
         E_subl = NF(2.0e-7)
         set!(state.sublimation, E_subl)
-        set!(state.surface_heat_flux, ρ_w * L_s * E_subl)   # SEB latent contribution to G_top
+        set!(state.surface_heat_flux, ρ_w * L_s * E_subl)   # SEB latent contribution to Q_gnd
         step_tendencies!(state)
         dE = Array(interior(state.tendencies.snow_energy))
         @test all(dE .≈ -ρ_w * L_v * E_subl)                # net loss = vaporization enthalpy only

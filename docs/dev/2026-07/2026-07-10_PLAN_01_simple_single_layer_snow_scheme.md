@@ -163,7 +163,7 @@ an inconsistency of `ρ_w·L_f` per unit mass. Corrected in `snow_mass.jl` (`com
 renamed from `compute_rain_heat_flux`):
 
 - **Meltwater** drains as liquid water at 0 °C (`U = 0`), so it carries no enthalpy — the previous
-  `Q_melt = ρ_w·L_f·M_r` term is dropped. The energy tendency is now `dE/dt = G_base − G_top + Q_precip`
+  `Q_melt = ρ_w·L_f·M_r` term is dropped. The energy tendency is now `dE/dt = Q_base − Q_gnd + Q_precip`
   (no meltwater term). The old term spuriously refroze draining meltwater (`dW_ice/dt = +M_r`).
 - **Rain-on-snow** carries only sensible heat `c_w·max(T_air,0)` above the liquid reference; the previous
   `+L_f` double-counted the freezing latent heat (which the enthalpy closure already captures implicitly).
@@ -178,7 +178,7 @@ updated to the liquid reference.
 
 Open follow-up (not yet resolved): the **sublimation** energy term is subject to the same reference
 subtlety. Sublimated ice mass carries `−L_f` enthalpy in the liquid reference, so under this reference the
-energy budget implies an additional `+ρ_w·L_f·E_subl` term beyond the SEB latent flux already in `G_top`;
+energy budget implies an additional `+ρ_w·L_f·E_subl` term beyond the SEB latent flux already in `Q_gnd`;
 this is entangled with the SEB's latent-heat convention (`L_v` vs `L_s`) and the still-deferred
 latent-flux partitioning, and is left for that work item.
 
@@ -216,7 +216,7 @@ Revision 7) and **thermodynamic consistency of the latent-heat constants**.
   `latent_heat_sublimation` is derived as `L_f + L_v`, enforcing `L_s = L_f + L_v` exactly. The `show`
   doctests and the constants documentation table were updated (fusion-first field order; `L_s = 2.83435e6`).
 - **Snow energy tendency** (`compute_snow_energy_tendency`, snow_mass.jl): added the advective sublimation
-  correction `Q_subl = ρ_w·L_f·E_subl`. `G_top` (the SEB residual) removes the full sublimation enthalpy
+  correction `Q_subl = ρ_w·L_f·E_subl`. `Q_gnd` (the SEB residual) removes the full sublimation enthalpy
   `ρ_w·L_s·E_subl` via the surface latent flux, but the mass leaving the pack departs as ice (enthalpy
   `−L_f` relative to the liquid-water-at-0 °C reference). Adding back `ρ_w·L_f·E_subl` leaves a net pack
   loss of exactly `ρ_w·L_v·E_subl` (the vaporization enthalpy of the departing vapor), the ice→vapor
@@ -224,7 +224,7 @@ Revision 7) and **thermodynamic consistency of the latent-heat constants**.
   so `L_f` is used directly. The SEB latent flux and skin-temperature solve are unchanged (they correctly
   see `L_s`).
 
-Test: `conservation: sublimation nets the vaporization enthalpy` (snow_model_tests.jl) — with `G_top`
+Test: `conservation: sublimation nets the vaporization enthalpy` (snow_model_tests.jl) — with `Q_gnd`
 set to the SEB's `ρ_w·L_s·E_subl` contribution, the snow energy tendency equals `−ρ_w·L_v·E_subl`. Docs
 updated (snow.md, snow_energy.md energy-balance equations).
 
