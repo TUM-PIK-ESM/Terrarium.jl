@@ -14,12 +14,14 @@ authors:
     equal-contrib: true
     affiliation: 1 # (Multiple affiliations must be quoted)
   - name: Maximilian Gelbrecht
+    orcid: 0000-0002-0729-6671
     equal-contrib: true # (This is how you can denote equal contributions between multiple authors)
     affiliation: "1, 2"
   - name: Maha Badri
     corresponding: true # (This is how to denote the corresponding author)
     affiliation: "1, 2"
   - name: Olivier Bonte
+    orcid: 0000-0003-1806-7572
     affiliation: 3
 affiliations:
  - name: Potsdam Institute for Climate Impact Research (PIK), Germany
