@@ -213,14 +213,14 @@ Follow [ColPrac](https://github.com/SciML/ColPrac). Feature branches, descriptiv
 
 ## Implementation plans
 
-All major feature additions, bug fixes, or refactoring that requires substantial changes to the existing code must be prefaced with an **implementation plan** that is reviewed and signed off by a human. These plan documents should be organized by date and stored in `docs/dev`. Each document should be prefaced by the following template:
+All major feature additions, bug fixes, or refactoring that requires substantial changes to the existing code must be prefaced with an **implementation plan** that is reviewed and signed off by a human. These plan documents should be organized by date and stored in `docs/dev/YYYY-MM`. Each document should be prefaced by the following template:
 
 ```md
 # Descriptive title
 
 > Status: **planned**/**in progress**/**completed**. One sentence summary of current status.
 
-Date of initial draft: YYYY-mm-dd
+Date of initial draft: YYYY-MM-dd
 
 Base revision: <SHA1 of HEAD when plan was drafted>
 
