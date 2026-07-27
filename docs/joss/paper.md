@@ -22,12 +22,15 @@ authors:
   - name: Olivier Bonte
     affiliation: 3
 affiliations:
- - name: Potsdam Institute for Climate Impact Research (PIK)
+ - name: Potsdam Institute for Climate Impact Research (PIK), Germany
    index: 1
+   ror: "03e8s1d88"
  - name: Technical University of Munich, Germany
    index: 2
- - name: Ghent University
+   ror: "02kkvpp62"
+ - name: Ghent University, Belgium 
    index: 3
+   ror: "00cv9y106"
 date: July 2026
 bibliography: paper.bib
 ---
