@@ -44,6 +44,17 @@ function get_asset(asset::AbstractLandAsset)
     return path
 end
 
+"""
+    $TYPEDSIGNATURES
+
+Download (if necessary) the given `asset` via [`get_asset`](@ref) and read the variable `name`
+from its data file, returning a suitable `Field` based on the asset's `native_grid` with element type
+`NF`. The asset's `indices` are applied when reading (e.g. to select a single time record), and `fill_value`
+replaces missing data; it defaults to `NF(NaN)`.
+
+The underlying read is dispatched to an I/O extension based on the asset's [`format`](@ref); load
+Rasters.jl and NCDatasets.jl to enable reading NetCDF and other raster files.
+"""
 function load_asset(asset::AbstractLandAsset, name::String; NF::Type = Float32, fill_value = NF(NaN))
     path = get_asset(asset)
     fmt = format(asset)
