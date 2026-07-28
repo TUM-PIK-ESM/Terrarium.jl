@@ -3,7 +3,7 @@ abstract type AbstractSnowThermalConductivity{NF} end
 """
     $TYPEDEF
 
-Power law parameterization for snow thermal conductivity as a function of density following [yenReviewThermalProperties1981](@cite).
+Power law parameterization for snow thermal conductivity as a function of density following [yenReviewThermalProperties1981; Eq. (34)](@cite).
 
 Properties:
 $TYPEDFIELDS

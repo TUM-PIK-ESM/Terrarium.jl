@@ -4,15 +4,18 @@
     $TYPEDSIGNATURES
 
 Darcy-type meltwater outflow `M_r` (m/s, SWE). Liquid water in excess of the capillary retention `L_c`
-drains from the snowpack with a cubic conductivity (Male & Gray 1981; UEB eqns 23–24, in excess-saturation
+drains from the snowpack with a cubic conductivity [tarbotonSpatiallyDistributedEnergy1994, Eq. (23-24)](@cite) (in excess-saturation
 form): `M_r = K_sat · S*³` with `S* = max(θ_liq − L_c, 0) / (1 − L_c)`, where `θ_liq` is the liquid
 fraction of the water substance. Outflow vanishes smoothly as `θ_liq → L_c` and saturates at `K_sat` as
 `θ_liq → 1`.
+# References
+
+* [tarbotonSpatiallyDistributedEnergy1994](@cite) Tarboton et al., Report (1994)
 """
 @inline function compute_meltwater_outflow(hydraulics::ConstantSnowHydraulics, θ_liq::NF) where {NF}
-    L_c = hydraulics.capillary_retention
+    liq_c = hydraulics.capillary_retention
     K_sat = hydraulics.saturated_conductivity
-    Sstar = max(θ_liq - L_c, zero(NF)) / (one(NF) - L_c)
+    Sstar = max(θ_liq - liq_c, zero(NF)) / (one(NF) - L_c)
     return K_sat * Sstar^3
 end
 
@@ -28,10 +31,10 @@ double-count relative to the liquid-water reference).
 """
 @inline function compute_precip_heat_flux(P_s::NF, R_on_snow::NF, T_air::NF, constants::PhysicalConstants) where {NF}
     ρ_w = constants.material.density_water
-    L_f = constants.thermodynamics.latent_heat_fusion
-    c_i = constants.thermodynamics.specific_heat_capacity_ice
-    c_w = constants.thermodynamics.specific_heat_capacity_liquid_water
-    Q_snow = ρ_w * P_s * (c_i * min(T_air, zero(NF)) - L_f)
+    L_sl = constants.thermodynamics.latent_heat_fusion
+    c_pi = constants.thermodynamics.specific_heat_capacity_ice
+    c_pw = constants.thermodynamics.specific_heat_capacity_liquid_water
+    Q_snow = ρ_w * P_s * (c_i * min(T_air, zero(NF)) - L_sl)
     Q_rain = ρ_w * R_on_snow * c_w * max(T_air, zero(NF))
     Q_prcp = Q_snow + Q_rain
     return Q_prcp
@@ -75,7 +78,7 @@ where `Q_gnd`/`Q_base` are the surface/basal heat fluxes, `Q_precip` the advecte
 (see [`compute_precip_heat_flux`](@ref)), and `Q_subl` an advective correction for sublimation.
 
 The sublimation correction `Q_subl = ρ_w·L_f·E_subl` is required because the latent heat flux
-carries the full sublimation enthalpy `ρ_w·L_s·E_subl`, whereas the mass leaving the snowpack departs as ice,
+carries the full sublimation enthalpy `ρ_w·L_sg·E_subl`, whereas the mass leaving the snowpack departs as ice,
 whose specific enthalpy relative to the liquid-water reference is `−L_f`. Adding back `ρ_w·L_f·E_subl`
 leaves the snowpack with a net loss of `ρ_w·(L_s − L_f)·E_subl = ρ_w·L_v·E_subl`, the vaporization enthalpy
 carried by the departing vapor.
@@ -99,9 +102,9 @@ out of the snowpack.
     R_snow = f_snow * R
     Q_prcp = compute_precip_heat_flux(P_s, R_snow, T_air, constants)
     ρ_w = constants.material.density_water
-    L_f = constants.thermodynamics.latent_heat_fusion
+    L_sl = constants.thermodynamics.latent_heat_fusion
     E_subl = fields.sublimation[i, j]
-    Q_subl = ρ_w * L_f * E_subl
+    Q_subl = ρ_w * L_sl * E_subl
     dUdt = Q_base - Q_gnd + Q_prcp + Q_subl
     return dUdt
 end

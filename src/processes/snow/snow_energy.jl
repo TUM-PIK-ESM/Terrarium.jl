@@ -91,18 +91,18 @@ Recover the snow temperature and liquid water fraction from the depth-integrated
     )
     E = fields.snow_energy[i, j] # assumed given
     W = fields.snow_water_equivalent[i, j]
-    L_f = constants.thermodynamics.latent_heat_fusion
-    c_i = constants.thermodynamics.specific_heat_capacity_ice
-    c_w = constants.thermodynamics.specific_heat_capacity_liquid_water
+    L_sl = constants.thermodynamics.latent_heat_fusion
+    c_pi = constants.thermodynamics.specific_heat_capacity_ice
+    c_pw = constants.thermodynamics.specific_heat_capacity_liquid_water
     ρ_w = constants.material.density_water
     ρ_s = compute_snow_density(i, j, grid, fields, snow.density)
     d_s = compute_snow_depth(snow, W, ρ_s, ρ_w)
     # Volumetric latent heat of fusion and volumetric energy (bulk snow treated as water substance)
-    Lθ = ρ_s * L_f
+    Lθ = ρ_s * L_sl
     U_v = volumetric_snow_energy(E, d_s)
     liq = liquid_water_fraction(FreeWater(), U_v, Lθ, one(U_v))
     out.snow_liquid_fraction[i, j, 1] = liq
-    C = ρ_s * (liq * c_w + (one(liq) - liq) * c_i)
+    C = ρ_s * (liq * c_pw + (one(liq) - liq) * c_pi)
     # Snow temperature cannot exceed 0°C, so clip the free-water temperature at zero. The energy above
     # the fully-melted (0°C, all-liquid) reference, i.e. the positive part `U_v > 0`, is not stored; it
     # is derived on demand where needed to determine snow melt.
@@ -124,19 +124,19 @@ Compute the depth-integrated snow energy from a prescribed temperature at grid c
     )
     T = fields.snow_temperature[i, j] # assumed given
     W = fields.snow_water_equivalent[i, j]
-    L_f = constants.thermodynamics.latent_heat_fusion
-    c_i = constants.thermodynamics.specific_heat_capacity_ice
-    c_w = constants.thermodynamics.specific_heat_capacity_liquid_water
+    L_sl = constants.thermodynamics.latent_heat_fusion
+    c_pi = constants.thermodynamics.specific_heat_capacity_ice
+    c_pw = constants.thermodynamics.specific_heat_capacity_liquid_water
     ρ_w = constants.material.density_water
     ρ_s = compute_snow_density(i, j, grid, fields, snow.density)
     d_s = compute_snow_depth(snow, W, ρ_s, ρ_w)
-    Lθ = ρ_s * L_f
+    Lθ = ρ_s * L_sl
     # N.B. For the free-water characteristic the liquid fraction is indeterminate at T = 0; assume
     # frozen for T < 0 and thawed otherwise. This mapping is for initialization only and must **not**
     # be used in the calculation of tendencies.
     liq = ifelse(T >= zero(T), one(T), zero(T))
     out.snow_liquid_fraction[i, j, 1] = liq
-    C = ρ_s * (liq * c_w + (one(liq) - liq) * c_i)
+    C = ρ_s * (liq * c_pw + (one(liq) - liq) * c_pi)
     U_v = T * C - Lθ * (one(liq) - liq)
     out.snow_energy[i, j, 1] = U_v * d_s
     return nothing

@@ -226,15 +226,15 @@ snow-covered fraction sublimates from the snowpack (latent heat of sublimation, 
     q_air = specific_humidity(i, j, grid, fields, atmos)
     # TODO: density should be evaluated at surface temperature for better accuracy
     ρₐ = Thermodynamics.air_density(constants.thermodynamics, celsius_to_kelvin(constants.thermodynamics, Tₐ), pres, q_air)
-    L_v = constants.thermodynamics.latent_heat_vaporization
-    L_s = constants.thermodynamics.latent_heat_sublimation
+    L_lv = constants.thermodynamics.latent_heat_vaporization
+    L_sg = constants.thermodynamics.latent_heat_sublimation
     ρ_w = constants.material.density_water
 
     # Partition by snow-covered fraction: ground/canopy evaporation over (1 − f_snow), snow sublimation over f_snow
     f = snow_cover_fraction(i, j, grid, fields, snow)  # zero without snow
     E_subl = compute_snow_sublimation_flux(i, j, grid, fields, snow, atmos, constants)  # zero without snow, f-weighted SWE
-    Hₗ_ground = compute_latent_heat_flux(tur, (one(f) - f) * Q_h, ρₐ, L_v)
-    Hₗ_snow = ρ_w * L_s * E_subl
+    Hₗ_ground = compute_latent_heat_flux(tur, (one(f) - f) * Q_h, ρₐ, L_lv)
+    Hₗ_snow = ρ_w * L_sg * E_subl
     return Hₗ_ground + Hₗ_snow
 end
 
