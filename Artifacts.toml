@@ -1,0 +1,15 @@
+[era5-land-forcings-N72]
+git-tree-sha1 = "e3210e8919a2603e40b3980d11112b09a18c9c7d"
+lazy = true
+
+    [[era5-land-forcings-N72.download]]
+    sha256 = "d8277ea3d5d1b213d01f96680fff6ff402ad54d17d5ff197da427810ee7aa607"
+    url = "https://syncandshare.lrz.de/dl/fiN9jwH3S1TfJ8N4ExMCwR/era5_land_2024_N72.nc.tar.gz"
+
+[era5-land-invariants]
+git-tree-sha1 = "774f5bc203d845fded98bfd8cc48d5f6a5e6deb6"
+lazy = true
+
+    [[era5-land-invariants.download]]
+    sha256 = "6b556983c7cec6c10337a1532f95ba7ab42ddfe73556e2f8eedd541d1e7050ca"
+    url = "https://syncandshare.lrz.de/dl/fiDVufWFritjBSp8uWZ3Pj/era5_land_invariants.nc.tar.gz"
