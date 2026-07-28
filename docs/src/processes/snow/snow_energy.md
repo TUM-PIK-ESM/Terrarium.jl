@@ -26,7 +26,7 @@ sensible/latent heat advected by precipitation (see [Snow mass balance](@ref)), 
 an advective correction for energy loss due to sublimation. Meltwater drains as liquid water at 0 °C, which is the zero-enthalpy reference of the enthalpy closure below, so it carries no enthalpy out of the snowpack and no
 explicit meltwater energy term appears.
 
-The sublimation correction arises from the same enthalpy reference.``Q_\text{top}`` includes the surface latent heat flux which reduces the energy content of the snowpack by ``\rho_w L_s E_\text{subl}``, but the the mass leaving the snowpack departs as ice, whose specific enthalpy relative to liquid water at 0 °C is ``-L_f``. Adding back ``Q_\text{subl} = \rho_w L_f E_\text{subl}`` leaves a net pack loss of ``\rho_w L_v E_\text{subl}`` since ``L_s = L_f + L_v`` by definition.
+The sublimation correction arises from the same enthalpy reference. ``Q_\text{top}`` includes the surface latent heat flux which reduces the energy content of the snowpack by ``\rho_w L_{sg} E_\text{subl}``, but the the mass leaving the snowpack departs as ice, whose specific enthalpy relative to liquid water at 0 °C is ``-L_{sl}``. Adding back ``Q_\text{subl} = \rho_w L_{sg} E_\text{subl}`` leaves a net pack loss of ``\rho_w L_{lv} E_\text{subl}`` since ``L_{sg} = L_{sl} + L_{lv}`` by definition.
 
 ## Energy–temperature closure
 
