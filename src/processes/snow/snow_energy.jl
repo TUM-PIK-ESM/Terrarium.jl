@@ -5,7 +5,7 @@ Energy–temperature closure for the single-layer snow scheme. Recovers the dept
 temperature `T_snow` [°C] and liquid water fraction `θ_liq` from the depth-integrated internal energy
 `E` [J/m²] using the medium-agnostic `FreeWater` enthalpy relations, treating the bulk snow as a water
 substance of volumetric mass `ρ_s`: the volumetric energy `U_v = E/d_s` [J/m³], the volumetric latent
-heat `Lθ = ρ_s·L_f`, and the volumetric heat capacity `C = ρ_s·(θ_liq·c_w + (1−θ_liq)·c_i)`. The
+heat `Lθ = ρ_s·L_{sl}`, and the volumetric heat capacity `C = ρ_s·(θ_liq·c_{p,l} + (1−θ_liq)·c_{p,i})`. The
 volumetric energy `U_v` is formed inline from the diagnosed snow depth `d_s` (no auxiliary field is
 stored for `U_v`). This is the same enthalpy map used for soil with the pore saturation set to one,
 i.e. the snow layer is "fully saturated" with water substance in the lumped sense.
