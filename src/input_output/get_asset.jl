@@ -32,11 +32,10 @@ native_grid(::ERA5LandForcings) = RingGrids.FullGaussianGrid(72)
 """
     $TYPEDSIGNATURES
 
-Download (if necessary) and load the given `asset`, returning a `NamedTuple` that maps each of the
-asset's `varnames` to a field wrapped on its `native_grid`. The data file is located inside the
-installed artifact directory by its [`file_extension`](@ref), and each variable is read via
-[`load_asset`](@ref) (load NCDatasets.jl to enable reading NetCDF files). `fill_value` replaces
-missing data (identified by the file's `_FillValue` attribute); defaults to `NaN`.
+Download (if necessary) the given `asset` and return the path to its data file within the installed
+artifact directory. The artifact is installed via [`get_artifact`](@ref) and the data file is located
+by its [`file_extension`](@ref). Reading the file is left to the caller; use [`load_asset`](@ref) to
+read a variable into a data `Field` wrapped on the asset's `native_grid`.
 """
 function get_asset(asset::AbstractLandAsset)
     artifact_dir = get_artifact(artifact_name(asset))
