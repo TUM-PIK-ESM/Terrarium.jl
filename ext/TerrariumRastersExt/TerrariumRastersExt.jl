@@ -11,6 +11,7 @@ using Oceananigans
 using Rasters
 
 import Oceananigans.Architectures: on_architecture
+import RingGrids
 
 """
     $TYPEDEF
@@ -50,6 +51,14 @@ function Terrarium.InputSource(grid::ColumnRingGrid{NF}, raster::AbstractRaster{
     reftime = default_reftime(raster, reftime)
     path = Terrarium.varpath(name)
     return RasterInputSource{NF, path, typeof(vd), typeof(reftime), typeof(idxmap), typeof(raster), typeof(units)}(vd, units, idxmap, reftime, raster)
+end
+
+function Terrarium.load_asset(path, name, grid::RingGrids.AbstractGrid, ::Terrarium.NetCDF, ::Type{NF}; indices = (:, :, :), fill_value = NaN) where {NF}
+    raster = replace(Raster(path, name = name), missing => fill_value)[indices...]
+    data = reconcile_latitudes(raster, grid)
+    field = RingGrids.Field(grid, size(data)[3:end]...)
+    field .= reshape(data, :, size(data)[3:end]...)
+    return field
 end
 
 Terrarium.variables(source::RasterInputSource) = Terrarium.with_scope(
@@ -152,5 +161,23 @@ on_architecture(to, raster::AbstractRaster) = rebuild(
     data = on_architecture(to, raster.data),
     dims = map(d -> rebuild(d, val = on_architecture(to, d.val)), dims(raster))
 )
+
+# Reconcile the latitude dimension (assumed to be the second, following the (lon, lat, ...)
+# layout used above) with the target grid. Regular lon-lat grids (e.g. ERA5-Land) place points
+# on both poles, whereas RingGrids full grids do not, so such data carries two extra latitude
+# rings. Drop the first and last latitude (the poles) when present; otherwise require an exact
+# match so mismatched data is not silently truncated.
+function reconcile_latitudes(data::AbstractArray, grid::RingGrids.AbstractFullGrid)
+    nlat_data = size(data, 2)
+    nlat_grid = RingGrids.get_nlat(grid)
+    if nlat_data == nlat_grid
+        return data
+    elseif nlat_data == nlat_grid + 2
+        trailing = ntuple(_ -> Colon(), ndims(data) - 2)
+        return data[:, 2:(nlat_data - 1), trailing...]
+    else
+        error("Cannot reconcile source latitude count ($nlat_data) with grid latitude count ($nlat_grid)")
+    end
+end
 
 end
