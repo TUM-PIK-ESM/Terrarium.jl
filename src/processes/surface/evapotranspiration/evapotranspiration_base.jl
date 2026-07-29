@@ -1,3 +1,19 @@
+# Compatibility dispatch for vegetation-free configurations
+# TODO: This suggests a need for a redesign of the call interface
+function compute_auxiliary!(
+        state, grid,
+        evaporation::AbstractEvapotranspiration,
+        interception::NoCanopyInterception,
+        constants::PhysicalConstants,
+        atmos::AbstractAtmosphere,
+        soil::Optional{AbstractSoil} = nothing,
+        vegetation::Nothing,
+        snow::Optional{AbstractSnow} = nothing,
+        args...
+    )
+    return compute_auxiliary!(state, grid, evaporation, interception, constants, atmos, soil, snow)
+end
+
 """
     $TYPEDSIGNATURES
 
