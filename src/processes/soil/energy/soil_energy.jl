@@ -24,6 +24,12 @@ struct SoilThermodynamics{
     thermal_properties::ThermalProps
 end
 
+SoilThermodynamics{NF}(
+    operator::AbstractHeatOperator,
+    closure::AbstractEnergyClosure,
+    thermal_properties::SoilThermalProperties,
+) where {NF} = SoilThermodynamics{NF, typeof(operator), typeof(closure), typeof(thermal_properties)}(operator, closure, thermal_properties)
+
 SoilThermodynamics(
     ::Type{NF};
     operator::AbstractHeatOperator = ExplicitTwoPhaseHeatConduction(),

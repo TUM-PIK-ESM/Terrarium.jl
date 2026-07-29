@@ -65,11 +65,12 @@ SoilHeatCapacities(::Type{NF}; kwargs...) where {NF} = SoilHeatCapacities{NF}(; 
 Properties:
 $TYPEDFIELDS
 """
-@parameterized @kwdef struct SoilThermalProperties{ 
-    Cond,       # <: SoilThermalConductivities
-    CondWeight, # <: AbstractBulkWeighting
-    SoilHeatC,  # <: SoilHeatCapacities
-    FC}         # <: FreezeCurve
+@parameterized @kwdef struct SoilThermalProperties{
+        Cond,       # <: SoilThermalConductivities
+        CondWeight, # <: AbstractBulkWeighting
+        SoilHeatC,  # <: SoilHeatCapacities
+        FC,
+    }         # <: FreezeCurve
     "Thermal conductivities for all constituents"
     @component conductivities::Cond
 
@@ -87,7 +88,7 @@ SoilThermalProperties(
     ::Type{NF};
     conductivities::SoilThermalConductivities = SoilThermalConductivities(NF),
     conductivity_weighting::AbstractBulkWeighting = InverseQuadratic(),
-    heat_capacities::SoilHeatCapacities{NF} = SoilHeatCapacities(NF),
+    heat_capacities::SoilHeatCapacities = SoilHeatCapacities(NF),
     freezecurve::FreezeCurve = FreeWater()
 ) where {NF} = SoilThermalProperties(conductivities, conductivity_weighting, heat_capacities, freezecurve)
 
