@@ -1,5 +1,5 @@
 # Terrarium.jl
-<strong> 🌲🌡💧 Fast, differentiable, and GPU-aware land modeling across scales with [Oceananigans.jl](https://github.com/CliMA/Oceananigans.jl). </strong>
+<strong> 🌲🌡💧 Fast, differentiable, and GPU-aware land modeling across scales with [Oceananigans.jl](https://github.com/CliMA/Oceananigans.jl) </strong>
 ---
 
 <a href="https://numericalearth.github.io/Terrarium.jl/dev">
@@ -56,24 +56,30 @@ If you would like to not only use Terrarium but also actively develop it (or fix
 ```
 pkg> dev Terrarium
 ```
-though it is worth noting that this will clone the repository into your Julia home directory by default. You can also fork/clone the repository yourself and start hacking!
+However, note that this will clone the repository into your local `~/.julia/dev` directory. You can alternatively directly fork/clone the repository yourself and start hacking!
 ```
 git clone git@github.com:NumericalEarth/Terrarium.jl
 ```
 
-You can then initialize the project environment by setting the repository as your working directory and running
+The project environment can be initialized by setting the repository as your working directory and running
 
 ```
 julia --project=. -e "import Pkg; Pkg.instantiate()"
 ```
 
-To run the example scripts, you will need to set the project directory to the `examples/` directory,
+To run the example scripts, you will need to also activate and set up the `examples` project environment,
+
+```
+julia --project=examples -e "import Pkg; Pkg.instantiate()"
+```
+
+which declares some additional dependencies that are needed for some of the example scripts. Note that this may take a few minutes to finish precompiling. Once finished, you can execute the example scripts within this environment:
 
 ```
 julia --project=examples examples/simulations/soil_heat_global.jl
 ```
 
-You can also directly `activate` the example project environment from your REPL by first entering the package manager with `]` and then running the command `activate examples` followed by `instantiate`.
+You can also `activate` the example project environment from your REPL by first entering the package manager with `]` and then running the command `activate examples`. This will let you interactively execute the examples from the REPL or your preferred IDE.
 
 ## Quick start
 
@@ -119,7 +125,6 @@ and voila! We have just run a GPU-accelerated, global-scale simulation of soil t
 ## Why Oceananigans?
 It might initially seem strange that a land model would be built on top of a framework for ocean modeling. There are, however, some key advantages in doing so:
 
-
 1. Firstly, like ocean models, land models are commonly implemented using finite difference and/or finite volume method (FDM/FVM) to approximate spatial gradients in mass and energy conservation laws. Oceananigans provides state-of-the-art tools for FVM simulation in Julia, with a focus on geophysical applications, which aligns well with our goals. Like most land models, Terrarium will initially focus on 1D column modeling; however, using Oceananigans affords us the possibility of very feasibly expanding to 2D and 3D simulations in the future!
 2. Secondly, the numerical operators provided by Oceananigans are built to be both auto-differentiable and GPU-compatible out-of-the-box, which means that Terrarium can inherit these capabilities almost “for free”.
 3. Finally, and perhaps most importantly, we believe in the vision pioneered by the [Climate Modeling Alliance](https://clima.caltech.edu/) and the [NumericalEarth](https://github.com/NumericalEarth/) projects for the development of a new generation of Earth System Models that are open, accessible, interactive, and capable of learning from data in a multitude of ways that go beyond traditional data assimilation.
@@ -128,7 +133,7 @@ It might initially seem strange that a land model would be built on top of a fra
 
 An open source project is only as strong as its community of contributors. We're always happy to accept contributions, no matter how big or small!
 
-Terrarium.jl is in a very early stage of development, so this is a golden opportunity for you to get your ideas in on the ground floor. If you have some ideas or code you would like to contribute, please don't hesitate to create an issue and get involved!
+Terrarium.jl is still in an early stage of development, so this is a golden opportunity for you to get your ideas in on the ground floor. If you have some ideas or code you would like to contribute, please don't hesitate to create an issue and get involved!
 
 ## Copyright and license
 
