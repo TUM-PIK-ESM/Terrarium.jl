@@ -31,6 +31,7 @@ SoilThermodynamics(
     thermal_properties::SoilThermalProperties{NF} = SoilThermalProperties(NF),
 ) where {NF} = SoilThermodynamics(operator, closure, thermal_properties)
 
+# TODO: Add base `AbstractParameterization` type and then (hopefully) remove
 Adapt.@adapt_structure SoilThermodynamics
 
 variables(energy::SoilThermodynamics) = (
