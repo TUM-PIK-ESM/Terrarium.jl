@@ -35,16 +35,16 @@ end
 end
 
 @testset "Snow depth: differentiability" begin
-    # d_s = W·ρ_w/ρ_s; gradient w.r.t. SWE is ρ_w/ρ_s for W > 0
+    # d_snow = W·ρ_w/ρ_snow; gradient w.r.t. SWE is ρ_w/ρ_snow for W > 0
     snow = SingleLayerSnow(Float64)
-    ρ_s = Terrarium.snow_density(snow)
+    ρ_snow = Terrarium.snow_density(snow)
     ρ_w = 1000.0
-    grad, = Enzyme.autodiff(Reverse, Terrarium.compute_snow_depth, Active, Const(snow), Active(0.1), Const(ρ_s), Const(ρ_w))
-    @test grad[2] ≈ ρ_w / ρ_s
+    grad, = Enzyme.autodiff(Reverse, Terrarium.compute_snow_depth, Active, Const(snow), Active(0.1), Const(ρ_snow), Const(ρ_w))
+    @test grad[2] ≈ ρ_w / ρ_snow
 end
 
 @testset "Snow thermal conductivity: differentiability" begin
-    # κ = a·(ρ_s/ρ_w)^b; gradient w.r.t. bulk density is finite and positive
+    # κ = a·(ρ_snow/ρ_w)^b; gradient w.r.t. bulk density is finite and positive
     cond = PowerLawSnowThermalConductivity(Float64)
     material = PhysicalConstants(Float64).material
     grad, = Enzyme.autodiff(Reverse, Terrarium.compute_thermal_conductivity, Active, Const(cond), Const(material), Active(250.0))
@@ -53,9 +53,9 @@ end
 end
 
 @testset "Snow basal heat flux: differentiability" begin
-    # Q_base = 2·κ·(T_soil − T_snow)/(d_s + eps); gradient w.r.t. the soil temperature is 2·κ/(d_s + eps)
+    # Q_base = 2·κ·(T_soil − T_snow)/(d_snow + eps); gradient w.r.t. the soil temperature is 2·κ/(d_snow + eps)
     κ = 0.3
-    d_s = 0.5
-    grad, = Enzyme.autodiff(Reverse, Terrarium.compute_snow_basal_heat_flux, Active, Const(κ), Active(1.0), Const(-2.0), Const(d_s))
-    @test grad[2] ≈ 2κ / (d_s + eps(Float64))
+    d_snow = 0.5
+    grad, = Enzyme.autodiff(Reverse, Terrarium.compute_snow_basal_heat_flux, Active, Const(κ), Active(1.0), Const(-2.0), Const(d_snow))
+    @test grad[2] ≈ 2κ / (d_snow + eps(Float64))
 end

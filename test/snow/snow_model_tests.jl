@@ -8,12 +8,12 @@ using Test
     snow = model.snow
     constants = model.constants
 
-    ρ_s = Terrarium.snow_density(snow)
+    ρ_snow = Terrarium.snow_density(snow)
     ρ_w = constants.material.density_water
     L_f = constants.thermodynamics.latent_heat_fusion
     c_i = constants.thermodynamics.specific_heat_capacity_ice
     W0 = NF(0.1)
-    d_s = W0 * ρ_w / ρ_s
+    d_snow = W0 * ρ_w / ρ_snow
 
     # Build a fresh state with all forcing zeroed; caller sets the prognostic/forcing of interest.
     function fresh_state()
@@ -73,10 +73,10 @@ using Test
     @testset "no drainage below capillary retention" begin
         state = fresh_state()
         set!(state.snow_water_equivalent, W0)
-        Lθ = ρ_s * L_f
+        Lθ = ρ_snow * L_f
         # choose θ_liq just below L_c via a phase-change energy: θ_liq = 1 + U_v/Lθ
         θ_target = snow.hydraulic_properties.capillary_retention / 2
-        set!(state.snow_energy, (θ_target - 1) * Lθ * d_s)
+        set!(state.snow_energy, (θ_target - 1) * Lθ * d_snow)
         step_tendencies!(state)
         @test all(0 .< state.snow_liquid_fraction .< snow.hydraulic_properties.capillary_retention)
         @test all(state.tendencies.snow_water_equivalent .≈ 0)      # retained, no outflow
@@ -112,9 +112,9 @@ using Test
         # meltwater flux would instead give dE = ρ_w·L_f·dW, spuriously refreezing the snowpack.)
         state = fresh_state()
         set!(state.snow_water_equivalent, W0)
-        Lθ = ρ_s * L_f
+        Lθ = ρ_snow * L_f
         θ_target = NF(0.5)  # > default capillary retention (0.05) -> outflow
-        set!(state.snow_energy, (θ_target - 1) * Lθ * d_s)  # U_v = (θ-1)·Lθ -> θ_liq = θ_target
+        set!(state.snow_energy, (θ_target - 1) * Lθ * d_snow)  # U_v = (θ-1)·Lθ -> θ_liq = θ_target
         step_tendencies!(state)
         dW = Array(interior(state.tendencies.snow_water_equivalent))
         dE = Array(interior(state.tendencies.snow_energy))

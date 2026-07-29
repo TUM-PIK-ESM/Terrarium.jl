@@ -56,7 +56,7 @@ LogarithmicSnowThermalConductivity
 
 QuadraticSnowThermalConductivity
 
-compute_thermal_conductivity(snow::SingleLayerSnow, constants::MaterialConstants, ρ_s)
+compute_thermal_conductivity(snow::SingleLayerSnow, constants::MaterialConstants, ρ_snow)
 ```
 
 ## Snow hydraulic properties

@@ -119,8 +119,8 @@ conductivity, and half-cell thickness.
     Δz_ground = Δzᵃᵃᶜ(i, j, field_grid.Nz, field_grid)
     f = snow_cover_fraction(i, j, grid, fields, snow)
     # bulk snow thermal conductivity recovered lazily from the density scheme (not stored as a field)
-    ρ_s = compute_snow_density(i, j, grid, fields, snow.density)
-    κ_snow = compute_thermal_conductivity(snow, constants.material, ρ_s)
+    ρ_snow = compute_snow_density(i, j, grid, fields, snow.density)
+    κ_snow = compute_thermal_conductivity(snow, constants.material, ρ_snow)
     Tg = (one(f) - f) * fields.ground_temperature[i, j] + f * snow_temperature(i, j, grid, fields, snow)
     κ = (one(f) - f) * skinT.κₛ + f * κ_snow
     Δz = (one(f) - f) * Δz_ground + f * snow_depth(i, j, grid, fields, snow)

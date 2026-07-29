@@ -19,12 +19,12 @@ using Terrarium: compute_snow_depth, compute_snow_cover_fraction, compute_therma
     end
 
     @testset "snow depth" begin
-        # d_s = W·ρ_w/ρ_s: zero at W=0, increasing in W, negative W clamped to zero
-        ρ_s = snow_density(snow)
-        @test compute_snow_depth(snow, NF(0), ρ_s, ρ_w) == 0
-        @test compute_snow_depth(snow, NF(-1), ρ_s, ρ_w) == 0
-        d1 = compute_snow_depth(snow, NF(0.1), ρ_s, ρ_w)
-        d2 = compute_snow_depth(snow, NF(0.2), ρ_s, ρ_w)
+        # d_snow = W·ρ_w/ρ_snow: zero at W=0, increasing in W, negative W clamped to zero
+        ρ_snow = snow_density(snow)
+        @test compute_snow_depth(snow, NF(0), ρ_snow, ρ_w) == 0
+        @test compute_snow_depth(snow, NF(-1), ρ_snow, ρ_w) == 0
+        d1 = compute_snow_depth(snow, NF(0.1), ρ_snow, ρ_w)
+        d2 = compute_snow_depth(snow, NF(0.2), ρ_snow, ρ_w)
         @test d1 ≈ 0.1 * ρ_w / snow_density(snow)
         @test d2 > d1 > 0
     end
@@ -43,18 +43,18 @@ using Terrarium: compute_snow_depth, compute_snow_cover_fraction, compute_therma
     end
 
     @testset "thermal conductivity" begin
-        # κ = a·(ρ_s/ρ_w)^b: positive and increasing with bulk density
-        ρ_s = snow_density(snow)
-        κ = compute_thermal_conductivity(snow, constants.material, ρ_s)
+        # κ = a·(ρ_snow/ρ_w)^b: positive and increasing with bulk density
+        ρ_snow = snow_density(snow)
+        κ = compute_thermal_conductivity(snow, constants.material, ρ_snow)
         cond = snow.thermal_conductivity
         @test κ > 0
-        @test κ ≈ cond.conductivity_coefficient * (ρ_s / ρ_w)^cond.conductivity_exponent
+        @test κ ≈ cond.conductivity_coefficient * (ρ_snow / ρ_w)^cond.conductivity_exponent
         denser = SingleLayerSnow(NF; density = ConstantSnowDensity(NF; density = NF(400)))
         @test compute_thermal_conductivity(denser, constants.material, snow_density(denser)) > κ
     end
 
     @testset "volumetric energy" begin
-        # U_v = E/d_s for d_s > 0
+        # U_v = E/d_snow for d_snow > 0
         @test volumetric_snow_energy(NF(-1000), NF(0.5)) ≈ -2000 rtol = 1.0e-6
         @test volumetric_snow_energy(NF(0), NF(0.5)) == 0
     end

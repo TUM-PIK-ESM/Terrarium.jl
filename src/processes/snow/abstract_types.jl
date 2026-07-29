@@ -25,7 +25,7 @@ function snow_energy end
 """
     snow_depth(i, j, grid, fields, ::AbstractSnow)
 
-Compute or retrieve the snow layer depth `d_s` [m].
+Compute or retrieve the snow layer depth `d_snow` [m].
 """
 function snow_depth end
 
@@ -53,7 +53,7 @@ abstract type AbstractSnowDensity{NF} end
 """
     snow_density(i, j, grid, fields, ::AbstractSnowDensity)
 
-Compute or retrieve the bulk snow density `ρ_s` [kg/m³].
+Compute or retrieve the bulk snow density `ρ_snow` [kg/m³].
 """
 function compute_snow_density end
 

@@ -77,7 +77,7 @@ Revision 4 (2026-07-12) — **implementation record** (phases 1–5 complete and
   snow through `initialize!`/`compute_auxiliary!`/`compute_tendencies!`/`closure!`/`invclosure!`; the
   no-snow model is byte-for-byte unchanged. **5b** added the snow↔surface/soil **energy** coupling in
   `src/models/coupled/snow_coupling.jl`:
-  - `Q_base` uses the **snow-resistance-only** closure `Q_base = 2·κ_snow·(T_soil − T_snow)/d_s`
+  - `Q_base` uses the **snow-resistance-only** closure `Q_base = 2·κ_snow·(T_soil − T_snow)/d_snow`
     (author's decision; the snowpack dominates the series resistance, so the soil-side conductivity need
     not be threaded into the snow coupling). Written to `basal_heat_flux` before the SEB.
   - After the SEB: `surface_heat_flux ← ground_heat_flux` (the snow's top loss `G`) and the soil-top BC
@@ -112,7 +112,7 @@ is independently swappable):
 - **Thermal conductivity** ([snow_thermal_conductivity.jl](../../src/processes/snow/snow_thermal_conductivity.jl)):
   `AbstractSnowThermalConductivity{NF}` with `PowerLawSnowThermalConductivity` (default),
   `LogarithmicSnowThermalConductivity`, and `QuadraticSnowThermalConductivity`. All expose the shared
-  (exported) generic `compute_thermal_conductivity(cond, constants::MaterialConstants, ρ_s)` — the snow
+  (exported) generic `compute_thermal_conductivity(cond, constants::MaterialConstants, ρ_snow)` — the snow
   conductivity is recovered lazily at the call sites (SEB conduction target, basal flux) rather than stored
   as an auxiliary field.
 - **Hydraulic properties** ([snow_hydraulic_properties.jl](../../src/processes/snow/snow_hydraulic_properties.jl)):
@@ -235,10 +235,10 @@ The following forks were resolved with the model author before drafting:
 1. **Thermal state representation — depth-integrated energy prognostic, volumetric closure
    (revised).** The prognostic snow energy is the **depth-integrated (column) energy content** `E`
    (J/m²), which is the conserved quantity and keeps the energy tendency free of the moving-boundary
-   `1/d_s` factor that the original volumetric prognostic introduced. The **volumetric** energy
-   `U_v = E/d_s` is exposed to the shared `FreeWater` enthalpy maps
+   `1/d_snow` factor that the original volumetric prognostic introduced. The **volumetric** energy
+   `U_v = E/d_snow` is exposed to the shared `FreeWater` enthalpy maps
    ([`thermodynamics/enthalpy.jl`](../../src/processes/thermodynamics/enthalpy.jl)) via a
-   **method**, with no auxiliary field allocated for `U_v`. Snow layer depth `d_s` is a diagnostic
+   **method**, with no auxiliary field allocated for `U_v`. Snow layer depth `d_snow` is a diagnostic
    derived from SWE and a homogeneous bulk density. This realizes the original intent (reuse the
    volumetric phase-change closure) while fixing the conservation/regularization concern raised in
    review.
@@ -336,7 +336,7 @@ These are the integration points the scheme attaches to (verified against curren
 ## Physical formulation
 
 All snow fields are `XY()` (single layer, one value per column, indexed `[i, j, 1]`). Bulk snow
-density `ρ_s` is a homogeneous, constant parameter (the "simple" assumption); homogeneous thermal
+density `ρ_snow` is a homogeneous, constant parameter (the "simple" assumption); homogeneous thermal
 properties follow from it.
 
 ### State variables (prognostic)
@@ -347,28 +347,28 @@ properties follow from it.
 
 ### Diagnostics (auxiliary / closure)
 
-- `snow_depth` `d_s = W·ρ_w/ρ_s` (m).
+- `snow_depth` `d_snow = W·ρ_w/ρ_snow` (m).
 - `snow_temperature` `T_snow` (°C) and `snow_liquid_fraction` `θ_liq ∈ [0,1]` — from the enthalpy
   closure.
-- **Volumetric energy `U_v = E/d_s` (J/m³) is *not* an auxiliary field.** It is returned by a method
+- **Volumetric energy `U_v = E/d_snow` (J/m³) is *not* an auxiliary field.** It is returned by a method
   (e.g. `volumetric_snow_energy(i, j, grid, fields, snow)`) evaluated inside the closure kernel, using
   `safediv` to remain finite as `W → 0` (the indeterminate limit is masked downstream by `f_snow → 0`).
 - `snow_cover_fraction` `f_snow ∈ [0,1]` — smooth function of `W`, e.g. `f_snow = W/(W + W₀)` or
   `tanh(W/W_ref)`; differentiable, → 0 as `W → 0`.
-- `snow_thermal_conductivity` `κ_snow` (W/m/K) — from `ρ_s` (e.g. Sturm/Yen power law `κ = a·ρ_s^b`),
-  constant for fixed `ρ_s`.
+- `snow_thermal_conductivity` `κ_snow` (W/m/K) — from `ρ_snow` (e.g. Sturm/Yen power law `κ = a·ρ_snow^b`),
+  constant for fixed `ρ_snow`.
 - `ground_heat_flux` (SEB closure flux `G`, reused), `soil_heat_flux` (soil-top BC, written by the
   blend), `infiltration` (reused) — see soil coupling below.
 
 ### Enthalpy closure (reusing `FreeWater`)
 
-Treat the bulk snow as a water-substance medium of volumetric mass `ρ_s` (kg/m³), fraction `θ_liq`
+Treat the bulk snow as a water-substance medium of volumetric mass `ρ_snow` (kg/m³), fraction `θ_liq`
 liquid and `1−θ_liq` ice. Then
 
 ```
-U_v  = E / d_s                        # volumetric energy via method (not stored)
-Lθ_v = ρ_s · L_f                      # volumetric latent heat for complete melt (J/m³)
-C_v  = ρ_s · (θ_liq·c_w + (1−θ_liq)·c_i)   # volumetric heat capacity (J/m³/K)
+U_v  = E / d_snow                        # volumetric energy via method (not stored)
+Lθ_v = ρ_snow · L_f                      # volumetric latent heat for complete melt (J/m³)
+C_v  = ρ_snow · (θ_liq·c_w + (1−θ_liq)·c_i)   # volumetric heat capacity (J/m³/K)
 θ_liq   = liquid_water_fraction(FreeWater(), U_v, Lθ_v, 1)
 T_snow  = energy_to_temperature(FreeWater(), U_v, Lθ_v, C_v)
 ```
@@ -377,10 +377,10 @@ This is the identical enthalpy map used for soil with `sat·por → 1` (snow is 
 water substance in the lumped sense). It is implemented as a `closure!`/`invclosure!` pair so that
 `T_snow`/`θ_liq` are recovered from `U_v` exactly as soil temperature is recovered from soil energy,
 reusing the shared `energy_to_temperature`/`temperature_to_energy` methods (dispatched on the snow
-closure type). The only division by `d_s` lives here, inside the closure, and is regularized with a
-finite `eps` offset (`U_v = E/(d_s+eps)`) rather than `safediv`: `safediv` returns `Inf` at exactly
-`d_s = 0` (even for `E = 0`), which would give `NaN` when multiplied by `f_snow = 0` in the SEB blend.
-`invclosure!` (initialization from a prescribed `T_snow ≤ 0`) sets `E = (T·C_v − Lθ_v·(1−θ_liq))·d_s`,
+closure type). The only division by `d_snow` lives here, inside the closure, and is regularized with a
+finite `eps` offset (`U_v = E/(d_snow+eps)`) rather than `safediv`: `safediv` returns `Inf` at exactly
+`d_snow = 0` (even for `E = 0`), which would give `NaN` when multiplied by `f_snow = 0` in the SEB blend.
+`invclosure!` (initialization from a prescribed `T_snow ≤ 0`) sets `E = (T·C_v − Lθ_v·(1−θ_liq))·d_snow`,
 so `W` must be initialized before `snow_energy`.
 
 **Temperature clip.** Snow temperature cannot exceed 0 °C, so `T_snow = min(T_freewater, 0)`. The
@@ -404,7 +404,7 @@ dW/dt = f_snow·0 + P_s + R_on_snow − M_r − E_subl
 ### Meltwater outflow (UEB eqns 23–24, continuous)
 
 ```
-S* = clamp((θ_liq/(1−θ_liq) − L_c) / (ρ_w/ρ_s − ρ_w/ρ_i − L_c), 0, 1)
+S* = clamp((θ_liq/(1−θ_liq) − L_c) / (ρ_w/ρ_snow − ρ_w/ρ_i − L_c), 0, 1)
 M_r = K_sat · S*^3
 ```
 
@@ -415,7 +415,7 @@ added to soil infiltration (below). `clamp` is expressed with `min`/`max` (kerne
 
 ### Energy balance (continuous, depth-integrated)
 
-With `E` (J/m²) prognostic, the column energy tendency is a direct flux sum — no `1/d_s` factor and no
+With `E` (J/m²) prognostic, the column energy tendency is a direct flux sum — no `1/d_snow` factor and no
 moving-boundary term:
 
 ```
@@ -431,7 +431,7 @@ dE/dt = Q_top − Q_base + Q_precip − Q_melt
   to 0 °C ice reference), UEB eqn 13.
 - `Q_melt = ρ_w·L_f·M_r` — heat advected out with meltwater at 0 °C (UEB eqn 25).
 
-The depth dependence now appears only inside the enthalpy closure (`U_v = E/d_s`), where it is guarded
+The depth dependence now appears only inside the enthalpy closure (`U_v = E/d_snow`), where it is guarded
 and masked by `f_snow → 0` in the thin-snow limit.
 
 ## Surface-energy-balance interface change
@@ -449,7 +449,7 @@ The SEB must "optionally accept an `AbstractSnow`". Plan:
    ```
    Tg_eff = f_snow·T_snow + (1−f_snow)·T_soil_top
    κ_eff  = f_snow·κ_snow + (1−f_snow)·κₛ
-   Δz_eff = f_snow·d_s     + (1−f_snow)·Δz_soil_top
+   Δz_eff = f_snow·d_snow     + (1−f_snow)·Δz_soil_top
    ```
    The default method (`snow === nothing`) returns today's soil-only values, so non-snow behavior is
    byte-for-byte unchanged. This also resolves the `κₛ`/thickness TODO in `compute_skin_temperature`.
@@ -536,9 +536,9 @@ src/processes/snow/
 ├── abstract_types.jl     # AbstractSnow{NF}, NoSnow, interface accessors
 │                         #   (snow_temperature, snow_depth, snow_cover_fraction,
 │                         #    snow_thermal_conductivity, ...)
-├── snow_properties.jl    # ρ_s, depth d_s(W), κ_snow(ρ_s), f_snow(W), volumetric_snow_energy method,
+├── snow_properties.jl    # ρ_snow, depth d_snow(W), κ_snow(ρ_snow), f_snow(W), volumetric_snow_energy method,
 │                         #   albedo helpers
-├── snow_energy.jl        # enthalpy closure (reuse FreeWater via U_v = E/d_s), column energy tendency
+├── snow_energy.jl        # enthalpy closure (reuse FreeWater via U_v = E/d_snow), column energy tendency
 ├── snow_mass.jl          # SWE mass balance, Darcy meltwater outflow, sublimation coupling
 └── snow.jl               # SingleLayerSnow concrete process + variables/initialize!/
                           #   compute_auxiliary!/compute_tendencies!/closure!
@@ -573,7 +573,7 @@ PR-B (`ground_heat_flux` / `soil_heat_flux` split). See "Preliminary refactoring
    `snow_properties.jl` (depth, density, conductivity, cover fraction, `volumetric_snow_energy` method).
    No coupling yet.
 2. **Energy closure.** `closure!`/`invclosure!` reusing the `FreeWater` maps from `thermodynamics/` via
-   `U_v = E/d_s` (guarded); verify `T_snow`/`θ_liq` recovery and round-trip `invclosure!`→`closure!`.
+   `U_v = E/d_snow` (guarded); verify `T_snow`/`θ_liq` recovery and round-trip `invclosure!`→`closure!`.
 3. **Tendencies.** Mass balance + Darcy outflow + depth-integrated energy tendency `dE/dt`, driven by
    prescribed top/base fluxes (standalone `SnowModel`).
 4. **SEB interface change.** Thread optional `snow`; snow-aware conduction accessors; `SnowAlbedo`;
@@ -587,31 +587,31 @@ PR-B (`ground_heat_flux` / `soil_heat_flux` split). See "Preliminary refactoring
 
 ## Testing
 
-- **Unit:** `f_snow`, `d_s`, `κ_snow` monotonicity and limits; closure recovers `T_snow`/`θ_liq` and
+- **Unit:** `f_snow`, `d_snow`, `κ_snow` monotonicity and limits; closure recovers `T_snow`/`θ_liq` and
   round-trips with `invclosure!`; `M_r` zero below capillary retention and increasing in `θ_liq`.
 - **Conservation:** integrate the standalone `SnowModel` with zero surface/base flux and check column
-  energy `E = U_v·d_s` and water `W` conservation under accumulation, melt, and complete ablation;
+  energy `E = U_v·d_snow` and water `W` conservation under accumulation, melt, and complete ablation;
   verify no energy/water created as `W → 0`.
 - **Coupling regression:** `LandModel` with `NoSnow` reproduces current results bit-for-bit (the
   default conduction accessors return soil-only values).
 - **Differentiability:** Enzyme adjoints through `compute_tendencies!` and the closure, following
-  `test/differentiability`; the `1/d_s` regularization must keep gradients finite as `W → 0`.
+  `test/differentiability`; the `1/d_snow` regularization must keep gradients finite as `W → 0`.
 - **GPU/type stability:** `SingleLayerSnow` kernels are `Float32`-clean and allocation-free; no literal
   `0.0`/`1.0`; `ifelse`/`min`/`max` instead of branches.
 
 ## Open questions / deferred work
 
-1. **(Resolved)** ~~`1/d_s` regularization near `W → 0`.~~ Resolved in revision 2: the prognostic is the
-   depth-integrated energy `E` (J/m²), so the tendency carries no `1/d_s` factor. The single remaining
-   division is inside the closure (`U_v = E/d_s`), guarded with `safediv` and masked by `f_snow → 0`.
+1. **(Resolved)** ~~`1/d_snow` regularization near `W → 0`.~~ Resolved in revision 2: the prognostic is the
+   depth-integrated energy `E` (J/m²), so the tendency carries no `1/d_snow` factor. The single remaining
+   division is inside the closure (`U_v = E/d_snow`), guarded with `safediv` and masked by `f_snow → 0`.
 2. **Composite surface vs separate tiles.** The single blended skin temperature is an approximation of
    fractional cover. Separate snow/bare energy-balance tiles (two skin temperatures) are more rigorous
    but heavier; deferred.
 3. **Snow albedo dynamics.** Constant snow albedo first; age-/temperature-dependent decay (UEB/BATS,
    Dickinson et al. 1993) and the shallow-snow albedo interpolation (UEB `r = (1−z/h)e^{−z/2h}`)
    deferred.
-4. **Snow density evolution.** `ρ_s` is constant ("simple" scheme). Compaction/densification (and the
-   resulting time-varying `κ_snow`, `d_s`) is a clear future extension and would relax the homogeneity
+4. **Snow density evolution.** `ρ_snow` is constant ("simple" scheme). Compaction/densification (and the
+   resulting time-varying `κ_snow`, `d_snow`) is a clear future extension and would relax the homogeneity
    assumption.
 5. **Aerodynamic roughness over snow.** UEB reduces turbulent transfer with a snow roughness; the first
    pass keeps the existing aerodynamic resistance. Worth revisiting if turbulent fluxes over snow are
@@ -655,7 +655,7 @@ Two design points to confirm before/while implementing (neither blocks starting 
 - **`f_snow` functional form and `W_ref`.** The plan lists `W/(W+W₀)` or `tanh(W/W_ref)`; pick one and a
   default reference SWE. Both are differentiable and → 0 as `W → 0`; this only affects the blend weights.
 - **Snow-base conductance for `Q_base`.** The plan specifies a series snow+soil Fourier conductance
-  between `T_snow` and `T_soil_top`; confirm the discretization (half-cell thicknesses `d_s/2` and
+  between `T_snow` and `T_soil_top`; confirm the discretization (half-cell thicknesses `d_snow/2` and
   `Δz_soil_top/2`) and that it reuses the soil-side `κ` from `SoilThermodynamics`' thermal properties.
 
 ## References

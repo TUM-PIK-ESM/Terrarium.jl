@@ -1,14 +1,14 @@
 """
     $TYPEDEF
 
-Constant, spatially homogeneous bulk snow density `ρ_s`. This is the default (and currently only) snow
+Constant, spatially homogeneous bulk snow density `ρ_snow`. This is the default (and currently only) snow
 density scheme for [`SingleLayerSnow`](@ref).
 
 Properties:
 $TYPEDFIELDS
 """
 @parameterized @kwdef struct ConstantSnowDensity{NF} <: AbstractSnowDensity{NF}
-    "Bulk snow density `ρ_s`"
+    "Bulk snow density `ρ_snow`"
     @param density::NF = 250.0 (units = u"kg/m^3", bounds = Positive)
 end
 
@@ -17,7 +17,7 @@ ConstantSnowDensity(::Type{NF}; kwargs...) where {NF} = ConstantSnowDensity{NF}(
 """
     $TYPEDSIGNATURES
 
-Return the constant bulk snow density `ρ_s` [kg/m³].
+Return the constant bulk snow density `ρ_snow` [kg/m³].
 """
 @inline snow_density(density::ConstantSnowDensity) = density.density
 

@@ -9,20 +9,20 @@ using Test
     closure = Terrarium.get_closure(snow)
     state = StateVariables(snow, grid)
 
-    ρ_s = Terrarium.snow_density(snow)
+    ρ_snow = Terrarium.snow_density(snow)
     ρ_w = constants.material.density_water
     L_f = constants.thermodynamics.latent_heat_fusion
     c_i = constants.thermodynamics.specific_heat_capacity_ice
     c_w = constants.thermodynamics.specific_heat_capacity_liquid_water
     W = NF(0.1)
-    d_s = W * ρ_w / ρ_s
-    Lθ = ρ_s * L_f
+    d_snow = W * ρ_w / ρ_snow
+    Lθ = ρ_snow * L_f
 
     @testset "recovery: frozen (T < 0)" begin
         set!(state.snow_water_equivalent, W)
         T0 = NF(-5)
-        U_v = T0 * ρ_s * c_i - Lθ          # frozen: θ_liq = 0
-        set!(state.snow_energy, U_v * d_s)
+        U_v = T0 * ρ_snow * c_i - Lθ          # frozen: θ_liq = 0
+        set!(state.snow_energy, U_v * d_snow)
         Terrarium.closure!(state, grid, closure, snow, constants)
         @test all(state.snow_temperature .≈ T0)
         @test all(state.snow_liquid_fraction .≈ 0)
@@ -30,7 +30,7 @@ using Test
 
     @testset "phase change: T = 0, partial liquid" begin
         set!(state.snow_water_equivalent, W)
-        set!(state.snow_energy, (-Lθ / 2) * d_s)   # half-melted
+        set!(state.snow_energy, (-Lθ / 2) * d_snow)   # half-melted
         Terrarium.closure!(state, grid, closure, snow, constants)
         @test all(state.snow_temperature .≈ 0)
         @test all(state.snow_liquid_fraction .≈ 0.5)
@@ -39,7 +39,7 @@ using Test
     @testset "temperature clipped at 0 for E > 0" begin
         set!(state.snow_water_equivalent, W)
         # E > 0: pack fully melted at 0°C plus a sensible excess (would give T = 2°C if unclipped)
-        set!(state.snow_energy, NF(2) * ρ_s * c_w * d_s)
+        set!(state.snow_energy, NF(2) * ρ_snow * c_w * d_snow)
         Terrarium.closure!(state, grid, closure, snow, constants)
         @test all(state.snow_temperature .≈ 0)     # clipped at 0
         @test all(state.snow_liquid_fraction .≈ 1)

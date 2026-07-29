@@ -3,7 +3,7 @@
 
 Simple single-layer snow scheme (loosely based on the Utah Energy Balance model,
 [tarbotonSpatiallyDistributedEnergy1994](@cite)). The snowpack is represented as a single lumped layer
-with a bulk density `ρ_s` supplied by a snow-density scheme (constant by default), from which the thermal
+with a bulk density `ρ_snow` supplied by a snow-density scheme (constant by default), from which the thermal
 properties follow. The prognostic state is the depth-integrated (column) internal energy `snow_energy`
 `Ū_snow` [J/m²] and the `snow_water_equivalent` `W_snow` [m]; snow depth, cover fraction, and thermal conductivity
 are diagnosed from these and the bulk density.
@@ -50,15 +50,15 @@ end
 """
     $TYPEDSIGNATURES
 
-Snow layer depth `d_s = W_snow·ρ_w/ρ_s` [m], converting the water-equivalent depth `W_snow` [m] to the physical
-snow depth using the water density `ρ_w` and the bulk snow density `ρ_s`.
+Snow layer depth `d_snow = W_snow·ρ_w/ρ_snow` [m], converting the water-equivalent depth `W_snow` [m] to the physical
+snow depth using the water density `ρ_w` and the bulk snow density `ρ_snow`.
 """
-@inline compute_snow_depth(::AbstractSnow, W_snow::NF, ρ_s::NF, ρ_w::NF) where {NF} = max(W_snow, zero(NF)) * ρ_w / ρ_s
+@inline compute_snow_depth(::AbstractSnow, W_snow::NF, ρ_snow::NF, ρ_w::NF) where {NF} = max(W_snow, zero(NF)) * ρ_w / ρ_snow
 
 """
     $TYPEDSIGNATURES
 
-Bulk snow density `ρ_s` [kg/m³] of the snowpack, delegating to the process's density scheme.
+Bulk snow density `ρ_snow` [kg/m³] of the snowpack, delegating to the process's density scheme.
 """
 @inline snow_density(snow::SingleLayerSnow) = snow_density(snow.density)
 
@@ -66,10 +66,10 @@ Bulk snow density `ρ_s` [kg/m³] of the snowpack, delegating to the process's d
     $TYPEDSIGNATURES
 
 Bulk snow thermal conductivity `κ_snow` [W/m/K], delegating to the process's thermal conductivity scheme
-with the bulk density `ρ_s`.
+with the bulk density `ρ_snow`.
 """
-@inline compute_thermal_conductivity(snow::SingleLayerSnow, constants::MaterialConstants, ρ_s) =
-    compute_thermal_conductivity(snow.thermal_conductivity, constants, ρ_s)
+@inline compute_thermal_conductivity(snow::SingleLayerSnow, constants::MaterialConstants, ρ_snow) =
+    compute_thermal_conductivity(snow.thermal_conductivity, constants, ρ_snow)
 
 """$TYPEDSIGNATURES"""
 @inline get_closure(snow::SingleLayerSnow) = snow.closure
@@ -182,8 +182,8 @@ Compute the snow depth, cover fraction, and thermal conductivity at grid cell `i
     )
     W_snow = fields.snow_water_equivalent[i, j]
     ρ_w = constants.material.density_water
-    ρ_s = compute_snow_density(i, j, grid, fields, snow.density)
-    out.snow_depth[i, j, 1] = compute_snow_depth(snow, W_snow, ρ_s, ρ_w)
+    ρ_snow = compute_snow_density(i, j, grid, fields, snow.density)
+    out.snow_depth[i, j, 1] = compute_snow_depth(snow, W_snow, ρ_snow, ρ_w)
     out.snow_cover_fraction[i, j, 1] = compute_snow_cover_fraction(snow.cover, W_snow)
     return nothing
 end
@@ -199,12 +199,12 @@ the snow→soil basal conductive flux `Q_base` and the bare-ground surface energ
 @propagate_inbounds function compute_snow_soil_heat_flux(i, j, grid, fields, snow::SingleLayerSnow, constants::PhysicalConstants)
     G = fields.ground_heat_flux[i, j]
     f = fields.snow_cover_fraction[i, j]
-    d_s = fields.snow_depth[i, j]
+    d_snow = fields.snow_depth[i, j]
     T_snow = fields.snow_temperature[i, j]
     T_soil = fields.ground_temperature[i, j]
-    ρ_s = compute_snow_density(i, j, grid, fields, snow.density)
-    κ_snow = compute_thermal_conductivity(snow, constants.material, ρ_s)
-    Q_base = compute_snow_basal_heat_flux(κ_snow, T_soil, T_snow, d_s)
+    ρ_snow = compute_snow_density(i, j, grid, fields, snow.density)
+    κ_snow = compute_thermal_conductivity(snow, constants.material, ρ_snow)
+    Q_base = compute_snow_basal_heat_flux(κ_snow, T_soil, T_snow, d_snow)
     return f * Q_base + (one(f) - f) * G
 end
 
