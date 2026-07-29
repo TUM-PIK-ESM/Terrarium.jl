@@ -23,8 +23,8 @@ const RARCH = ReactantState
 const ReactantLandGrid{NF} = AbstractLandGrid{NF, <:RARCH}
 const ReactantModel{NF} = AbstractModel{NF, <:ReactantLandGrid{NF}}
 
-include("TerrariumReactantExt/grids.jl")
-include("TerrariumReactantExt/transfer.jl")
-include("TerrariumReactantExt/integrator.jl")
+include("grids.jl")
+include("transfer.jl")
+include("integrator.jl")
 
 end # module
