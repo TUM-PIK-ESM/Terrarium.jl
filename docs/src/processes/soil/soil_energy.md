@@ -93,13 +93,13 @@ U_{\text{ice}}(T, \theta_{\text{ice}}) = \rho_{\text{ice}} \theta_{\text{ice}} \
 \end{equation}
 ```
 
-Consequently, the adapted version of the internal energy as defined in [dallamicoEnergyConservingFreezingSoil2011; Eq. (4)](@cite) is:
+Consequently, the adapted version of the internal energy is:
 ```math
 \begin{equation}
 U(T,\theta) = C(\theta_{\text{w}},\theta) (T - T_{\text{ref}}) - \rho_{\text{ice}} L_{\text{sl}} \theta_{\text{ice}}(\theta, T),
 \end{equation}
 ```
-where $\theta_{\text{ice}}(T,\theta)$ is the volumetric ice content as a function of temperature $T$ and total water/ice content $\theta$. $C(\theta_{\text{w}},\theta)$  (J/(K m³)) is the bulk volumetric material heat capacity of the total soil volume as a function of the unfrozen ($\theta_{\text{w}}$) and total ($\theta$) water contents, calculated as $\sum_x \rho_x c_x$ ;  $\rho_{\text{ice}}$ corresponds to the density (kg/m³) of ice. The apparent heat capacity is then defined as the derivative of the energy-temperature relation,
+where $\theta_{\text{ice}}(T,\theta)$ is the volumetric ice content as a function of temperature $T$ and total water/ice content $\theta$. Note that, under this formulation, zero internal energy corresponds to zero ice content (fully thawed) at 0°C. $C(\theta_{\text{w}},\theta)$  (J/(K m³)) is the bulk volumetric material heat capacity of the total soil volume as a function of the unfrozen ($\theta_{\text{w}}$) and total ($\theta$) water contents, calculated as $\sum_x \rho_x c_x$ ;  $\rho_{\text{ice}}$ corresponds to the density (kg/m³) of ice. The apparent heat capacity is then defined as the derivative of the energy-temperature relation,
 
 ```math
 \begin{equation}
