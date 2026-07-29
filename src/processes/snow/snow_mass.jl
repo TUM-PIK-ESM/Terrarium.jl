@@ -19,35 +19,14 @@ fraction of the water substance. Outflow vanishes smoothly as `θ_liq → L_c` a
     return K_sat * Sstar^3
 end
 
-"""
-    $TYPEDSIGNATURES
-
-Advected heat flux [W/m²] carried into the snowpack by precipitation, relative to liquid water at 0 °C
-(the `U = 0` reference of the `FreeWater` enthalpy closure). Fresh snow `P_s` arrives as ice, which sits
-`L_f` below the liquid reference, plus sensible heat for `T_air < 0`; rain-on-snow `R_on_snow` arrives as
-liquid carrying only its sensible heat for `T_air > 0`. The latent heat released when rain refreezes in a
-cold pack is captured implicitly by the enthalpy closure, so it is *not* added here (adding `L_f` would
-double-count relative to the liquid-water reference).
-"""
-@inline function compute_precip_heat_flux(P_s::NF, R_on_snow::NF, T_air::NF, constants::PhysicalConstants) where {NF}
-    ρ_w = constants.material.density_water
-    L_sl = constants.thermodynamics.latent_heat_fusion
-    cp_i = constants.thermodynamics.specific_heat_capacity_ice
-    cp_w = constants.thermodynamics.specific_heat_capacity_liquid_water
-    Q_snow = ρ_w * P_s * (cp_i * min(T_air, zero(NF)) - L_sl)
-    Q_rain = ρ_w * R_on_snow * cp_w * max(T_air, zero(NF))
-    Q_prcp = Q_snow + Q_rain
-    return Q_prcp
-end
-
 # Kernel functions
 
 """
     $TYPEDSIGNATURES
 
-Snow water-equivalent tendency [m/s SWE] at grid cell `i, j` (continuous mass balance):
+Snow water equivalent (SWE) tendency [m/s] at grid cell `i, j`:
 ```
-dW/dt = S + R_snow − M − E_sub
+dW_snow/dt = S + R_snow − M − E_sub
 ```
 where `S` is snowfall, `R_snow = f_snow · rainfall` the rain intercepted by the snow-covered fraction,
 `M` the Darcy meltwater outflow (see [`snow_meltwater_flux`](@ref)), and `E_sub` the sublimation rate.
@@ -75,7 +54,7 @@ Depth-integrated snow energy tendency [W/m²] at grid cell `i, j` (all fluxes po
 dŪ_snow/dt = Q_base − Q_gnd + Q_precip + Q_subl
 ```
 where `Q_gnd`/`Q_base` are the surface/basal heat fluxes, `Q_precip` the advected precipitation heat
-(see [`compute_precip_heat_flux`](@ref)), and `Q_subl` an advective correction for sublimation.
+(see [`compute_snow_precip_heat_flux`](@ref)), and `Q_subl` an advective correction for sublimation.
 
 The sublimation correction `Q_subl = ρ_w·L_f·E_subl` is required because the latent heat flux
 carries the full sublimation enthalpy `ρ_w·L_sg·E_subl`, whereas the mass leaving the snowpack departs as ice,
@@ -100,7 +79,7 @@ out of the snowpack.
     R = rainfall(i, j, grid, fields, atmos)
     T_air = air_temperature(i, j, grid, fields, atmos)
     R_snow = f_snow * R
-    Q_prcp = compute_precip_heat_flux(P_s, R_snow, T_air, constants)
+    Q_prcp = compute_snow_precip_heat_flux(P_s, R_snow, T_air, constants)
     ρ_w = constants.material.density_water
     L_sl = constants.thermodynamics.latent_heat_fusion
     E_subl = fields.sublimation[i, j]

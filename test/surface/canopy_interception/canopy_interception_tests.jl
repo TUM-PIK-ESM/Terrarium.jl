@@ -3,7 +3,7 @@ using Terrarium:
     compute_canopy_interception,
     compute_canopy_saturation_fraction,
     compute_canopy_water_removal,
-    compute_w_can_tendency,
+    compute_canopy_water_tendency,
     compute_precip_ground
 using Test
 
@@ -30,11 +30,11 @@ end
     f_can = compute_canopy_saturation_fraction(canopy_interception, 1.0, 0.0, 0.0)
     @test iszero(f_can)
     # Test saturation is between 0 and 1
-    w_can = 1.0e-4
-    f_can = compute_canopy_saturation_fraction(canopy_interception, w_can, 1.0, 0.5)
+    W_can = 1.0e-4
+    f_can = compute_canopy_saturation_fraction(canopy_interception, W_can, 1.0, 0.5)
     @test 0 < f_can < 1
     # Check that f_can decreases when we increase the total LAI + SAI
-    f_can2 = compute_canopy_saturation_fraction(canopy_interception, w_can, 2.0, 1.0)
+    f_can2 = compute_canopy_saturation_fraction(canopy_interception, W_can, 2.0, 1.0)
     @test f_can2 < f_can
 end
 
@@ -51,20 +51,20 @@ end
     @test ∂w∂t > 0
 end
 
-@testset "compute_w_can_tendency" begin
+@testset "compute_canopy_water_tendency" begin
     canopy_interception = PALADYNCanopyInterception(Float64)
     constants = PhysicalConstants(Float64)
     # Test tendency is zero when all flux terms are zero
-    ∂w∂t = compute_w_can_tendency(canopy_interception, 0.0, 0.0, 0.0)
+    ∂w∂t = compute_canopy_water_tendency(canopy_interception, 0.0, 0.0, 0.0)
     @test iszero(∂w∂t)
     # Test tendency is negative when removal is positive
-    ∂w∂t = compute_w_can_tendency(canopy_interception, 0.0, 0.0, 1.0)
+    ∂w∂t = compute_canopy_water_tendency(canopy_interception, 0.0, 0.0, 1.0)
     @test ∂w∂t < 0
     # Test that interception and evaporation cancel
-    ∂w∂t = compute_w_can_tendency(canopy_interception, 1.0e-6, 1.0e-6, 0.0)
+    ∂w∂t = compute_canopy_water_tendency(canopy_interception, 1.0e-6, 1.0e-6, 0.0)
     @test iszero(∂w∂t)
     # Test positive with incoming interception
-    ∂w∂t = compute_w_can_tendency(canopy_interception, 1.0e-6, 1.0e-7, 1.0e-7)
+    ∂w∂t = compute_canopy_water_tendency(canopy_interception, 1.0e-6, 1.0e-7, 1.0e-7)
     @test ∂w∂t ≈ 1.0e-6 - 2.0e-7
 end
 

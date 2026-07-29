@@ -5,7 +5,7 @@ Simple single-layer snow scheme (loosely based on the Utah Energy Balance model,
 [tarbotonSpatiallyDistributedEnergy1994](@cite)). The snowpack is represented as a single lumped layer
 with a bulk density `ρ_s` supplied by a snow-density scheme (constant by default), from which the thermal
 properties follow. The prognostic state is the depth-integrated (column) internal energy `snow_energy`
-`Ū_snow` [J/m²] and the `snow_water_equivalent` `W` [m]; snow depth, cover fraction, and thermal conductivity
+`Ū_snow` [J/m²] and the `snow_water_equivalent` `W_snow` [m]; snow depth, cover fraction, and thermal conductivity
 are diagnosed from these and the bulk density.
 
 Properties:
@@ -50,10 +50,10 @@ end
 """
     $TYPEDSIGNATURES
 
-Snow layer depth `d_s = W·ρ_w/ρ_s` [m], converting the water-equivalent depth `W` [m] to the physical
+Snow layer depth `d_s = W_snow·ρ_w/ρ_s` [m], converting the water-equivalent depth `W_snow` [m] to the physical
 snow depth using the water density `ρ_w` and the bulk snow density `ρ_s`.
 """
-@inline compute_snow_depth(::AbstractSnow, W::NF, ρ_s::NF, ρ_w::NF) where {NF} = max(W, zero(NF)) * ρ_w / ρ_s
+@inline compute_snow_depth(::AbstractSnow, W_snow::NF, ρ_s::NF, ρ_w::NF) where {NF} = max(W_snow, zero(NF)) * ρ_w / ρ_s
 
 """
     $TYPEDSIGNATURES
@@ -178,11 +178,11 @@ Compute the snow depth, cover fraction, and thermal conductivity at grid cell `i
         snow::SingleLayerSnow,
         constants::PhysicalConstants
     )
-    W = fields.snow_water_equivalent[i, j]
+    W_snow = fields.snow_water_equivalent[i, j]
     ρ_w = constants.material.density_water
     ρ_s = compute_snow_density(i, j, grid, fields, snow.density)
-    out.snow_depth[i, j, 1] = compute_snow_depth(snow, W, ρ_s, ρ_w)
-    out.snow_cover_fraction[i, j, 1] = compute_snow_cover_fraction(snow.cover, W)
+    out.snow_depth[i, j, 1] = compute_snow_depth(snow, W_snow, ρ_s, ρ_w)
+    out.snow_cover_fraction[i, j, 1] = compute_snow_cover_fraction(snow.cover, W_snow)
     return nothing
 end
 

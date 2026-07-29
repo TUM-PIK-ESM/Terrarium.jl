@@ -159,7 +159,7 @@ Revision 7 (2026-07-21) — **enthalpy-reference correction of the advective flu
 closure references internal energy to liquid water at 0 °C (`U = 0`; the phase-change band is
 `U ∈ [-Lθ, 0]` with ice at 0 °C = `-Lθ`), consistent with the soil energy. The snow mass/energy
 tendencies, however, had computed the advective (mass-carrying) heat terms against an *ice* reference,
-an inconsistency of `ρ_w·L_f` per unit mass. Corrected in `snow_mass.jl` (`compute_precip_heat_flux`,
+an inconsistency of `ρ_w·L_f` per unit mass. Corrected in `snow_mass.jl` (`compute_snow_precip_heat_flux`,
 renamed from `compute_rain_heat_flux`):
 
 - **Meltwater** drains as liquid water at 0 °C (`U = 0`), so it carries no enthalpy — the previous

@@ -65,7 +65,7 @@ $FIELDS
     @param k_ext::NF = 0.5 (bounds = Positive,)
 
     "Canopy interception capacity parameter, [verseghyCLASSCanadianLand1993](@cite)"
-    @param w_can_max::NF = 2.0e-4 (units = u"m", bounds = Positive, scale = 1.0e-4)
+    @param W_can_max::NF = 2.0e-4 (units = u"m", bounds = Positive, scale = 1.0e-4)
 
     "Canopy water removal timescale"
     @param τ_w::NF = 86400.0 (units = u"s", bounds = Positive)
@@ -103,43 +103,43 @@ end
 """
     $TYPEDSIGNATURES
 
-Compute the canopy saturation fraction as `w_can / w_can_max`.
+Compute the canopy saturation fraction as `W_can / W_can_max`.
 """
-@inline function compute_canopy_saturation_fraction(canopy_interception::PALADYNCanopyInterception{NF}, w_can, LAI, SAI) where {NF}
+@inline function compute_canopy_saturation_fraction(canopy_interception::PALADYNCanopyInterception{NF}, W_can, LAI, SAI) where {NF}
     # Compute the wet canopy fraction
-    w_can_max = canopy_interception.w_can_max * (LAI + SAI)
-    f_can = ifelse(w_can_max > zero(NF), safediv(w_can, w_can_max), zero(NF))
+    W_can_max = canopy_interception.W_can_max * (LAI + SAI)
+    f_can = ifelse(W_can_max > zero(NF), safediv(W_can, W_can_max), zero(NF))
     return f_can
 end
 
 """
     $TYPEDSIGNATURES
 
-Compute the canopy water removal rate as `w_can / τw`.
+Compute the canopy water removal rate as `W_can / τw`.
 """
 @inline function compute_canopy_water_removal(
         canopy_interception::PALADYNCanopyInterception{NF},
-        w_can
+        W_can
     ) where {NF}
-    R_can = max(w_can, zero(NF)) / canopy_interception.τ_w
+    R_can = max(W_can, zero(NF)) / canopy_interception.τ_w
     return R_can
 end
 
 """
     $TYPEDSIGNATURES
 
-Compute the `w_can` tendency and removal rate following [willeitPALADYNV10Comprehensive2016; Eq. (41)](@cite).
+Compute the `W_can` tendency and removal rate following [willeitPALADYNV10Comprehensive2016; Eq. (41)](@cite).
 
 # References
 * [willeitPALADYNV10Comprehensive2016](@cite) Willeit and Ganopolski, Geoscientific Model Development (2016)
 """
-@inline function compute_w_can_tendency(
+@inline function compute_canopy_water_tendency(
         ::PALADYNCanopyInterception{NF},
         I_can, E_can, R_can
     ) where {NF}
     # Canopy water storage tendency: interception - evaporation - removal
-    w_can_tend = I_can - E_can - R_can
-    return w_can_tend
+    W_can_tend = I_can - E_can - R_can
+    return W_can_tend
 end
 
 """
@@ -201,16 +201,16 @@ end
     rain = rainfall(i, j, grid, fields, atmos)
     LAI = fields.leaf_area_index[i, j]
     SAI = fields.stem_area_index[i, j]
-    w_can = fields.canopy_water[i, j]
+    W_can = fields.canopy_water[i, j]
 
     # Compute canopy saturation faction
-    f_can = compute_canopy_saturation_fraction(canopy_interception, w_can, LAI, SAI)
+    f_can = compute_canopy_saturation_fraction(canopy_interception, W_can, LAI, SAI)
 
     # Compute canopy rain interception
     I_can = compute_canopy_interception(canopy_interception, rain, LAI, SAI)
 
     # Compute canopy water removal
-    R_can = compute_canopy_water_removal(canopy_interception, w_can)
+    R_can = compute_canopy_water_removal(canopy_interception, W_can)
 
     # Compute precipitation reaching the ground
     rainfall_ground = compute_precip_ground(canopy_interception, rain, I_can, R_can)
@@ -235,7 +235,7 @@ end
     R_can = fields.canopy_water_removal[i, j]
 
     # Compute canopy water tendency
-    tendencies.canopy_water[i, j, 1] = compute_w_can_tendency(canopy_interception, I_can, E_can, R_can)
+    tendencies.canopy_water[i, j, 1] = compute_canopy_water_tendency(canopy_interception, I_can, E_can, R_can)
     return tendencies
 end
 
