@@ -27,12 +27,22 @@ The sublimation correction arises from the same enthalpy reference. ``Q_\text{to
 
 ## Energy–temperature closure
 
-The bulk snowpack is treated as an ice-water-air mixture, and its temperature and liquid water fraction are recovered from the depth-integrated internal energy using the same medium-agnostic [`FreeWater`](@extref FreezeCurves.FreeWater) enthalpy relations used for the soil (see [Soil energy balance](@ref)). The volumetric energy ``U_\text{snow} = \bar{U}_\text{snow} / d_snow`` is computed from the snow depth ``d_snow`` (see [`volumetric_snow_energy`](@ref)) without allocating an auxiliary field. The `FreeWater` map references the internal energy to liquid water at 0 °C (``U_\text{snow} = 0``), so the phase-change band is ``U_\text{snow} \in [-L\theta, 0]`` with ice at 0 °C at ``-L\theta``. Because snow temperature cannot exceed 0 °C, the recovered free-water temperature is clipped at zero.
+The bulk snowpack is treated as an ice-water-air mixture, and its temperature and liquid water fraction are recovered from the depth-integrated internal energy using the same medium-agnostic [`FreeWater`](@extref FreezeCurves.FreeWater) enthalpy relations used for the soil (see [Soil energy balance](@ref)). The volumetric energy ``U_\text{snow} = \bar{U}_\text{snow} / d_snow`` is computed from the snow depth ``d_snow`` (see [`volumetric_snow_energy`](@ref)). The `FreeWater` map references the internal energy to liquid water at 0 °C (``U_\text{snow} = 0``), so the phase-change range is ``U_\text{snow} \in [-L\theta, 0]`` with 0 °C ice at ``-L\theta`` where ``\theta`` is here the total volumetric content of water/ice. Because snow temperature cannot exceed 0 °C, the recovered free-water temperature is clipped at zero.
 
 ```@docs; canonical = false
 SnowEnergyTemperatureClosure
 
 volumetric_snow_energy
+```
+
+
+## Advected heat from precipitation
+
+Precipitation carries sensible and latent heat into the snowpack, referenced to liquid water at 0 °C (the
+enthalpy reference of the closure, see [Snow energy balance](@ref)).
+
+```@docs; canonical = false
+compute_snow_precip_heat_flux
 ```
 
 ## Tendency

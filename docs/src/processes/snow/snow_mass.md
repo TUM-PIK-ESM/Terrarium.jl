@@ -33,15 +33,6 @@ compute_meltwater_outflow
 snow_meltwater_flux
 ```
 
-## Advected precipitation heat
-
-Precipitation carries sensible and latent heat into the snowpack, referenced to liquid water at 0 °C (the
-enthalpy reference of the closure, see [Snow energy balance](@ref)).
-
-```@docs; canonical = false
-compute_snow_precip_heat_flux
-```
-
 ## Tendencies
 
 ```@docs; canonical = false
