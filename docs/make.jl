@@ -194,6 +194,7 @@ makedocs(
         "Models" => [
             "Land model" => "models/land_model.md",
             "Soil model" => "models/soil_model.md",
+            "Snow model" => "models/snow_model.md",
             "Vegetation model" => "models/vegetation_model.md",
         ],
         "Processes" => [
