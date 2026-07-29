@@ -14,7 +14,7 @@ using InteractiveUtils
 
 ## Overview
 
-Snow is represented in Terrarium as one or more vertical layers of an ice-water-air mixture overlaying the land surface with fractional subgrid coverage diagnosed from the mass balance (see [Snow cover](@ref)). The default scheme, [`SingleLayerSnow`](@ref), is a simple single-layer snowpack loosely based on the Utah Energy Balance model [tarbotonSpatiallyDistributedEnergy1994](@cite). The snowpack is treated as a single, integrated layer with constant density and prognostic state defined by the depth-integrated internal energy ``E`` (J/m²) and the snow water equivalent ``W`` (m).  The mass balance dynamics are detailed on the [Snow mass balance](@ref) page and the energy balance and enthalpy closure on the [Snow energy balance](@ref) page.
+Snow is represented in Terrarium as one or more vertical layers of an ice-water-air mixture overlaying the land surface with fractional subgrid coverage diagnosed from the mass balance (see [Snow cover](@ref)). The default scheme, [`SingleLayerSnow`](@ref), is a simple single-layer snowpack loosely based on the Utah Energy Balance model [tarbotonSpatiallyDistributedEnergy1994](@cite). The snowpack is treated as a single, integrated layer with constant density and prognostic state defined by the depth-integrated internal energy ``\bar{U}_\text{snow}`` (J/m²) and the snow water equivalent ``W`` (m).  The mass balance dynamics are detailed on the [Snow mass balance](@ref) page and the energy balance and enthalpy closure on the [Snow energy balance](@ref) page.
 
 ### Coupling
 

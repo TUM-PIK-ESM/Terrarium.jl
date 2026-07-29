@@ -15,7 +15,7 @@ fraction of the water substance. Outflow vanishes smoothly as `θ_liq → L_c` a
 @inline function compute_meltwater_outflow(hydraulics::ConstantSnowHydraulics, θ_liq::NF) where {NF}
     liq_c = hydraulics.capillary_retention
     K_sat = hydraulics.saturated_conductivity
-    Sstar = max(θ_liq - liq_c, zero(NF)) / (one(NF) - L_c)
+    Sstar = max(θ_liq - liq_c, zero(NF)) / (one(NF) - liq_c)
     return K_sat * Sstar^3
 end
 
@@ -32,10 +32,10 @@ double-count relative to the liquid-water reference).
 @inline function compute_precip_heat_flux(P_s::NF, R_on_snow::NF, T_air::NF, constants::PhysicalConstants) where {NF}
     ρ_w = constants.material.density_water
     L_sl = constants.thermodynamics.latent_heat_fusion
-    c_pi = constants.thermodynamics.specific_heat_capacity_ice
-    c_pw = constants.thermodynamics.specific_heat_capacity_liquid_water
-    Q_snow = ρ_w * P_s * (c_i * min(T_air, zero(NF)) - L_sl)
-    Q_rain = ρ_w * R_on_snow * c_w * max(T_air, zero(NF))
+    cp_i = constants.thermodynamics.specific_heat_capacity_ice
+    cp_w = constants.thermodynamics.specific_heat_capacity_liquid_water
+    Q_snow = ρ_w * P_s * (cp_i * min(T_air, zero(NF)) - L_sl)
+    Q_rain = ρ_w * R_on_snow * cp_w * max(T_air, zero(NF))
     Q_prcp = Q_snow + Q_rain
     return Q_prcp
 end
@@ -72,7 +72,7 @@ end
 
 Depth-integrated snow energy tendency [W/m²] at grid cell `i, j` (all fluxes positive upward):
 ```
-dU/dt = Q_base − Q_gnd + Q_precip + Q_subl
+dŪ_snow/dt = Q_base − Q_gnd + Q_precip + Q_subl
 ```
 where `Q_gnd`/`Q_base` are the surface/basal heat fluxes, `Q_precip` the advected precipitation heat
 (see [`compute_precip_heat_flux`](@ref)), and `Q_subl` an advective correction for sublimation.

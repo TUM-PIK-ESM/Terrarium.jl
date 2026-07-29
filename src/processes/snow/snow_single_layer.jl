@@ -5,7 +5,7 @@ Simple single-layer snow scheme (loosely based on the Utah Energy Balance model,
 [tarbotonSpatiallyDistributedEnergy1994](@cite)). The snowpack is represented as a single lumped layer
 with a bulk density `ρ_s` supplied by a snow-density scheme (constant by default), from which the thermal
 properties follow. The prognostic state is the depth-integrated (column) internal energy `snow_energy`
-`E` [J/m²] and the `snow_water_equivalent` `W` [m]; snow depth, cover fraction, and thermal conductivity
+`Ū_snow` [J/m²] and the `snow_water_equivalent` `W` [m]; snow depth, cover fraction, and thermal conductivity
 are diagnosed from these and the bulk density.
 
 Properties:

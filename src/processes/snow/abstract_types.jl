@@ -18,7 +18,7 @@ function snow_water_equivalent end
 """
     snow_energy(i, j, grid, fields, ::AbstractSnow)
 
-Retrieve the depth-integrated (column) snow internal energy `E` [J/m²] relative to ice at 0°C.
+Retrieve the depth-integrated (column) snow internal energy `Ū_snow` [J/m²] relative to ice at 0°C.
 """
 function snow_energy end
 
