@@ -8,7 +8,7 @@ liquid carrying only its sensible heat for `T_air > 0`. The latent heat released
 cold pack is captured implicitly by the enthalpy closure, so it is *not* added here (adding `L_f` would
 double-count relative to the liquid-water reference).
 """
-@inline function compute_snow_precip_heat_flux(P_s::NF, R_on_snow::NF, T_air::NF, constants::PhysicalConstants) where {NF}
+@inline function compute_snow_precip_heat_flux(::AbstractSnow, constants::PhysicalConstants, P_s::NF, R_on_snow::NF, T_air::NF) where {NF}
     ρ_w = constants.material.density_water
     L_sl = constants.thermodynamics.latent_heat_fusion
     cp_i = constants.thermodynamics.specific_heat_capacity_ice
@@ -17,6 +17,42 @@ double-count relative to the liquid-water reference).
     Q_rain = ρ_w * R_on_snow * cp_w * max(T_air, zero(NF))
     Q_prcp = Q_snow + Q_rain
     return Q_prcp
+end
+
+"""
+    $TYPEDSIGNATURES
+
+Bulk volumetric heat capacity `C_snow` [J/m³/K] of the snowpack treated as an ice–liquid–air mixture,
+given the bulk snow density `ρ_snow` [kg/m³] and the liquid water fraction `liq` ∈ [0,1] of the water
+substance. The water-substance mass per unit snow volume is `ρ_snow`, of which `(1 − liq)` is ice and
+`liq` is liquid; the remaining void space is dry air. The corresponding constituent volume fractions are
+```math
+\\begin{aligned}
+θ_ice &= ρ_snow·(1 − liq)/ρ_i,\\
+θ_liq &= ρ_snow·liq/ρ_w,\\
+θ_air &= 1 − θ_ice − θ_liq
+\\end{aligned}
+```
+and the heat capacity is the volume-weighted sum over the ice and liquid constituents,
+`C_snow = cp_i·ρ_i·θ_ice + cp_w·ρ_w·θ_liq`. The air's own sensible-heat storage (≈0.1%) is neglected; note
+the air is still reflected in the bulk density `ρ_snow < ρ_ice`.
+"""
+@propagate_inbounds function compute_snow_volumetric_heat_capacity(
+        ::AbstractSnow{NF},
+        constants::PhysicalConstants,
+        ρ_snow::NF,
+        liq::NF
+    ) where {NF}
+    cp_i = constants.thermodynamics.specific_heat_capacity_ice
+    cp_w = constants.thermodynamics.specific_heat_capacity_liquid_water
+    ρ_w = constants.material.density_water
+    ρ_i = constants.material.density_ice
+    # ice and liquid volume fractions per unit snow volume; the remaining void is air, whose
+    # sensible-heat storage (≈0.1%) is neglected
+    θ_ice = ρ_snow * (one(NF) - liq) / ρ_i
+    θ_liq = ρ_snow * liq / ρ_w
+    C_snow = cp_i * ρ_i * θ_ice + cp_w * ρ_w * θ_liq
+    return C_snow
 end
 
 """
@@ -55,25 +91,52 @@ out of the snowpack.
     R = rainfall(i, j, grid, fields, atmos)
     T_air = air_temperature(i, j, grid, fields, atmos)
     R_snow = f_snow * R
-    Q_prcp = compute_snow_precip_heat_flux(P_s, R_snow, T_air, constants)
-    Q_subl = ρ_w * L_sl * E_subl # correction to account for negative enthalpy of lost ice
+    Q_prcp = compute_snow_precip_heat_flux(snow, constants, P_s, R_snow, T_air)
+    Q_subl = ρ_w * L_sl * E_subl # correction to account for enthalpy of lost ice
     dUdt = Q_base - Q_top + Q_prcp + Q_subl
     return dUdt
 end
 
+# Helper functions
+
+"""
+    $TYPEDSIGNATURES
+
+Volumetric snow internal energy `U_snow = Ū_snow/d_snow` [J/m³] from the depth-integrated energy `Ū_snow`
+[J/m²] and the snow depth `d_snow` [m]. The denominator is regularized with a machine-`eps` offset so the
+result stays finite (and differentiable) as `W_snow → 0`: with `Ū_snow → 0` and `d_snow → 0` together,
+`U_snow → 0`. The thin-snow indeterminacy is additionally masked downstream by `f_snow → 0`. A finite
+offset is used rather than [`safediv`](@ref) because `safediv` returns `Inf` at exactly `d_snow = 0` (even
+for `Ū_snow = 0`), which would produce `NaN` when multiplied by `f_snow = 0` in the surface energy
+balance blend.
+"""
+@inline compute_volumetric_snow_energy(Ū_snow::NF, d_snow::NF) where {NF} = Ū_snow / (d_snow + eps(NF))
+
+"""
+    $TYPEDSIGNATURES
+
+Snow→soil basal conductive heat flux `Q_base` [W/m²], positive upward (soil → snow). The snowpack is a
+strong insulator, so only its resistance is retained (snow-resistance-only closure):
+`Q_base = 2·κ_snow·(T_soil − T_snow)/d_snow`. The depth is regularized with a machine-`eps` offset so the
+flux stays finite as the snowpack vanishes.
+"""
+@inline compute_snow_basal_heat_flux(κ_snow::NF, T_soil::NF, T_snow::NF, d_snow::NF) where {NF} =
+    2 * κ_snow * (T_soil - T_snow) / (d_snow + eps(NF))
+
+
+# Snow energy closure
+
 """
     $TYPEDEF
 
-Energy–temperature closure for the single-layer snow scheme. Recovers the depth-averaged snow
-temperature `T_snow` [°C] and liquid water fraction `θ_liq` from the depth-integrated internal energy
-`Ū_snow` [J/m²] using the medium-agnostic `FreeWater` enthalpy relations, treating the bulk snow as a water
-substance of volumetric mass `ρ_snow`: the volumetric energy `U_snow = Ū_snow/d_snow` [J/m³], the volumetric latent
-heat `Lθ = ρ_s·L_{sl}`, and the volumetric heat capacity `C = ρ_s·(θ_liq·c_{p,l} + (1−θ_liq)·c_{p,i})`. The
-volumetric energy `U_snow` is formed inline from the diagnosed snow depth `d_snow` (no auxiliary field is
-stored for `U_snow`). This is the same enthalpy map used for soil with the pore saturation set to one,
-i.e. the snow layer is "fully saturated" with water substance in the lumped sense.
+Energy–temperature closure for snow volumes. For [`SingleLayerSnow`](@ref), the depth-averaged snow
+temperature `T_snow` (°C) and liquid water fraction `θ_liq` are recovered from the depth-integrated internal energy
+`Ū_snow` (J/m²) using the medium-agnostic `FreeWater` enthalpy relations, treating the bulk snowpack as an ice-water-air
+mixture.
 """
-struct SnowEnergyTemperatureClosure <: AbstractEnergyClosure end
+struct SnowEnergyTemperatureClosure{NF} <: AbstractEnergyClosure end
+
+SnowEnergyTemperatureClosure(::Type{NF}) where {NF} = SnowEnergyTemperatureClosure{NF}()
 
 variables(::SnowEnergyTemperatureClosure) = (
     auxiliary(:snow_temperature, XY(), units = u"°C", desc = "Depth-averaged snow temperature in °C (≤ 0)"),
@@ -117,6 +180,8 @@ function closure!(
     return nothing
 end
 
+# Helper functions
+
 """
     $TYPEDSIGNATURES
 
@@ -152,24 +217,22 @@ Recover the snow temperature and liquid water fraction from the depth-integrated
         snow::SingleLayerSnow,
         constants::PhysicalConstants
     )
-    Ū_snow = fields.snow_energy[i, j] # assumed given
-    W_snow = fields.snow_water_equivalent[i, j]
+    Ū_snow = fields.snow_energy[i, j] # assumed given (prognostic)
+    W_snow = fields.snow_water_equivalent[i, j] # assumed given (prognostic)
     L_sl = constants.thermodynamics.latent_heat_fusion
-    cp_i = constants.thermodynamics.specific_heat_capacity_ice
-    cp_w = constants.thermodynamics.specific_heat_capacity_liquid_water
     ρ_w = constants.material.density_water
     ρ_snow = compute_snow_density(i, j, grid, fields, snow.density)
     d_snow = compute_snow_depth(snow, W_snow, ρ_snow, ρ_w)
-    # Volumetric latent heat of fusion and volumetric energy (bulk snow treated as water substance)
+    # Volumetric latent heat of fusion
     Lθ = ρ_snow * L_sl
-    U_snow = volumetric_snow_energy(Ū_snow, d_snow)
-    liq = liquid_water_fraction(FreeWater(), U_snow, Lθ, one(U_snow))
+    U_snow = compute_volumetric_snow_energy(Ū_snow, d_snow)
+    liq = liquid_water_fraction(FreeWater(), U_snow, Lθ)
     out.snow_liquid_fraction[i, j, 1] = liq
-    C = ρ_snow * (liq * cp_w + (one(liq) - liq) * cp_i)
+    C_snow = compute_snow_volumetric_heat_capacity(snow, constants, ρ_snow, liq)
     # Snow temperature cannot exceed 0°C, so clip the free-water temperature at zero. The energy above
     # the fully-melted (0°C, all-liquid) reference, i.e. the positive part `U_snow > 0`, is not stored; it
     # is derived on demand where needed to determine snow melt.
-    T = energy_to_temperature(FreeWater(), U_snow, Lθ, C)
+    T = energy_to_temperature(FreeWater(), U_snow, Lθ, C_snow)
     out.snow_temperature[i, j, 1] = min(T, zero(T))
     return nothing
 end
@@ -185,11 +248,9 @@ Compute the depth-integrated snow energy from a prescribed temperature at grid c
         snow::SingleLayerSnow,
         constants::PhysicalConstants
     )
-    T = fields.snow_temperature[i, j] # assumed given
-    W_snow = fields.snow_water_equivalent[i, j]
+    T = fields.snow_temperature[i, j] # assumed given (initialization)
+    W_snow = fields.snow_water_equivalent[i, j] # assumed given (prognostic)
     L_sl = constants.thermodynamics.latent_heat_fusion
-    cp_i = constants.thermodynamics.specific_heat_capacity_ice
-    cp_w = constants.thermodynamics.specific_heat_capacity_liquid_water
     ρ_w = constants.material.density_water
     ρ_snow = compute_snow_density(i, j, grid, fields, snow.density)
     d_snow = compute_snow_depth(snow, W_snow, ρ_snow, ρ_w)
@@ -199,22 +260,11 @@ Compute the depth-integrated snow energy from a prescribed temperature at grid c
     # be used in the calculation of tendencies.
     liq = ifelse(T >= zero(T), one(T), zero(T))
     out.snow_liquid_fraction[i, j, 1] = liq
-    C = ρ_snow * (liq * cp_w + (one(liq) - liq) * cp_i)
-    U_snow = T * C - Lθ * (one(liq) - liq)
-    out.snow_energy[i, j, 1] = U_snow * d_snow
+    C_snow = compute_snow_volumetric_heat_capacity(snow, constants, ρ_snow, liq)
+    U_snow = T * C_snow - Lθ * (one(liq) - liq)
+    out.snow_energy[i, j, 1] = U_snow * d_snow # integrate by d_snow
     return nothing
 end
-
-"""
-    $TYPEDSIGNATURES
-
-Snow→soil basal conductive heat flux `Q_base` [W/m²], positive upward (soil → snow). The snowpack is a
-strong insulator, so only its resistance is retained (snow-resistance-only closure):
-`Q_base = 2·κ_snow·(T_soil − T_snow)/d_snow`. The depth is regularized with a machine-`eps` offset so the
-flux stays finite as the snowpack vanishes.
-"""
-@inline compute_snow_basal_heat_flux(κ_snow::NF, T_soil::NF, T_snow::NF, d_snow::NF) where {NF} =
-    2 * κ_snow * (T_soil - T_snow) / (d_snow + eps(NF))
 
 # Kernels
 #
@@ -232,18 +282,3 @@ end
     i, j = @index(Global, NTuple)
     temperature_to_energy!(out, i, j, grid, fields, closure, args...)
 end
-
-# Helper functions
-
-"""
-    $TYPEDSIGNATURES
-
-Volumetric snow internal energy `U_snow = Ū_snow/d_snow` [J/m³] from the depth-integrated energy `Ū_snow`
-[J/m²] and the snow depth `d_snow` [m]. The denominator is regularized with a machine-`eps` offset so the
-result stays finite (and differentiable) as `W_snow → 0`: with `Ū_snow → 0` and `d_snow → 0` together,
-`U_snow → 0`. The thin-snow indeterminacy is additionally masked downstream by `f_snow → 0`. A finite
-offset is used rather than [`safediv`](@ref) because `safediv` returns `Inf` at exactly `d_snow = 0` (even
-for `Ū_snow = 0`), which would produce `NaN` when multiplied by `f_snow = 0` in the surface energy
-balance blend.
-"""
-@inline volumetric_snow_energy(Ū_snow::NF, d_snow::NF) where {NF} = Ū_snow / (d_snow + eps(NF))

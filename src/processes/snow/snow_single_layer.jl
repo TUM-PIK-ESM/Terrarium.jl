@@ -37,7 +37,7 @@ function SingleLayerSnow(
         density = ConstantSnowDensity(NF),
         thermal_conductivity = PowerLawSnowThermalConductivity(NF),
         hydraulic_properties = ConstantSnowHydraulics(NF),
-        closure = SnowEnergyTemperatureClosure()
+        closure = SnowEnergyTemperatureClosure(NF)
     ) where {NF}
     # `NF` is not carried by any field, so it must be supplied explicitly to the type constructor
     return SingleLayerSnow{NF, typeof(cover), typeof(density), typeof(thermal_conductivity), typeof(hydraulic_properties), typeof(closure)}(
@@ -254,7 +254,6 @@ end
 @propagate_inbounds snow_temperature(i, j, grid, fields, ::SingleLayerSnow) = fields.snow_temperature[i, j]
 
 @propagate_inbounds liquid_water_fraction(i, j, grid, fields, ::SingleLayerSnow) = fields.snow_liquid_fraction[i, j]
-
 
 # Kernels
 

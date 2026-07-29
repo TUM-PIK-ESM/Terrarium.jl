@@ -351,7 +351,7 @@ properties follow from it.
 - `snow_temperature` `T_snow` (°C) and `snow_liquid_fraction` `θ_liq ∈ [0,1]` — from the enthalpy
   closure.
 - **Volumetric energy `U_v = E/d_snow` (J/m³) is *not* an auxiliary field.** It is returned by a method
-  (e.g. `volumetric_snow_energy(i, j, grid, fields, snow)`) evaluated inside the closure kernel, using
+  (e.g. `compute_volumetric_snow_energy(i, j, grid, fields, snow)`) evaluated inside the closure kernel, using
   `safediv` to remain finite as `W → 0` (the indeterminate limit is masked downstream by `f_snow → 0`).
 - `snow_cover_fraction` `f_snow ∈ [0,1]` — smooth function of `W`, e.g. `f_snow = W/(W + W₀)` or
   `tanh(W/W_ref)`; differentiable, → 0 as `W → 0`.
@@ -536,7 +536,7 @@ src/processes/snow/
 ├── abstract_types.jl     # AbstractSnow{NF}, NoSnow, interface accessors
 │                         #   (snow_temperature, snow_depth, snow_cover_fraction,
 │                         #    snow_thermal_conductivity, ...)
-├── snow_properties.jl    # ρ_snow, depth d_snow(W), κ_snow(ρ_snow), f_snow(W), volumetric_snow_energy method,
+├── snow_properties.jl    # ρ_snow, depth d_snow(W), κ_snow(ρ_snow), f_snow(W), compute_volumetric_snow_energy method,
 │                         #   albedo helpers
 ├── snow_energy.jl        # enthalpy closure (reuse FreeWater via U_v = E/d_snow), column energy tendency
 ├── snow_mass.jl          # SWE mass balance, Darcy meltwater outflow, sublimation coupling
@@ -570,7 +570,7 @@ PR-B (`ground_heat_flux` / `soil_heat_flux` split). See "Preliminary refactoring
 **Snow scheme:**
 
 1. **Process skeleton + properties.** `AbstractSnow`/`NoSnow`/`SingleLayerSnow`, `variables`,
-   `snow_properties.jl` (depth, density, conductivity, cover fraction, `volumetric_snow_energy` method).
+   `snow_properties.jl` (depth, density, conductivity, cover fraction, `compute_volumetric_snow_energy` method).
    No coupling yet.
 2. **Energy closure.** `closure!`/`invclosure!` reusing the `FreeWater` maps from `thermodynamics/` via
    `U_v = E/d_snow` (guarded); verify `T_snow`/`θ_liq` recovery and round-trip `invclosure!`→`closure!`.
