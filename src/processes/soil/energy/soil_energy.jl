@@ -12,7 +12,7 @@ struct SoilThermodynamics{
         NF,
         HeatOperator <: AbstractHeatOperator,
         EnergyClosure <: AbstractEnergyClosure,
-        ThermalProps <: SoilThermalProperties{NF},
+        ThermalProps <: SoilThermalProperties,
     } <: AbstractSoilThermodynamics{NF}
     "Heat transport operator"
     operator::HeatOperator
@@ -28,11 +28,21 @@ SoilThermodynamics(
     ::Type{NF};
     operator::AbstractHeatOperator = ExplicitTwoPhaseHeatConduction(),
     closure::AbstractEnergyClosure = SoilEnergyTemperatureClosure(),
-    thermal_properties::SoilThermalProperties{NF} = SoilThermalProperties(NF),
-) where {NF} = SoilThermodynamics(operator, closure, thermal_properties)
+    thermal_properties::SoilThermalProperties = SoilThermalProperties(NF),
+) where {NF} = SoilThermodynamics{NF, typeof(operator), typeof(closure), typeof(thermal_properties)}(operator, closure, thermal_properties)
+
+# Retain `NF` when rebuilding from properties (`setproperties`, `Flatten.reconstruct`,
+# `ParameterEditing.reconstruct`); the default `constructorof` would drop it.
+ConstructionBase.constructorof(::Type{<:SoilThermodynamics{NF}}) where {NF} = SoilThermodynamics{NF}
 
 # TODO: Add base `AbstractParameterization` type and then (hopefully) remove
-Adapt.@adapt_structure SoilThermodynamics
+# Written out rather than `Adapt.@adapt_structure` because that macro rebuilds via the bare type
+# name, which cannot recover `NF`.
+Adapt.adapt_structure(to, energy::SoilThermodynamics{NF}) where {NF} = SoilThermodynamics{NF}(
+    adapt(to, energy.operator),
+    adapt(to, energy.closure),
+    adapt(to, energy.thermal_properties),
+)
 
 variables(energy::SoilThermodynamics) = (
     prognostic(:internal_energy, XYZ(); closure = energy.closure, units = u"J/m^3", desc = "Internal energy of the soil volume, including both latent and sensible components"),

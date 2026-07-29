@@ -9,9 +9,10 @@ $(TYPEDFIELDS)
 @parameterized @kwdef struct SoilModel{
         NF,
         GridType <: AbstractLandGrid{NF},
-        Soil <: AbstractSoil{NF},
+        Soil <: AbstractSoil,
+        Constants, # <: PhysicalConstants
         Initializer <: AbstractInitializer,
-        Timestepper <: AbstractTimeStepper{NF},
+        Timestepper <: AbstractTimeStepper,
     } <: AbstractSoilModel{NF, GridType}
     "Spatial grid type"
     grid::GridType
@@ -20,7 +21,7 @@ $(TYPEDFIELDS)
     @component soil::Soil = SoilEnergyWaterCarbon(eltype(grid))
 
     "Physical constants"
-    @component constants::PhysicalConstants{NF} = PhysicalConstants(eltype(grid))
+    @component constants::Constants = PhysicalConstants(eltype(grid))
 
     "State variable initializer"
     @component initializer::Initializer = DefaultInitializer(eltype(grid))

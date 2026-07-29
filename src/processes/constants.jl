@@ -120,7 +120,7 @@ sub-structs by category:
 
 ```jldoctest
 julia> show(PhysicalConstants())
-PhysicalConstants{Float64}(ThermodynamicConstants{Float64}(1004.5, 2070.0, 4181.0, 1859.0, 334000.0, 2.5008e6, 2.8344e6, 273.16, 273.15, 273.16, 611.657, 287.0, 461.5), MaterialConstants{Float64}(1000.0, 916.7, 12.0), UniversalConstants{Float64}(9.80665, 5.6704e-8, 0.4))
+PhysicalConstants{ThermodynamicConstants{Float64}, MaterialConstants{Float64}, UniversalConstants{Float64}}(ThermodynamicConstants{Float64}(1004.5, 2070.0, 4181.0, 1859.0, 334000.0, 2.5008e6, 2.8344e6, 273.16, 273.15, 273.16, 611.657, 287.0, 461.5), MaterialConstants{Float64}(1000.0, 916.7, 12.0), UniversalConstants{Float64}(9.80665, 5.6704e-8, 0.4))
 ```
 
 To override individual constants, pass a customised sub-struct:
@@ -137,19 +137,23 @@ julia> c.thermodynamics.temperature_reference
 Properties:
 $FIELDS
 """
-struct PhysicalConstants{NF}
-    thermodynamics::ThermodynamicConstants{NF}
-    material::MaterialConstants{NF}
-    universal::UniversalConstants{NF}
+struct PhysicalConstants{
+        Thermo,    # <: ThermodynamicConstants
+        Material,  # <: MaterialConstants
+        Universal, # <: UniversalConstants
+    }
+    thermodynamics::Thermo
+    material::Material
+    universal::Universal
 end
 
 PhysicalConstants() = PhysicalConstants(Float64)
 
 function PhysicalConstants(
         ::Type{NF};
-        thermodynamics::ThermodynamicConstants{NF} = ThermodynamicConstants(NF),
-        material::MaterialConstants{NF} = MaterialConstants(NF),
-        universal::UniversalConstants{NF} = UniversalConstants(NF),
+        thermodynamics::ThermodynamicConstants = ThermodynamicConstants(NF),
+        material::MaterialConstants = MaterialConstants(NF),
+        universal::UniversalConstants = UniversalConstants(NF),
     ) where {NF}
-    return PhysicalConstants{NF}(thermodynamics, material, universal)
+    return PhysicalConstants(thermodynamics, material, universal)
 end

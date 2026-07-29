@@ -12,8 +12,9 @@ conditions.
         GridType <: AbstractLandGrid{NF},
         SEB <: AbstractSurfaceEnergyBalance,
         Atmosphere <: AbstractAtmosphere,
+        Constants, # <: PhysicalConstants
         Initializer <: AbstractInitializer,
-        Timestepper <: AbstractTimeStepper{NF},
+        Timestepper <: AbstractTimeStepper,
     } <: AbstractSurfaceEnergyModel{NF, GridType}
     "Spatial grid"
     grid::GridType
@@ -25,7 +26,7 @@ conditions.
     @component surface_energy_balance::SEB = SurfaceEnergyBalance(eltype(grid))
 
     "Physical constants"
-    @component constants::PhysicalConstants{NF} = PhysicalConstants(eltype(grid))
+    @component constants::Constants = PhysicalConstants(eltype(grid))
 
     "State variable initializer"
     @component initializer::Initializer = DefaultInitializer(eltype(grid))

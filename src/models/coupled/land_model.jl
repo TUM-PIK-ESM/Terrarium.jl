@@ -10,13 +10,14 @@ $(TYPEDFIELDS)
 @parameterized @kwdef struct LandModel{
         NF,
         GridType <: AbstractLandGrid{NF},
-        Vegetation <: Optional{AbstractVegetation{NF}},
-        Soil <: AbstractSoil{NF},
+        Vegetation <: Optional{AbstractVegetation},
+        Soil <: AbstractSoil,
         SEB <: AbstractSurfaceEnergyBalance,
         Hydrology <: AbstractSurfaceHydrology,
         Atmosphere <: AbstractAtmosphere,
+        Constants, # <: PhysicalConstants
         Initializer <: AbstractInitializer,
-        Timestepper <: AbstractTimeStepper{NF},
+        Timestepper <: AbstractTimeStepper,
     } <: AbstractLandModel{NF, GridType}
     "Spatial discretization"
     grid::GridType
@@ -37,7 +38,7 @@ $(TYPEDFIELDS)
     @component atmosphere::Atmosphere = PrescribedAtmosphere(eltype(grid))
 
     "Physical constants"
-    @component constants::PhysicalConstants{NF} = PhysicalConstants(eltype(grid))
+    @component constants::Constants = PhysicalConstants(eltype(grid))
 
     "State variable initializer"
     @component initializer::Initializer = DefaultInitializer(eltype(grid))

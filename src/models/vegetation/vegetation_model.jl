@@ -10,11 +10,12 @@ $TYPEDFIELDS
 """
 @parameterized @kwdef struct VegetationModel{
         NF,
-        Vegetation <: AbstractVegetation{NF},
-        Atmosphere <: AbstractAtmosphere{NF},
+        Vegetation <: AbstractVegetation,
+        Atmosphere <: AbstractAtmosphere,
         GridType <: AbstractLandGrid{NF},
+        Constants, # <: PhysicalConstants
         Initializer <: AbstractInitializer,
-        Timestepper <: AbstractTimeStepper{NF},
+        Timestepper <: AbstractTimeStepper,
     } <: AbstractVegetationModel{NF, GridType}
     "Spatial grid type"
     grid::GridType
@@ -26,7 +27,7 @@ $TYPEDFIELDS
     @component vegetation::Vegetation = VegetationCarbon(eltype(grid))
 
     "Physical constants"
-    @component constants::PhysicalConstants{NF} = PhysicalConstants(eltype(grid))
+    @component constants::Constants = PhysicalConstants(eltype(grid))
 
     "State variable initializer"
     @component initializer::Initializer = DefaultInitializer(eltype(grid))

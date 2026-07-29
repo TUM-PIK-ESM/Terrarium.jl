@@ -13,8 +13,9 @@ $TYPEDFIELDS
         CanopyHydrology <: AbstractCanopyInterception,
         CanopyET <: AbstractEvapotranspiration,
         SurfaceRunoff <: AbstractSurfaceRunoff,
+        Constants, # <: PhysicalConstants
         Initializer <: AbstractInitializer,
-        Timestepper <: AbstractTimeStepper{NF},
+        Timestepper <: AbstractTimeStepper,
     } <: AbstractSurfaceHydrologyModel{NF, GridType}
     "Spatial grid type"
     grid::GridType
@@ -32,7 +33,7 @@ $TYPEDFIELDS
     surface_runoff::SurfaceRunoff = DirectSurfaceRunoff(eltype(grid))
 
     "Physical constants"
-    constants::PhysicalConstants{NF} = PhysicalConstants(eltype(grid))
+    constants::Constants = PhysicalConstants(eltype(grid))
 
     "State variable initializer"
     initializer::Initializer = DefaultInitializer(eltype(grid))
