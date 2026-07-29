@@ -53,7 +53,7 @@ function Terrarium.InputSource(grid::ColumnRingGrid{NF}, raster::AbstractRaster{
     return RasterInputSource{NF, path, typeof(vd), typeof(reftime), typeof(idxmap), typeof(raster), typeof(units)}(vd, units, idxmap, reftime, raster)
 end
 
-function Terrarium.load_asset(path, name, grid::RingGrids.AbstractGrid, ::Terrarium.NetCDF, ::Type{NF}; indices = (:, :, :), fill_value = NaN) where {NF}
+function Terrarium.load_asset(path, name, grid::RingGrids.AbstractGrid, ::Terrarium.NetCDF, ::Type{NF}; indices = (:, :, :), fill_value = NF(NaN)) where {NF}
     raster = replace(Raster(path, name = name), missing => fill_value)[indices...]
     data = reconcile_latitudes(raster, grid)
     field = RingGrids.Field(grid, size(data)[3:end]...)

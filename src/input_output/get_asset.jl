@@ -55,7 +55,7 @@ replaces missing data; it defaults to `NF(NaN)`.
 The underlying read is dispatched to an I/O extension based on the asset's [`format`](@ref); load
 Rasters.jl and NCDatasets.jl to enable reading NetCDF and other raster files.
 """
-function load_asset(asset::AbstractLandAsset, name::String; NF::Type = Float32, fill_value = NF(NaN))
+function load_asset(asset::AbstractLandAsset, name::String; NF = Float32, fill_value = NF(NaN))
     path = get_asset(asset)
     fmt = format(asset)
     grid = native_grid(asset)

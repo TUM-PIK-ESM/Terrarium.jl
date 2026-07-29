@@ -29,7 +29,8 @@ arch = CUDA.functional() ? GPU() : CPU()
 # used for simulation, the land-sea mask is kept on the CPU for easy scalar indexing, which is by default not
 # allowed for GPU arrays (see [here](https://cuda.juliagpu.org/stable/usage/workflow/#UsageWorkflowScalar)).
 NF = Float32
-land_sea_frac_10km = Terrarium.load_asset(ERA5LandInvariants(), "lsm"; NF)
+land_sea_frac_10km = on_architecture(arch, Terrarium.load_asset(ERA5LandInvariants(), "lsm"; NF))
+ring_grid = on_architecture(arch, RingGrids.FullGaussianGrid(72))
 land_sea_frac_N72 = RingGrids.interpolate(ring_grid, land_sea_frac_10km)
 fig = heatmap(land_sea_frac_N72)
 DisplayAs.PNG(fig) #hide
