@@ -13,12 +13,14 @@ current snow water equivalent (SWE) within any given finite area and `W_ref` is 
 SWE at which the are would be expected to be 50% covered. The function is smooth and differentiable,
 with `f_snow → 0` as `W_snow → 0` and `f_snow → 1` as `W_snow → ∞`.
 
+Default SWE level for `half_coverage` is set to 0.1 m following Bonan (2019) and references therein.
+
 Properties:
 $TYPEDFIELDS
 """
 @parameterized @kwdef struct FractionalSnowCover{NF} <: AbstractSnowCover{NF}
     "Reference snow water equivalent level `W_ref`"
-    @param half_coverage::NF = 0.01 (units = u"m", bounds = Positive)
+    @param half_coverage::NF = 0.1 (units = u"m", bounds = Positive)
 end
 
 FractionalSnowCover(::Type{NF}; kwargs...) where {NF} = FractionalSnowCover{NF}(; kwargs...)
