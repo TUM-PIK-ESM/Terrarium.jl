@@ -92,8 +92,9 @@ end
     @test energy_top_bc.condition === integrator.state.soil_heat_flux
     # Advance one timestep
     timestep!(integrator, 60.0)
-    # A 0.2 m SWE pack should be essentially fully snow-covered (cover fraction is diagnosed in compute_auxiliary!)
-    @test all(integrator.state.snow_cover_fraction .> 0.9)
+    # Cover fraction is diagnosed in compute_auxiliary! as f = W/(W + W_ref); with the default
+    # half-coverage W_ref = 0.1 m, a 0.2 m SWE pack is majority-covered (f = 0.2/0.3 ≈ 0.67)
+    @test all(integrator.state.snow_cover_fraction .> 0.6)
     @test all(isfinite.(integrator.state.snow_energy))
     @test all(isfinite.(integrator.state.snow_water_equivalent))
     @test all(isfinite.(integrator.state.snow_temperature))

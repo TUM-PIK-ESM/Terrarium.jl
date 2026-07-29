@@ -22,7 +22,7 @@ function compute_snow_interface_fluxes!(
         basal_heat_flux = state.basal_heat_flux,
     )
     fields = get_fields(state, snow, seb, soil, atmos)
-    launch!(grid, XY, compute_snow_interface_fluxes_kernel!, out, fields, snow, seb, soil, atmos, constants)
+    launch!(grid, XY, compute_snow_interface_fluxes_kernel!, out, fields, snow, seb, soil, constants, atmos)
     return nothing
 end
 
@@ -74,7 +74,7 @@ snow's `surface_heat_flux`/`basal_heat_flux` inputs in the coupled model).
     return nothing
 end
 
-@kernel inbounds = true function compute_snow_interface_fluxes_kernel!(out, grid, fields, snow::SingleLayerSnow, atmos, constants)
+@kernel inbounds = true function compute_snow_interface_fluxes_kernel!(out, grid, fields, snow::SingleLayerSnow, args...)
     i, j = @index(Global, NTuple)
-    compute_snow_interface_fluxes!(out, i, j, grid, fields, snow, atmos, constants)
+    compute_snow_interface_fluxes!(out, i, j, grid, fields, snow, args...)
 end
