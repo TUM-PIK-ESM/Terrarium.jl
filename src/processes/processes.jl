@@ -80,6 +80,7 @@ include("snow/snow_single_layer.jl")
 export SnowEnergyTemperatureClosure
 include("snow/snow_energy.jl")
 include("snow/snow_mass.jl")
+include("snow/snow_interfaces.jl")
 
 # Vegetation
 

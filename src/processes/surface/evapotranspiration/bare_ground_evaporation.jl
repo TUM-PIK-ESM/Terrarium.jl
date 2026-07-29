@@ -60,7 +60,6 @@ function compute_auxiliary!(
         atmos::AbstractAtmosphere,
         soil::Optional{AbstractSoil} = nothing,
         snow::Optional{AbstractSnow} = nothing,
-        args...
     )
     out = auxiliary_fields(state, evaporation)
     # merge the snow cover fraction so the ground evaporation can be scaled by the snow-free fraction

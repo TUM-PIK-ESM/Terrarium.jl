@@ -161,37 +161,6 @@ end
 """
     $TYPEDSIGNATURES
 
-Snow-surface sublimation rate [m/s SWE] at grid cell `i, j`, area-weighted by the snow-covered fraction
-`f_snow`. The snow surface is treated as saturated: a bulk-aerodynamic vapor flux `Δq/rₐ` evaluated at
-the skin temperature, with `Δq` taken over ice for a sub-freezing surface (the saturation humidity
-already dispatches over ice for `T ≤ 0` — see [`saturation_specific_humidity_vapor`](@ref)). The
-water-vapor mass flux `ρₐ·Δq/rₐ` is converted to a snow-water-equivalent rate via `ρ_w`. Zero without
-snow (`snow === nothing`).
-"""
-@propagate_inbounds compute_snow_sublimation_flux(i, j, grid, fields, ::Nothing, atmos, constants) = zero(eltype(grid))
-
-@propagate_inbounds function compute_snow_sublimation_flux(
-        i, j, grid, fields,
-        snow::AbstractSnow,
-        atmos::AbstractAtmosphere,
-        constants::PhysicalConstants
-    )
-    f = snow_cover_fraction(i, j, grid, fields, snow)
-    Tₛ = fields.skin_temperature[i, j]
-    rₐ = aerodynamic_resistance(i, j, grid, fields, atmos)
-    Δq = compute_specific_humidity_difference(i, j, grid, fields, atmos, constants, Tₛ) # over ice for Tₛ ≤ 0
-    Tₐ = air_temperature(i, j, grid, fields, atmos)
-    pres = air_pressure(i, j, grid, fields, atmos)
-    q_air = specific_humidity(i, j, grid, fields, atmos)
-    ρₐ = Thermodynamics.air_density(constants.thermodynamics, celsius_to_kelvin(constants.thermodynamics, Tₐ), pres, q_air)
-    ρ_w = constants.material.density_water
-    # saturated vapor mass flux over the snow-covered fraction, as a snow-water-equivalent rate
-    return f * ρₐ * (Δq / rₐ) / ρ_w
-end
-
-"""
-    $TYPEDSIGNATURES
-
 Compute the latent heat flux at `i, j` based on the current skin temperature and atmospheric conditions.
 When an evapotranspiration scheme is provided, uses the ET-aware humidity flux; otherwise uses bare ground evaporation.
 
@@ -207,7 +176,7 @@ snow-covered fraction sublimates from the snowpack (latent heat of sublimation, 
         constants::PhysicalConstants,
         atmos::AbstractAtmosphere,
         evtr::Optional{AbstractEvapotranspiration} = nothing,
-        snow::Optional{AbstractSnow} = nothing
+        snow::Optional{AbstractSnow} = nothing,
     )
     Q_h = if isnothing(evtr)
         # Direct calculation of evaporative flux without ET coupling
@@ -220,7 +189,7 @@ snow-covered fraction sublimates from the snowpack (latent heat of sublimation, 
         compute_surface_humidity_flux(i, j, grid, fields, evtr, atmos, constants)
     end
 
-    # Get air density (same for both cases)
+    # Get atmospheric variables and constants
     Tₐ = air_temperature(i, j, grid, fields, atmos)
     pres = air_pressure(i, j, grid, fields, atmos)
     q_air = specific_humidity(i, j, grid, fields, atmos)
@@ -232,10 +201,10 @@ snow-covered fraction sublimates from the snowpack (latent heat of sublimation, 
 
     # Partition by snow-covered fraction: ground/canopy evaporation over (1 − f_snow), snow sublimation over f_snow
     f = snow_cover_fraction(i, j, grid, fields, snow)  # zero without snow
-    E_subl = compute_snow_sublimation_flux(i, j, grid, fields, snow, atmos, constants)  # zero without snow, f-weighted SWE
-    Hₗ_ground = compute_latent_heat_flux(tur, (one(f) - f) * Q_h, ρₐ, L_lv)
-    Hₗ_snow = ρ_w * L_sg * E_subl
-    return Hₗ_ground + Hₗ_snow
+    E_sub = compute_snow_sublimation_flux(i, j, grid, fields, snow, atmos, constants, skinT)
+    Hₗ_ground = compute_latent_heat_flux(tur, Q_h, ρₐ, L_lv)
+    Hₗ_snow = ρ_w * L_sg * E_sub
+    return (one(f) - f) * Hₗ_ground + f * Hₗ_snow
 end
 
 # Kernels

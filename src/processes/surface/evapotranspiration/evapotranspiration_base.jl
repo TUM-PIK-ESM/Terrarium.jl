@@ -6,9 +6,9 @@ function compute_auxiliary!(
         interception::NoCanopyInterception,
         constants::PhysicalConstants,
         atmos::AbstractAtmosphere,
-        soil::Optional{AbstractSoil} = nothing,
-        vegetation::Nothing = nothing,
-        snow::Optional{AbstractSnow} = nothing,
+        soil::Optional{AbstractSoil},
+        vegetation::Nothing,
+        snow::Optional{AbstractSnow},
         args...
     )
     return compute_auxiliary!(state, grid, evaporation, interception, constants, atmos, soil, snow)

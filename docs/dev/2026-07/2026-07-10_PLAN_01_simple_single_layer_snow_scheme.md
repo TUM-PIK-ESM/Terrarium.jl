@@ -135,7 +135,7 @@ Revision 4). Delivered:
   `SurfaceHydrology`→`DirectSurfaceRunoff`, mirroring the SEB. Meltwater is therefore subject to the
   infiltration capacity limit, with the remainder becoming surface runoff.
 - **Sublimation** driven by the SEB latent-heat flux: the post-SEB coupling (renamed
-  `compute_snow_soil_boundary_fluxes!`) now sets `sublimation = f_snow·H_l/(ρ_w·L_s)` alongside the blended
+  `compute_snow_interface_fluxes!`) now sets `sublimation = f_snow·H_l/(ρ_w·L_s)` alongside the blended
   `soil_heat_flux`. Known limitation: the latent flux is not yet partitioned between snow sublimation and
   soil/canopy evapotranspiration, so the two over-count when both are active.
 - The snow-field gather helper `seb_conduction_fields` was removed
@@ -201,7 +201,7 @@ surface energy balance as an optional argument (author's directive):
   unchanged over snow (a documented simplification; only bare-ground evaporation is scaled).
 - `snow` is threaded through `SurfaceHydrology`/`DirectSurfaceRunoff`/`BareGroundEvaporation` and the SEB
   solve chain (`solve_skin_temperature!`/residual → `compute_surface_energy_fluxes!`). The snow coupling
-  (`compute_snow_soil_boundary_fluxes!`) now takes `atmos` to evaluate the sublimation flux at the
+  (`compute_snow_interface_fluxes!`) now takes `atmos` to evaluate the sublimation flux at the
   converged skin temperature.
 
 Test: `LandModel: latent flux partitioned` — under near-full snow cover, ground evaporation is suppressed

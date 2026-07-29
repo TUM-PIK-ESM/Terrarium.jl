@@ -65,5 +65,5 @@ compute_snow_soil_heat_flux
 
 compute_snow_sublimation_flux
 
-compute_snow_soil_boundary_fluxes!
+compute_snow_interface_fluxes!
 ```

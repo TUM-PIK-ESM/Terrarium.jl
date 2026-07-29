@@ -74,32 +74,6 @@ with the bulk density `ρ_snow`.
 """$TYPEDSIGNATURES"""
 @inline get_closure(snow::SingleLayerSnow) = snow.closure
 
-"""
-    $TYPEDSIGNATURES
-
-Launch [`compute_snow_soil_boundary_fluxes!`](@ref) to diagnose the snow↔surface/soil coupling fluxes from the
-snow state and the surface energy balance outputs: the blended soil-top heat flux (`soil_heat_flux`) and
-the snow surface sublimation rate (`sublimation`, the snow-fraction bulk-aerodynamic vapor flux at the
-converged skin temperature). Must run after the surface energy balance (which sets `ground_heat_flux` and
-the skin temperature). No-op when there is no snowpack (`snow === nothing`).
-"""
-compute_snow_soil_boundary_fluxes!(state, grid, ::Nothing, constants::PhysicalConstants, atmos::AbstractAtmosphere) = nothing
-function compute_snow_soil_boundary_fluxes!(state, grid, snow::SingleLayerSnow, constants::PhysicalConstants, atmos::AbstractAtmosphere)
-    out = (; soil_heat_flux = state.soil_heat_flux, sublimation = state.sublimation)
-    coupling_fields = (;
-        ground_heat_flux = state.ground_heat_flux,
-        ground_temperature = state.ground_temperature,
-        skin_temperature = state.skin_temperature,
-        snow_temperature = state.snow_temperature,
-        snow_depth = state.snow_depth,
-        snow_cover_fraction = state.snow_cover_fraction,
-    )
-    # atmosphere fields (air temperature/pressure/humidity, windspeed) are needed for the sublimation flux
-    fields = merge(coupling_fields, get_fields(state, atmos))
-    launch!(grid, XY, compute_snow_coupling_fluxes_kernel!, out, fields, snow, atmos, constants)
-    return nothing
-end
-
 # Process methods
 
 variables(snow::SingleLayerSnow) = (
@@ -191,47 +165,6 @@ end
 """
     $TYPEDSIGNATURES
 
-Blended soil-top heat flux [W/m²] at grid cell `i, j`: the snow-cover-fraction-weighted combination of
-the snow→soil basal conductive flux `Q_base` and the bare-ground surface energy balance closure flux `G`
-(`ground_heat_flux`), `f_snow·Q_base + (1 − f_snow)·G`. The bulk snow thermal conductivity entering
-`Q_base` is recovered lazily from the density scheme rather than stored.
-"""
-@propagate_inbounds function compute_snow_soil_heat_flux(i, j, grid, fields, snow::SingleLayerSnow, constants::PhysicalConstants)
-    G = fields.ground_heat_flux[i, j]
-    f = fields.snow_cover_fraction[i, j]
-    d_snow = fields.snow_depth[i, j]
-    T_snow = fields.snow_temperature[i, j]
-    T_soil = fields.ground_temperature[i, j]
-    ρ_snow = compute_snow_density(i, j, grid, fields, snow.density)
-    κ_snow = compute_thermal_conductivity(snow, constants.material, ρ_snow)
-    Q_base = compute_snow_basal_heat_flux(κ_snow, T_soil, T_snow, d_snow)
-    return f * Q_base + (one(f) - f) * G
-end
-
-"""
-    $TYPEDSIGNATURES
-
-Diagnose the snow↔surface/soil coupling fluxes at grid cell `i, j`, run after the surface energy balance:
-the blended soil-top heat flux (see [`compute_snow_soil_heat_flux`](@ref)) and the snow surface
-sublimation rate (see [`compute_snow_sublimation_flux`](@ref), the same snow-fraction vapor flux the
-surface energy balance uses for the latent-flux partition). The snow surface and basal heat fluxes seen
-by the energy tendency are the `ground_heat_flux` and `soil_heat_flux` fields themselves (aliased as the
-snow's `surface_heat_flux`/`basal_heat_flux` inputs in the coupled model).
-"""
-@propagate_inbounds function compute_snow_soil_boundary_fluxes!(
-        out, i, j, grid, fields,
-        snow::SingleLayerSnow,
-        atmos::AbstractAtmosphere,
-        constants::PhysicalConstants
-    )
-    out.soil_heat_flux[i, j, 1] = compute_snow_soil_heat_flux(i, j, grid, fields, snow, constants)
-    out.sublimation[i, j, 1] = compute_snow_sublimation_flux(i, j, grid, fields, snow, atmos, constants)
-    return nothing
-end
-
-"""
-    $TYPEDSIGNATURES
-
 Snow meltwater outflow `M_r` [m/s SWE] at grid cell `i, j`: the Darcy-type drainage
 (see [`compute_meltwater_outflow`](@ref)) evaluated at the diagnosed liquid water fraction.
 """
@@ -256,11 +189,6 @@ end
 @propagate_inbounds liquid_water_fraction(i, j, grid, fields, ::SingleLayerSnow) = fields.snow_liquid_fraction[i, j]
 
 # Kernels
-
-@kernel inbounds = true function compute_snow_coupling_fluxes_kernel!(out, grid, fields, snow::SingleLayerSnow, atmos, constants)
-    i, j = @index(Global, NTuple)
-    compute_snow_soil_boundary_fluxes!(out, i, j, grid, fields, snow, atmos, constants)
-end
 
 @kernel inbounds = true function compute_auxiliary_kernel!(out, grid, fields, snow::AbstractSnow, args...)
     i, j = @index(Global, NTuple)
