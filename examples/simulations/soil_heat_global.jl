@@ -29,14 +29,15 @@ arch = CUDA.functional() ? GPU() : CPU()
 # used for simulation, the land-sea mask is kept on the CPU for easy scalar indexing, which is by default not
 # allowed for GPU arrays (see [here](https://cuda.juliagpu.org/stable/usage/workflow/#UsageWorkflowScalar)).
 NF = Float32
-land_sea_frac = convert.(NF, dropdims(Raster(joinpath(input_dir, "era5-land_land_sea_mask_N72.nc")), dims = Ti))
-land_sea_frac_field = RingGrids.FullGaussianGrid(Matrix(land_sea_frac), input_as = Matrix)
-fig = heatmap(land_sea_frac_field)
+land_sea_frac_10km = on_architecture(arch, Terrarium.load_asset(ERA5LandInvariants(), "lsm"; NF))
+ring_grid = on_architecture(arch, RingGrids.FullGaussianGrid(72))
+land_sea_frac_N72 = RingGrids.interpolate(ring_grid, land_sea_frac_10km)
+fig = heatmap(land_sea_frac_N72)
 DisplayAs.PNG(fig) #hide
 
 # Then we set up a masked [`ColumnRingGrid`](@ref), selecting only grid points
 # with >50% land cover:
-land_mask = land_sea_frac_field .> 0.5
+land_mask = land_sea_frac_N72 .> 0.5
 grid = ColumnRingGrid(arch, NF, ExponentialSpacing(N = 30), land_mask.grid, land_mask)
 grid_lon, grid_lat = RingGrids.get_lonlats(grid.rings) # in radians
 

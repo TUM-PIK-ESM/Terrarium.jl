@@ -51,10 +51,12 @@ using SpeedyWeatherInternals.ParameterEditing: ParameterEditing, ParameterTable,
 
 # Explicit imports
 import DomainSets
+import Downloads
 import Interpolations
 import ModelParameters
 import Oceananigans
 import Oceananigans.Diagnostics
+import Pkg
 import RingGrids
 import RootSolvers
 import Thermodynamics
@@ -106,6 +108,9 @@ include("grids/vertical_discretization.jl")
 
 export ColumnGrid, ColumnRingGrid, get_field_grid
 include("grids/grids.jl")
+
+export ERA5LandForcings, ERA5LandInvariants
+include("input_output/get_asset.jl")
 
 export InputSource, InputSources, FieldInputSource, FieldTimeSeriesInputSource
 export update_inputs!, varpath, varpath, VarPath
