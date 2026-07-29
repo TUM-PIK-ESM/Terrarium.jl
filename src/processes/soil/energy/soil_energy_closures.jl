@@ -112,12 +112,11 @@ end
     U = fields.internal_energy[i, j, k] # assumed given
     ρw = constants.material.density_water
     Lsl = constants.thermodynamics.latent_heat_fusion
-    L = ρw * Lsl
     por = porosity(i, j, k, grid, fields, strat, bgc)
     sat = saturation_water_ice(i, j, k, grid, fields, hydrology)
-    Lθ = L * sat * por
+    Lθ = ρw * Lsl * sat * por
     # calculate unfrozen water content
-    liq = out.liquid_water_fraction[i, j, k] = liquid_water_fraction(fc, U, Lθ, sat)
+    liq = out.liquid_water_fraction[i, j, k] = liquid_water_fraction(fc, U, Lθ)
     # add liquid water fraction to fields
     fields = merge(fields, (; liquid_water_fraction = out.liquid_water_fraction))
     # calculate soil volumetric fractions
