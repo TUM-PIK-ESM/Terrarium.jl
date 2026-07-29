@@ -154,20 +154,22 @@ end
 
 # Kernel functions
 
-## Field-level accessors
+"""
+    $TYPEDSIGNATURES
 
-@propagate_inbounds snow_water_equivalent(i, j, grid, fields, ::SingleLayerSnow) = fields.snow_water_equivalent[i, j]
-
-@propagate_inbounds snow_energy(i, j, grid, fields, ::SingleLayerSnow) = fields.snow_energy[i, j]
-
-@propagate_inbounds snow_depth(i, j, grid, fields, ::SingleLayerSnow) = fields.snow_depth[i, j]
-
-@propagate_inbounds snow_cover_fraction(i, j, grid, fields, ::SingleLayerSnow) = fields.snow_cover_fraction[i, j]
-
-@propagate_inbounds snow_temperature(i, j, grid, fields, ::SingleLayerSnow) = fields.snow_temperature[i, j]
-
-@propagate_inbounds liquid_water_fraction(i, j, grid, fields, ::SingleLayerSnow) = fields.snow_liquid_fraction[i, j]
-
+Accumulate the snow water-equivalent and depth-integrated energy tendencies at grid cell `i, j` from the
+mass and energy balances (see [`compute_snow_water_tendency`](@ref) and [`compute_snow_energy_tendency`](@ref)).
+"""
+@propagate_inbounds function compute_snow_tendencies!(
+        tendencies, i, j, grid, fields,
+        snow::SingleLayerSnow,
+        atmos::AbstractAtmosphere,
+        constants::PhysicalConstants
+    )
+    tendencies.snow_water_equivalent[i, j, 1] += compute_snow_water_tendency(i, j, grid, fields, snow, atmos)
+    tendencies.snow_energy[i, j, 1] += compute_snow_energy_tendency(i, j, grid, fields, snow, atmos, constants)
+    return nothing
+end
 """
     $TYPEDSIGNATURES
 
@@ -238,6 +240,21 @@ Snow meltwater outflow `M_r` [m/s SWE] at grid cell `i, j`: the Darcy-type drain
     M = compute_meltwater_outflow(snow.hydraulic_properties, θ_liq)
     return M
 end
+
+## Field-level accessors
+
+@propagate_inbounds snow_water_equivalent(i, j, grid, fields, ::SingleLayerSnow) = fields.snow_water_equivalent[i, j]
+
+@propagate_inbounds snow_energy(i, j, grid, fields, ::SingleLayerSnow) = fields.snow_energy[i, j]
+
+@propagate_inbounds snow_depth(i, j, grid, fields, ::SingleLayerSnow) = fields.snow_depth[i, j]
+
+@propagate_inbounds snow_cover_fraction(i, j, grid, fields, ::SingleLayerSnow) = fields.snow_cover_fraction[i, j]
+
+@propagate_inbounds snow_temperature(i, j, grid, fields, ::SingleLayerSnow) = fields.snow_temperature[i, j]
+
+@propagate_inbounds liquid_water_fraction(i, j, grid, fields, ::SingleLayerSnow) = fields.snow_liquid_fraction[i, j]
+
 
 # Kernels
 

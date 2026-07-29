@@ -20,6 +20,48 @@ double-count relative to the liquid-water reference).
 end
 
 """
+    $TYPEDSIGNATURES
+
+Depth-integrated snow energy tendency [W/m²] at grid cell `i, j` (all fluxes positive upward):
+```
+dŪ_snow/dt = Q_base − Q_top + Q_precip + Q_subl
+```
+where `Q_top`/`Q_base` are the surface/basal heat fluxes, `Q_precip` the advected precipitation heat
+(see [`compute_snow_precip_heat_flux`](@ref)), and `Q_subl` an advective correction for sublimation.
+
+The sublimation correction `Q_subl = ρ_w·L_f·E_subl` is required because the latent heat flux
+carries the full sublimation enthalpy `ρ_w·L_sg·E_subl`, whereas the mass leaving the snowpack departs as ice,
+whose specific enthalpy relative to the liquid-water reference is `−L_f`. Adding back `ρ_w·L_f·E_subl`
+leaves the snowpack with a net loss of `ρ_w·(L_s − L_f)·E_subl = ρ_w·L_v·E_subl`, the vaporization enthalpy
+carried by the departing vapor.
+
+Note that no explicit *meltwater* energy term appears because meltwater drains as liquid water at 0 °C,
+which is the zero-enthalpy reference (`U = 0`) of the `FreeWater` closure, so it carries no enthalpy
+out of the snowpack.
+"""
+@propagate_inbounds function compute_snow_energy_tendency(
+        i, j, grid, fields,
+        snow::SingleLayerSnow,
+        atmos::AbstractAtmosphere,
+        constants::PhysicalConstants
+    )
+    ρ_w = constants.material.density_water
+    L_sl = constants.thermodynamics.latent_heat_fusion
+    Q_top = fields.surface_heat_flux[i, j]   # positive upward: energy leaving the snow top
+    Q_base = fields.basal_heat_flux[i, j]    # positive upward: energy entering the snow base from soil
+    E_subl = fields.sublimation[i, j]        # positive upward: snow mass loss to water vapor
+    f_snow = snow_cover_fraction(i, j, grid, fields, snow)
+    P_s = snowfall(i, j, grid, fields, atmos)
+    R = rainfall(i, j, grid, fields, atmos)
+    T_air = air_temperature(i, j, grid, fields, atmos)
+    R_snow = f_snow * R
+    Q_prcp = compute_snow_precip_heat_flux(P_s, R_snow, T_air, constants)
+    Q_subl = ρ_w * L_sl * E_subl # correction to account for negative enthalpy of lost ice
+    dUdt = Q_base - Q_top + Q_prcp + Q_subl
+    return dUdt
+end
+
+"""
     $TYPEDEF
 
 Energy–temperature closure for the single-layer snow scheme. Recovers the depth-averaged snow

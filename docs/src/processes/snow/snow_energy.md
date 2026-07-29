@@ -17,13 +17,11 @@ using InteractiveUtils
 The prognostic snow energy is the depth-integrated (column) internal energy ``\bar{U}_\text{snow}`` (J/m²). Its tendency is computed as,
 ```math
 \begin{equation}
-\frac{\partial \bar{U}_\text{snow}}{\partial t} = Q_\text{base} - Q_\text{top} - Q_\text{precip} - Q_\text{subl},
+\frac{\partial \bar{U}_\text{snow}}{\partial t} = Q_\text{base} - Q_\text{top} + Q⁺_\text{precip} - Q_\text{subl},
 \end{equation}
 ```
 where ``Q_\text{top}`` is the net surface heat flux (the surface energy balance closure flux over the
-snow), ``Q_\text{base}`` is the conductive heat flux at the snow base, ``Q_\text{precip}`` is the
-sensible/latent heat advected by precipitation (see [Snow mass balance](@ref)), and ``Q_\text{subl}`` is
-an advective correction for energy loss due to sublimation. All fluxes are treated as positive upwards. Meltwater drains as liquid water at 0 °C, which is the zero-enthalpy reference of the enthalpy closure below, so it carries no enthalpy out of the snowpack and thus no explicit meltwater energy flux is needed.
+snow), ``Q_\text{base}`` is the conductive heat flux at the snow base, ``Q_\text{precip}`` is the nondirectional (positive) sensible/latent heat advected by precipitation (see [Snow mass balance](@ref)), and ``Q_\text{subl}`` is an advective correction for energy loss due to sublimation. Meltwater drains as liquid water at 0 °C, which is the zero-enthalpy reference of the enthalpy closure below, so it carries no enthalpy out of the snowpack and thus no explicit meltwater energy flux is needed.
 
 The sublimation correction arises from the same enthalpy reference. ``Q_\text{top}`` includes the surface latent heat flux which reduces the energy content of the snowpack by ``\rho_w L_{sg} E_\text{subl}``, but the the mass leaving the snowpack departs as ice, whose specific enthalpy relative to liquid water at 0 °C is ``-L_{sl}``. Adding back ``Q_\text{subl} = \rho_w L_{sg} E_\text{subl}`` leaves a net pack loss of ``\rho_w L_{lv} E_\text{subl}`` since ``L_{sg} = L_{sl} + L_{lv}`` by definition.
 
