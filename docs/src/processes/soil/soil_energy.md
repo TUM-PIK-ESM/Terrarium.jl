@@ -79,18 +79,33 @@ The constitutive relationship between energy and temperature plays a critical ro
     U(T,\theta) = \int_{T_{\text{ref}}}^T \tilde{C}(x,\theta) \, \mathrm{d}x 
 \end{equation}
 ```
-where $\tilde{C}$ is referred to as the *effective* or *apparent* heat capacity and $T_{\text{ref}}$ is a reference temperature. Alternatively, the internal energy is defined following [dallamicoEnergyConservingFreezingSoil2011; Eq. (4)](@cite) as:
+where $\tilde{C}$ is referred to as the *effective* or *apparent* heat capacity and $T_{\text{ref}}$ is a reference temperature. The internal energy $U$ is defined relative to a reference temperature $T_{\text{ref}}$ and a reference physical state if phase change is considered. For Terrarium, we choose $T_{\text{ref}} = 273.15$ K. Water is the soil substance undergoing phase change and its liquid state is chosen as a reference. Following [dallamicoEnergyConservingFreezingSoil2011; Eq. (3)](@cite) the internal energy of each soil constituent $x$ is defined as:
+
 ```math
 \begin{equation}
-U(T,\theta) = C(\theta_{\text{w}},\theta) (T - T_{\text{ref}}) + \rho_{\text{w}} L_{\text{sl}} \theta_{\text{w}}(\theta, T),
+U_x(T, \theta_x) = \rho_x c_x \theta_x (T - T_{\text{ref}}) 
 \end{equation}
 ```
-where $\theta_{\text{w}}(T,\theta)$ is the volumetric unfrozen water content as a function of temperature $T$ and total water/ice content $\theta$; $C(\theta_{\text{w}},\theta)$  (J/(K m³)) is the bulk volumetric material heat capacity of the volume as a function of the unfrozen and total water contents;  $\rho_{\text{w}}$ corresponds to the density (kg/m³) of water. The apparent heat capacity is then defined as the derivative of the energy-temperature relation,
+with $\rho_x$ the density (kg/m³) of the constituent, $c_x$ its specific heat capacity (J/(kg K)), and $\theta_x$ its volumetric fraction (m³/m³). As [dallamicoEnergyConservingFreezingSoil2011](@citet) use solid ice as a reference state and not liquid water, we include the latent heat of fusion $L_{\text{sl}}$ (J/kg) in the internal energy of ice (instead of water as in their Eq. (3)):
+```math
+\begin{equation}
+U_{\text{ice}}(T, \theta_{\text{ice}}) = \rho_{\text{ice}} \theta_{\text{ice}} \left[c_{\text{ice}} (T - T_{\text{ref}}) - L_{\text{sl}}\right]
+\end{equation}
+```
+
+Consequently, the adapted version of the internal energy as defined in [dallamicoEnergyConservingFreezingSoil2011; Eq. (4)](@cite) is:
+```math
+\begin{equation}
+U(T,\theta) = C(\theta_{\text{w}},\theta) (T - T_{\text{ref}}) - \rho_{\text{ice}} L_{\text{sl}} \theta_{\text{ice}}(\theta, T),
+\end{equation}
+```
+where $\theta_{\text{ice}}(T,\theta)$ is the volumetric ice content as a function of temperature $T$ and total water/ice content $\theta$. $C(\theta_{\text{w}},\theta)$  (J/(K m³)) is the bulk volumetric material heat capacity of the total soil volume as a function of the unfrozen ($\theta_{\text{w}}$) and total ($\theta$) water contents, calculated as $\sum_x \rho_x c_x$ ;  $\rho_{\text{ice}}$ corresponds to the density (kg/m³) of ice. The apparent heat capacity is then defined as the derivative of the energy-temperature relation,
+
 ```math
 \begin{equation}
 \tilde{C}(T,\theta) := \frac{\partial U}{\partial T} =
-\overbrace{C(\theta_{\text{w}},\theta) + T \frac{\partial C}{\partial \theta_{\text{w}}}\frac{\partial \theta_{\text{w}}}{\partial T}}^{\text{Sensible}} \,+\,
-\overbrace{\rho_{\text{w}} L_{\text{sl}} \frac{\partial\theta_{\text{w}}}{\partial T}}^{\text{Latent}}\,,
+\overbrace{C(\theta_{\text{w}},\theta) + T \frac{\partial C}{\partial \theta_{\text{w}}}\frac{\partial \theta_{\text{w}}}{\partial T}}^{\text{Sensible}} \,-\,
+\overbrace{\rho_{\text{ice}} L_{\text{sl}} \frac{\partial\theta_{\text{ice}}}{\partial T}}^{\text{Latent}}\,,
 \end{equation}
 ```
 where the chain-rule is applied on $C(\theta_{\text{w}},\theta) (T - T_{\text{ref}})$ as both $C$ and $\theta_{\text{w}}$ are functions of $T$. The grouping of terms on the right-hand side show the partitioning of energy change into **sensible** and **latent** heat. The sensible component represents the energy necessary to heat a volume of the material to a particular temperature, whereas the latent component corresponds to the energy required for the phase change of water in the volume from solid (frozen) to liquid (thawed).
