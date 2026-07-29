@@ -4,7 +4,7 @@
     $TYPEDSIGNATURES
 
 Darcy-type meltwater outflow `M_r` (m/s, SWE). Liquid water in excess of the capillary retention `L_c`
-drains from the snowpack with a cubic conductivity [tarbotonSpatiallyDistributedEnergy1994, Eq. (23-24)](@cite) (in excess-saturation
+drains from the snowpack with a cubic conductivity [tarbotonSpatiallyDistributedEnergy1994](@cite) (in excess-saturation
 form): `M_r = K_sat · S*³` with `S* = max(θ_liq − L_c, 0) / (1 − L_c)`, where `θ_liq` is the liquid
 fraction of the water substance. Outflow vanishes smoothly as `θ_liq → L_c` and saturates at `K_sat` as
 `θ_liq → 1`.
