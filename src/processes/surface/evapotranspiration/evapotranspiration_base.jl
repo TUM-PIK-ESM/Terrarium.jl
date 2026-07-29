@@ -7,7 +7,7 @@ function compute_auxiliary!(
         constants::PhysicalConstants,
         atmos::AbstractAtmosphere,
         soil::Optional{AbstractSoil} = nothing,
-        vegetation::Nothing,
+        vegetation::Nothing = nothing,
         snow::Optional{AbstractSnow} = nothing,
         args...
     )
