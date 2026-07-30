@@ -32,6 +32,8 @@ end
 
 SoilThermalConductivities(::Type{NF}; kwargs...) where {NF} = SoilThermalConductivities{NF}(; kwargs...)
 
+Adapt.@adapt_structure SoilThermalConductivities
+
 """
     $TYPEDEF
 
@@ -63,9 +65,9 @@ SoilHeatCapacities(::Type{NF}; kwargs...) where {NF} = SoilHeatCapacities{NF}(; 
 Properties:
 $TYPEDFIELDS
 """
-@parameterized @kwdef struct SoilThermalProperties{NF, FC, CondWeight}
+@parameterized @kwdef struct SoilThermalProperties{NF, FC, CondWeight, Cond}
     "Thermal conductivities for all constituents"
-    @component conductivities::SoilThermalConductivities{NF}
+    @component conductivities::Cond
 
     "Method for computing bulk thermal conductivity from constituents"
     @component conductivity_weighting::CondWeight
@@ -79,11 +81,13 @@ end
 
 SoilThermalProperties(
     ::Type{NF};
-    conductivities::SoilThermalConductivities{NF} = SoilThermalConductivities(NF),
+    conductivities::SoilThermalConductivities = SoilThermalConductivities(NF),
     conductivity_weighting::AbstractBulkWeighting = InverseQuadratic(),
     heat_capacities::SoilHeatCapacities{NF} = SoilHeatCapacities(NF),
     freezecurve::FreezeCurve = FreeWater()
-) where {NF} = SoilThermalProperties{NF, typeof(freezecurve), typeof(conductivity_weighting)}(conductivities, conductivity_weighting, heat_capacities, freezecurve)
+) where {NF} = SoilThermalProperties{NF, typeof(freezecurve), typeof(conductivity_weighting), typeof(conductivities)}(conductivities, conductivity_weighting, heat_capacities, freezecurve)
+
+Adapt.@adapt_structure SoilThermalProperties
 
 freezecurve(
     ::SoilThermalProperties{NF, FreeWater},
@@ -170,5 +174,12 @@ k = \\left[\\sum_{i=1}^N θᵢ\\sqrt{kᵢ}\\right]^2
 """
 struct InverseQuadratic <: AbstractBulkWeighting end
 
-# we use fastmap here so that the ordering of named tuples can be arbitrary
-(f::InverseQuadratic)(xs, weights) = sum(fastmap((x, w) -> sqrt(x) * w, xs, weights))^2
+# we use fastmap here so that the ordering of named tuples can be arbitrary.
+# `√x` is written as the float power `x^(one(x)/2)` rather than `sqrt(x)` so the weighting stays
+# device-kernel-safe when a constituent conductivity is a traced device scalar (`CuTracedRNumber`):
+# those have no `sqrt` method (its absence lowers to a reachable `throw`, which is illegal in a
+# kernel and breaks Reactant compilation), but they do support the float power, exactly as the
+# mineral-grain mixing `κ^q` in `mineral_thermal_conductivity` already relies on. The exponent is
+# `one(x)/2` (not the rational `1//2`) because `^(::CuTracedRNumber, ::Rational)` is likewise absent;
+# `one(x)/2` matches `x`'s own number type (plain float or traced scalar) and stays type-generic.
+(f::InverseQuadratic)(xs, weights) = sum(fastmap((x, w) -> x^(one(x) / 2) * w, xs, weights))^2
