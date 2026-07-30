@@ -3,9 +3,9 @@
 
 Advected heat flux [W/m²] carried into the snowpack by precipitation, relative to liquid water at 0 °C
 (the `U = 0` reference of the `FreeWater` enthalpy closure). Fresh snow `P_s` arrives as ice, which sits
-`L_f` below the liquid reference, plus sensible heat for `T_air < 0`; rain-on-snow `R_on_snow` arrives as
+`L_sl` below the liquid reference, plus sensible heat for `T_air < 0`; rain-on-snow `R_on_snow` arrives as
 liquid carrying only its sensible heat for `T_air > 0`. The latent heat released when rain refreezes in a
-cold pack is captured implicitly by the enthalpy closure, so it is *not* added here (adding `L_f` would
+cold pack is captured implicitly by the enthalpy closure, so it is *not* added here (adding `L_sl` would
 double-count relative to the liquid-water reference).
 """
 @inline function compute_snow_precip_heat_flux(::AbstractSnow, constants::PhysicalConstants, P_s::NF, R_on_snow::NF, T_air::NF) where {NF}
@@ -65,10 +65,10 @@ dŪ_snow/dt = Q_base − Q_top + Q_precip + Q_subl
 where `Q_top`/`Q_base` are the surface/basal heat fluxes, `Q_precip` the advected precipitation heat
 (see [`compute_snow_precip_heat_flux`](@ref)), and `Q_subl` an advective correction for sublimation.
 
-The sublimation correction `Q_subl = ρ_w·L_f·E_subl` is required because the latent heat flux
+The sublimation correction `Q_subl = ρ_w·L_sl·E_subl` is required because the latent heat flux
 carries the full sublimation enthalpy `ρ_w·L_sg·E_subl`, whereas the mass leaving the snowpack departs as ice,
-whose specific enthalpy relative to the liquid-water reference is `−L_f`. Adding back `ρ_w·L_f·E_subl`
-leaves the snowpack with a net loss of `ρ_w·(L_s − L_f)·E_subl = ρ_w·L_v·E_subl`, the vaporization enthalpy
+whose specific enthalpy relative to the liquid-water reference is `−L_sl`. Adding back `ρ_w·L_sl·E_subl`
+leaves the snowpack with a net loss of `ρ_w·(L_sg − L_sl)·E_subl = ρ_w·L_lg·E_subl`, the vaporization enthalpy
 carried by the departing vapor.
 
 Note that no explicit *meltwater* energy term appears because meltwater drains as liquid water at 0 °C,
