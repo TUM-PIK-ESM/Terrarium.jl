@@ -102,7 +102,7 @@ In the simplest case where we neglect the effect of capillary action in the soil
     \theta_{\text{w}}(U) =
         \begin{cases}
             0                   & U < -\rho_{\text{w}}L_{\text{sl}}\theta \\
-            \frac{U}{L} & -\rho_{\text{w}}L_{\text{sl}}\theta \leq U < 0 \\
+            \theta \left( 1 + \frac{U}{\rho_{\text{w}}L_{\text{sl}}\theta} \right) & -\rho_{\text{w}}L_{\text{sl}}\theta \leq U < 0 \\
             \theta              & U \geq 0\,,
         \end{cases}
 \end{equation}
@@ -110,15 +110,16 @@ In the simplest case where we neglect the effect of capillary action in the soil
 with temperature then determined by
 ```math
 \begin{equation}
-    T = U^{-1}(U(T,\theta)) =
+    T - T_{\text{ref}} = U^{-1}(U(T,\theta)) =
     \begin{cases}
-    \frac{U(T,\theta) - \rho_{\text{w}}L_{\text{sl}}\theta}{C} & U(T,\theta) < -\rho_{\text{w}}L_{\text{sl}}\theta \\
-    0 & 0 \leq U(T,\theta) \leq \rho_{\text{w}}L_{\text{sl}}\theta \\
-    \frac{U(T,\theta)}{C} &   U(T,\theta) \geq 0\,,
-    \end{cases}.
+    \frac{U + \rho_{\text{w}}L_{\text{sl}}\theta}{C} & U < -\rho_{\text{w}}L_{\text{sl}}\theta \\
+    0 & -\rho_{\text{w}}L_{\text{sl}}\theta \leq U < 0 \\
+    \frac{U}{C} & U \geq 0\,.
+    \end{cases}
 \end{equation}
 ```
 
+By expressing $T$ in °C, $T_{ref}$ can be dropped as it equals 0°C.
 For more information on more complex formulations of these so-called soil freezing characteristic curves, see [FreezeCurves.jl](https://github.com/CryoGrid/FreezeCurves.jl/tree/main?tab=readme-ov-file). 
 
 ```@docs; canonical = false
