@@ -2,9 +2,12 @@
     $TYPEDEF
 
 Base type for input data sources. Implementations of `InputSource` are free to load data
-from any arbitrary backend. They expect an `initialize!(fields, ::InputSource)` that is called once at model initialization and an 
-`update_inputs!(fields, ::InputSource, ::Clock)` method that is called at every time step. Both default to doing nothing. Implementations should
-additionally provide a constructor as a dispatch of `InputSource`.
+from any arbitrary backend. They expect an `initialize!(inputs, grid, clock, fields, ::InputSource)` that
+is called once at model initialization and an `update_inputs!(inputs, grid, clock, fields, ::InputSource)`
+method that is called at every time step, where `inputs` are the input `Field`s to be written, `grid` is
+the model grid, `clock` the simulation clock, and `fields` the full (read-only) model state. Both default
+to doing nothing. Implementations should additionally provide a constructor as a dispatch of `InputSource`.
+Namespace routing (`scope`) is handled by the enclosing [`InputSources`] container.
 
 The type argument `NF` corresponds to the numeric type of the input data, `name` to its name that's also used in its `variables` definition. 
 """
@@ -41,19 +44,22 @@ matches_scope(source::InputSource, scope::VarPath) = Base.front(varpath(source))
 """
     $TYPEDSIGNATURES
 
-Initializes the input source. The `scope` corresponds to the namespace path (relative to the root namespace)
-of the input variables in `fields`. Default implementation does nothing.
+Initializes the input `source`, writing into the input `inputs` fields at model start. The `grid` and
+the full model state `fields` (read-only) are provided so that sources may compute their inputs from the
+grid geometry or other state variables. Namespace routing is handled by the caller (see [`InputSources`]).
+Default implementation does nothing.
 """
-initialize!(fields, ::InputSource, clock, scope::VarPath = ()) = nothing
+initialize!(inputs, grid, clock, fields, ::InputSource) = nothing
 
 """
     $TYPEDSIGNATURES
 
-Updates the values of input variables stored in `fields` from the given input `source`. The `scope`
-corresponds to the namespace path (relative to the root namespace) of the input variables in `fields`.
-Default implementation simply returns `nothing`.
+Updates the values of the input variables stored in `inputs` from the given input `source`, called at
+every time step. The `grid` and the full model state `fields` (read-only) are provided so that sources
+may compute their inputs from the grid geometry or other state variables. Namespace routing is handled by
+the caller (see [`InputSources`]). Default implementation returns `nothing`.
 """
-update_inputs!(fields, ::InputSource, ::Clock, scope::VarPath = ()) = nothing
+update_inputs!(inputs, grid, clock, fields, ::InputSource) = nothing
 
 """
 Type alias for an `AbstractField` with any X, Y, Z location or grid.
@@ -79,16 +85,18 @@ variables(sources::InputSources) = tuplejoin(map(variables, sources.sources)...)
 
 varname(::InputSources) = nothing
 
-function initialize!(fields, input::InputSources, clock::Clock, scope::VarPath = ())
+matches_scope(sources::InputSources, scope) = any(map(src -> matches_scope(src, scope), sources.sources))
+
+function initialize!(inputs, grid, clock, fields, input::InputSources, scope::VarPath = ())
     for source in input.sources
-        initialize!(fields, source, clock, scope)
+        matches_scope(source, scope) && initialize!(inputs, grid, clock, fields, source)
     end
     return nothing
 end
 
-function update_inputs!(fields, input::InputSources, clock::Clock, scope::VarPath = ())
+function update_inputs!(inputs, grid, clock, fields, input::InputSources, scope::VarPath = ())
     for source in input.sources
-        update_inputs!(fields, source, clock, scope)
+        matches_scope(source, scope) && update_inputs!(inputs, grid, clock, fields, source)
     end
     return nothing
 end
@@ -110,10 +118,10 @@ struct FieldInputSource{NF, name, VD <: VarDims, FS <: AnyField{NF}, UT} <: Inpu
     field::FS
 end
 
-function initialize!(fields, source::FieldInputSource, clock::Clock = Clock(time = 0.0), scope::VarPath = ())
+function initialize!(inputs, grid, clock, fields, source::FieldInputSource)
     name = varname(source)
-    if matches_scope(source, scope) && hasproperty(fields, name)
-        field = getproperty(fields, name)
+    if hasproperty(inputs, name)
+        field = getproperty(inputs, name)
         set!(field, source.field)
     end
     return nothing
@@ -184,17 +192,17 @@ end
 variables(source::FieldTimeSeriesInputSource) = tuple(with_scope(Base.front(varpath(source)), input(varname(source), source.dims; units = source.units)))
 
 # to initialize just update the state once at the start time
-function initialize!(fields, source::FieldTimeSeriesInputSource, clock::Clock, scope::VarPath = ())
-    return update_inputs!(fields, source, clock, scope)
+function initialize!(inputs, grid, clock, fields, source::FieldTimeSeriesInputSource)
+    return update_inputs!(inputs, grid, clock, fields, source)
 end
 
-function update_inputs!(fields, source::FieldTimeSeriesInputSource, clock::Clock, scope::VarPath = ())
+function update_inputs!(inputs, grid, clock, fields, source::FieldTimeSeriesInputSource)
     name = varname(source)
-    if matches_scope(source, scope) && hasproperty(fields, name)
-        field_t = getproperty(fields, name)
+    if hasproperty(inputs, name)
+        field_t = getproperty(inputs, name)
         set!(field_t, source.fts[Time(clock.time)])
     end
-    return
+    return nothing
 end
 
 # Internal helper method to check that all Field dimensions match

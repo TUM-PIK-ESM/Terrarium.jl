@@ -66,15 +66,15 @@ Terrarium.variables(source::RasterInputSource) = Terrarium.with_scope(
     Terrarium.input(Terrarium.varname(source), source.dims; units = source.units)
 ) |> tuple
 
-function Terrarium.initialize!(fields, source::RasterInputSource, clock::Clock, scope::Terrarium.VarPath = ())
+function Terrarium.initialize!(inputs, grid, clock, fields, source::RasterInputSource)
     name = Terrarium.varname(source)
-    if Terrarium.matches_scope(source, scope) && hasproperty(fields, name)
-        field = getproperty(fields, name)
+    if hasproperty(inputs, name)
+        field = getproperty(inputs, name)
         timedim = dims(source.raster, Ti)
         current_time = timestamp(source.reftime, clock.time)
         initialize_from_raster!(field, source.raster, source.idxmap, timedim, current_time)
     end
-    return
+    return nothing
 end
 
 # for static rasters initialize once and then don't update anymore
@@ -86,15 +86,15 @@ end
 # for time-varying rasters this just updates once at the start time
 initialize_from_raster!(field, raster, idxmap, timedim, current_time) = update_from_raster!(field, raster, idxmap, timedim, current_time)
 
-function Terrarium.update_inputs!(fields, source::RasterInputSource, clock::Clock, scope::Terrarium.VarPath = ())
+function Terrarium.update_inputs!(inputs, grid, clock, fields, source::RasterInputSource)
     name = Terrarium.varname(source)
-    if Terrarium.matches_scope(source, scope) && hasproperty(fields, name)
-        field = getproperty(fields, name)
+    if hasproperty(inputs, name)
+        field = getproperty(inputs, name)
         timedim = dims(source.raster, Ti)
         current_time = timestamp(source.reftime, clock.time)
         update_from_raster!(field, source.raster, source.idxmap, timedim, current_time)
     end
-    return
+    return nothing
 end
 
 # For static raster we don't need to update

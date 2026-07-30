@@ -76,7 +76,7 @@ Update the `state` for the given `model` and `inputs`; this includes calling `up
 """
 function Oceananigans.TimeSteppers.update_state!(state::StateVariables, model::AbstractModel, inputs::InputSources; compute_tendencies = true)
     reset_tendencies!(state)
-    update_inputs!(state, inputs)
+    update_inputs!(state, model, inputs)
     fill_halo_regions!(state)
     compute_auxiliary!(state, model)
     return if compute_tendencies
@@ -145,12 +145,13 @@ Initialize input variables from the given input `sources`. The `scope` correspon
 path of namespace names from the root namespace to `state` and is used to match namespaced
 input sources to their target variables; see [`varpath`](@ref).
 """
-function initialize!(state::StateVariables, sources::InputSources, scope::Tuple{Vararg{Symbol}} = ())
-    # initialize inputs in current namespace
-    initialize!(state.inputs, sources, state.clock, scope)
+function initialize!(state::StateVariables, model, sources::InputSources, scope::Tuple{Vararg{Symbol}} = ())
+    grid = get_grid(model)
+    # initialize inputs in current namespace, passing the full state as read-only `fields`
+    initialize!(state.inputs, grid, state.clock, state, sources, scope)
     # recursively initialize namespaces
     fastiterate(namespace_names(state)) do nsname
-        initialize!(getproperty(getfield(state, :namespaces), nsname), sources, (scope..., nsname))
+        initialize!(getproperty(getfield(state, :namespaces), nsname), model, sources, (scope..., nsname))
     end
     return nothing
 end
@@ -160,14 +161,15 @@ Update input variables from the given input `sources`. The `scope` corresponds t
 path of namespace names from the root namespace to `state` and is used to match namespaced
 input sources to their target variables; see [`varpath`](@ref).
 """
-function update_inputs!(state::StateVariables, sources::InputSources, scope::Tuple{Vararg{Symbol}} = ())
-    # update inputs in current namespace
-    update_inputs!(state.inputs, sources, state.clock, scope)
+function update_inputs!(state::StateVariables, model::AbstractModel, sources::InputSources, scope::Tuple{Vararg{Symbol}} = ())
+    grid = get_grid(model)
+    # update inputs in current namespace, passing the full state as read-only `fields`
+    update_inputs!(state.inputs, grid, state.clock, state, sources, scope)
     # recursively update namespaces
     fastiterate(namespace_names(state)) do nsname
-        update_inputs!(getproperty(getfield(state, :namespaces), nsname), sources, (scope..., nsname))
+        update_inputs!(getproperty(getfield(state, :namespaces), nsname), model, sources, (scope..., nsname))
     end
-    return
+    return nothing
 end
 
 """

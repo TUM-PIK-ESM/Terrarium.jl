@@ -63,19 +63,17 @@ struct IdealizedSeasonalForcing{NF, L} <: InputSource{NF, :idealized_seasonal_fo
     year::NF
     "Precipitation rate applied as snowfall where the air is below freezing (m/s SWE)"
     precip_rate::NF
-    "Amplitude of the idealized seasonal net surface heat flux (W/m²)"
-    flux_amplitude::NF
+    "Bulk surface heat-flux transfer coefficient h (W/m²/K) for the restoring flux Q = h·(T_snow − T_air)"
+    transfer_coefficient::NF
 end
 
-# This source updates existing input variables (declared by the model) rather than adding new ones.
-variables(::IdealizedSeasonalForcing) = ()
-
 # Idealized near-surface air temperature (°C): warm at the equator, cold at the poles, with a seasonal
-# swing that grows with latitude and flips sign between hemispheres.
+# swing that grows with latitude and flips sign between hemispheres. The amplitude is large enough that
+# high latitudes rise well above freezing in summer (so snow melts) and fall well below in winter.
 @inline function idealized_air_temperature(φ, t, year, ::Type{NF}) where {NF}
     ω = 2NF(π) / year
-    T_mean = NF(25) - NF(45) * abs(sin(φ))          # ~25 °C at equator, ~-20 °C at poles
-    A_seasonal = NF(20) * abs(sin(φ))               # larger seasonal amplitude toward the poles
+    T_mean = NF(15) - NF(30) * abs(sin(φ))          # ~15 °C at equator, ~-15 °C at poles
+    A_seasonal = NF(25) * abs(sin(φ))               # poles swing to ≈ +10 °C (summer) / −40 °C (winter)
     return T_mean - A_seasonal * cos(ω * t) * sign(φ)  # NH coldest at t = 0, SH out of phase
 end
 
@@ -83,24 +81,32 @@ end
 # simulation device. Writing the results straight into `interior(field)` keeps everything on the device
 # (using `set!` with a coordinate function would evaluate the closure over the grid nodes on the host and
 # trigger scalar indexing of the device `lat` array on the GPU).
-function update_inputs!(fields, src::IdealizedSeasonalForcing{NF}, clock::Terrarium.Clock, scope::Terrarium.VarPath = ()) where {NF}
+function update_inputs!(inputs, grid, clock, fields, src::IdealizedSeasonalForcing{NF}) where {NF}
     t = convert(NF, clock.time)
     lat = src.latitude
     year = src.year
     precip = src.precip_rate
-    Q0 = src.flux_amplitude
-    ## near-surface air temperature (reused for the snowfall test)
-    T_air = (φ -> idealized_air_temperature(φ, t, year, NF)).(lat)
-    interior(fields.air_temperature)[:, 1, 1] .= T_air
+    h = src.transfer_coefficient
+    ## near-surface air temperature (reused for the snowfall test and the restoring flux)
+    T_air = idealized_air_temperature.(lat, t, year, NF)
+    interior(inputs.air_temperature)[:, 1, 1] .= T_air
     ## precipitation falls as snow wherever the air is below freezing
-    interior(fields.snowfall)[:, 1, 1] .= ifelse.(T_air .< zero(NF), precip, zero(NF))
-    ## idealized net surface heat flux (positive upward): cooling in winter, warming (melt) in summer
-    interior(fields.surface_heat_flux)[:, 1, 1] .= Q0 .* cos(2NF(π) / year * t) .* sign.(lat)
+    interior(inputs.snowfall)[:, 1, 1] .= ifelse.(T_air .< zero(NF), precip, zero(NF))
+    ## Restoring surface heat flux (positive upward): Q = f_snow·h·(T_snow − T_air) relaxes the pack toward
+    ## the air temperature — cooling when the snow is warmer, warming (and eventually melting) when the air
+    ## is warmer. This reads the diagnosed snow temperature and cover fraction from the (read-only) model
+    ## state `fields`, which the new `update_inputs!` interface makes available. The negative feedback keeps
+    ## the pack temperature bounded (unlike a fixed seasonal flux), and weighting by the snow-covered
+    ## fraction `f_snow` both makes it a grid-cell-mean flux and suppresses the feedback for a vanishing
+    ## pack (whose depth-averaged temperature is poorly conditioned).
+    T_snow = interior(fields.snow_temperature)[:, 1, 1]
+    f_snow = interior(fields.snow_cover_fraction)[:, 1, 1]
+    interior(inputs.surface_heat_flux)[:, 1, 1] .= f_snow .* h .* (T_snow .- T_air)
     return nothing
 end
 
 year_seconds = NF(365 * 24 * 3600)
-forcing = IdealizedSeasonalForcing(lat_device, year_seconds, NF(2.0e-3 / (24 * 3600)), NF(30))
+forcing = IdealizedSeasonalForcing(lat_device, year_seconds, NF(2.0e-3 / (24 * 3600)), NF(15))
 
 # ## Model and initial state
 #
@@ -165,7 +171,7 @@ let fig = Figure(size = (1200, 660))
     data = @lift Matrix(RingGrids.Field(swe_ts[$n_t], grid)[:, 1])
     hm = heatmap!(ax, lond, latd, data; colorrange = (0, 1))
     Colorbar(fig[:, end + 1], hm; label = "SWE (m)")
-    Makie.record(fig, joinpath("plots", "snow_global_swe.mp4"), 1:length(swe_ts.times); framerate = 10) do i
+    Makie.record(fig, joinpath("plots", "snow_global_swe.mp4"), 1:length(swe_ts.times); framerate = 12) do i
         n_t[] = i
     end
 end
