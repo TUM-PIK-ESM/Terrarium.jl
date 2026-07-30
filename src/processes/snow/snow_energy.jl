@@ -28,9 +28,9 @@ substance. The water-substance mass per unit snow volume is `ρ_snow`, of which 
 `liq` is liquid; the remaining void space is dry air. The corresponding constituent volume fractions are
 ```math
 \\begin{aligned}
-θ_ice &= ρ_snow·(1 − liq)/ρ_i,\\
-θ_liq &= ρ_snow·liq/ρ_w,\\
-θ_air &= 1 − θ_ice − θ_liq
+θ_{ice} &= ρ_{snow}·(1 − liq)/ρ_i,\\
+θ_{liq} &= ρ_{snow}·liq/ρ_w,\\
+θ_{air} &= 1 − θ_{ice} − θ_{liq}
 \\end{aligned}
 ```
 and the heat capacity is the volume-weighted sum over the ice and liquid constituents,
