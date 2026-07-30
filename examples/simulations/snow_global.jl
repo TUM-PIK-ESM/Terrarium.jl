@@ -72,8 +72,8 @@ end
 # high latitudes rise well above freezing in summer (so snow melts) and fall well below in winter.
 @inline function idealized_air_temperature(φ, t, year, ::Type{NF}) where {NF}
     ω = 2NF(π) / year
-    T_mean = NF(15) - NF(30) * abs(sin(φ))          # ~15 °C at equator, ~-15 °C at poles
-    A_seasonal = NF(25) * abs(sin(φ))               # poles swing to ≈ +10 °C (summer) / −40 °C (winter)
+    T_mean = NF(25) - NF(35) * abs(sin(φ))          # ~25 °C at equator, ~-10 °C at poles
+    A_seasonal = NF(20) * abs(sin(φ))               # poles swing to ≈ +10 °C (summer) / −30 °C (winter)
     return T_mean - A_seasonal * cos(ω * t) * sign(φ)  # NH coldest at t = 0, SH out of phase
 end
 
@@ -176,4 +176,4 @@ let fig = Figure(size = (1200, 660))
         n_t[] = i
     end
 end
-# ![Snow water equivalent animation](outputs/snow_global_swe.mp4)
+# ![Snow water equivalent animation](plots/snow_global_swe.mp4)
