@@ -54,8 +54,8 @@ In addition to the physics components, `SnowModel` carries the standard model ma
 ### Snow
 
 The `snow` component is the single-layer snowpack process. The default is [`SingleLayerSnow`](@ref), a
-lumped layer of constant bulk density loosely based on the Utah Energy Balance model, composed of
-independently swappable sub-parameterizations for areal cover, density, thermal conductivity, and
+lumped layer of constant bulk density loosely based on the Utah Energy Balance model [tarbotonSpatiallyDistributedEnergy1994](@cite),
+composed of independently swappable sub-parameterizations for areal cover, density, thermal conductivity, and
 hydraulic properties. See the [Snow](@ref) overview and [Snow parameterizations](@ref) for details.
 
 ### Atmosphere
