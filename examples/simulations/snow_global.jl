@@ -152,6 +152,7 @@ fig = heatmap(W_end[:, 1, 1], title = "Snow water equivalent after two years (m)
 DisplayAs.PNG(fig) #hide
 
 # We next load the time-varying outputs using `FieldTimeSeries` and use them to create an animation:
+plots_dir = mkpath("plots_dir")
 swe_ts = FieldTimeSeries(output_file, "snow_water_equivalent")
 ring0 = RingGrids.Field(swe_ts[1], grid)[:, 1]
 lond = RingGrids.get_lond(ring0)
@@ -171,7 +172,7 @@ let fig = Figure(size = (1200, 660))
     data = @lift Matrix(RingGrids.Field(swe_ts[$n_t], grid)[:, 1])
     hm = heatmap!(ax, lond, latd, data; colorrange = (0, 1))
     Colorbar(fig[:, end + 1], hm; label = "SWE (m)")
-    Makie.record(fig, joinpath("plots", "snow_global_swe.mp4"), 1:length(swe_ts.times); framerate = 12) do i
+    Makie.record(fig, joinpath(plots_dir, "snow_global_swe.mp4"), 1:length(swe_ts.times); framerate = 12) do i
         n_t[] = i
     end
 end
