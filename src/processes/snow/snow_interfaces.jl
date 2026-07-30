@@ -57,9 +57,7 @@ end
 Diagnose the snow↔surface/soil coupling fluxes at grid cell `i, j`, run after the surface energy balance:
 the blended soil-top heat flux (see [`compute_snow_soil_heat_flux`](@ref)) and the snow surface
 sublimation rate (see [`compute_snow_sublimation_flux`](@ref), the same snow-fraction vapor flux the
-surface energy balance uses for the latent-flux partition). The snow surface and basal heat fluxes seen
-by the energy tendency are the `ground_heat_flux` and `basal_heat_flux` fields themselves (aliased as the
-snow's `surface_heat_flux`/`basal_heat_flux` inputs in the coupled model).
+surface energy balance uses for the latent-flux partition).
 """
 @propagate_inbounds function compute_snow_interface_fluxes!(
         out, i, j, grid, fields,

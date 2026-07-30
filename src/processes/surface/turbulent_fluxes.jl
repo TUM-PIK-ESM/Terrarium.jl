@@ -199,12 +199,14 @@ snow-covered fraction sublimates from the snowpack (latent heat of sublimation, 
     L_sg = constants.thermodynamics.latent_heat_sublimation
     ρ_w = constants.material.density_water
 
-    # Partition by snow-covered fraction: ground/canopy evaporation over (1 − f_snow), snow sublimation over f_snow
+    # Partition by snow-covered fraction: ground/canopy evaporation over (1 − f_snow), snow sublimation over
+    # f_snow. `E_subl` is already area-weighted by f_snow (see `compute_snow_sublimation_flux`), so the snow
+    # term is not scaled again here.
     f = snow_cover_fraction(i, j, grid, fields, snow)  # zero without snow
-    E_sub = compute_snow_sublimation_flux(i, j, grid, fields, snow, atmos, constants, skinT)
+    E_subl = compute_snow_sublimation_flux(i, j, grid, fields, snow, atmos, constants, skinT)
     Hₗ_ground = compute_latent_heat_flux(tur, Q_h, ρₐ, L_lv)
-    Hₗ_snow = ρ_w * L_sg * E_sub
-    return (one(f) - f) * Hₗ_ground + f * Hₗ_snow
+    Hₗ_snow = ρ_w * L_sg * E_subl
+    return (one(f) - f) * Hₗ_ground + Hₗ_snow
 end
 
 # Kernels

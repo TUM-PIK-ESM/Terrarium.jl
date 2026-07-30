@@ -157,7 +157,7 @@ end
     q_air = Array(interior(it.state.specific_humidity))
     # unscaled bulk-aerodynamic ground evaporation g·Δq(T_skin); the stored flux is this scaled by (1 − f)
     Δq = Terrarium.specific_humidity_difference.(Ref(thermo), p, q_air, Ts)
-    @test all(f .> 0.95)                                     # 0.5 m SWE ≫ W_ref -> near-full cover
+    @test all(f .> 0.8)                                      # 0.5 m SWE -> f = 0.5/(0.5 + 0.1) ≈ 0.83 (W_ref = 0.1 m)
     @test all(isapprox.(E, (1 .- f) .* g .* Δq; rtol = 1.0e-6))   # ground evaporation scaled by (1 − f_snow)
     @test all(isfinite.(interior(it.state.sublimation)))
     @test all(isfinite.(interior(it.state.latent_heat_flux)))

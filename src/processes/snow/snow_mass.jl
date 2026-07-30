@@ -37,6 +37,7 @@ snow (`snow === nothing`).
         constants::PhysicalConstants,
         skinT::AbstractSkinTemperature
     )
+    f = snow_cover_fraction(i, j, grid, fields, snow)
     Tₛ = skin_temperature(i, j, grid, fields, skinT)
     rₐ = aerodynamic_resistance(i, j, grid, fields, atmos)
     Δq = compute_specific_humidity_difference(i, j, grid, fields, atmos, constants, Tₛ) # over ice for Tₛ ≤ 0
@@ -45,8 +46,9 @@ snow (`snow === nothing`).
     q_air = specific_humidity(i, j, grid, fields, atmos)
     ρₐ = Thermodynamics.air_density(constants.thermodynamics, celsius_to_kelvin(constants.thermodynamics, Tₐ), pres, q_air)
     ρ_w = constants.material.density_water
-    # saturated vapor mass flux over the snow-covered fraction, as a snow-water-equivalent rate
-    return ρₐ * (Δq / rₐ) / ρ_w
+    # saturated vapor mass flux converted to a snow-water-equivalent rate, area-weighted by the snow-covered
+    # fraction `f` to give the grid-cell-mean sublimation (W_snow and Ū_snow are grid-cell means)
+    return f * ρₐ * (Δq / rₐ) / ρ_w
 end
 
 # Kernel functions
@@ -56,10 +58,10 @@ end
 
 Snow water equivalent (SWE) tendency (m/s) at grid cell `i, j`:
 ```
-dW_snow/dt = S + R_snow − M − E_sub
+dW_snow/dt = S + R_snow − M − E_subl
 ```
 where `S` is snowfall, `R_snow = f_snow · rainfall` the rain intercepted by the snow-covered fraction,
-`M` the Darcy meltwater outflow (see [`snow_meltwater_flux`](@ref)), and `E_sub` the sublimation rate.
+`M` the Darcy meltwater outflow (see [`snow_meltwater_flux`](@ref)), and `E_subl` the sublimation rate.
 """
 @propagate_inbounds function compute_snow_water_tendency(
         i, j, grid, fields,
@@ -71,7 +73,7 @@ where `S` is snowfall, `R_snow = f_snow · rainfall` the rain intercepted by the
     M = snow_meltwater_flux(i, j, grid, fields, snow)
     R = rainfall(i, j, grid, fields, atmos)
     R_snow = f_snow * R
-    E_sub = fields.sublimation[i, j]
-    dWdt = S + R_snow - M - E_sub
+    E_subl = fields.sublimation[i, j]
+    dWdt = S + R_snow - M - E_subl
     return dWdt
 end
