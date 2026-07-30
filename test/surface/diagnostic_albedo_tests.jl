@@ -25,12 +25,12 @@ using Test
 
         # full snow cover recovers the snow endpoints; bare cover recovers the background
         set!(state.snow_cover_fraction, 1.0)
-        compute_auxiliary!(state, grid, alb, snow)
+        compute_auxiliary!(state, grid, alb, nothing, snow)
         @test all(state.albedo .≈ alb.snow_albedo)
         @test all(state.emissivity .≈ alb.snow_emissivity)
 
         set!(state.snow_cover_fraction, 0.0)
-        compute_auxiliary!(state, grid, alb, snow)
+        compute_auxiliary!(state, grid, alb, nothing, snow)
         @test all(state.albedo .≈ alb.background_albedo)
     end
 end

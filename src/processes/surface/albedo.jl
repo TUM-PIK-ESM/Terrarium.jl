@@ -78,14 +78,14 @@ by the snow-covered area fraction of the optional `snow` component.
 """
 function compute_auxiliary!(
         state, grid,
-        alb::DiagnosticAlbedo,
-        snow = nothing,
+        albedo::DiagnosticAlbedo,
+        vegetation::Optional{AbstractVegetation} = nothing,
+        snow::Optional{AbstractSnow} = nothing,
         args...
     )
-    out = auxiliary_fields(state, alb)
-    # include the snow fields (for `snow_cover_fraction`) only when a snow component is present
-    fields = isnothing(snow) ? get_fields(state, alb; except = out) : get_fields(state, alb, snow; except = out)
-    launch!(grid, XY, compute_albedo_kernel!, out, fields, alb, snow)
+    out = auxiliary_fields(state, albedo)
+    fields = get_fields(state, albedo, vegetation, snow; except = out)
+    launch!(grid, XY, compute_albedo_kernel!, out, fields, albedo, vegetation, snow)
     return nothing
 end
 
@@ -94,8 +94,9 @@ end
 @propagate_inbounds function compute_albedo(
         i, j, grid, fields,
         albedo::DiagnosticAlbedo{NF},
-        vegetation::Optional{AbstractVegetation} = nothing,
-        snow::Optional{AbstractSnow} = nothing
+        vegetation::Optional{AbstractVegetation},
+        snow::Optional{AbstractSnow},
+        args...
     ) where {NF}
     α₀ = albedo.background_albedo
     ϵ₀ = albedo.background_emissivity
@@ -120,8 +121,9 @@ end
 @propagate_inbounds function compute_albedo!(
         out, i, j, grid, fields,
         albedo::DiagnosticAlbedo,
-        vegetation::Optional{AbstractVegetation} = nothing,
-        snow::Optional{AbstractSnow} = nothing
+        vegetation::Optional{AbstractVegetation},
+        snow::Optional{AbstractSnow},
+        args...
     )
     α, ϵ = compute_albedo(i, j, grid, fields, albedo, vegetation, snow)
     out.albedo[i, j, 1] = α
