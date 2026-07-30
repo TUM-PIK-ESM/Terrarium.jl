@@ -3,14 +3,16 @@ using Test
 
 using Enzyme
 
+function build_snow_model(arch, ::Type{NF}) where {NF}
+    grid = ColumnGrid(arch, NF, ExponentialSpacing(N = 3))
+    model = SnowModel(grid)
+    return model
+end
+
 # Differentiability of the snow-specific physics. These are function-level adjoint checks: the snow energy
 # closure reuses the medium-agnostic `FreeWater` maps (`liquid_water_fraction`, `energy_to_temperature`),
 # whose adjoints are already covered in `soil_energy_diff.jl`, so here we exercise the snow-specific
 # diagnostics and fluxes.
-#
-# N.B. reverse-mode autodiff of the *full* `SnowModel` timestep currently fails to compile under Enzyme
-# with an internal `LLVM error: Canonicalization failed` in `EnzymeCreateAugmentedPrimal`. This is a
-# documented limitation to investigate separately; the physics below is differentiable in isolation.
 
 @testset "Snow meltwater outflow: differentiability" begin
     # Darcy outflow M_r = K_sat·S*³; gradient w.r.t. the liquid fraction
@@ -58,4 +60,32 @@ end
     d_snow = 0.5
     grad, = Enzyme.autodiff(Reverse, Terrarium.compute_snow_basal_heat_flux, Active, Const(κ), Active(1.0), Const(-2.0), Const(d_snow))
     @test grad[2] ≈ 2κ / (d_snow + eps(Float64))
+end
+
+@testset "Snow model: timestep!" begin
+    model = build_snow_model(CPU(), Float64)
+    integrator = initialize(
+        model;
+        initializers = (
+            snow_water_equivalent = 0.3,
+            snow_temperature = -5.0,
+            surface_heat_flux = 50.0,
+            basal_heat_flux = 0.0,
+        )
+    )
+    state = integrator.state
+    # perturb into the phase-change band (partial liquid fraction) so the Darcy meltwater outflow
+    # nonlinearity is active, then resync the closure so `snow_temperature`/`snow_liquid_fraction` are consistent
+    set!(state.snow_energy, state.snow_energy[1, 1, 1] / 4)
+    Terrarium.closure!(state, model)
+    @test 0 < state.snow_liquid_fraction[1, 1, 1] < 1
+
+    dintegrator = make_zero(integrator)
+    dintegrator.state.snow_energy .= 1.0
+    dintegrator.state.snow_water_equivalent .= 1.0
+    Δt = get_timestepper(integrator.model).Δt
+    @time Enzyme.autodiff(set_runtime_activity(Reverse), timestep!, Const, Duplicated(integrator, dintegrator), Const(Δt))
+    @test all(isfinite.(dintegrator.state.snow_water_equivalent))
+    @test all(isfinite.(dintegrator.state.snow_energy))
+    @test all(isfinite.(dintegrator.state.snow_liquid_fraction))
 end
