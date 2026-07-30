@@ -1,7 +1,7 @@
 """
     $TYPEDEF
 
-Prescribed vegetation phenology where `leaf_area_index` is treated a (possibly time-varying) input variable.
+Prescribed vegetation phenology where `leaf_area_index` is treated as a (possibly time-varying) input variable.
 
 Properties:
 $TYPEDFIELDS

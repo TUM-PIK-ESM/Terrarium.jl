@@ -11,7 +11,7 @@ accumulated growing degree days above a base temperature `T_gdd_base` at a rate 
 linearly during senescence as air temperature falls from `T_gdd_base` to `T_gdd_base − T_senescence_range`.
 
 Unlike the discrete daily accumulation of the original scheme in PALADYN, the growing degree days are integrated as
-a prognostic state variable, so no history of past inputs need be stored. To recover a periodic seasonal
+a prognostic state variable, so no history of past inputs needs to be stored. To recover a periodic seasonal
 cycle without a discrete annual reset (which would violate the continuous-time design), a cold-season
 relaxation term drains the accumulator with timescale `gdd_relaxation_time` whenever air temperature is
 below `T_gdd_base`.
