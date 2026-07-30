@@ -20,6 +20,8 @@ The default values are for freshly fallen snow, taken from [westermannwestermann
     @param snow_emissivity::NF = 0.99 (bounds = UnitInterval,)
 end
 
+ConstantSnowAlbedo(::Type{NF}; kwargs...) where {NF} = ConstantSnowAlbedo{NF}(; kwargs...)
+
 """$TYPEDSIGNATURES"""
 @inline compute_albedo(i, j, grid, fields, albedo::ConstantSnowAlbedo) = albedo.snow_albedo
 
