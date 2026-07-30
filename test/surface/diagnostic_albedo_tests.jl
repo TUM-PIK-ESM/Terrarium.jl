@@ -19,15 +19,15 @@ using Test
         state = StateVariables(vars, grid)
 
         set!(state.snow_cover_fraction, 0.5)
-        compute_auxiliary!(state, grid, albedo, snow)
-        @test all(state.albedo .≈ 0.5 * albedo.background_albedo + 0.5 * albedo.snow_albedo)
-        @test all(state.emissivity .≈ 0.5 * albedo.background_emissivity + 0.5 * albedo.snow_emissivity)
+        compute_auxiliary!(state, grid, albedo, nothing, snow)
+        @test all(state.albedo .≈ 0.5 * albedo.background_albedo + 0.5 * snow.albedo.snow_albedo)
+        @test all(state.emissivity .≈ 0.5 * albedo.background_emissivity + 0.5 * snow.albedo.snow_emissivity)
 
         # full snow cover recovers the snow endpoints; bare cover recovers the background
         set!(state.snow_cover_fraction, 1.0)
         compute_auxiliary!(state, grid, albedo, nothing, snow)
-        @test all(state.albedo .≈ albedo.snow_albedo)
-        @test all(state.emissivity .≈ albedo.snow_emissivity)
+        @test all(state.albedo .≈ snow.albedo.snow_albedo)
+        @test all(state.emissivity .≈ snow.albedo.snow_emissivity)
 
         set!(state.snow_cover_fraction, 0.0)
         compute_auxiliary!(state, grid, albedo, nothing, snow)
