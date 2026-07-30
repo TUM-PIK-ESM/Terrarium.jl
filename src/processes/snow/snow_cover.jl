@@ -10,13 +10,17 @@ abstract type AbstractSnowCover{NF} end
 
 Simple fractional snow cover parameterization `f_snow = W_snow/(W_snow + W_ref)` where `W_snow` is the
 current snow water equivalent (SWE) within any given finite area and `W_ref` is the reference
-SWE at which the are would be expected to be 50% covered. The function is smooth and differentiable,
+SWE at which the area would be expected to be 50% covered. The function is smooth and differentiable,
 with `f_snow → 0` as `W_snow → 0` and `f_snow → 1` as `W_snow → ∞`.
 
-Default SWE level for `half_coverage` is set to 0.1 m following Bonan (2019) and references therein.
+Default SWE level for `half_coverage` is set to 0.1 m following [bonanClimateChangeTerrestrial2019](@cite) and references therein.
 
 Properties:
 $TYPEDFIELDS
+
+# References
+
+* [bonanClimateChangeTerrestrial2019](@cite) Bonan, Cambridge University Press (2019)
 """
 @parameterized @kwdef struct FractionalSnowCover{NF} <: AbstractSnowCover{NF}
     "Reference snow water equivalent level `W_ref`"

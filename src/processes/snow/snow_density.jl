@@ -2,10 +2,15 @@
     $TYPEDEF
 
 Constant, spatially homogeneous bulk snow density `ρ_snow`. This is the default (and currently only) snow
-density scheme for [`SingleLayerSnow`](@ref).
+density scheme for [`SingleLayerSnow`](@ref). Default bulk snow density follows
+[westermannCryoGrid3Simulating2016](@cite).
 
 Properties:
 $TYPEDFIELDS
+
+# References
+
+* [westermannCryoGrid3Simulating2016](@cite) Westermann et al., Geoscientific Model Development (2016)
 """
 @parameterized @kwdef struct ConstantSnowDensity{NF} <: AbstractSnowDensity{NF}
     "Bulk snow density `ρ_snow`"

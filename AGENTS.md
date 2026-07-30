@@ -117,6 +117,7 @@ on the device (eager KernelAbstractions launches run on the Reactant backend; Oc
 - Include `# output` with verifiable output; prefer `show` methods over boolean comparisons
 - Use unicode for math (`Δt`, `η`, `ρ`), not LaTeX — LaTeX doesn't render in the REPL
 - Use parentheses instead of brackets for units (e.g. (m/s) instead of [m/s])
+- Use DocumenterCitations.jl for references, e.g. `[GoerzQ2022](@cite)`. Make sure to include the Bibtex entry in `docs/src/references.bib`. Also add a `# References` section to the docstring, where you add e.g. `* [GoerzQ2022](@cite) Goerz et al. Quantum 6, 871 (2022)`
 
 ### Documentation pages
 
