@@ -45,7 +45,7 @@ pages.
 
 | Field | Type | Scope | Process page |
 |-------|------|-------|---------------|
-| `snow` | [`AbstractSnow`](@ref) | Single-layer snowpack mass and energy balance | [Snow](@ref) |
+| `snow` | [`AbstractSnow`](@ref) | Single-layer snowpack mass and energy balance | [Snow](@ref snow_process_docs) |
 | `atmosphere` | [`AbstractAtmosphere`](@ref) | Prescribed near-surface forcing (precipitation, air temperature) | [Atmospheric inputs](@ref atmosphere_docs) |
 
 In addition to the physics components, `SnowModel` carries the standard model machinery: `constants`
@@ -56,7 +56,7 @@ In addition to the physics components, `SnowModel` carries the standard model ma
 The `snow` component is the single-layer snowpack process. The default is [`SingleLayerSnow`](@ref), a
 lumped layer of constant bulk density loosely based on the Utah Energy Balance model [tarbotonSpatiallyDistributedEnergy1994](@cite),
 composed of independently swappable sub-parameterizations for areal cover, density, thermal conductivity, and
-hydraulic properties. See the [Snow](@ref) overview and [Snow parameterizations](@ref) for details.
+hydraulic properties. See the [Snow](@ref snow_process_docs) overview and [Snow parameterizations](@ref) for details.
 
 ### Atmosphere
 
