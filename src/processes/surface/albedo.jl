@@ -102,17 +102,17 @@ end
     f_snow = snow_cover_fraction(i, j, grid, fields, snow)
     α_snow = compute_albedo(i, j, grid, fields, snow)
     ϵ_snow = compute_emissivity(i, j, grid, fields, snow)
-    f_veg = vegetation_area_fraction(i, j, grid, fields, veg)
-    α_veg = compute_albedo(i, j, grid, fields, veg)
-    ϵ_veg = compute_emissivity(i, j, grid, fields, veg)
+    f_veg = vegetation_area_fraction(i, j, grid, fields, vegetation)
+    α_veg = compute_albedo(i, j, grid, fields, vegetation)
+    ϵ_veg = compute_emissivity(i, j, grid, fields, vegetation)
     α_eff =
         (1 - f_snow) * (1 - f_veg) * α₀ +
         (1 - f_snow) * f_veg * α_veg +
         f_snow * α_snow # assume for now that bare and vegetated areas have same snow-covered albedo
     ϵ_eff =
         (1 - f_snow) * (1 - f_veg) * ϵ₀ +
-        (1 - f_snow) * f_veg * α_veg +
-        f_snow * α_snow # assume for now that bare and vegetated areas have same snow-covered emissivity
+        (1 - f_snow) * f_veg * ϵ_veg +
+        f_snow * ϵ_snow # assume for now that bare and vegetated areas have same snow-covered emissivity
     return α_eff, ϵ_eff
 end
 
