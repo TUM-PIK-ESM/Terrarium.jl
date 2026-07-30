@@ -223,16 +223,16 @@ Recover the snow temperature and liquid water fraction from the depth-integrated
     ρ_w = constants.material.density_water
     ρ_snow = compute_snow_density(i, j, grid, fields, snow.density)
     d_snow = compute_snow_depth(snow, W_snow, ρ_snow, ρ_w)
-    # Volumetric latent heat of fusion
-    Lθ = ρ_snow * L_sl
+    # Volumetric latent heat of fusion (assume θ = θ_w + θ_i = 1)
+    ρLθ = ρ_snow * L_sl
     U_snow = compute_volumetric_snow_energy(Ū_snow, d_snow)
-    liq = liquid_water_fraction(FreeWater(), U_snow, Lθ)
+    liq = liquid_water_fraction(FreeWater(), U_snow, ρLθ)
     out.snow_liquid_fraction[i, j, 1] = liq
     C_snow = compute_snow_volumetric_heat_capacity(snow, constants, ρ_snow, liq)
     # Snow temperature cannot exceed 0°C, so clip the free-water temperature at zero. The energy above
     # the fully-melted (0°C, all-liquid) reference, i.e. the positive part `U_snow > 0`, is not stored; it
     # is derived on demand where needed to determine snow melt.
-    T = energy_to_temperature(FreeWater(), U_snow, Lθ, C_snow)
+    T = energy_to_temperature(FreeWater(), U_snow, ρLθ, C_snow)
     out.snow_temperature[i, j, 1] = min(T, zero(T))
     return nothing
 end
@@ -254,14 +254,14 @@ Compute the depth-integrated snow energy from a prescribed temperature at grid c
     ρ_w = constants.material.density_water
     ρ_snow = compute_snow_density(i, j, grid, fields, snow.density)
     d_snow = compute_snow_depth(snow, W_snow, ρ_snow, ρ_w)
-    Lθ = ρ_snow * L_sl
+    ρLθ = ρ_snow * L_sl
     # N.B. For the free-water characteristic the liquid fraction is indeterminate at T = 0; assume
     # frozen for T < 0 and thawed otherwise. This mapping is for initialization only and must **not**
     # be used in the calculation of tendencies.
     liq = ifelse(T >= zero(T), one(T), zero(T))
     out.snow_liquid_fraction[i, j, 1] = liq
     C_snow = compute_snow_volumetric_heat_capacity(snow, constants, ρ_snow, liq)
-    U_snow = T * C_snow - Lθ * (one(liq) - liq)
+    U_snow = T * C_snow - ρLθ * (one(liq) - liq)
     out.snow_energy[i, j, 1] = U_snow * d_snow # integrate by d_snow
     return nothing
 end
