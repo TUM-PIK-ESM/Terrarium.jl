@@ -30,9 +30,9 @@ import RingGrids
 # the [Reactant page](@ref)), so we use `UniformSpacing` instead of `ExponentialSpacing`.
 
 ## Load land-sea mask at ~1° resolution
-land_sea_frac = convert.(Float32, dropdims(Raster("inputs/era5-land_land_sea_mask_N72.nc"), dims = Ti))
-land_sea_frac_field = RingGrids.FullGaussianField(Matrix(land_sea_frac), input_as = Matrix)
-land_mask = land_sea_frac_field .> 0.5 # select only grid points with > 50% land
+land_sea_frac_10km = Terrarium.load_asset(ERA5LandInvariants(), "lsm")
+land_sea_frac_N72 = RingGrids.interpolate(ring_grid, land_sea_frac_10km)
+land_mask = land_sea_frac_N72 .> 0.5 # select only grid points with > 50% land
 
 Nz = 30 # number of soil layers
 grid = ColumnRingGrid(ReactantState(), Float32, UniformSpacing(Δz = 0.2f0, N = Nz), land_mask)
@@ -44,7 +44,7 @@ grid = ColumnRingGrid(ReactantState(), Float32, UniformSpacing(Δz = 0.2f0, N = 
 
 # The full-year hourly file is large (~1.5 GB, 8760 time steps); load it lazily and materialize
 # only the first time slice, which we use as a constant-in-time forcing.
-Tair_raster = Raster("inputs/era5_land_2m_temperature_2023_N72.nc"; lazy = true)
+Tair_raster = Raster(Terrarium.get_asset(ERA5LandForcings()), name = "t2m", lazy = true)
 Tair0 = convert.(Float32, replace_missing(Tair_raster[Ti(1)], NaN)) .- 273.15f0
 Tair_field = RingGrids.FullGaussianField(Matrix(Tair0), input_as = Matrix)
 Tair_forcing = InputSource(grid, Tair_field, name = :Tair, units = u"°C")
