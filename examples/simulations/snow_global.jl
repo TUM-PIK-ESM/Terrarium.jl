@@ -34,9 +34,8 @@ arch = CUDA.functional() ? GPU() : CPU()
 NF = Float32
 @info "Setting up global snow simulation on $arch"
 
-# We reuse the ERA5 land–sea mask at ~1° resolution to select land points, exactly as in the
-# [global soil example](@ref soil_heat_global). The snowpack is a single lumped layer, so a single
-# vertical level suffices.
+# We reuse the ERA5 land–sea mask at ~1° resolution (72 rings on Gaussian grid) to land cells only,
+# exactly as in the [global soil example](@ref soil_heat_global).
 land_sea_frac_10km = on_architecture(arch, Terrarium.load_asset(ERA5LandInvariants(), "lsm"; NF))
 ring_grid = on_architecture(arch, RingGrids.FullGaussianGrid(72))
 land_sea_frac_N72 = RingGrids.interpolate(ring_grid, land_sea_frac_10km)
