@@ -80,6 +80,7 @@ include("snow/mass/snow_mass.jl")
 export PowerLawSnowThermalConductivity, LogarithmicSnowThermalConductivity, QuadraticSnowThermalConductivity
 include("snow/energy/snow_thermal_conductivity.jl")
 export SnowEnergyTemperatureClosure
+include("snow/energy/snow_energy_closures.jl")
 include("snow/energy/snow_energy.jl")
 
 # Vegetation
