@@ -13,8 +13,9 @@ double-count relative to the liquid-water reference).
     L_sl = constants.thermodynamics.latent_heat_fusion
     cp_i = constants.thermodynamics.specific_heat_capacity_ice
     cp_w = constants.thermodynamics.specific_heat_capacity_liquid_water
-    Q_snow = ρ_w * P_s * (cp_i * min(T_air, zero(NF)) - L_sl)
-    Q_rain = ρ_w * R_on_snow * cp_w * max(T_air, zero(NF))
+    T_ref = constants.thermodynamics.temperature_reference
+    Q_snow = ρ_w * P_s * (cp_i * min(T_air, T_ref) - L_sl)
+    Q_rain = ρ_w * R_on_snow * cp_w * max(T_air, T_ref)
     Q_prcp = Q_snow + Q_rain
     return Q_prcp
 end
