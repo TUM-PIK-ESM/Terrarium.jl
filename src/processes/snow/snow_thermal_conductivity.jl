@@ -73,18 +73,20 @@ end
     $TYPEDEF
 
 Piecewise quadratic snow thermal conductivity parameterization of [sturmThermalConductivitySeasonal1997](@cite).
+Default conductivity of ice from [wellerNewDataThermal1971](@cite). 
 
 Properties:
 $TYPEDFIELDS
 
 # References
-* [sturmThermalConductivitySeasonal1997](@cite)
+* [sturmThermalConductivitySeasonal1997](@cite) Sturm et al., Journal of Glaciology (1997)
+* [wellerNewDataThermal1971](@cite) Weller & Schwerdtfeger, Journal of Glaciology (1971)
 """
 @parameterized @kwdef struct QuadraticSnowThermalConductivity{NF} <: AbstractSnowThermalConductivity{NF}
     @component func_hi::QuadraticFunction{NF} = QuadraticFunction(a = 3.233, b = -1.01, c = 0.138)
     @component func_lo::QuadraticFunction{NF} = QuadraticFunction(a = 0.0, b = 0.234, c = 0.023)
     @param threshold::NF = 0.156 (units = u"g/cm^3", bounds = UnitInterval)
-    @param κ_max::NF = 2.2 (units = u"W/m/K", bounds = Positive) # assumed cond. of ice
+    @param κ_max::NF = 2.2 (units = u"W/m/K", bounds = Positive) # assumed conductivity of ice
 end
 
 QuadraticSnowThermalConductivity(::Type{NF}; kwargs...) where {NF} = QuadraticSnowThermalConductivity{NF}(; kwargs...)
