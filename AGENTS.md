@@ -116,6 +116,7 @@ on the device (eager KernelAbstractions launches run on the Reactant backend; Oc
 - **ALWAYS `jldoctest` blocks, NEVER plain `julia` blocks** — doctests are tested; plain blocks rot
 - Include `# output` with verifiable output; prefer `show` methods over boolean comparisons
 - Use unicode for math (`Δt`, `η`, `ρ`), not LaTeX — LaTeX doesn't render in the REPL
+- Use parentheses instead of brackets for units (e.g. (m/s) instead of [m/s])
 
 ### Documentation pages
 
