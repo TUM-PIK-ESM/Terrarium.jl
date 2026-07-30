@@ -88,6 +88,13 @@ dynamics. Implementations compute the local tendency value for `ν` at the given
 function compute_ν_tendency end
 
 """
+    vegetation_area_fraction(i, j, grid, fields, ::AbstractVegetationDynamics)
+
+Return the fraction of the grid cell `i, j` covered by vegetation of any type.
+"""
+function vegetation_area_fraction end
+
+"""
     $TYPEDEF
 
 Base type for vegetation phenology schemes.

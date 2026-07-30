@@ -72,6 +72,7 @@ include("snow/snow_hydraulic_properties.jl")
 export SingleLayerSnow
 include("snow/snow_single_layer.jl")
 include("snow/snow_interfaces.jl")
+include("snow/snow_albedo.jl")
 export FractionalSnowCover
 include("snow/mass/snow_cover.jl")
 export ConstantSnowDensity

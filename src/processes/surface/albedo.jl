@@ -56,17 +56,11 @@ Properties:
 $TYPEDFIELDS
 """
 @parameterized @kwdef struct DiagnosticAlbedo{NF} <: AbstractAlbedo{NF}
-    "Snow-free (background) albedo"
+    "Snow- and vegetation-free (background) albedo of bare ground"
     @param background_albedo::NF = 0.25 (bounds = UnitInterval,)
 
-    "Snow-free (background) emissivity"
+    "Snow- and vegetation-free (background) emissivity of bare ground"
     @param background_emissivity::NF = 0.97 (bounds = UnitInterval,)
-
-    "Snow albedo"
-    @param snow_albedo::NF = 0.8 (bounds = UnitInterval,)
-
-    "Snow emissivity"
-    @param snow_emissivity::NF = 0.99 (bounds = UnitInterval,)
 end
 
 DiagnosticAlbedo(::Type{NF}; kwargs...) where {NF} = DiagnosticAlbedo{NF}(; kwargs...)
@@ -97,17 +91,47 @@ end
 
 # Kernel functions
 
+@propagate_inbounds function compute_albedo(
+        i, j, grid, fields,
+        albedo::DiagnosticAlbedo{NF},
+        vegetation::Optional{AbstractVegetation} = nothing,
+        snow::Optional{AbstractSnow} = nothing
+    ) where {NF}
+    α₀ = albedo.background_albedo
+    ϵ₀ = albedo.background_emissivity
+    f_snow = snow_cover_fraction(i, j, grid, fields, snow)
+    α_snow = compute_albedo(i, j, grid, fields, snow)
+    ϵ_snow = compute_emissivity(i, j, grid, fields, snow)
+    f_veg = vegetation_area_fraction(i, j, grid, fields, veg)
+    α_veg = compute_albedo(i, j, grid, fields, veg)
+    ϵ_veg = compute_emissivity(i, j, grid, fields, veg)
+    α_eff =
+        (1 - f_snow) * (1 - f_veg) * α₀ +
+        (1 - f_snow) * f_veg * α_veg +
+        f_snow * α_snow # assume for now that bare and vegetated areas have same snow-covered albedo
+    ϵ_eff =
+        (1 - f_snow) * (1 - f_veg) * ϵ₀ +
+        (1 - f_snow) * f_veg * α_veg +
+        f_snow * α_snow # assume for now that bare and vegetated areas have same snow-covered emissivity
+    return α_eff, ϵ_eff
+end
+
 """ $TYPEDSIGNATURES """
-@propagate_inbounds function compute_albedo!(out, i, j, grid, fields, alb::DiagnosticAlbedo, snow)
-    f = snow_cover_fraction(i, j, grid, fields, snow)
-    out.albedo[i, j, 1] = (one(f) - f) * alb.background_albedo + f * alb.snow_albedo
-    out.emissivity[i, j, 1] = (one(f) - f) * alb.background_emissivity + f * alb.snow_emissivity
+@propagate_inbounds function compute_albedo!(
+        out, i, j, grid, fields,
+        albedo::DiagnosticAlbedo,
+        vegetation::Optional{AbstractVegetation} = nothing,
+        snow::Optional{AbstractSnow} = nothing
+    )
+    α, ϵ = compute_albedo(i, j, grid, fields, albedo, vegetation, snow)
+    out.albedo[i, j, 1] = α
+    out.emissivity[i, j, 1] = ϵ
     return nothing
 end
 
 # Kernels
 
-@kernel inbounds = true function compute_albedo_kernel!(out, grid, fields, alb::DiagnosticAlbedo, snow)
+@kernel inbounds = true function compute_albedo_kernel!(out, grid, fields, albedo::DiagnosticAlbedo, args...)
     i, j = @index(Global, NTuple)
-    compute_albedo!(out, i, j, grid, fields, alb, snow)
+    compute_albedo!(out, i, j, grid, fields, albedo, args...)
 end

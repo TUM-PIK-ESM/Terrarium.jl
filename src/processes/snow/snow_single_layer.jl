@@ -14,7 +14,7 @@ $FIELDS
 # References
 * [tarbotonSpatiallyDistributedEnergy1994](@cite) Tarboton, Chowdhury and Jackson (1994)
 """
-@parameterized struct SingleLayerSnow{NF, Cover, Density, Conductivity, Hydraulics, Closure} <: AbstractSnow{NF}
+@parameterized struct SingleLayerSnow{NF, Cover, Density, Conductivity, Hydraulics, Albedo, Closure} <: AbstractSnow{NF}
     "Snow areal coverage parameterization"
     @component cover::Cover
 
@@ -27,6 +27,9 @@ $FIELDS
     "Snow hydraulic properties"
     @component hydraulic_properties::Hydraulics
 
+    "Snow albedo parameterization"
+    @component albedo::Albedo
+
     "Snow energy-temperature closure"
     @component closure::Closure
 end
@@ -37,11 +40,12 @@ function SingleLayerSnow(
         density = ConstantSnowDensity(NF),
         thermal_conductivity = PowerLawSnowThermalConductivity(NF),
         hydraulic_properties = ConstantSnowHydraulics(NF),
+        albedo = ConstantSnowAlbedo(NF),
         closure = SnowEnergyTemperatureClosure(NF)
     ) where {NF}
     # `NF` is not carried by any field, so it must be supplied explicitly to the type constructor
-    return SingleLayerSnow{NF, typeof(cover), typeof(density), typeof(thermal_conductivity), typeof(hydraulic_properties), typeof(closure)}(
-        cover, density, thermal_conductivity, hydraulic_properties, closure
+    return SingleLayerSnow{NF, typeof(cover), typeof(density), typeof(thermal_conductivity), typeof(hydraulic_properties), typeof(albedo), typeof(closure)}(
+        cover, density, thermal_conductivity, hydraulic_properties, albedo, closure
     )
 end
 
