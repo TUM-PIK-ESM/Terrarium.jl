@@ -9,9 +9,9 @@ $FIELDS
 """
 struct SurfaceHydrology{
         NF,
-        CanopyInterception <: AbstractCanopyInterception{NF},
-        Evapotranspiration <: AbstractEvapotranspiration{NF},
-        SurfaceRunoff <: AbstractSurfaceRunoff{NF},
+        CanopyInterception <: AbstractCanopyInterception,
+        Evapotranspiration <: AbstractEvapotranspiration,
+        SurfaceRunoff <: AbstractSurfaceRunoff,
     } <: AbstractSurfaceHydrology{NF}
     "Canopy hydrology scheme"
     canopy_interception::CanopyInterception
@@ -23,13 +23,26 @@ struct SurfaceHydrology{
     surface_runoff::SurfaceRunoff
 end
 
+# No sub-scheme is pinned to `NF` — any of them may hold a promoted (e.g. traced) parameter — so `NF`
+# is not derivable from the field types and must be given. `constructorof` rebuilds through this
+# constructor so `setproperties` / `Flatten.reconstruct` / `Adapt` retain `NF`.
+SurfaceHydrology{NF}(
+    canopy_interception::AbstractCanopyInterception,
+    evapotranspiration::AbstractEvapotranspiration,
+    surface_runoff::AbstractSurfaceRunoff,
+) where {NF} = SurfaceHydrology{NF, typeof(canopy_interception), typeof(evapotranspiration), typeof(surface_runoff)}(
+    canopy_interception, evapotranspiration, surface_runoff
+)
+
+ConstructionBase.constructorof(::Type{<:SurfaceHydrology{NF}}) where {NF} = SurfaceHydrology{NF}
+
 function SurfaceHydrology(
         ::Type{NF};
-        canopy_interception::CI = PALADYNCanopyInterception(NF),
-        evapotranspiration::ET = PALADYNCanopyEvapotranspiration(NF),
-        surface_runoff::SR = DirectSurfaceRunoff(NF)
-    ) where {NF, CI, ET, SR}
-    return SurfaceHydrology{NF, CI, ET, SR}(canopy_interception, evapotranspiration, surface_runoff)
+        canopy_interception::AbstractCanopyInterception = PALADYNCanopyInterception(NF),
+        evapotranspiration::AbstractEvapotranspiration = PALADYNCanopyEvapotranspiration(NF),
+        surface_runoff::AbstractSurfaceRunoff = DirectSurfaceRunoff(NF)
+    ) where {NF}
+    return SurfaceHydrology{NF}(canopy_interception, evapotranspiration, surface_runoff)
 end
 
 """ $TYPEDSIGNATURES """

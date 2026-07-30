@@ -8,7 +8,7 @@ and a mixture of organic and mineral solid material.
 Properties:
 $FIELDS
 """
-struct SoilComposition{NF, Solid <: AbstractSoilMatrix{NF}}
+struct SoilComposition{NF, Solid <: AbstractSoilMatrix}
     "Natural porosity or void space of the soil"
     porosity::NF
 
@@ -21,7 +21,7 @@ struct SoilComposition{NF, Solid <: AbstractSoilMatrix{NF}}
     "Parameterization of the solid phase (matrix) of the soil"
     solid::Solid
 
-    function SoilComposition(porosity::NF, saturation::NF, liquid::NF, solid::AbstractSoilMatrix{NF}) where {NF <: Number}
+    function SoilComposition(porosity::NF, saturation::NF, liquid::NF, solid::AbstractSoilMatrix) where {NF <: Number}
         return new{NF, typeof(solid)}(porosity, saturation, liquid, solid)
     end
 end
@@ -90,15 +90,15 @@ Soil matrix consisting of a simple, homogeneous mixture of mineral and organic m
 Properties:
 $TYPEDFIELDS
 """
-struct MineralOrganic{NF} <: AbstractSoilMatrix{NF}
+struct MineralOrganic{NF, Texture} <: AbstractSoilMatrix{NF}
     "Mineral soil texture"
-    texture::SoilTexture{NF}
+    texture::Texture
 
     "Organic soil fraction"
     organic::NF
 
-    function MineralOrganic(texture::SoilTexture{NF}, organic::NF) where {NF}
-        return new{NF}(texture, organic)
+    function MineralOrganic(texture::SoilTexture, organic::NF) where {NF}
+        return new{NF, typeof(texture)}(texture, organic)
     end
 end
 
@@ -114,9 +114,9 @@ function MineralOrganic(; texture = SoilTexture(), organic = zero(eltype(texture
 end
 
 """
-Alias for `SoilComposition{T, MineralOrganic{T}}`
+Alias for `SoilComposition{NF, <:MineralOrganic{NF}}`
 """
-const MineralOrganicSoil{NF} = SoilComposition{NF, MineralOrganic{NF}}
+const MineralOrganicSoil{NF} = SoilComposition{NF, <:MineralOrganic{NF}}
 
 @inline mineral_texture(solid::MineralOrganic) = solid.texture
 

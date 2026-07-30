@@ -42,8 +42,8 @@ $(TYPEDFIELDS)
 """
 struct IMEX{
         NF,
-        E <: AbstractTimeStepper{NF},
-        I <: AbstractTimeStepper{NF},
+        E <: AbstractTimeStepper,
+        I <: AbstractTimeStepper,
     } <: AbstractIMEX{NF}
     "Sub-stepper for prognostic variables of class `Explicit` (should have `timestepping(explicit) == Explicit()`)"
     explicit::E
@@ -56,11 +56,23 @@ end
     IMEX(explicit, implicit)
     IMEX(; explicit, implicit)
 
-Construct an [`IMEX`](@ref) time stepper from an `explicit` and an `implicit` sub-stepper (which must share
-the same numerical type `NF`). Which prognostic variables are integrated implicitly is controlled by
+Construct an [`IMEX`](@ref) time stepper from an `explicit` and an `implicit` sub-stepper. The sub-steppers
+need not share a number format; the `IMEX`'s own `NF` is taken from `explicit` unless given explicitly as
+`IMEX{NF}(explicit, implicit)`. Which prognostic variables are integrated implicitly is controlled by
 specializing [`timestepping`](@ref).
 """
 IMEX(; explicit, implicit) = IMEX(explicit, implicit)
+
+# Neither sub-stepper is pinned to `NF` — either may hold a promoted (e.g. traced) timestep — so `NF`
+# is not derivable from the field types. It defaults to the explicit sub-stepper's number format, or
+# can be given as `IMEX{NF}(explicit, implicit)`. `constructorof` rebuilds through this constructor so
+# `setproperties` / `Flatten.reconstruct` / `Adapt` retain `NF`.
+IMEX{NF}(explicit::AbstractTimeStepper, implicit::AbstractTimeStepper) where {NF} =
+    IMEX{NF, typeof(explicit), typeof(implicit)}(explicit, implicit)
+
+IMEX(explicit::AbstractTimeStepper{NF}, implicit::AbstractTimeStepper) where {NF} = IMEX{NF}(explicit, implicit)
+
+ConstructionBase.constructorof(::Type{<:IMEX{NF}}) where {NF} = IMEX{NF}
 
 default_dt(imex::AbstractIMEX) = default_dt(explicit_timestepper(imex))
 
@@ -79,8 +91,8 @@ $(TYPEDFIELDS)
 struct IMEXCache{
         classes,
         NF,
-        EC <: AbstractTimeStepperCache{NF},
-        IC <: AbstractTimeStepperCache{NF},
+        EC <: AbstractTimeStepperCache,
+        IC <: AbstractTimeStepperCache,
     } <: AbstractTimeStepperCache{NF}
     "Cache for the explicit sub-stepper"
     explicit::EC
@@ -89,8 +101,9 @@ struct IMEXCache{
     implicit::IC
 end
 
-# Construct an IMEXCache with the resolved `classes` given as the leading type parameter.
-function IMEXCache{classes}(explicit::EC, implicit::IC) where {classes, NF, EC <: AbstractTimeStepperCache{NF}, IC <: AbstractTimeStepperCache{NF}}
+# Construct an IMEXCache with the resolved `classes` given as the leading type parameter; `NF` is
+# taken from the explicit sub-cache since the sub-caches are not pinned to a common `NF`.
+function IMEXCache{classes}(explicit::EC, implicit::IC) where {classes, NF, EC <: AbstractTimeStepperCache{NF}, IC <: AbstractTimeStepperCache}
     return IMEXCache{classes, NF, EC, IC}(explicit, implicit)
 end
 

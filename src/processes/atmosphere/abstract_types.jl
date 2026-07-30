@@ -46,6 +46,6 @@ abstract type AbstractAtmosphere{
     PR <: AbstractPrecipitation,
     IR <: AbstractIncomingRadiation,
     HM <: AbstractHumidity,
-    AD <: AbstractAerodynamics{NF},
+    AD <: AbstractAerodynamics,
 } <: AbstractProcess{NF}
 end

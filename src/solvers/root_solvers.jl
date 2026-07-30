@@ -3,7 +3,7 @@
 
 Wrapper for RootSolvers.jl root-finding methods.
 """
-struct RootSolver{NF, M, S, Tolerance <: RootSolvers.AbstractTolerance{NF}}
+struct RootSolver{NF, M, S, Tolerance <: RootSolvers.AbstractTolerance}
     "Numerical tolerance of the root finding iteration"
     tolerance::Tolerance
 

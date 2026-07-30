@@ -6,10 +6,10 @@ The stratigraphy parameterization determines how the vertical layering of the so
 """
 struct SoilEnergyWaterCarbon{
         NF,
-        Stratigraphy <: AbstractStratigraphy{NF},
-        Energy <: AbstractSoilThermodynamics{NF},
-        Hydrology <: AbstractSoilHydrology{NF},
-        Biogeochemistry <: AbstractSoilBiogeochemistry{NF},
+        Stratigraphy <: AbstractStratigraphy,
+        Energy <: AbstractSoilThermodynamics,
+        Hydrology <: AbstractSoilHydrology,
+        Biogeochemistry <: AbstractSoilBiogeochemistry,
     } <: AbstractSoil{NF}
     "Soil stratigraphy parameterization"
     strat::Stratigraphy
@@ -24,6 +24,20 @@ struct SoilEnergyWaterCarbon{
     biogeochem::Biogeochemistry
 end
 
+# No component is pinned to `NF` — any of them may hold a promoted (e.g. traced) parameter — so `NF`
+# is not derivable from the field types and must be given. `constructorof` rebuilds through this
+# constructor so `setproperties` / `Flatten.reconstruct` / `Adapt` retain `NF`.
+SoilEnergyWaterCarbon{NF}(
+    strat::AbstractStratigraphy,
+    energy::AbstractSoilThermodynamics,
+    hydrology::AbstractSoilHydrology,
+    biogeochem::AbstractSoilBiogeochemistry,
+) where {NF} = SoilEnergyWaterCarbon{NF, typeof(strat), typeof(energy), typeof(hydrology), typeof(biogeochem)}(
+    strat, energy, hydrology, biogeochem
+)
+
+ConstructionBase.constructorof(::Type{<:SoilEnergyWaterCarbon{NF}}) where {NF} = SoilEnergyWaterCarbon{NF}
+
 function SoilEnergyWaterCarbon(
         ::Type{NF};
         strat = HomogeneousSoilStratigraphy(NF),
@@ -31,7 +45,7 @@ function SoilEnergyWaterCarbon(
         hydrology = SoilHydrology(NF),
         biogeochem = ConstantSoilCarbonDensity(NF)
     ) where {NF}
-    return SoilEnergyWaterCarbon(strat, energy, hydrology, biogeochem)
+    return SoilEnergyWaterCarbon{NF}(strat, energy, hydrology, biogeochem)
 end
 
 # Process interface methods

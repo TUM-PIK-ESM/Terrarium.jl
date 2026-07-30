@@ -5,9 +5,9 @@ Initializer for coupled soil energy/hydrology/biogeochemistry models.
 """
 struct SoilInitializer{
         NF,
-        EnergyInit <: AbstractInitializer{NF},
-        HydrologyInit <: AbstractInitializer{NF},
-        BGCInit <: AbstractInitializer{NF},
+        EnergyInit <: AbstractInitializer,
+        HydrologyInit <: AbstractInitializer,
+        BGCInit <: AbstractInitializer,
     } <: AbstractInitializer{NF}
     "Soil energy/temperature state initializer"
     energy::EnergyInit
@@ -19,13 +19,24 @@ struct SoilInitializer{
     biogeochem::BGCInit
 end
 
+# No sub-initializer is pinned to `NF` — any of them may hold a promoted (e.g. traced) parameter — so
+# `NF` is not derivable from the field types and must be given. `constructorof` rebuilds through this
+# constructor so `setproperties` / `Flatten.reconstruct` / `Adapt` retain `NF`.
+SoilInitializer{NF}(
+    energy::AbstractInitializer,
+    hydrology::AbstractInitializer,
+    biogeochem::AbstractInitializer,
+) where {NF} = SoilInitializer{NF, typeof(energy), typeof(hydrology), typeof(biogeochem)}(energy, hydrology, biogeochem)
+
+ConstructionBase.constructorof(::Type{<:SoilInitializer{NF}}) where {NF} = SoilInitializer{NF}
+
 function SoilInitializer(
         ::Type{NF};
         energy = QuasiThermalSteadyState(NF),
         hydrology = SaturationWaterTable(NF),
         biogeochem = DefaultInitializer(NF)
     ) where {NF}
-    return SoilInitializer(energy, hydrology, biogeochem)
+    return SoilInitializer{NF}(energy, hydrology, biogeochem)
 end
 
 function initialize!(state, model::AbstractModel, init::SoilInitializer)

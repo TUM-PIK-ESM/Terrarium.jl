@@ -50,7 +50,7 @@ struct PrescribedAtmosphere{
         IncomingRad <: AbstractIncomingRadiation,
         Humidity <: AbstractHumidity,
         Aerodynamics <: AbstractAerodynamics,
-        Gases <: Tuple{Vararg{TracerGas{NF}}},
+        Gases <: Tuple{Vararg{TracerGas}},
     } <: AbstractAtmosphere{NF, Precip, IncomingRad, Humidity, Aerodynamics}
     "Surface-relative altitude in meters at which the atmospheric forcings are assumed to be applied"
     altitude::NF

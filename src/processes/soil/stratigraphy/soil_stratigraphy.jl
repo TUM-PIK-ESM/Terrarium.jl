@@ -8,14 +8,22 @@ respective names are defined by the user.
 Properties:
 $TYPEDFIELDS
 """
-struct SoilStratigraphy{NF, N, Horizons <: Tuple{Vararg{AbstractSoilHorizon{NF}, N}}} <: AbstractStratigraphy{NF}
+struct SoilStratigraphy{NF, N, Horizons <: Tuple{Vararg{AbstractSoilHorizon, N}}} <: AbstractStratigraphy{NF}
     "Named tuple of soil horizons ordered from top to bottom"
     horizons::Horizons
 end
 
+# The horizons are not pinned to `NF` — any of their parameters may be promoted (e.g. traced) — so
+# `NF` is not derivable from the field types and must be given. `constructorof` rebuilds through
+# this constructor so `setproperties` / `Flatten.reconstruct` / `Adapt` retain `NF`.
+SoilStratigraphy{NF}(horizons::Tuple{Vararg{AbstractSoilHorizon, N}}) where {NF, N} =
+    SoilStratigraphy{NF, N, typeof(horizons)}(horizons)
+
+ConstructionBase.constructorof(::Type{<:SoilStratigraphy{NF}}) where {NF} = SoilStratigraphy{NF}
+
 function SoilStratigraphy(::Type{NF}, horizons::AbstractSoilHorizon...) where {NF}
     @assert length(horizons) > 0 "At least one soil horizon must be specified; for simple configurations, consider using HomogeneousSoilStratigraphy."
-    return SoilStratigraphy(horizons)
+    return SoilStratigraphy{NF}(horizons)
 end
 
 # Convenience constructors
@@ -51,7 +59,7 @@ function SoilGridsStratigraphy(
         horizon5::AbstractSoilHorizon = PrescribedSoilHorizon(NF, :horizon5; porosity, default_thickness = NF(0.4)),
         horizon6::AbstractSoilHorizon = PrescribedSoilHorizon(NF, :horizon6; porosity, default_thickness = NF(1.0))
     ) where {NF}
-    return SoilStratigraphy((horizon1, horizon2, horizon3, horizon4, horizon5, horizon6))
+    return SoilStratigraphy{NF}((horizon1, horizon2, horizon3, horizon4, horizon5, horizon6))
 end
 
 # Base methods

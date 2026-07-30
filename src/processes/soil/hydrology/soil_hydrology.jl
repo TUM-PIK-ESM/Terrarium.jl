@@ -22,7 +22,7 @@ struct SoilHydrology{
         NF,
         VerticalFlow <: AbstractVerticalFlow,
         SaturationClosure <: AbstractSoilWaterClosure,
-        SoilHydraulics <: AbstractSoilHydraulics{NF},
+        SoilHydraulics <: AbstractSoilHydraulics,
         VWCForcing <: Union{Nothing, AbstractForcing},
     } <: AbstractSoilHydrology{NF}
     "Soil water vertical flow operator"
@@ -38,6 +38,20 @@ struct SoilHydrology{
     vwc_forcing::VWCForcing
 end
 
+# `hydraulic_properties` is not pinned to `NF` — it may hold a promoted (e.g. traced) parameter — so
+# `NF` is not derivable from the field types and must be given. `constructorof` rebuilds through this
+# constructor so `setproperties` / `Flatten.reconstruct` / `Adapt` retain `NF`.
+SoilHydrology{NF}(
+    vertical_flow::AbstractVerticalFlow,
+    closure::AbstractSoilWaterClosure,
+    hydraulic_properties::AbstractSoilHydraulics,
+    vwc_forcing::Union{Nothing, AbstractForcing},
+) where {NF} = SoilHydrology{NF, typeof(vertical_flow), typeof(closure), typeof(hydraulic_properties), typeof(vwc_forcing)}(
+    vertical_flow, closure, hydraulic_properties, vwc_forcing
+)
+
+ConstructionBase.constructorof(::Type{<:SoilHydrology{NF}}) where {NF} = SoilHydrology{NF}
+
 function SoilHydrology(
         ::Type{NF};
         vertical_flow::AbstractVerticalFlow = NoFlow(),
@@ -45,7 +59,7 @@ function SoilHydrology(
         hydraulic_properties::AbstractSoilHydraulics = SoilHydraulicsSURFEX(NF),
         vwc_forcing::Union{Nothing, AbstractForcing} = nothing,
     ) where {NF}
-    return SoilHydrology(vertical_flow, closure, hydraulic_properties, vwc_forcing)
+    return SoilHydrology{NF}(vertical_flow, closure, hydraulic_properties, vwc_forcing)
 end
 
 function SoilHydrology(::Type{NF}, vertical_flow::AbstractVerticalFlow; kwargs...) where {NF}

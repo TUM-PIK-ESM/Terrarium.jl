@@ -70,7 +70,7 @@ measurements of hydraulic properites are available.
 Properties:
 $TYPEDFIELDS
 """
-@parameterized @kwdef struct ConstantSoilHydraulics{NF, RC, UnsatK <: AbstractUnsatK{NF}} <: AbstractSoilHydraulics{NF, RC, UnsatK}
+@parameterized @kwdef struct ConstantSoilHydraulics{NF, RC, UnsatK <: AbstractUnsatK} <: AbstractSoilHydraulics{NF, RC, UnsatK}
     "Soil water retention curve"
     @component swrc::RC
 
@@ -121,7 +121,7 @@ $TYPEDFIELDS
 
 * [noilhanISBA1996](@cite) Noilhan & Mahfouf, Global and Planetary Change (1996)
 """
-@parameterized @kwdef struct SoilHydraulicsSURFEX{NF, RC, UnsatK <: AbstractUnsatK{NF}} <: AbstractSoilHydraulics{NF, RC, UnsatK}
+@parameterized @kwdef struct SoilHydraulicsSURFEX{NF, RC, UnsatK <: AbstractUnsatK} <: AbstractSoilHydraulics{NF, RC, UnsatK}
     "Soil water retention curve"
     @component swrc::RC
 

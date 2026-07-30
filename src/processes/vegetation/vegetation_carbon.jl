@@ -5,11 +5,11 @@ Represents a generic coupling of vegetation carbon processes.
 """
 @kwdef struct VegetationCarbon{
         NF,
-        Photosynthesis <: AbstractPhotosynthesis{NF},
-        StomatalConductance <: AbstractStomatalConductance{NF},
-        AutotrophicRespiration <: AbstractAutotrophicRespiration{NF},
-        Phenology <: AbstractPhenology{NF},
-        CarbonDynamics <: AbstractVegetationCarbonDynamics{NF},
+        Photosynthesis <: AbstractPhotosynthesis,
+        StomatalConductance <: AbstractStomatalConductance,
+        AutotrophicRespiration <: AbstractAutotrophicRespiration,
+        Phenology <: AbstractPhenology,
+        CarbonDynamics <: AbstractVegetationCarbonDynamics,
         VegetationDynamics <: Optional{AbstractVegetationDynamics},
         RootDistribution <: Optional{AbstractRootDistribution},
         PAW <: Optional{AbstractPlantAvailableWater},
@@ -39,6 +39,41 @@ Represents a generic coupling of vegetation carbon processes.
     plant_available_water::PAW
 end
 
+# No component process is pinned to `NF` — any of them may hold a promoted (e.g. traced) parameter —
+# so `NF` is not derivable from the field types and must be given. `constructorof` rebuilds through
+# this constructor so `setproperties` / `Flatten.reconstruct` / `Adapt` retain `NF`.
+VegetationCarbon{NF}(
+    photosynthesis::AbstractPhotosynthesis,
+    stomatal_conductance::AbstractStomatalConductance,
+    autotrophic_respiration::AbstractAutotrophicRespiration,
+    phenology::AbstractPhenology,
+    carbon_dynamics::AbstractVegetationCarbonDynamics,
+    vegetation_dynamics::Optional{AbstractVegetationDynamics},
+    root_distribution::Optional{AbstractRootDistribution},
+    plant_available_water::Optional{AbstractPlantAvailableWater},
+) where {NF} = VegetationCarbon{
+    NF,
+    typeof(photosynthesis),
+    typeof(stomatal_conductance),
+    typeof(autotrophic_respiration),
+    typeof(phenology),
+    typeof(carbon_dynamics),
+    typeof(vegetation_dynamics),
+    typeof(root_distribution),
+    typeof(plant_available_water),
+}(
+    photosynthesis,
+    stomatal_conductance,
+    autotrophic_respiration,
+    phenology,
+    carbon_dynamics,
+    vegetation_dynamics,
+    root_distribution,
+    plant_available_water,
+)
+
+ConstructionBase.constructorof(::Type{<:VegetationCarbon{NF}}) where {NF} = VegetationCarbon{NF}
+
 function VegetationCarbon(
         ::Type{NF};
         photosynthesis = LUEPhotosynthesis(NF),
@@ -50,7 +85,7 @@ function VegetationCarbon(
         root_distribution = StaticExponentialRootDistribution(NF),
         plant_available_water = FieldCapacityLimitedPAW(NF)
     ) where {NF}
-    return VegetationCarbon(;
+    return VegetationCarbon{NF}(
         photosynthesis,
         stomatal_conductance,
         autotrophic_respiration,

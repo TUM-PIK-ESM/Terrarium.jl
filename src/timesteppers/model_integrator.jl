@@ -11,7 +11,7 @@ struct ModelIntegrator{
         NF,
         Arch <: AbstractArchitecture,
         Grid <: AbstractLandGrid{NF, Arch},
-        TimeStepper <: AbstractTimeStepper{NF},
+        TimeStepper <: AbstractTimeStepper,
         Model <: AbstractModel{NF, Grid},
         StateVars <: AbstractStateVariables,
         ClockType <: Clock,

@@ -8,10 +8,10 @@ as well as the albedo.
 """
 struct SurfaceEnergyBalance{
         NF,
-        SkinTemperature <: AbstractSkinTemperature{NF},
-        TurbulentFluxes <: AbstractTurbulentFluxes{NF},
-        RadiativeFluxes <: AbstractRadiativeFluxes{NF},
-        Albedo <: AbstractAlbedo{NF},
+        SkinTemperature <: AbstractSkinTemperature,
+        RadiativeFluxes <: AbstractRadiativeFluxes,
+        TurbulentFluxes <: AbstractTurbulentFluxes,
+        Albedo <: AbstractAlbedo,
     } <: AbstractSurfaceEnergyBalance{NF}
     "Scheme for determining skin temperature and ground heat flux"
     skin_temperature::SkinTemperature
@@ -26,6 +26,20 @@ struct SurfaceEnergyBalance{
     albedo::Albedo
 end
 
+# No sub-scheme is pinned to `NF` — any of them may hold a promoted (e.g. traced) parameter — so `NF`
+# is not derivable from the field types and must be given. `constructorof` rebuilds through this
+# constructor so `setproperties` / `Flatten.reconstruct` / `Adapt` retain `NF`.
+SurfaceEnergyBalance{NF}(
+    skin_temperature::AbstractSkinTemperature,
+    radiative_fluxes::AbstractRadiativeFluxes,
+    turbulent_fluxes::AbstractTurbulentFluxes,
+    albedo::AbstractAlbedo,
+) where {NF} = SurfaceEnergyBalance{NF, typeof(skin_temperature), typeof(radiative_fluxes), typeof(turbulent_fluxes), typeof(albedo)}(
+    skin_temperature, radiative_fluxes, turbulent_fluxes, albedo
+)
+
+ConstructionBase.constructorof(::Type{<:SurfaceEnergyBalance{NF}}) where {NF} = SurfaceEnergyBalance{NF}
+
 function SurfaceEnergyBalance(
         ::Type{NF};
         radiative_fluxes::AbstractRadiativeFluxes = DiagnosedRadiativeFluxes(NF),
@@ -33,7 +47,7 @@ function SurfaceEnergyBalance(
         skin_temperature::AbstractSkinTemperature = ImplicitSkinTemperature(NF),
         albedo::AbstractAlbedo = ConstantAlbedo(NF)
     ) where {NF}
-    return SurfaceEnergyBalance(skin_temperature, radiative_fluxes, turbulent_fluxes, albedo)
+    return SurfaceEnergyBalance{NF}(skin_temperature, radiative_fluxes, turbulent_fluxes, albedo)
 end
 
 variables(seb::SurfaceEnergyBalance) = tuplejoin(

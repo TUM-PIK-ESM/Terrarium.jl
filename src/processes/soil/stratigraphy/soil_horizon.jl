@@ -4,18 +4,23 @@
 Represents an arbitrary soil horizon whose properties (texture and porosity) are assumed to
 be constant across both space and time.
 """
-@parameterized struct ConstantSoilHorizon{NF, name, Porosity <: AbstractSoilPorosity{NF}} <: AbstractSoilHorizon{NF, name}
+@parameterized struct ConstantSoilHorizon{
+        NF,
+        name,
+        Porosity <: AbstractSoilPorosity,
+        Texture, # <: SoilTexture
+    } <: AbstractSoilHorizon{NF, name}
     "Parameterization of soil porosity"
     @component porosity::Porosity
 
     "Material composition of mineral soil component"
-    @component texture::SoilTexture{NF}
+    @component texture::Texture
 
     "Thickness of the soil horizon in meters"
     @param thickness::NF
 
     function ConstantSoilHorizon(name::Symbol, texture::SoilTexture, porosity::AbstractSoilPorosity, thickness::NF) where {NF}
-        return new{NF, name, typeof(porosity)}(porosity, texture, thickness)
+        return new{NF, name, typeof(porosity), typeof(texture)}(porosity, texture, thickness)
     end
 end
 
@@ -38,14 +43,14 @@ end
 Represents an arbitrary soil horizon whose properties (texture and porosity) are prescribed
 via input `Field`s and can therefore vary across space and (less commonly) time.
 """
-@parameterized struct PrescribedSoilHorizon{NF, name, Porosity <: AbstractSoilPorosity{NF}} <: AbstractSoilHorizon{NF, name}
+@parameterized struct PrescribedSoilHorizon{NF, name, Porosity <: AbstractSoilPorosity} <: AbstractSoilHorizon{NF, name}
     "Parameterization of soil porosity"
     @component porosity::Porosity
 
     "Default horizon thickness applied uniformly to all grid cells"
     default_thickness::NF
 
-    function PrescribedSoilHorizon(name::Symbol, porosity::AbstractSoilPorosity{NF}, default_thickness::NF) where {NF}
+    function PrescribedSoilHorizon(name::Symbol, porosity::AbstractSoilPorosity, default_thickness::NF) where {NF}
         return new{NF, name, typeof(porosity)}(porosity, default_thickness)
     end
 end
