@@ -79,9 +79,10 @@ function Oceananigans.TimeSteppers.update_state!(state::StateVariables, model::A
     update_inputs!(state, get_grid(model), inputs)
     fill_halo_regions!(state)
     compute_auxiliary!(state, model)
-    return if compute_tendencies
+    if compute_tendencies
         compute_tendencies!(state, model)
     end
+    return nothing
 end
 
 """

@@ -6,9 +6,12 @@
 #
 # Without much further ado, let us look into how we can differentiate Terrarium hands-on and perform a small sensitivity analysis of a one column soil model. First, we set up our model as usual:
 
-using Terrarium, Enzyme, Checkpointing
-
-import CairoMakie as Makie
+using Terrarium
+using Enzyme
+using Enzyme: Forward, Reverse, set_runtime_activity
+using Checkpointing
+using CairoMakie
+using Statistics
 
 grid = ColumnGrid(ExponentialSpacing())
 initializer = SoilInitializer(eltype(grid))
@@ -19,13 +22,13 @@ integrator = initialize(model, boundary_conditions = bcs)
 
 # So far, this is just our usual setup. In this case, for a soil column with a prescribed surface temperature.
 #
-# Now, we set up our AD checkpoiting scheme for the timestepping. Here we choose a [Revolve scheme](https://dl.acm.org/doi/10.1145/347837.347846) that saves intermediate values at every single time step. Note that when we save at every single time step the different available schemes don't actually differ from each other.
+# Now, we set up our AD checkpointing scheme for the timestepping. Here we choose a [Revolve scheme](https://dl.acm.org/doi/10.1145/347837.347846) that saves intermediate values at every single time step. Note that when we save at every single time step the different available schemes don't actually differ from each other.
 
 scheme = Revolve(1)
 
 # Next we prepare to differentiate with Enzyme. For a comprehensive introduction to Enzyme, please see [their documentation](https://enzymead.github.io/Enzyme.jl/stable/).
 #
-# We want to perform a sensitivity analysis of the temperature of the second lowest soiler layer ``T_f`` at the end of our simulation with respect to the initial conditions of our simulation ``\mathbf{U}_0``, ``\mathbf{T}_0``, where ``\mathbf{U}`` is the internal energy.
+# We want to perform a sensitivity analysis of the temperature of the second lowest soil layer ``T_f`` at the end of our simulation with respect to the initial conditions of our simulation ``\mathbf{U}_0``, ``\mathbf{T}_0``, where ``\mathbf{U}`` is the internal energy.
 #
 # Enzyme's `autodiff` is it's core function that we can use to compute vector-Jacobian products (vJP) for the reverse-mode AD of our `run!` function that integrates our model using the `integrator` that we initialized. In order to compute the gradient of the just one layer of the soil, we set a "one-hot" seed for the vJP like so:
 
@@ -33,12 +36,15 @@ dintegrator = make_zero(integrator)
 # set a one hot seed for a sensitivity analysis of T for now
 interior(dintegrator.state.temperature)[1, 1, 2] = 1.0
 
-# how many steps we want to integrate for
-N_t = 200
+function mean_temperature(integrator)
+    run!(integrator, steps = 1)
+    return mean(interior(integrator.state.temperature))
+end
 
-# While doing that we allocated a shadow memory `dintegrator` for Enzyme in which it can accumluate the vJP (see Enzyme docs for more information). That's all the setup we need, as we have a pre-defined version of `run!` that takes in our `scheme`. We just need to call `autodiff` now. Executing this for the first time, might take a few minutes. Subsequent executions will be very fast though.
+# While doing that we allocated a shadow memory `dintegrator` for Enzyme in which it can accumulate the vJP (see Enzyme docs for more information).
+# We just need to call `autodiff` now. Executing this for the first time, might take a few minutes. Subsequent executions will be very fast though.
 
-autodiff(set_runtime_activity(Reverse), run!, Const, Duplicated(integrator, dintegrator), Const(scheme), Const(N_t))
+autodiff(set_runtime_activity(Reverse), mean_temperature, Active, Duplicated(integrator, dintegrator))
 
 # Let's look at the results that were accumulated in our shadow memory `dintegrator` by Enzyme and plot them!
 
@@ -56,6 +62,65 @@ Makie.Axis(f2[1, 1], ylabel = "Soil depth", xlabel = "Sensitivity dU_f/dU_0")
 Makie.scatterlines!(f2[1, 1], dU, zs)
 f2
 
-# As expected the sensitivity is the highest locally, with the same and neighbouring soil layers contributing and no sensitivity wrt higher soil layers for our still rather short integration of only ``N_t\cdot 300s``.
+# As expected the sensitivity is the highest locally, with the same and neighboring soil layers contributing and no sensitivity wrt higher soil layers for our still rather short integration of only ``N_t\cdot 300s``.
+
+# ## Parameter sensitivities
 #
-# This example should just demonstrate the technical possibilities of Terrarium.jl in an easy and fast to compute setup, stay tuned for more complex examples.
+# We can also compute sensitivities with respect to *model parameters* rather than initial
+# conditions. Since we are interested in only a single parameter — the soil mineral thermal
+# conductivity ``\lambda_\text{mineral}`` — forward-mode AD is the natural choice: it
+# propagates one tangent vector forward through the computation in a single pass, without
+# the memory overhead of reverse mode.
+#
+# We re-initialize a fresh integrator so the state starts at ``t = 0``:
+
+grid = ColumnGrid(ExponentialSpacing())
+initializer = SoilInitializer(eltype(grid))
+model = SoilModel(grid; initializer)
+bcs = PrescribedSurfaceTemperature(:T_ub, 1.0)
+integrator = initialize(model, ForwardEuler(), boundary_conditions = bcs)
+
+# TODO
+
+function mean_temperature(clock, model, inputs, state, inits, timestepper)
+    integrator = Terrarium.ModelIntegrator(clock, model, inputs, state, inits, timestepper)
+    run!(integrator, steps = 1)
+    return mean(interior(integrator.state.temperature))
+end
+
+scheme = Revolve(1)
+dmodel = Ref(make_zero(model))
+dintegrator = make_zero(integrator)
+dstate = dintegrator.state
+
+grads = autodiff(
+    set_runtime_activity(Reverse), mean_temperature,
+    Active,
+    Const(integrator.clock),
+    MixedDuplicated(model, dmodel),
+    Const(integrator.inputs),
+    Duplicated(integrator.state, dstate),
+    Const(integrator.initializers),
+    Duplicated(integrator.timestepper, make_zero(integrator.timestepper))
+)
+
+dTdp = dstate.temperature ./ dmodel.x.soil.energy.thermal_properties.conductivities.mineral
+zs = znodes(integrator.state.temperature)
+lines(dTdp[1, 1, :])
+
+# The temperature tangent accumulated in `dintegrator` now holds
+# ``\partial T(k) / \partial \lambda_\text{mineral}`` for each layer ``k``:
+
+dT_mineral = interior(dintegrator.state.temperature)[1, 1, :]
+zs = znodes(integrator.state.temperature)
+
+f3 = Makie.Figure()
+Makie.Axis(f3[1, 1], ylabel = "Soil depth", xlabel = "Sensitivity ∂T/∂λ_mineral  (K m K W⁻¹)")
+Makie.scatterlines!(f3[1, 1], dT_mineral, zs)
+f3
+
+# A positive sensitivity in the upper layers is consistent with a more conductive mineral
+# matrix transferring surface warmth downward more efficiently over one time step.
+#
+# This example should just demonstrate the technical possibilities of Terrarium.jl in an
+# easy and fast to compute setup, stay tuned for more complex examples.
