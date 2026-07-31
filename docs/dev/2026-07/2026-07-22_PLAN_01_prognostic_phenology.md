@@ -243,8 +243,6 @@ scope** for this plan unless noted:
   - `cn_sapwood`, `cn_root` — physical meaning and units unconfirmed (`# TODO check ... + add unit`).
   - `compute_f_temp` hardcodes the constants `308.56`, `56.02`, `46.02`; per the rule against
     hardcoded literals these should move into the process struct or `PhysicalConstants`.
-  - The `T_soil > 7 °C` hard bound is inherited from CLIMBER-X/PALADYN and is not further justified;
-    flagged as a candidate for improvement / data-driven replacement.
   - `compute_resp10` returns a placeholder constant `0.066`; needs a real implementation, meaning,
     and units.
 - `dynamics/vegetation_dynamics.jl` & `dynamics/carbon_dynamics.jl` — several parameters are annual

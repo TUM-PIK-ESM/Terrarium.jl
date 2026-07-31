@@ -52,12 +52,10 @@ Computes temperature factors `f_temp_air` and `f_temp_soil` for autotrophic resp
     # parameters or into the PhysicalConstants struct
     f_temp(T) = exp(NF(308.56) * (NF(1.0) / NF(56.02) - NF(1.0) / (NF(46.02) + T)))
 
-    # Compute f_temp_soil
-    # TODO: This hard bound at 7°C comes from CLIMBER-X/PALADYN but is there not further justified.
-    # Maybe these functions can be considered candidates for further improvement or data-driven replacement.
-    f_temp_soil = (T_soil > 7) * f_temp(T_soil)
+    # Compute soil temperature factor
+    f_temp_soil = f_temp(T_soil)
 
-    # Compute f_temp_air
+    # Compute air temperature factor
     f_temp_air = f_temp(T_air)
 
     return f_temp_air, f_temp_soil
