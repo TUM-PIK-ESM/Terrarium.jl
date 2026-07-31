@@ -67,7 +67,6 @@ MaterialConstants
 |---|---|---|---|---|
 | `density_water` | $\rho_w$ | 1000.0 | kg/m³ | Density of liquid water |
 | `density_ice` | $\rho_i$ | 916.7 | kg/m³ | Density of ice |
-| `density_dry_air` | $\rho_i$ | 1.292 | kg/m³ | Density of dry air |
 | `atomic_weight_carbon` | $M_C$ | 12.0 | gC/mol | Atomic mass of carbon |
 
 ## Universal constants
