@@ -57,7 +57,7 @@ compute_auxiliary!(
         args...
     )
 
-compute_tendencies!(state, grid, veg::VegetationCarbon, args...)
+compute_tendencies!(state, grid, veg::VegetationCarbon, constants::PhysicalConstants, atmos::AbstractAtmosphere, args...)
 ```
 
 ## Component processes
