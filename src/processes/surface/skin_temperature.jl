@@ -189,11 +189,9 @@ function compute_ground_heat_flux!(
         skinT::AbstractSkinTemperature,
         seb::AbstractSurfaceEnergyBalance
     )
-    rad = get_radiative_fluxes(seb)
-    tur = get_turbulent_fluxes(seb)
     out = auxiliary_fields(state, skinT)
-    fields = get_fields(state, skinT, rad, tur; except = out)
-    launch!(grid, XY, compute_ground_heat_flux_kernel!, out, fields, skinT, rad, tur)
+    fields = get_fields(state, seb; except = out)
+    launch!(grid, XY, compute_ground_heat_flux_kernel!, out, fields, skinT, seb)
     return nothing
 end
 

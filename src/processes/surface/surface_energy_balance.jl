@@ -90,6 +90,29 @@ end
 """
     $TYPEDSIGNATURES
 
+Close the surface energy balance when the skin temperature is prescribed (e.g. supplied by an external
+coupler such as an atmosphere-land flux scheme).
+"""
+function solve_surface_energy_balance!(
+        state,
+        grid,
+        seb::SurfaceEnergyBalance{NF, <:PrescribedSkinTemperature},
+        constants::PhysicalConstants,
+        atmos::AbstractAtmosphere,
+        args...
+    ) where {NF}
+    # Diagnose the radiative budget (net radiation) from the prescribed skin temperature and albedo.
+    compute_auxiliary!(state, grid, seb.radiative_fluxes, seb, constants, atmos)
+    # Diagnose the turbulent fluxes, if necessary
+    compute_auxiliary!(state, grid, seb.turbulent_fluxes, seb, constants, atmos)
+    # Close the energy balance by computing ground heat flux from the radiative and turbulent fluxes
+    compute_ground_heat_flux!(state, grid, seb.skin_temperature, seb)
+    return nothing
+end
+
+"""
+    $TYPEDSIGNATURES
+
 Compute the surface energy fluxes on `grid` based on the current atmospheric state.
 """
 function compute_surface_energy_fluxes!(
