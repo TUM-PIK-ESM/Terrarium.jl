@@ -15,6 +15,9 @@ variables(::PrescribedTurbulentFluxes) = (
     input(:latent_heat_flux, XY(), units = u"W/m^2", desc = "Latent heat flux at the surface [W m⁻²]"),
 )
 
+# The turbulent fluxes are prescribed input variables, so there is nothing to diagnose.
+@inline compute_auxiliary!(state, grid, ::PrescribedTurbulentFluxes, args...) = nothing
+
 # Diagnosed turbulent fluxes
 
 """
