@@ -37,6 +37,7 @@ include("setup.jl")
     test_model(:soil_heat_column)
     test_model(:soil_heat_column_stretched)   # array-valued (ExponentialSpacing) vertical coordinates
     test_model(:soil_heat_global)
+    test_model(:snow_column)                  # standalone single-layer snow (closure + tendencies)
 end
 
 include("autodiff.jl")

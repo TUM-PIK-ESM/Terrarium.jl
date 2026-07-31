@@ -28,7 +28,7 @@ using Test
     )
     state = StateVariables(all_vars, grid)
     X1 .= 3.0f0
-    initialize!(state, InputSources(src))
+    initialize!(state, grid, InputSources(src))
     ## only ns1.x should be set by the source
     @test all(interior(state.namespaces.ns1.x) .== 3.0f0)
     @test all(interior(state.namespaces.ns2.x) .== 0.0f0)
@@ -38,14 +38,14 @@ using Test
     X2 = Field(grid, XY())
     X2 .= 5.0f0
     root_src = InputSource(grid, X2; name = :x)
-    initialize!(state, InputSources(root_src))
+    initialize!(state, grid, InputSources(root_src))
     @test all(interior(state.inputs.x) .== 5.0f0)
     @test all(interior(state.namespaces.ns1.x) .== 3.0f0)
     @test all(interior(state.namespaces.ns2.x) .== 0.0f0)
 
     # static field sources do not change values in update_inputs!
     X1 .= 7.0f0
-    update_inputs!(state, InputSources(src))
+    update_inputs!(state, grid, InputSources(src))
     @test all(interior(state.namespaces.ns1.x) .== 3.0f0)
 
     # time-varying sources follow the same scoping rules in update_inputs!
@@ -56,10 +56,10 @@ using Test
     end
     fts_src = InputSource(S; name = :ns2 => :x)
     @test varpath(fts_src) == (:ns2, :x)
-    update_inputs!(state, InputSources(fts_src))
+    update_inputs!(state, grid, InputSources(fts_src))
     @test all(interior(state.namespaces.ns2.x) .== 0.0f0)
     Terrarium.tick!(state.clock, 1.0)
-    update_inputs!(state, InputSources(fts_src))
+    update_inputs!(state, grid, InputSources(fts_src))
     @test all(interior(state.namespaces.ns2.x) .== 1.0f0)
     ## other fields named x are untouched
     @test all(interior(state.namespaces.ns1.x) .== 3.0f0)

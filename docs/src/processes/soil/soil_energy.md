@@ -79,17 +79,18 @@ The constitutive relationship between energy and temperature plays a critical ro
     U(T,\theta) = \int_{T_{\text{ref}}}^T \tilde{C}(x,\theta) \, \mathrm{d}x 
 \end{equation}
 ```
-where $\tilde{C}$ is referred to as the *effective* or *apparent* heat capacity and $T_{\text{ref}}$ is a reference temperature. Alternatively, the internal energy is defined following [dallamicoEnergyConservingFreezingSoil2011; Eq. (4)](@cite) as:
+where $\tilde{C}$ is referred to as the *effective* or *apparent* heat capacity and $T_{\text{ref}}$ is a reference temperature. The internal energy $U$ is defined relative to a reference temperature $T_{\text{ref}}$ and a reference physical state if phase change is considered. For Terrarium, we choose $T_{\text{ref}} = 273.15$ K. We assume water to be the only constituent undergoing phase change; as such, the total internal energy of the soil volume is computed as,
 ```math
 \begin{equation}
-U(T,\theta) = C(\theta_{\text{w}},\theta) (T - T_{\text{ref}}) + \rho_{\text{w}} L_{\text{sl}} \theta_{\text{w}}(\theta, T),
+U(T,\theta) = C(\theta_{\text{w}},\theta) (T - T_{\text{ref}}) - \rho_{\text{w}} L_{\text{sl}} (\theta - \theta_{\text{w}}(\theta, T)),
 \end{equation}
 ```
-where $\theta_{\text{w}}(T,\theta)$ is the volumetric unfrozen water content as a function of temperature $T$ and total water/ice content $\theta$; $C(\theta_{\text{w}},\theta)$  (J/(K m³)) is the bulk volumetric material heat capacity of the volume as a function of the unfrozen and total water contents;  $\rho_{\text{w}}$ corresponds to the density (kg/m³) of water. The apparent heat capacity is then defined as the derivative of the energy-temperature relation,
+where $\theta_{\text{w}}(T,\theta)$ is the volumetric unfrozen water content as a function of temperature $T$ and total water/ice content $\theta$. Note that, under this formulation, zero internal energy corresponds to zero ice content (fully thawed) at 0°C. $C(\theta_{\text{w}},\theta)$  (J/(K m³)) is the bulk volumetric material heat capacity of the total soil volume as a function of the unfrozen and total ($\theta$) water contents, calculated as $\sum_x \rho_x c_x$. The apparent heat capacity is then defined as the derivative of the energy-temperature relation,
+
 ```math
 \begin{equation}
 \tilde{C}(T,\theta) := \frac{\partial U}{\partial T} =
-\overbrace{C(\theta_{\text{w}},\theta) + T \frac{\partial C}{\partial \theta_{\text{w}}}\frac{\partial \theta_{\text{w}}}{\partial T}}^{\text{Sensible}} \,+\,
+\overbrace{C(\theta_{\text{w}},\theta) + T \frac{\partial C}{\partial \theta_{\text{w}}}\frac{\partial \theta_{\text{w}}}{\partial T}}^{\text{Sensible}} \, + \,
 \overbrace{\rho_{\text{w}} L_{\text{sl}} \frac{\partial\theta_{\text{w}}}{\partial T}}^{\text{Latent}}\,,
 \end{equation}
 ```
@@ -101,7 +102,7 @@ In the simplest case where we neglect the effect of capillary action in the soil
     \theta_{\text{w}}(U) =
         \begin{cases}
             0                   & U < -\rho_{\text{w}}L_{\text{sl}}\theta \\
-            \frac{U}{L} & -\rho_{\text{w}}L_{\text{sl}}\theta \leq U < 0 \\
+            \theta \left( 1 + \frac{U}{\rho_{\text{w}}L_{\text{sl}}\theta} \right) & -\rho_{\text{w}}L_{\text{sl}}\theta \leq U < 0 \\
             \theta              & U \geq 0\,,
         \end{cases}
 \end{equation}
@@ -109,15 +110,16 @@ In the simplest case where we neglect the effect of capillary action in the soil
 with temperature then determined by
 ```math
 \begin{equation}
-    T = U^{-1}(U(T,\theta)) =
+    T - T_{\text{ref}} = U^{-1}(U(T,\theta)) =
     \begin{cases}
-    \frac{U(T,\theta) - \rho_{\text{w}}L_{\text{sl}}\theta}{C} & U(T,\theta) < -\rho_{\text{w}}L_{\text{sl}}\theta \\
-    0 & 0 \leq U(T,\theta) \leq \rho_{\text{w}}L_{\text{sl}}\theta \\
-    \frac{U(T,\theta)}{C} &   U(T,\theta) \geq 0\,,
-    \end{cases}.
+    \frac{U + \rho_{\text{w}}L_{\text{sl}}\theta}{C} & U < -\rho_{\text{w}}L_{\text{sl}}\theta \\
+    0 & -\rho_{\text{w}}L_{\text{sl}}\theta \leq U < 0 \\
+    \frac{U}{C} & U \geq 0\,.
+    \end{cases}
 \end{equation}
 ```
 
+By expressing $T$ in °C, $T_{ref}$ can be dropped as it equals 0°C.
 For more information on more complex formulations of these so-called soil freezing characteristic curves, see [FreezeCurves.jl](https://github.com/CryoGrid/FreezeCurves.jl/tree/main?tab=readme-ov-file). 
 
 ```@docs; canonical = false

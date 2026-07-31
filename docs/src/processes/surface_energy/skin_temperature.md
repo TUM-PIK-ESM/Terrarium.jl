@@ -61,9 +61,9 @@ compute_auxiliary!(state, grid, skinT::ImplicitSkinTemperature, seb::AbstractSur
 ## Methods
 
 ```@docs; canonical = false
-compute_skin_temperature(skinT::ImplicitSkinTemperature, Tg, G, Δz)
+compute_skin_temperature(::ImplicitSkinTemperature, Tg, G, Δz, κ)
 compute_ground_heat_flux(::AbstractSkinTemperature, R_net, H_s, H_l)
-compute_skin_temperature!(state, grid, skinT::ImplicitSkinTemperature)
+compute_skin_temperature!(state, grid, skinT::ImplicitSkinTemperature, constants::PhysicalConstants, snow::Optional{AbstractSnow})
 compute_ground_heat_flux!(state, grid, skinT::AbstractSkinTemperature, seb::AbstractSurfaceEnergyBalance)
 default_skin_temperature_solver
 ```
@@ -71,9 +71,9 @@ default_skin_temperature_solver
 ## Kernel functions
 
 ```@docs; canonical = false
-compute_skin_temperature(i, j, grid, fields, skinT::ImplicitSkinTemperature)
+compute_skin_temperature(i, j, grid, fields, skinT::ImplicitSkinTemperature, constants::PhysicalConstants, snow::Optional{AbstractSnow})
 compute_ground_heat_flux(i, j, grid, fields, skinT::AbstractSkinTemperature, ::AbstractSurfaceEnergyBalance)
-compute_skin_temperature!(out, i, j, grid, fields, skinT::ImplicitSkinTemperature, seb::AbstractSurfaceEnergyBalance, seb_args...)
+compute_skin_temperature!(out, i, j, grid, fields, skinT::ImplicitSkinTemperature, seb::AbstractSurfaceEnergyBalance, constants::PhysicalConstants, snow::Optional{AbstractSnow}, seb_args...)
 compute_skin_temperature_residual!
 solve_skin_temperature!
 ```

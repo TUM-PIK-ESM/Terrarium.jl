@@ -9,6 +9,7 @@ if FLAG_ENZYME_TESTS
         include("differentiability/soil_energy_diff.jl")
         include("differentiability/soil_hydrology_diff.jl")
         include("differentiability/vegetation_model_diff.jl")
+        include("differentiability/snow_model_diff.jl")
     end
 end
 
@@ -47,12 +48,19 @@ if MAIN_TESTS
         include("soil/soil_model_tests.jl")
     end
 
+    @testset "Snow processes" begin
+        include("snow/snow_properties_tests.jl")
+        include("snow/snow_energy_tests.jl")
+        include("snow/snow_model_tests.jl")
+    end
+
     @testset "Vegetation model and processes" begin
         include("vegetation/vegetation_model_tests.jl")
     end
 
     @testset "Surface energy balance" begin
         include("surface/seb_tests.jl")
+        include("surface/diagnostic_albedo_tests.jl")
     end
 
     @testset "Surface hydrology" begin

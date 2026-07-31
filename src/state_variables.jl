@@ -76,7 +76,7 @@ Update the `state` for the given `model` and `inputs`; this includes calling `up
 """
 function Oceananigans.TimeSteppers.update_state!(state::StateVariables, model::AbstractModel, inputs::InputSources; compute_tendencies = true)
     reset_tendencies!(state)
-    update_inputs!(state, inputs)
+    update_inputs!(state, get_grid(model), inputs)
     fill_halo_regions!(state)
     compute_auxiliary!(state, model)
     if compute_tendencies
@@ -146,12 +146,12 @@ Initialize input variables from the given input `sources`. The `scope` correspon
 path of namespace names from the root namespace to `state` and is used to match namespaced
 input sources to their target variables; see [`varpath`](@ref).
 """
-function initialize!(state::StateVariables, sources::InputSources, scope::Tuple{Vararg{Symbol}} = ())
-    # initialize inputs in current namespace
-    initialize!(state.inputs, sources, state.clock, scope)
+function initialize!(state::StateVariables, grid::AbstractLandGrid, sources::InputSources, scope::Tuple{Vararg{Symbol}} = ())
+    # initialize inputs in current namespace, passing the full state as read-only `fields`
+    initialize!(state.inputs, grid, state.clock, state, sources, scope)
     # recursively initialize namespaces
     fastiterate(namespace_names(state)) do nsname
-        initialize!(getproperty(getfield(state, :namespaces), nsname), sources, (scope..., nsname))
+        initialize!(getproperty(getfield(state, :namespaces), nsname), grid, sources, (scope..., nsname))
     end
     return nothing
 end
@@ -161,14 +161,14 @@ Update input variables from the given input `sources`. The `scope` corresponds t
 path of namespace names from the root namespace to `state` and is used to match namespaced
 input sources to their target variables; see [`varpath`](@ref).
 """
-function update_inputs!(state::StateVariables, sources::InputSources, scope::Tuple{Vararg{Symbol}} = ())
-    # update inputs in current namespace
-    update_inputs!(state.inputs, sources, state.clock, scope)
+function update_inputs!(state::StateVariables, grid::AbstractLandGrid, sources::InputSources, scope::Tuple{Vararg{Symbol}} = ())
+    # update inputs in current namespace, passing the full state as read-only `fields`
+    update_inputs!(state.inputs, grid, state.clock, state, sources, scope)
     # recursively update namespaces
     fastiterate(namespace_names(state)) do nsname
-        update_inputs!(getproperty(getfield(state, :namespaces), nsname), sources, (scope..., nsname))
+        update_inputs!(getproperty(getfield(state, :namespaces), nsname), grid, sources, (scope..., nsname))
     end
-    return
+    return nothing
 end
 
 """
@@ -214,8 +214,11 @@ Retrieves the `Field` from `state` matching the `name` of the given variable.
 """
 @inline get_field(state, ::Union{AbstractVariable{name}, Namespace{name}}) where {name} = getproperty(state, name)
 
+# NOTE: use `$SIGNATURES` (not `$TYPEDSIGNATURES`) here. `$TYPEDSIGNATURES` performs return-type
+# inference via `Base.return_types`, which crashes with a `BoundsError` in `may_invoke_generator`
+# when applied to this `@generated` method on Julia 1.10, breaking the docs build.
 """
-    $TYPEDSIGNATURES
+    $SIGNATURES
 
 Retrieves all `Field`s from `state` matching the names of the given variables. Any `Namespace`s
 in `vars` are resolved recursively and their fields are merged into the returned `NamedTuple`

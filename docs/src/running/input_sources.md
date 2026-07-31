@@ -16,8 +16,8 @@ All [`InputSource`](@ref)s implement the following interface:
 
 ```@docs; canonical = false
 variables(::InputSource)
-initialize!(state, ::InputSource, ::Clock)
-update_inputs!(state, ::InputSource, ::Clock)
+initialize!(inputs, grid, clock, fields, input::InputSource)
+update_inputs!(inputs, grid, clock, fields, input::InputSource)
 ```
 
 ## Built-in input source types

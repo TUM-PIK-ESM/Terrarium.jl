@@ -9,7 +9,7 @@ so that it integrates directly with [Thermodynamics.jl](https://github.com/CliMA
 
 ```jldoctest
 julia> show(ThermodynamicConstants(Float64))
-ThermodynamicConstants{Float64}(1004.5, 2070.0, 4181.0, 1859.0, 334000.0, 2.5008e6, 2.8344e6, 273.16, 273.15, 273.16, 611.657, 287.0, 461.5)
+ThermodynamicConstants{Float64}(1004.5, 2070.0, 4181.0, 1859.0, 333550.0, 2.5008e6, 2.83435e6, 273.16, 273.15, 273.16, 611.657, 287.0, 461.5)
 ```
 
 Properties:
@@ -18,28 +18,40 @@ $FIELDS
 @kwdef struct ThermodynamicConstants{NF} <: Thermodynamics.Parameters.AbstractThermodynamicsParameters{NF}
     "Isobaric specific heat capacity of dry air at standard pressure and 0°C in J/(m^3*K)"
     specific_heat_capacity_dry_air::NF = 1004.5
+
     "Isobaric specific heat capacity of ice at standard pressure and 0°C in J/(m^3*K)"
     specific_heat_capacity_ice::NF = 2070.0
+
     "Isobaric specific heat capacity of liquid water at standard pressure and 0°C in J/(m^3*K)"
     specific_heat_capacity_liquid_water::NF = 4181.0
+
     "Isobaric specific heat capacity of water vapor at standard pressure and 0°C in J/(m^3*K)"
     specific_heat_capacity_water_vapor::NF = 1859.0
+
     "Specific latent heat of fusion of water in J/kg at 0°C"
-    latent_heat_fusion::NF = 3.34e5
+    latent_heat_fusion::NF = 3.3355e5
+
     "Specific latent heat of vaporization of water in J/kg at 0°C"
     latent_heat_vaporization::NF = 2.5008e6
+
     "Specific latent heat of sublimation of water in J/kg at 0°C"
-    latent_heat_sublimation::NF = 2.8344e6
+    latent_heat_sublimation::NF = latent_heat_fusion + latent_heat_vaporization
+
     "Reference temperature (0°C in Kelvin)"
     temperature_reference::NF = 273.16
+
     "Freezing temperature of water in Kelvin"
     temperature_water_freeze::NF = 273.15
+
     "Triple point temperature of water in Kelvin"
     temperature_water_triple_point::NF = 273.16
+
     "Triple point pressure of water in Pa"
     pressure_water_triple_point::NF = 611.657
+
     "Specific gas constant of dry air in J/(kg*K)"
     gas_constant_dry_air::NF = 287.0
+
     "Specific gas constant of water vapor in J/(kg*K)"
     gas_constant_water_vapor::NF = 461.5
 end
@@ -120,7 +132,7 @@ sub-structs by category:
 
 ```jldoctest
 julia> show(PhysicalConstants())
-PhysicalConstants{Float64}(ThermodynamicConstants{Float64}(1004.5, 2070.0, 4181.0, 1859.0, 334000.0, 2.5008e6, 2.8344e6, 273.16, 273.15, 273.16, 611.657, 287.0, 461.5), MaterialConstants{Float64}(1000.0, 916.7, 12.0), UniversalConstants{Float64}(9.80665, 5.6704e-8, 0.4))
+PhysicalConstants{Float64}(ThermodynamicConstants{Float64}(1004.5, 2070.0, 4181.0, 1859.0, 333550.0, 2.5008e6, 2.83435e6, 273.16, 273.15, 273.16, 611.657, 287.0, 461.5), MaterialConstants{Float64}(1000.0, 916.7, 12.0), UniversalConstants{Float64}(9.80665, 5.6704e-8, 0.4))
 ```
 
 To override individual constants, pass a customised sub-struct:

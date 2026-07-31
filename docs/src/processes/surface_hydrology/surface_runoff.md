@@ -77,7 +77,7 @@ In riparian areas or regions with high water tables, more sophisticated approach
 ## Process interface
 
 ```@docs; canonical = false
-compute_auxiliary!(state, grid, runoff::DirectSurfaceRunoff, canopy_interception::AbstractCanopyInterception, soil::AbstractSoil, args...)
+compute_auxiliary!(state, grid, runoff::DirectSurfaceRunoff, canopy_interception::AbstractCanopyInterception, soil::AbstractSoil, snow::Optional{AbstractSnow}, args...)
 ```
 
 ## Kernel functions

@@ -177,7 +177,7 @@ ground_evaporation_resistance_factor
 ## Process interface
 
 ```@docs; canonical = false
-compute_auxiliary!(state, grid, ::BareGroundEvaporation, ::NoCanopyInterception, ::PhysicalConstants, ::AbstractAtmosphere, ::Optional{AbstractSoil}, args...)
+compute_auxiliary!(state, grid, ::BareGroundEvaporation, ::NoCanopyInterception, ::PhysicalConstants, ::AbstractAtmosphere, ::Optional{AbstractSoil}, ::Optional{AbstractSnow})
 ```
 
 ```@docs; canonical = false

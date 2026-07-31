@@ -163,6 +163,11 @@ end
 
 Compute the latent heat flux at `i, j` based on the current skin temperature and atmospheric conditions.
 When an evapotranspiration scheme is provided, uses the ET-aware humidity flux; otherwise uses bare ground evaporation.
+
+With a snow component, the flux is partitioned by snow-covered area fraction `f_snow`: the snow-free
+fraction `(1 − f_snow)` evaporates from the ground/canopy (latent heat of vaporization), while the
+snow-covered fraction sublimates from the snowpack (latent heat of sublimation, see
+[`compute_snow_sublimation_flux`](@ref)). Without snow it reduces to the bare ground/canopy latent flux.
 """
 @inline function compute_latent_heat_flux(
         i, j, grid, fields,
@@ -170,7 +175,8 @@ When an evapotranspiration scheme is provided, uses the ET-aware humidity flux; 
         skinT::AbstractSkinTemperature,
         constants::PhysicalConstants,
         atmos::AbstractAtmosphere,
-        evtr::Optional{AbstractEvapotranspiration} = nothing
+        evtr::Optional{AbstractEvapotranspiration} = nothing,
+        snow::Optional{AbstractSnow} = nothing,
     )
     Q_h = if isnothing(evtr)
         # Direct calculation of evaporative flux without ET coupling
@@ -183,17 +189,24 @@ When an evapotranspiration scheme is provided, uses the ET-aware humidity flux; 
         compute_surface_humidity_flux(i, j, grid, fields, evtr, atmos, constants)
     end
 
-    # Get air density (same for both cases)
+    # Get atmospheric variables and constants
     Tₐ = air_temperature(i, j, grid, fields, atmos)
     pres = air_pressure(i, j, grid, fields, atmos)
     q_air = specific_humidity(i, j, grid, fields, atmos)
     # TODO: density should be evaluated at surface temperature for better accuracy
     ρₐ = Thermodynamics.air_density(constants.thermodynamics, celsius_to_kelvin(constants.thermodynamics, Tₐ), pres, q_air)
-    L = constants.thermodynamics.latent_heat_vaporization
+    L_lv = constants.thermodynamics.latent_heat_vaporization
+    L_sg = constants.thermodynamics.latent_heat_sublimation
+    ρ_w = constants.material.density_water
 
-    # Calculate latent heat flux (positive upwards)
-    Hₗ = compute_latent_heat_flux(tur, Q_h, ρₐ, L)
-    return Hₗ
+    # Partition by snow-covered fraction: ground/canopy evaporation over (1 − f_snow), snow sublimation over
+    # f_snow. `E_subl` is already area-weighted by f_snow (see `compute_snow_sublimation_flux`), so the snow
+    # term is not scaled again here.
+    f = snow_cover_fraction(i, j, grid, fields, snow)  # zero without snow
+    E_subl = compute_snow_sublimation_flux(i, j, grid, fields, snow, atmos, constants, skinT)
+    Hₗ_ground = compute_latent_heat_flux(tur, Q_h, ρₐ, L_lv)
+    Hₗ_snow = ρ_w * L_sg * E_subl
+    return (one(f) - f) * Hₗ_ground + Hₗ_snow
 end
 
 # Kernels

@@ -183,6 +183,9 @@ closure returned by [`closures`](@ref).
 """
 closure!(state, grid, proc::AbstractProcess, args...) = fastiterate!(closure -> closure!(state, grid, closure, proc, args...), closures(proc))
 
+# Allow dispatch on nothing for absent process components
+closure!(state, grid, ::Nothing, args...) = nothing
+
 """
     closure!(state, grid, closure::AbstractClosureRelation, process, args...)
 
@@ -205,6 +208,9 @@ defined by the coupling interface for the process type. The default implementati
 closure returned by [`closures`](@ref).
 """
 invclosure!(state, grid, proc::AbstractProcess, args...) = fastiterate!(closure -> invclosure!(state, grid, closure, proc, args...), closures(proc))
+
+# Allow dispatch on nothing for absent process components
+invclosure!(state, grid, ::Nothing, args...) = nothing
 
 """
     invclosure!(state, grid, closure::AbstractClosureRelation, process::AbstractProcess, args...)

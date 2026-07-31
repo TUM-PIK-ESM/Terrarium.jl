@@ -50,9 +50,13 @@ variables(seb::SurfaceEnergyBalance) = tuplejoin(
         constants::PhysicalConstants,
         atmos::AbstractAtmosphere,
         hydrology::Optional{AbstractSurfaceHydrology} = nothing,
+        vegetation::Optional{AbstractVegetation} = nothing,
+        snow::Optional{AbstractSnow} = nothing,
         args...
     )
-    solve_surface_energy_balance!(state, grid, seb, constants, atmos, hydrology)
+    # diagnose the (optionally snow-aware) albedo, then solve the surface energy balance
+    compute_auxiliary!(state, grid, seb.albedo, vegetation, snow)
+    solve_surface_energy_balance!(state, grid, seb, constants, atmos, hydrology, snow)
     return nothing
 end
 
@@ -71,13 +75,15 @@ function solve_surface_energy_balance!(
         constants::PhysicalConstants,
         atmos::AbstractAtmosphere,
         hydrology::Optional{AbstractSurfaceHydrology} = nothing,
+        snow::Optional{AbstractSnow} = nothing,
         args...
     ) where {NF}
     evtr = isnothing(hydrology) ? nothing : get_evapotranspiration(hydrology)
     # Construct outputs as auxiliaries + skin temperature (which is prognostic)
     out = (skin_temperature = state.skin_temperature, auxiliary_fields(state, seb)...)
-    fields = get_fields(state, seb, atmos, evtr)
-    launch!(grid, XY, solve_surface_energy_balance_kernel!, out, fields, seb, constants, atmos, evtr, args...)
+    # Merge the snow thermal auxiliaries so the (optionally snow-aware) conduction target can be evaluated
+    fields = merge(get_fields(state, seb, atmos, evtr), get_fields(state, snow))
+    launch!(grid, XY, solve_surface_energy_balance_kernel!, out, fields, seb, constants, atmos, evtr, snow, args...)
     return nothing
 end
 
@@ -116,6 +122,7 @@ skin temperature and humidity fluxes.
         constants::PhysicalConstants,
         atmos::AbstractAtmosphere,
         evtr::Optional{AbstractEvapotranspiration} = nothing,
+        snow::Optional{AbstractSnow} = nothing,
         args...
     )
     # Compute radiative fluxes
@@ -123,9 +130,9 @@ skin temperature and humidity fluxes.
     out.surface_shortwave_up[i, j, 1] = radiative_fluxes.surface_shortwave_up
     out.surface_longwave_up[i, j, 1] = radiative_fluxes.surface_longwave_up
     out.surface_net_radiation[i, j, 1] = compute_surface_net_radiation(i, j, grid, fields, seb.radiative_fluxes, atmos)
-    # Compute turbulent fluxes
+    # Compute turbulent fluxes; `snow` partitions the latent flux (evaporation vs. sublimation) by area fraction
     out.sensible_heat_flux[i, j, 1] = compute_sensible_heat_flux(i, j, grid, fields, seb.turbulent_fluxes, seb.skin_temperature, constants, atmos)
-    out.latent_heat_flux[i, j, 1] = compute_latent_heat_flux(i, j, grid, fields, seb.turbulent_fluxes, seb.skin_temperature, constants, atmos, evtr)
+    out.latent_heat_flux[i, j, 1] = compute_latent_heat_flux(i, j, grid, fields, seb.turbulent_fluxes, seb.skin_temperature, constants, atmos, evtr, snow)
     # Compute ground heat flux
     out.ground_heat_flux[i, j, 1] = compute_ground_heat_flux(i, j, grid, fields, seb.skin_temperature, seb)
     return nothing
@@ -139,19 +146,21 @@ end
         constants::PhysicalConstants,
         atmos::AbstractAtmosphere,
         evtr::Optional{AbstractEvapotranspiration} = nothing,
+        snow::Optional{AbstractSnow} = nothing,
         args...
     )
     i, j = @index(Global, NTuple)
 
-    # Compute fluxes based on current skin temperature
-    solve_skin_temperature!(out, i, j, grid, fields, seb.skin_temperature, seb, constants, atmos, args...)
+    # Solve for skin temperature; `snow` (after `seb`) makes the conduction target and latent flux snow-aware
+    solve_skin_temperature!(out, i, j, grid, fields, seb.skin_temperature, seb, snow, constants, atmos, args...)
     if !isnothing(evtr)
-        # Recompute evapotranspiration component fluxes from final skin temperature
+        # Recompute evapotranspiration component fluxes from final skin temperature; `snow` scales the
+        # ground evaporation by the snow-free fraction (1 − f_snow)
         out_ET = auxiliary_fields(fields, evtr)
-        compute_evapotranspiration_fluxes!(out_ET, i, j, grid, fields, evtr, constants, atmos, args...)
+        compute_evapotranspiration_fluxes!(out_ET, i, j, grid, fields, evtr, constants, atmos, snow, args...)
     end
-    # Recompute fluxes from final skin temperature
-    compute_surface_energy_fluxes!(out, i, j, grid, fields, seb, constants, atmos, args...)
+    # Recompute fluxes from final skin temperature; `snow` partitions the latent flux (evaporation vs. sublimation)
+    compute_surface_energy_fluxes!(out, i, j, grid, fields, seb, constants, atmos, nothing, snow, args...)
 end
 
 @kernel inbounds = true function compute_surface_energy_fluxes_kernel!(

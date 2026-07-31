@@ -194,6 +194,7 @@ makedocs(
         "Models" => [
             "Land model" => "models/land_model.md",
             "Soil model" => "models/soil_model.md",
+            "Snow model" => "models/snow_model.md",
             "Vegetation model" => "models/vegetation_model.md",
         ],
         "Processes" => [
@@ -203,6 +204,12 @@ makedocs(
                 "Hydrology" => "processes/soil/soil_hydrology.md",
                 "Energy balance" => "processes/soil/soil_energy.md",
                 "Biogeochemistry" => "processes/soil/soil_biogeochemistry.md",
+            ],
+            "Snow" => [
+                "Overview" => "processes/snow/snow.md",
+                "Parameterizations" => "processes/snow/snow_parameterizations.md",
+                "Energy balance" => "processes/snow/snow_energy.md",
+                "Mass balance" => "processes/snow/snow_mass.md",
             ],
             "Vegetation" => [
                 "Overview" => "processes/vegetation/vegetation.md",

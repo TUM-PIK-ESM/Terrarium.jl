@@ -4,12 +4,12 @@
 Defines the constitutive relationship between the the internal energy and temperature of a
 soil volume, i.e.
 ```math
-U(T) = T\\times C(T) - L_f \\theta_{wi} (1 - F(T))
+U(T) = T\\times C(T) - \\rho_w L_{sl} \\theta (1 - F(T))
 ```
-where T is temperature, C(T) is the temperature-dependent heat capacity, L_f is the
-volumetric latent heat of fusion, and F(T) is the constitutive relation between temperature
-and the unfrozen fraction of pore water. Note that, under this formulation, zero energy corresponds to
-0°C with no ice, i.e. all pore water fully thawed.
+where T is temperature (°C), C(T) is the temperature-dependent heat capacity (J/m³/K), 
+ρ_w L_{sl} θ is the volumetric latent heat of fusion (J/m³),  and F(T) = θ_w/θ is the constitutive
+relation between T and the unfrozen fraction of pore water with θ the sum of the volumetric fractions of water and ice. 
+Note that, under this formulation, zero energy corresponds to 0°C with no ice, i.e. all pore water fully thawed.
 
 The closure relation is defined as being a mapping from the conserved quantity (energy) to the continuous
 quantity (temperature), i.e. the inverse of U(T).
@@ -74,7 +74,7 @@ end
     T = fields.temperature[i, j, k] # assumed given
     ρw = constants.material.density_water
     Lsl = constants.thermodynamics.latent_heat_fusion
-    L = ρw * Lsl
+    ρL = ρw * Lsl
     por = porosity(i, j, k, grid, fields, strat, bgc)
     sat = saturation_water_ice(i, j, k, grid, fields, hydrology)
     # calculate unfrozen water content from temperature
@@ -94,7 +94,7 @@ end
     soil = SoilComposition(por, sat, liq, solid)
     C = compute_heat_capacity(energy.thermal_properties, soil)
     # compute energy from temperature, heat capacity, and ice fraction
-    U = out.internal_energy[i, j, k] = T * C - L * sat * por * (1 - liq)
+    U = out.internal_energy[i, j, k] = T * C - ρL * sat * por * (1 - liq)
     return U
 end
 
@@ -112,12 +112,11 @@ end
     U = fields.internal_energy[i, j, k] # assumed given
     ρw = constants.material.density_water
     Lsl = constants.thermodynamics.latent_heat_fusion
-    L = ρw * Lsl
     por = porosity(i, j, k, grid, fields, strat, bgc)
     sat = saturation_water_ice(i, j, k, grid, fields, hydrology)
-    Lθ = L * sat * por
+    ρLθ = ρw * Lsl * sat * por
     # calculate unfrozen water content
-    liq = out.liquid_water_fraction[i, j, k] = liquid_water_fraction(fc, U, Lθ, sat)
+    liq = out.liquid_water_fraction[i, j, k] = liquid_water_fraction(fc, U, ρLθ)
     # add liquid water fraction to fields
     fields = merge(fields, (; liquid_water_fraction = out.liquid_water_fraction))
     # calculate soil volumetric fractions
@@ -125,7 +124,7 @@ end
     soil = SoilComposition(por, sat, liq, solid)
     C = compute_heat_capacity(energy.thermal_properties, soil)
     # calculate temperature from internal energy and liquid water fraction
-    T = out.temperature[i, j, k] = energy_to_temperature(fc, U, Lθ, C)
+    T = out.temperature[i, j, k] = energy_to_temperature(fc, U, ρLθ, C)
     return T
 end
 
