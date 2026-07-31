@@ -6,7 +6,14 @@
 Energy–temperature closure for snow volumes. For [`SingleLayerSnow`](@ref), the depth-averaged snow
 temperature `T_snow` (°C) and liquid water fraction `θ_liq` are recovered from the depth-integrated internal energy
 `Ū_snow` (J/m²) using the medium-agnostic `FreeWater` enthalpy relations, treating the bulk snowpack as an ice-water-air
-mixture.
+mixture. The internal energy is defined as:
+```math
+U(T) = T_{\text{snow}} \\times C(T) - \\rho_{snow} L_{sl} (1 - F(T))
+```
+with `C(T)` the temperature-dependent volumetric heat capacity of the snowpack (J/m³/K), 
+`ρ_snow L_sl = ρ_w L_sl θ` the volumetric latent heat of fusion (J/m³), and `F(T) = θ_liq/θ` 
+the fraction of the total (liquid water + ice) volumetric water content that is liquid. 
+
 """
 struct SnowEnergyTemperatureClosure{NF} <: AbstractEnergyClosure end
 
@@ -97,8 +104,8 @@ Recover the snow temperature and liquid water fraction from the depth-integrated
     ρ_w = constants.material.density_water
     ρ_snow = compute_snow_density(i, j, grid, fields, snow.density)
     d_snow = compute_snow_depth(snow, W_snow, ρ_snow, ρ_w)
-    # Volumetric latent heat of fusion (assume θ = θ_w + θ_i = 1)
-    ρLθ = ρ_snow * L_sl
+    # Volumetric latent heat of fusion
+    ρLθ = ρ_snow * L_sl # ρ_snow L_sl = ρ_w θ L_sl by definition
     U_snow = compute_volumetric_snow_energy(Ū_snow, d_snow)
     liq = liquid_water_fraction(FreeWater(), U_snow, ρLθ)
     out.snow_liquid_fraction[i, j, 1] = liq
@@ -128,7 +135,7 @@ Compute the depth-integrated snow energy from a prescribed temperature at grid c
     ρ_w = constants.material.density_water
     ρ_snow = compute_snow_density(i, j, grid, fields, snow.density)
     d_snow = compute_snow_depth(snow, W_snow, ρ_snow, ρ_w)
-    ρLθ = ρ_snow * L_sl
+    ρLθ = ρ_snow * L_sl # ρ_snow L_sl = ρ_w θ L_sl by definition
     # N.B. For the free-water characteristic the liquid fraction is indeterminate at T = 0; assume
     # frozen for T < 0 and thawed otherwise. This mapping is for initialization only and must **not**
     # be used in the calculation of tendencies.

@@ -7,7 +7,8 @@
 """
     $TYPEDSIGNATURES
 
-Calculate the unfrozen water content from the given internal energy `U` and latent heat content `ρLθ`.
+Calculate the unfrozen water content from the given internal energy `U` (J/m³) and 
+volumetric latent heat content `ρLθ` (J/m³).
 """
 @inline function liquid_water_fraction(::FreeWater, U::NF, ρLθ::NF) where {NF}
     # Case 1: U ≥ 0 -> thawed (liq = 1)
@@ -23,8 +24,9 @@ end
 """
     $TYPEDSIGNATURES
     
-Calculate the inverse enthalpy function given the internal energy, latent heat content, and heat
-capacity under the free water freezing characteristic.
+Calculate the inverse enthalpy function given the internal energy `U` (J/m³), 
+volumetric latent heat content `ρLθ` (J/m³), and volumetric heat capacity `C` (J/m³/K)
+under the free water freezing characteristic.
 """
 @inline function energy_to_temperature(::FreeWater, U::NF, ρLθ::NF, C::NF) where {NF}
     # Case 1:  U < -ρLθ      → frozen      (T = (U + ρLθ)/C)
