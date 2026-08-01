@@ -65,6 +65,12 @@ Compute net radiation and store in auxiliary fields at a grid point.
     return out
 end
 
+# Signature-compatible variant for the fused surface-energy-balance kernel. Skin temperature, albedo,
+# and constants are unused for prescribed radiation (the upwelling fluxes are read from input fields).
+@propagate_inbounds compute_radiative_fluxes!(out, i, j, grid, fields, rad::PrescribedRadiativeFluxes,
+        skinT::AbstractSkinTemperature, abd::AbstractAlbedo, consts::PhysicalConstants, atmos::AbstractAtmosphere) =
+    compute_radiative_fluxes!(out, i, j, grid, fields, rad, atmos)
+
 # Diagnosed radiative fluxes
 
 """
