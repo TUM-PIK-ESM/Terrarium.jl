@@ -30,6 +30,10 @@ variables(::PrescribedSkinTemperature) = (
 
 @propagate_inbounds compute_skin_temperature(i, j, grid, fields, skinT::PrescribedSkinTemperature) = fields.skin_temperature[i, j]
 
+# The skin temperature is prescribed (an input field), so there is no implicit solve: the fused
+# surface-energy-balance kernel just evaluates the fluxes from the prescribed skin temperature.
+@propagate_inbounds solve_skin_temperature!(out, i, j, grid, fields, ::PrescribedSkinTemperature, seb, snow, seb_args...) = nothing
+
 # Implicit skin temperature
 
 """
@@ -189,11 +193,9 @@ function compute_ground_heat_flux!(
         skinT::AbstractSkinTemperature,
         seb::AbstractSurfaceEnergyBalance
     )
-    rad = get_radiative_fluxes(seb)
-    tur = get_turbulent_fluxes(seb)
     out = auxiliary_fields(state, skinT)
-    fields = get_fields(state, skinT, rad, tur; except = out)
-    launch!(grid, XY, compute_ground_heat_flux_kernel!, out, fields, skinT, rad, tur)
+    fields = get_fields(state, seb; except = out)
+    launch!(grid, XY, compute_ground_heat_flux_kernel!, out, fields, skinT, seb)
     return nothing
 end
 
@@ -235,6 +237,17 @@ Compute the ground heat flux from the surface net radiation and sensible/latent 
     # Compute ground heat flux
     G = compute_ground_heat_flux(skinT, R_net, H_s, H_l)
     return G
+end
+
+"""
+    $TYPEDSIGNATURES
+
+Per-cell mutating variant used by the fused surface-energy-balance kernel: store the ground heat flux
+into the auxiliary output field `out`.
+"""
+@propagate_inbounds function compute_ground_heat_flux!(out, i, j, grid, fields, skinT::AbstractSkinTemperature, seb::AbstractSurfaceEnergyBalance)
+    out.ground_heat_flux[i, j, 1] = compute_ground_heat_flux(i, j, grid, fields, skinT, seb)
+    return nothing
 end
 
 """

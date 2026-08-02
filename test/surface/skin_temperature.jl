@@ -98,6 +98,50 @@ end
     @test all(state.skin_temperature .≈ 1.0)
 end
 
+@testset "Prescribed skin temperature, full SEB" begin
+    # Configuration used when the surface turbulent fluxes are computed by an external
+    # coupler (e.g. NumericalEarth's Monin-Obukhov scheme) and prescribed to Terrarium:
+    # the skin temperature and sensible/latent fluxes are inputs, radiation is diagnosed
+    # locally, and the ground heat flux closes as the residual G = R_net + H_s + H_l.
+    grid = ColumnGrid(CPU(), Float64, ExponentialSpacing(Δz_max = 1.0, N = 20))
+    NF = eltype(grid)
+    seb = SurfaceEnergyBalance(
+        NF;
+        skin_temperature = PrescribedSkinTemperature(NF),
+        turbulent_fluxes = PrescribedTurbulentFluxes(NF),
+        radiative_fluxes = DiagnosedRadiativeFluxes(NF),
+        albedo = DiagnosticAlbedo(NF)
+    )
+    soil = SoilEnergyWaterCarbon(NF; hydrology = SoilHydrology(NF, RichardsEq()))
+    land = LandModel(grid; soil, surface_energy_balance = seb, vegetation = nothing)
+    integrator = initialize(
+        land; initializers = (
+            temperature = (x, z) -> 5.0 - 0.02 * z,
+            saturation_water_ice = (x, z) -> 0.5,
+        )
+    )
+    state = integrator.state
+
+    # Prescribe the skin temperature and the turbulent heat fluxes.
+    set!(state.skin_temperature, 10.0)
+    set!(state.sensible_heat_flux, 20.0)
+    set!(state.latent_heat_flux, 30.0)
+    Terrarium.closure!(state, land)
+    compute_auxiliary!(state, land)
+
+    R_net = Array(interior(state.surface_net_radiation))
+    G = Array(interior(state.ground_heat_flux))
+    # Radiation is diagnosed from the prescribed skin temperature (so it is nonzero) and
+    # the ground heat flux is the residual of the prescribed components.
+    @test all(abs.(R_net) .> 0)
+    @test all(isapprox.(G, R_net .+ 20 .+ 30; rtol = 1.0e-6))
+
+    # The soil integrates against the prescribed-flux boundary condition.
+    timestep!(integrator, 60.0)
+    @test all(isfinite.(interior(state.internal_energy)))
+    @test all(isfinite.(interior(state.ground_heat_flux)))
+end
+
 @testset "Implicit skin temperature" begin
     grid = ColumnGrid(CPU(), Float64, ExponentialSpacing(N = 10))
     solver = Terrarium.default_skin_temperature_solver(eltype(grid))

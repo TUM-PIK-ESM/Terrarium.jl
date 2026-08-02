@@ -122,6 +122,12 @@ specific_humidity_difference
 
 ## Kernel functions
 
+The fused surface-energy-balance kernel stores the turbulent fluxes through [`compute_turbulent_fluxes!`](@ref): the [`DiagnosedTurbulentFluxes`](@ref) variant computes and stores the sensible and latent heat fluxes, while the [`PrescribedTurbulentFluxes`](@ref) variant is a no-op because the fluxes are supplied as input fields.
+
+```@docs; canonical = false
+compute_turbulent_fluxes!
+```
+
 ```@docs; canonical = false
 compute_vapor_pressure_difference(i, j, grid, fields, atmos::AbstractAtmosphere, c::PhysicalConstants, Ts)
 ```

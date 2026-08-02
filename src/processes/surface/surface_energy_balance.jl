@@ -71,7 +71,7 @@ and surface hydrology state.
 """
 function solve_surface_energy_balance!(
         state, grid,
-        seb::SurfaceEnergyBalance{NF, <:ImplicitSkinTemperature},
+        seb::SurfaceEnergyBalance{NF},
         constants::PhysicalConstants,
         atmos::AbstractAtmosphere,
         hydrology::Optional{AbstractSurfaceHydrology} = nothing,
@@ -125,16 +125,14 @@ skin temperature and humidity fluxes.
         snow::Optional{AbstractSnow} = nothing,
         args...
     )
-    # Compute radiative fluxes
-    radiative_fluxes = compute_surface_upwelling_radiation(i, j, grid, fields, seb.radiative_fluxes, seb.skin_temperature, seb.albedo, constants, atmos)
-    out.surface_shortwave_up[i, j, 1] = radiative_fluxes.surface_shortwave_up
-    out.surface_longwave_up[i, j, 1] = radiative_fluxes.surface_longwave_up
-    out.surface_net_radiation[i, j, 1] = compute_surface_net_radiation(i, j, grid, fields, seb.radiative_fluxes, atmos)
-    # Compute turbulent fluxes; `snow` partitions the latent flux (evaporation vs. sublimation) by area fraction
-    out.sensible_heat_flux[i, j, 1] = compute_sensible_heat_flux(i, j, grid, fields, seb.turbulent_fluxes, seb.skin_temperature, constants, atmos)
-    out.latent_heat_flux[i, j, 1] = compute_latent_heat_flux(i, j, grid, fields, seb.turbulent_fluxes, seb.skin_temperature, constants, atmos, evtr, snow)
-    # Compute ground heat flux
-    out.ground_heat_flux[i, j, 1] = compute_ground_heat_flux(i, j, grid, fields, seb.skin_temperature, seb)
+    # Each flux group is stored by a per-process mutating variant, so a prescribed process (whose
+    # fluxes are supplied as input fields) is a no-op while a diagnosed one computes and stores.
+    # Radiative fluxes (net radiation, and upwelling SW/LW where diagnosed).
+    compute_radiative_fluxes!(out, i, j, grid, fields, seb.radiative_fluxes, seb.skin_temperature, seb.albedo, constants, atmos)
+    # Turbulent fluxes; `snow` partitions the latent flux (evaporation vs. sublimation) by area fraction.
+    compute_turbulent_fluxes!(out, i, j, grid, fields, seb.turbulent_fluxes, seb.skin_temperature, constants, atmos, evtr, snow)
+    # Ground heat flux closes the balance: G = R_net + H_s + H_l.
+    compute_ground_heat_flux!(out, i, j, grid, fields, seb.skin_temperature, seb)
     return nothing
 end
 
