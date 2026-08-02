@@ -2,3 +2,16 @@ Copyright: Brian Groenke, Maximillian Gelbrecht, Maha Badri, and Contributors, 2
 Licensed under the EUPL, with extension of article 5 (compatibility clause) to any licence for
 (i) distributing derivative works that have been produced by the normal use of the Work as a library,
 (ii) distributing derivative works managed by the [NumericalEarth](https://github.com/NumericalEarth) development organization
+
+## Third party copyright notices
+
+### ERA5-Land
+
+Data artifacts from ERA5-Land are licensed under the CC-BY 4.0 license and sourced the Copernicus Climate Change Service (C3S):
+
+Copernicus Climate Change Service (C3S)(2019): ERA5-Land hourly data from 1950 to present. Copernicus Climate Change Service (C3S) Climate Data Store (CDS). DOI: 10.24381/cds.e2161bac (Accessed on 31-Jul-2026)
+Attribution
+
+Generated using or contains modified Copernicus Climate Change Service information 2019-2026. Neither the European Commission nor ECMWF is responsible for any use that may be made of the Copernicus information or data it contains.
+
+Muñoz Sabater, J. (2019): ERA5-Land hourly data from 1950 to present. Copernicus Climate Change Service (C3S) Climate Data Store (CDS). DOI: 10.24381/cds.e2161bac (Accessed on 31-Jul-2026)
