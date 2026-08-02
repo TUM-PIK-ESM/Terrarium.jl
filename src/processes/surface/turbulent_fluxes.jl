@@ -15,6 +15,9 @@ variables(::PrescribedTurbulentFluxes) = (
     input(:latent_heat_flux, XY(), units = u"W/m^2", desc = "Latent heat flux at the surface [W m⁻²]"),
 )
 
+# The turbulent fluxes are prescribed input variables, so there is nothing to diagnose.
+@inline compute_auxiliary!(state, grid, ::PrescribedTurbulentFluxes, args...) = nothing
+
 # Diagnosed turbulent fluxes
 
 """
@@ -218,3 +221,25 @@ end
     # compute latent heat flux - pass all args to allow dispatch on evtr presence
     out.latent_heat_flux[i, j, 1] = compute_latent_heat_flux(i, j, grid, fields, tur, args...)
 end
+
+# Per-process mutating variant used by the fused surface-energy-balance kernel.
+
+"""
+    $TYPEDSIGNATURES
+
+Compute the turbulent (sensible and latent) heat fluxes from the current skin temperature and store
+them into the auxiliary output fields `out`.
+"""
+@propagate_inbounds function compute_turbulent_fluxes!(out, i, j, grid, fields, tur::DiagnosedTurbulentFluxes, skinT, constants, atmos, evtr, snow)
+    out.sensible_heat_flux[i, j, 1] = compute_sensible_heat_flux(i, j, grid, fields, tur, skinT, constants, atmos)
+    out.latent_heat_flux[i, j, 1] = compute_latent_heat_flux(i, j, grid, fields, tur, skinT, constants, atmos, evtr, snow)
+    return nothing
+end
+
+"""
+    $TYPEDSIGNATURES
+
+Prescribed turbulent fluxes are input fields supplied by an external coupler (already present in
+`fields`), so there is nothing to compute or store.
+"""
+@propagate_inbounds compute_turbulent_fluxes!(out, i, j, grid, fields, ::PrescribedTurbulentFluxes, skinT, constants, atmos, evtr, snow) = nothing

@@ -51,6 +51,12 @@ The solve is performed by [`solve_skin_temperature!`](@ref), which wraps [`compu
 PrescribedSkinTemperature
 ```
 
+When the skin temperature is prescribed, it is supplied directly as the `skin_temperature` input field (for example by an external coupler) and no nonlinear solve is performed: [`solve_skin_temperature!`](@ref) is a no-op for [`PrescribedSkinTemperature`](@ref). The fused surface-energy-balance kernel then evaluates the radiative and turbulent fluxes from the prescribed skin temperature and closes the ground heat flux as the residual
+```math
+G = R_{\text{net}} + H_s + H_l
+```
+This configuration can be used to defer the surface energy balance to an external solver, often in tandem with [`PrescribedTurbulentFluxes`](@ref) when the turbulent fluxes are also supplied as inputs (see [Surface energy balance](@ref surface_energy_balance_docs)).
+
 ## Process interface
 
 ```@docs; canonical = false
@@ -73,6 +79,7 @@ default_skin_temperature_solver
 ```@docs; canonical = false
 compute_skin_temperature(i, j, grid, fields, skinT::ImplicitSkinTemperature, constants::PhysicalConstants, snow::Optional{AbstractSnow})
 compute_ground_heat_flux(i, j, grid, fields, skinT::AbstractSkinTemperature, ::AbstractSurfaceEnergyBalance)
+compute_ground_heat_flux!(out, i, j, grid, fields, skinT::AbstractSkinTemperature, seb::AbstractSurfaceEnergyBalance)
 compute_skin_temperature!(out, i, j, grid, fields, skinT::ImplicitSkinTemperature, seb::AbstractSurfaceEnergyBalance, constants::PhysicalConstants, snow::Optional{AbstractSnow}, seb_args...)
 compute_skin_temperature_residual!
 solve_skin_temperature!
