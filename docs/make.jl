@@ -6,6 +6,10 @@ using Literate
 
 using Terrarium
 
+# Generate the Benchmarks page from the stored benchmark results before makedocs runs, so that
+# Documenter sees an ordinary static markdown page. Writes a placeholder if no results exist yet.
+include(joinpath(@__DIR__, "generate_benchmarks_page.jl"))
+
 const EXAMPLES_DIR = joinpath(dirname(@__DIR__), "examples")
 const EXAMPLES_OUTDIR = joinpath(@__DIR__, "src", "examples")
 const EXAMPLES_OUTDIR_RELATIVE = "examples"
@@ -184,6 +188,7 @@ makedocs(
             "Reactant acceleration" => "running/reactant.md",
             running_example_docpages...,
         ],
+        "Benchmarks" => "benchmarks.md",
         "Extending Terrarium" => [
             "Core interfaces" => "extending/core_interfaces.md",
             "State variables" => "extending/state_variables.md",

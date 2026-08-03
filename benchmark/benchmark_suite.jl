@@ -209,9 +209,15 @@ function benchmark_configuration(
     runner.warmup()
     device_synchronize(arch)
 
-    ## Restart from the initial state so the timed run starts where the warm-up did.
-    initialize!(integrator)
-    device_synchronize(arch)
+    ## Restart from the initial state so the timed run starts where the warm-up did. This is a
+    ## convenience, not a requirement — the amount of work per step does not depend on the state — so
+    ## a failure here is reported and the timing still goes ahead.
+    try
+        Terrarium.initialize!(integrator)
+        device_synchronize(arch)
+    catch err
+        @warn "Could not re-initialize before the timed run; timing continues from the warmed-up state" exception = err
+    end
 
     t0 = time()
     runner.run()
@@ -292,7 +298,12 @@ function format_sypd(s)
     return s < 10 ? string(round(s; digits = 2)) : string(round(Int, s))
 end
 
-format_metric(x, digits = 2) = (x isa Number && isfinite(x)) ? string(round(x; digits)) : "—"
+function format_metric(x, sigdigits = 3)
+    (x isa Number && isfinite(x)) || return "—"
+    rounded = round(x; sigdigits)
+    return isinteger(rounded) ? string(round(Int, rounded)) : string(rounded)
+end
+format_integer(x) = (x isa Number && isfinite(x)) ? string(round(Int, x)) : "—"
 format_seconds(x) = (x isa Number && isfinite(x)) ? @sprintf("%.1f s", x) : "—"
 format_memory(bytes) = bytes > 0 ? prettymemory(bytes) : "—"
 
@@ -333,7 +344,7 @@ function write_results(io, suite::BenchmarkSuite)
         row *= print_label ? "| $(suite.label[i]) " : ""
         row *= @sprintf("| %.2f° | %d ", resolution_degrees(suite.nlat_half[i]), suite.ncolumns[i])
         row *= print_nz ? "| $(suite.nz[i]) " : ""
-        row *= "| $(format_metric(suite.Δt[i], 0)) "
+        row *= "| $(format_integer(suite.Δt[i])) "
         row *= "| $(suite.nsteps[i] > 0 ? string(suite.nsteps[i]) : "—") "
         row *= "| $(format_sypd(suite.sypd[i])) "
         row *= "| $(format_metric(suite.ms_per_step[i])) "
