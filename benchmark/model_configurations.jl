@@ -39,8 +39,8 @@ resolution_degrees(nlat_half::Integer) = 180 / (2 * nlat_half)
 Benchmark grid: `nlat_half` sets the horizontal resolution, `nz` the number of soil layers.
 
 The vertical spacing grows quasi-exponentially from 5 cm at the surface to 1 m at the bottom, as in
-`test/coupled_models/land_model_tests.jl`, so that `nz` changes the resolution of a soil column of
-roughly fixed depth rather than the depth itself.
+`test/coupled_models/land_model_tests.jl`. Note that the two endpoints are fixed, so a larger `nz`
+both refines the profile and deepens the column.
 """
 function benchmark_grid(arch, ::Type{NF}; nlat_half::Integer, nz::Integer) where {NF}
     spacing = ExponentialSpacing(Δz_min = NF(0.05), Δz_max = NF(1), N = nz)

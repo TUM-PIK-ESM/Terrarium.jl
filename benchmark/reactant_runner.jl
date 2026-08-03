@@ -11,7 +11,8 @@ function build_runner(::ReactantState, integrator, Δt, nsteps)
     Δt = Terrarium.convert_dt(Δt)
     compile_time = @elapsed compiled_run! = @compile raise = true raise_first = true sync = true run_timesteps!(integrator, Δt, nsteps, false)
     @info @sprintf("     compiled the %d-step loop in %.1f s", nsteps, compile_time)
-    ## `sync = true` makes the call block until the device is done, so the wallclock around it is the
-    ## full execution time.
-    return (() -> compiled_run!(integrator, Δt, nsteps, false), compile_time)
+    ## The compiled program has a fixed step count, so the warm-up is a full run. `sync = true` makes
+    ## the call block until the device is done, so the wallclock around it is the execution time.
+    call() = compiled_run!(integrator, Δt, nsteps, false)
+    return (run = call, warmup = call, compile_time = compile_time)
 end

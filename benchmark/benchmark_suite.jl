@@ -113,14 +113,25 @@ already synchronous (the compiled program is built with `sync = true`).
 device_synchronize(arch) = KernelAbstractions.synchronize(device(arch))
 device_synchronize(::ReactantState) = nothing
 
+"Steps taken before the timed run, to move JIT compilation and first kernel launches out of it."
+const WARMUP_STEPS = 3
+
 """
     build_runner(arch, integrator, Δt, nsteps)
 
-Return `(runner, compile_time)` where `runner()` advances `integrator` by `nsteps` steps of size
-`Δt`. The generic method just calls `run!`; `reactant_runner.jl` adds the `ReactantState` method,
-which compiles the stepping loop once and reports how long that took.
+Return `(; run, warmup, compile_time)`, where `run()` advances `integrator` by `nsteps` steps of size
+`Δt` and `warmup()` does the same thing more cheaply. The generic method calls `run!` and warms up
+with a handful of steps; `reactant_runner.jl` adds the `ReactantState` method, which compiles the
+stepping loop once (for a fixed step count, so its warm-up is a full run) and reports the compile
+time.
 """
-build_runner(arch, integrator, Δt, nsteps) = (() -> run!(integrator; steps = nsteps, Δt), NaN)
+function build_runner(arch, integrator, Δt, nsteps)
+    return (
+        run = () -> run!(integrator; steps = nsteps, Δt),
+        warmup = () -> run!(integrator; steps = min(nsteps, WARMUP_STEPS), Δt),
+        compile_time = NaN,
+    )
+end
 
 # Recursive walk over the (possibly namespaced) NamedTuples returned by `get_fields`.
 field_bytes(f::Field) = length(parent(f)) * sizeof(eltype(f))
@@ -192,18 +203,18 @@ function benchmark_configuration(
     device_synchronize(arch)
     memory = state_memory(integrator)
 
-    runner, compile_time = build_runner(arch, integrator, cfg.Δt, nsteps)
+    runner = build_runner(arch, integrator, cfg.Δt, nsteps)
 
     ## Warm up: JIT (and, on the GPU, the first kernel launches) must not land in the timed run.
-    runner()
+    runner.warmup()
     device_synchronize(arch)
 
-    ## Restart from the same initial state so the timed run does the same work as the warm-up.
+    ## Restart from the initial state so the timed run starts where the warm-up did.
     initialize!(integrator)
     device_synchronize(arch)
 
     t0 = time()
-    runner()
+    runner.run()
     device_synchronize(arch)
     elapsed = time() - t0
 
@@ -214,7 +225,10 @@ function benchmark_configuration(
     throughput = ncols * nz * nsteps / elapsed / 1.0e6
 
     status = state_is_finite(integrator) ? "ok" : "unstable"
-    return (; ncolumns = ncols, Δt, nsteps, sypd, ms_per_step, throughput, memory, init_time, compile_time, status)
+    return (;
+        ncolumns = ncols, Δt, nsteps, sypd, ms_per_step, throughput, memory,
+        init_time, compile_time = runner.compile_time, status,
+    )
 end
 
 """
