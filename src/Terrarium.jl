@@ -109,8 +109,8 @@ include("grids/vertical_discretization.jl")
 export ColumnGrid, ColumnRingGrid, get_field_grid
 include("grids/grids.jl")
 
-export ERA5LandForcings, ERA5LandInvariants
-include("input_output/get_asset.jl")
+export ERA5LandForcings, ERA5LandInvariants, ERA5LandLeafAreaIndex
+include("input_output/assets.jl")
 
 export InputSource, InputSources, FieldInputSource, FieldTimeSeriesInputSource
 export update_inputs!, varpath, varpath, VarPath
