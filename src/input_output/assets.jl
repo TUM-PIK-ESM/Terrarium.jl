@@ -1,3 +1,4 @@
+# File formats
 abstract type FileFormat end
 struct NetCDF <: FileFormat end
 
@@ -6,6 +7,8 @@ File extension (including the leading dot) used by files of the given [`FileForm
 """
 file_extension(::NetCDF) = ".nc"
 
+# Asset types
+
 """
     $TYPEDEF
 
@@ -13,6 +16,11 @@ Lightweight base type for Terrarium land data assets.
 """
 abstract type AbstractLandAsset end
 
+"""
+    $TYPEDEF
+
+Time-invariant spatial fields from ERA5-Land at the native 0.1° x 0.1° resolution.
+"""
 struct ERA5LandInvariants <: AbstractLandAsset end
 
 artifact_name(::ERA5LandInvariants) = "era5-land-invariants"
@@ -21,6 +29,24 @@ format(::ERA5LandInvariants) = NetCDF()
 indices(::ERA5LandInvariants) = (:, :, 5)
 native_grid(::ERA5LandInvariants) = RingGrids.FullClenshawGrid(900)
 
+"""
+    $TYPEDEF
+
+Leaf area index daily climatology for 1980-2010 from ERA5-Land at the native 0.1° x 0.1° resolution.
+"""
+struct ERA5LandLeafAreaIndex <: AbstractLandAsset end
+
+artifact_name(::ERA5LandLeafAreaIndex) = "era5-land-leaf-area-index"
+varnames(::ERA5LandLeafAreaIndex) = ["lai_lv", "lai_hv"]
+format(::ERA5LandLeafAreaIndex) = NetCDF()
+indices(::ERA5LandLeafAreaIndex) = (:, :, :)
+native_grid(::ERA5LandLeafAreaIndex) = RingGrids.FullClenshawGrid(900)
+
+"""
+    $TYPEDEF
+
+One year of ERA5-Land hourly meterological variables regridded to approximately 1° x 1° resolution (72 Gaussian rings).
+"""
 struct ERA5LandForcings <: AbstractLandAsset end
 
 artifact_name(::ERA5LandForcings) = "era5-land-forcings-N72"
@@ -28,6 +54,8 @@ varnames(::ERA5LandForcings) = ["t2m", "d2m", "tp", "sf", "sp", "ssrd", "strd", 
 format(::ERA5LandForcings) = NetCDF()
 indices(::ERA5LandForcings) = (:, :, :)
 native_grid(::ERA5LandForcings) = RingGrids.FullGaussianGrid(72)
+
+# get_asset
 
 """
     $TYPEDSIGNATURES
@@ -80,6 +108,11 @@ function locate_asset_file(dir::String, format::FileFormat)
     return only(matches)
 end
 
+"""
+    $TYPEDSIGNATURES
+
+Retrieve the path to the artifact with the given `name`. Throws an `AssertionError` if no artifact with `name` exists in `Artifacts.toml`.
+"""
 function get_artifact(name::String)
     project_root = pkgdir(Terrarium)
     # fallback to @__DIR__ if pkgdir fails
