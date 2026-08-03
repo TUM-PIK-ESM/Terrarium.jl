@@ -1,6 +1,6 @@
 using Terrarium
 using Terrarium: compute_phenology_factor, compute_LAI, compute_gdd_tendency,
-    compute_auxiliary!, initialize, VegetationCarbon, PALADYNPhenology, PrescribedPhenology,
+    compute_auxiliary!, initialize, VegetationCarbonCycle, PALADYNPhenology, PrescribedPhenology,
     seconds_per_day
 using Oceananigans: set!, interior
 using Test
@@ -51,7 +51,7 @@ end
 
 @testset "PALADYNPhenology in VegetationModel" begin
     grid = ColumnGrid(CPU(), Float64, ExponentialSpacing(N = 5))
-    model = VegetationModel(grid; vegetation = VegetationCarbon(Float64; phenology = PALADYNPhenology(Float64)))
+    model = VegetationModel(grid; vegetation = VegetationCarbonCycle(Float64; phenology = PALADYNPhenology(Float64)))
     integrator = initialize(model)
     state = integrator.state
     set!(state.air_temperature, 20.0)
@@ -66,7 +66,7 @@ end
 @testset "PrescribedPhenology derives phenology factor" begin
     grid = ColumnGrid(CPU(), Float64, ExponentialSpacing(N = 5))
     phenol = PrescribedPhenology(Float64; max_leaf_area_index = 4.0)
-    model = VegetationModel(grid; vegetation = VegetationCarbon(Float64; phenology = phenol))
+    model = VegetationModel(grid; vegetation = VegetationCarbonCycle(Float64; phenology = phenol))
     integrator = initialize(model)
     state = integrator.state
     # ϕ = clamp(LAI / max_leaf_area_index, 0, 1)

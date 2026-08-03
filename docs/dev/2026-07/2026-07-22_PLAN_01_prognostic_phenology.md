@@ -44,7 +44,7 @@ Base revision: b53747d7fb9bd12c213d3a144a3fc064cf519dfd
 >   `LAI = ϕ·LAI_b`.
 > - Air temperature is obtained through the `air_temperature(i, j, grid, fields, atmos)` accessor, so
 >   `atmosphere` is now threaded into the phenology `compute_auxiliary!`/`compute_tendencies!`. This
->   required adding `atmosphere` to `VegetationCarbon`'s `compute_tendencies!` and to the
+>   required adding `atmosphere` to `VegetationCarbonCycle`'s `compute_tendencies!` and to the
 >   `VegetationModel` / `LandModel` tendency couplings (`compute_tendencies!(..., constants,
 >   atmosphere)`); `PrescribedPhenology`'s no-op methods absorb the extra argument via `args...`.
 > - Added the `sitchEvaluationEcosystemDynamics2003` bibliography entry (cited by the new docstrings).

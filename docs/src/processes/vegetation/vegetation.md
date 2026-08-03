@@ -35,14 +35,14 @@ subtypes(Terrarium.AbstractVegetation)
 
 ## Vegetation carbon
 
-Terrarium currently provides a single implementation of [`AbstractVegetation`](@ref), [`VegetationCarbon`](@ref), which couples together all of the above processes related to the carbon cycle for natural vegetation. `VegetationCarbon` also provides a coupling interface for interacting with [`AbstractAtmosphere`](@ref) and [`AbstractSoil`](@ref) components.
+Terrarium currently provides a single implementation of [`AbstractVegetation`](@ref), [`VegetationCarbonCycle`](@ref), which couples together all of the above processes related to the carbon cycle for natural vegetation. `VegetationCarbonCycle` also provides a coupling interface for interacting with [`AbstractAtmosphere`](@ref) and [`AbstractSoil`](@ref) components.
 
 ```@docs; canonical = false
-VegetationCarbon
+VegetationCarbonCycle
 ```
 
 ```@example vegetation
-variables(VegetationCarbon(Float32))
+variables(VegetationCarbonCycle(Float32))
 ```
 
 ### Process interface
@@ -50,14 +50,14 @@ variables(VegetationCarbon(Float32))
 ```@docs; canonical = false
 compute_auxiliary!(
         state, grid,
-        veg::VegetationCarbon,
+        veg::VegetationCarbonCycle,
         constants::PhysicalConstants,
         atmos::AbstractAtmosphere,
         soil::Optional{AbstractSoil} = nothing,
         args...
     )
 
-compute_tendencies!(state, grid, veg::VegetationCarbon, constants::PhysicalConstants, atmos::AbstractAtmosphere, args...)
+compute_tendencies!(state, grid, veg::VegetationCarbonCycle, constants::PhysicalConstants, atmos::AbstractAtmosphere, args...)
 ```
 
 ## Component processes

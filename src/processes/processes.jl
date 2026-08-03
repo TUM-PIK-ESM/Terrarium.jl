@@ -118,8 +118,8 @@ include("vegetation/stomatal_conductance/medlyn_stomatal_conductance.jl")
 export PALADYNAutotrophicRespiration
 include("vegetation/respiration/autotrophic_respiration.jl")
 
-export VegetationCarbon
-include("vegetation/vegetation_carbon.jl")
+export VegetationCarbonCycle
+include("vegetation/vegetation_carbon_cycle.jl")
 
 # Surface
 

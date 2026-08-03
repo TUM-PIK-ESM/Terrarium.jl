@@ -1,9 +1,9 @@
 """
     $TYPEDEF
 
-Represents a generic coupling of vegetation carbon processes.
+Coupled process type representing the major carbon cycle processes for natural vegetation.
 """
-@kwdef struct VegetationCarbon{
+@kwdef struct VegetationCarbonCycle{
         NF,
         Photosynthesis <: AbstractPhotosynthesis{NF},
         StomatalConductance <: AbstractStomatalConductance{NF},
@@ -39,7 +39,7 @@ Represents a generic coupling of vegetation carbon processes.
     plant_available_water::PAW
 end
 
-function VegetationCarbon(
+function VegetationCarbonCycle(
         ::Type{NF};
         photosynthesis = LUEPhotosynthesis(NF),
         stomatal_conductance = MedlynStomatalConductance(NF),
@@ -50,7 +50,7 @@ function VegetationCarbon(
         root_distribution = StaticExponentialRootDistribution(NF),
         plant_available_water = FieldCapacityLimitedPAW(NF)
     ) where {NF}
-    return VegetationCarbon(;
+    return VegetationCarbonCycle(;
         photosynthesis,
         stomatal_conductance,
         autotrophic_respiration,
@@ -63,7 +63,7 @@ function VegetationCarbon(
 end
 
 # TODO: Remove once dedicated vegetation surface parameterizations are added
-# Also may be a good reason to rename VegetationCarbon to NaturalVegetation or similar
+# Also may be a good reason to rename VegetationCarbonCycle to NaturalVegetation or similar
 @propagate_inbounds compute_albedo(i, j, grid, fields, ::AbstractVegetation{NF}) where {NF} = NF(0.02)
 
 # TODO: will need to change once PFTs are added
@@ -79,7 +79,7 @@ stress factors due to soil temperature and moisture availability will be ignored
 """
 function compute_auxiliary!(
         state, grid,
-        veg::VegetationCarbon,
+        veg::VegetationCarbonCycle,
         constants::PhysicalConstants,
         atmos::AbstractAtmosphere,
         soil::Optional{AbstractSoil} = nothing,
@@ -116,7 +116,7 @@ end
 
 Compute tendencies for carbon and vegetation dynamics.
 """
-function compute_tendencies!(state, grid, veg::VegetationCarbon, constants::PhysicalConstants, atmos::AbstractAtmosphere, args...)
+function compute_tendencies!(state, grid, veg::VegetationCarbonCycle, constants::PhysicalConstants, atmos::AbstractAtmosphere, args...)
     # Needs NPP(t), C_veg(t), LAI_b(t) and computes tendency for C_veg
     compute_tendencies!(state, grid, veg.carbon_dynamics)
 
