@@ -1,8 +1,10 @@
 # Benchmark suite for Terrarium
 
 > Status: **in progress**. Harness, model configuration registry, results store, README generator and
-> documentation page are implemented; `cpu-arm` and `reactant-cpu` results collected locally, the
-> remaining four architectures still need to be run on their respective machines.
+> documentation page are implemented and verified end to end on `cpu-arm`; the Reactant path of the
+> harness is verified too (it compiles and times `:soil_heat`, and reports the land configurations'
+> compile failures rather than dying). The remaining architectures — `cpu-x86`, `gpu-nvidia`,
+> `reactant-cpu`, `reactant-gpu` — still need a full run on their respective machines.
 
 Date of initial draft: 2026-08-03
 
@@ -31,6 +33,13 @@ Base revision: e015a29db9d97090edfd112a5eea165640134404
   hydrology and snow, plus a no-vegetation variant; `:soil_heat` retained only as a Reactant
   reference configuration. Resolution sweep extended to `nlat_half = 144` (~166k columns) on a
   synthetic all-land mask. The stale `test/benchmarks/gpu/` scripts are left untouched.
+- 2026-08-03: two pre-existing defects had to be worked around in the benchmark configurations
+  before the coupled land model could be benchmarked at all; both are described under
+  [Defects found while building this](#defects-found-while-building-this) and both are worked around
+  in `benchmark/model_configurations.jl` rather than fixed in `src/` (out of scope here).
+- 2026-08-03: `:bench500` benchmarks `ForwardEuler` against `Heun` only. `IMEX` needs an implicit
+  sub-stepper and Terrarium has no concrete one yet — nothing implements
+  `timestepping(…) == Implicit()`.
 
 ## Problem description
 
@@ -177,6 +186,58 @@ resolver cannot confuse them with other pages. A missing or empty JSON store yie
 page, so the documentation still builds on a fresh checkout. `docs/Project.toml` gains `JSON3`;
 `docs/make.jl` gains a top-level `"Benchmarks"` page.
 
+## Defects found while building this
+
+Neither is caused by the benchmark suite; both block the coupled land model outright and are worked
+around in `benchmark/model_configurations.jl`, with the workaround documented at the point of use.
+Both deserve their own fix (and their own tests) in a separate PR.
+
+### 1. Vegetation turnover rates are in yr⁻¹ but integrated in seconds
+
+`PALADYNCarbonDynamics.γL`, `.γR`, `.γS` (`src/processes/vegetation/dynamics/carbon_dynamics.jl`) and
+`PALADYNVegetationDynamics.γv_min` (`…/vegetation_dynamics.jl`) are declared with `units = u"yr^-1"`
+but are used unconverted in tendencies that the time steppers integrate in seconds. The litterfall
+term is `Λ_loc = (γL/SLA + γR/SLA + γS·awl)·LAI_b = 0.16·LAI_b`, and with `LAI_b = C_veg/2.2` this
+makes the carbon pool decay at `0.0727 s⁻¹` — an e-folding time of 14 seconds instead of 14 years.
+
+Consequence: with an explicit time stepper the pool oscillates with a growth factor of `1 + λΔt`,
+i.e. −3.4 per step at Δt = 60 s. Measured `carbon_vegetation` for the coupled model at Δt = 60 s:
+
+```
+0.1 → −0.376 → 1.28 → −4.29 → 14.4 → −48.6 → 163 → −549 → (abort)
+```
+
+The model then aborts inside a kernel on `@assert isfinite(β) && 0 <= β <= 1` in
+`compute_stomatal_conductance`. Stability would require Δt ≲ 25 s. The unit tests do not catch this
+because `test/coupled_models/land_model_tests.jl` takes a single time step. (`γv_min` already carries
+a `# TODO this parameter is yearly` comment.)
+
+Benchmark workaround: `benchmark_vegetation` rescales the four rates by `1/(365.25·24·3600)`. Only
+parameter values change, so the code path and the cost per step are unaffected.
+
+### 2. The default soil texture makes the vegetation soil-moisture factor non-finite
+
+`SoilTexture` defaults to pure sand (`clay = 0`). For `SoilHydraulicsSURFEX` — the default hydraulics
+— both `field_capacity = 0.089·(100·clay)^0.35` and `wilting_point = 0.03713·√(100·clay)` are then
+zero, so the plant available water `(θ − θ_wp)/(θ_fc − θ_wp)` is `0/0`. `NaN` survives the
+`max(min(1, ·), 0)` clamp, β is `NaN`, and the same assertion aborts the run — during initialization
+this time. So `LandModel(grid)` with default vegetation and default soil cannot be initialized.
+
+Benchmark workaround: `benchmark_texture` prescribes a loam (`sand = 0.4, clay = 0.2, silt = 0.4`).
+
+A fix could give the SURFEX hydraulics a floor on `θ_fc − θ_wp`, or default `SoilTexture` to a
+non-degenerate loam. Either way the assertion should also move out of the kernel: a reachable throw
+path in a kernel is banned by `AGENTS.md` because it cannot be raised under Reactant.
+
+### 3. Residual: vegetation carbon drifts negative under the default forcing
+
+With the rates rescaled the coupled model integrates stably for at least 100 steps at Δt = 600 s, but
+`carbon_vegetation` falls linearly (roughly −1.8·10⁻⁴ kg m⁻² s⁻¹) under the default constant
+atmospheric forcing, i.e. autotrophic respiration greatly exceeds assimilation, and turns negative
+within a day of simulated time. This does not affect the benchmark (the work per time step is
+unchanged and no branch depends on the sign), but it suggests a further calibration or unit problem
+in the NPP path that is worth a look.
+
 ## Testing and verification
 
 Benchmarks are not part of CI (they are wallclock measurements on dedicated hardware). Verification
@@ -199,11 +260,27 @@ is manual:
 
 ## Known limitations
 
-- **Reactant coverage of the land model is unproven.** `:land` is expected to fail to compile on the
-  static root-fraction path (`exp(::TracedRArray)` from the `FunctionField` `sum(dims = 3)` in
-  `StaticExponentialRootDistribution`); `:land_no_vegetation` is untested. The harness records such
-  failures as `—` rather than hiding them, and `:soil_heat` distinguishes a physics gap from a
-  harness bug.
+- **Neither land configuration compiles under Reactant today** (measured 2026-08-03, `reactant-cpu`,
+  128 columns × 10 layers):
+
+  | Configuration | Reactant CPU |
+  | --- | --- |
+  | `:soil_heat` | compiles in 24.6 s, then 0.011 ms/step (149,000 SYPD) |
+  | `:land_no_vegetation` | `InvalidIRError` compiling `gpu_saturation_to_pressure_kernel!` (the soil hydrology saturation→pressure closure) |
+  | `:land` | `MethodError: no method matching exp(::Reactant.TracedRArray{Float32, 3})` — the static root-fraction path |
+
+  Both failures are in Terrarium's physics kernels, not in the harness: the same harness compiles and
+  times `:soil_heat` on the same run. The `:land` failure is the known root-fraction gap
+  (`FunctionField` `sum(dims = 3)` in `StaticExponentialRootDistribution` evaluating the closure on the
+  whole traced array). The `:land_no_vegetation` failure is new information — the Richards-equation
+  hydrology closure is a Reactant blocker independently of vegetation. The in-kernel `@assert` in
+  `compute_stomatal_conductance` is a third one, which vegetation configurations would hit after the
+  root-fraction issue is fixed.
+
+  This is why `:soil_heat` is in the registry: it is what distinguishes "Reactant cannot compile this
+  physics yet" from "the benchmark harness is broken".
+- **Two workarounds carried in the benchmark configurations** for the defects described above. They
+  must be removed once those are fixed upstream; neither affects the measured cost per time step.
 - **Single-threaded CPU numbers.** Thread scaling is not swept; runs inherit whatever
   `JULIA_NUM_THREADS` the machine provides, and the value is recorded in the machine info block.
 - **Synthetic all-land mask.** Column counts are ~3x a real land-sea mask at the same `nlat_half`.
