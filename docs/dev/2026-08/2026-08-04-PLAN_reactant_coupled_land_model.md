@@ -1,7 +1,9 @@
 # Reactant support for the coupled `LandModel` (soil + snow, no vegetation)
 
-> Status: **in progress**. All six Reactant blockers found on the coupled soil+snow path are fixed and
-> the configuration compiles and runs; the CPU-vs-Reactant correctness comparison is being verified.
+> Status: **in progress**. Five of the six Reactant blockers on the coupled soil+snow path are fixed;
+> with a local patch for the sixth the `:land_soil_snow` correctness test passes (59/59 fields after 100
+> steps). Blocker #5 is being fixed upstream in Oceananigans instead, so the coupled configuration does
+> not compile against stock Oceananigans yet.
 
 Date of initial draft: 2026-08-04
 
@@ -15,6 +17,10 @@ Base revision: e015a29db9d97090edfd112a5eea165640134404
 ## Revision log
 
 - 2026-08-04: initial draft, written after the blockers were found and fixed.
+- 2026-08-04: the Terrarium-side workaround for blocker #5 (materializing the negated infiltration into
+  a `soil_water_flux` coupling field) was **reverted** on request — the underlying `getbc` limitation is
+  to be fixed in Oceananigans instead. Written up separately, with a Terrarium-free MWE, in
+  `2026-08-04-OCEANANIGANS_getbc_2d_indexing_issue.md`.
 
 ## Problem description
 
@@ -117,12 +123,15 @@ Reason: unsupported call to an unknown function (call to jl_f_throw_methoderror)
  [7] getbc @ Oceananigans/src/BoundaryConditions/boundary_condition.jl:182
 ```
 
-**Fix**: materialize the negation into a `soil_water_flux` coupling field (upwards-positive), declared
-by `interface_variables(::LandModel)` alongside `soil_heat_flux` and refreshed by
-`compute_soil_water_flux!` at the end of each `compute_auxiliary!`. This makes the water BC structurally
-identical to the heat BC, which already compiles. It is semantically equivalent because
-`fill_halo_regions!` (where `getbc` runs) precedes `compute_auxiliary!` in `update_state!`, so the lazy
-operation also saw the previous step's infiltration.
+**Status: not fixed in Terrarium — to be fixed upstream.** A Terrarium-side workaround was implemented
+and verified (materialize the negation into a `soil_water_flux` coupling field declared by
+`interface_variables(::LandModel)` alongside `soil_heat_flux`, refreshed at the end of each
+`compute_auxiliary!`), which made the water BC structurally identical to the heat BC and let the whole
+configuration compile and pass. It was then reverted: the real defect is `getbc`'s 2D indexing, and
+patching around it in Terrarium costs an extra field plus an explicit refresh step while leaving the
+same trap for every other operation-valued BC. See
+`2026-08-04-OCEANANIGANS_getbc_2d_indexing_issue.md` for the analysis, the Terrarium-free MWE and the
+suggested upstream fix.
 
 ### 6. Data-dependent control flow in kernels
 
@@ -153,10 +162,12 @@ configuration selects it explicitly; **the default is unchanged** (see Known lim
 | `src/solvers/root_solvers.jl`, `src/solvers/fixed_point.jl` | Index the target field in 3D via `pad_indices` |
 | `src/solvers/newton.jl` (new) | `NewtonSolver`: fixed, type-level iteration count |
 | `src/solvers/solvers.jl` | Include the new solver |
-| `src/models/coupled/land_model.jl` | `soil_water_flux` coupling variable + `compute_soil_water_flux!`; BC no longer a lazy operation |
 | `test/reactant/setup.jl`, `test/reactant/runtests.jl` | New `:land_soil_snow` configuration |
 | `test/solvers/test_solvers.jl` | `NewtonSolver` tests |
-| `test/coupled_models/land_model_tests.jl` | Refresh `soil_water_flux` before asserting on the BC condition |
+| `docs/dev/2026-08/2026-08-04-OCEANANIGANS_getbc_2d_indexing_issue.md` (+ MWE) | Write-up of blocker #5 for upstream |
+
+`src/models/coupled/land_model.jl` is deliberately **unchanged**: the `soil_water_flux` workaround for
+blocker #5 was reverted (see the revision log).
 
 ## Testing and verification
 
@@ -166,23 +177,39 @@ configuration selects it explicitly; **the default is unchanged** (see Known lim
   and every prognostic and auxiliary field is compared.
 - The pack is held below freezing deliberately: the comparison should not hinge on the exact step at
   which a melt threshold is crossed, which CPU and XLA need not agree on.
-- The full CPU suite passes unchanged.
+- **Result with the (reverted) blocker-#5 workaround in place: 59/59 fields match.** The worst deviations
+  after 100 steps were `max_rel = 1.7e-5` for `soil_heat_flux` and `snow_temperature`, well inside the
+  suite's `rtol = 1e-3`; most fields were bit-identical.
+- Substituting `NewtonSolver` for the default `RootSolver` changes the CPU answer by at most `6e-7`
+  relative (`skin_temperature`) and `8e-6` (`snow_temperature`) after 100 steps; soil temperature,
+  saturation and the latent heat flux are bit-identical.
+- The full CPU suite passes unchanged (841 tests).
 
 ## Known limitations
 
-- **The default `LandModel` still does not compile under Reactant.** `ImplicitSkinTemperature` defaults
+- **`:land_soil_snow` does not compile against stock Oceananigans** — blocker #5. It is registered in
+  `test/reactant/runtests.jl` and will pass once the upstream `getbc` fix lands.
+- **The default `LandModel` would still not compile even then.** `ImplicitSkinTemperature` defaults
   to `RootSolver`, whose convergence-tested loop is blocker #6. The Reactant configuration overrides it
   with `NewtonSolver`; users of the default configuration hit the raise failure. Making `NewtonSolver`
   the default is recommended (see Future work) but changes results for existing users and so is left for
   review.
-- **`getbc`'s 2D indexing is an upstream issue.** Terrarium now avoids it by keeping BC conditions as
-  `Field`s, but any operation-valued boundary condition will hit it again. Worth reporting to
-  Oceananigans.
 - **Vegetation is still unsupported** — see the separate root-fraction `exp(::TracedRArray)` blocker.
+
+## Unrelated issues noticed along the way
+
+- **The default coupled `LandModel` has no snow-aware albedo.** `default_surface_energy_balance` never
+  receives the `snow` component and always selects `ConstantAlbedo` (α = 0.3), so a snow-covered column
+  absorbs ~70% of the incoming shortwave. With the default forcing (a constant 341 W/m² downwelling
+  shortwave, no diurnal cycle) the CPU run settles at a skin temperature of **38 °C over a 0.2 m
+  snowpack with air at −2 °C**. `DiagnosticAlbedo` exists for exactly this case (snow-cover-weighted
+  blend, α_snow = 0.8) but is not wired into the defaults.
+- **The skin temperature is not capped at the melting point over snow**, so nothing bounds the above.
 
 ## Future work
 
+- Fix `getbc` upstream in Oceananigans, then re-run `:land_soil_snow` against the released version.
 - Make `NewtonSolver` the default skin-temperature solver, after checking the effect on the SEB
   regression tests.
 - Add a `LandModel` configuration to `test/reactant/autodiff.jl` once the forward path is verified.
-- Report the `getbc` 2D-indexing limitation upstream.
+- Select a snow-aware albedo in `default_surface_energy_balance` when a snow component is present.
