@@ -98,7 +98,10 @@ function build_model(::Val{:land_soil_snow}, arch, NF)
     hydraulic_properties = ConstantSoilHydraulics(NF; swrc, unsat_hydraulic_cond = UnsatKVanGenuchten(NF))
     hydrology = SoilHydrology(NF, RichardsEq(); hydraulic_properties)
     soil = SoilEnergyWaterCarbon(NF; hydrology)
-    model = LandModel(grid; soil, snow = SingleLayerSnow(NF), vegetation = nothing)
+    # Use a `NewtonSolver` with fixed iterations for Reactant
+    skin_temperature = Terrarium.ImplicitSkinTemperature(NF; solver = Terrarium.NewtonSolver(NF; iterations = 5))
+    seb = SurfaceEnergyBalance(NF; skin_temperature)
+    model = LandModel(grid; soil, snow = SingleLayerSnow(NF), vegetation = nothing, surface_energy_balance = seb)
     # Soil BCs are set up by `LandModel` itself (ground/soil heat flux and infiltration coupling),
     # so only the initial state and the prescribed atmospheric inputs are specified here.
     inits = (
