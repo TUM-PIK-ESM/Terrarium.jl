@@ -62,6 +62,14 @@ function VegetationCarbon(
     )
 end
 
+# TODO: Remove once dedicated vegetation surface parameterizations are added
+# Also may be a good reason to rename VegetationCarbon to NaturalVegetation or similar
+@propagate_inbounds compute_albedo(i, j, grid, fields, ::AbstractVegetation{NF}) where {NF} = NF(0.02)
+
+# TODO: will need to change once PFTs are added
+@propagate_inbounds vegetation_area_fraction(i, j, grid, fields, veg::AbstractVegetation) = vegetation_area_fraction(i, j, grid, fields, veg.vegetation_dynamics)
+@propagate_inbounds vegetation_area_fraction(i, j, grid, fields, ::Nothing) = zero(eltype(grid))
+
 """
     $TYPEDSIGNATURES
 

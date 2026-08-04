@@ -181,6 +181,7 @@ makedocs(
             "Initialization" => "running/initialization.md",
             "Time stepping" => "running/time_stepping.md",
             "Input sources" => "running/input_sources.md",
+            "Reactant acceleration" => "running/reactant.md",
             running_example_docpages...,
         ],
         "Extending Terrarium" => [
@@ -193,6 +194,7 @@ makedocs(
         "Models" => [
             "Land model" => "models/land_model.md",
             "Soil model" => "models/soil_model.md",
+            "Snow model" => "models/snow_model.md",
             "Vegetation model" => "models/vegetation_model.md",
         ],
         "Processes" => [
@@ -202,6 +204,12 @@ makedocs(
                 "Hydrology" => "processes/soil/soil_hydrology.md",
                 "Energy balance" => "processes/soil/soil_energy.md",
                 "Biogeochemistry" => "processes/soil/soil_biogeochemistry.md",
+            ],
+            "Snow" => [
+                "Overview" => "processes/snow/snow.md",
+                "Parameterizations" => "processes/snow/snow_parameterizations.md",
+                "Energy balance" => "processes/snow/snow_energy.md",
+                "Mass balance" => "processes/snow/snow_mass.md",
             ],
             "Vegetation" => [
                 "Overview" => "processes/vegetation/vegetation.md",
@@ -236,6 +244,7 @@ makedocs(
                 "Physics" => "processes/utils/physics_utils.md",
             ],
         ],
+        "Numerical solvers" => "solvers/solvers.md",
         "Contributing" => "contributing.md",
         "Index of API" => "api_index.md",
         "References" => "references.md",

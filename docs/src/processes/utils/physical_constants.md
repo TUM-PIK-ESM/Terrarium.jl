@@ -45,9 +45,9 @@ ThermodynamicConstants
 | `specific_heat_capacity_ice` | $c_{p,i}$ | 2070.0 | J/(kg·K) | Isobaric specific heat capacity of ice at 0°C |
 | `specific_heat_capacity_liquid_water` | $c_{p,l}$ | 4186.0 | J/(kg·K) | Isobaric specific heat capacity of liquid water at 0°C |
 | `specific_heat_capacity_water_vapor` | $c_{p,v}$ | 1846.0 | J/(kg·K) | Isobaric specific heat capacity of water vapor at 0°C |
-| `latent_heat_fusion` | $L_{sl}$ | 3.34×10⁵ | J/kg | Specific latent heat of fusion at 0°C |
-| `latent_heat_vaporization` | $L_{lv}$ | 2.257×10⁶ | J/kg | Specific latent heat of vaporization at 0°C |
-| `latent_heat_sublimation` | $L_{sg}$ | 2.834×10⁶ | J/kg | Specific latent heat of sublimation at 0°C |
+| `latent_heat_fusion` | $L_{sl}$ | 3.3355×10⁵ | J/kg | Specific latent heat of fusion at 0°C |
+| `latent_heat_vaporization` | $L_{lv}$ | 2.5008×10⁶ | J/kg | Specific latent heat of vaporization at 0°C |
+| `latent_heat_sublimation` | $L_{sg}$ | 2.83435×10⁶ | J/kg | Specific latent heat of sublimation at 0°C, derived as $L_{sl} + L_{lv}$ for thermodynamic consistency |
 | `temperature_reference` | $T_{\text{ref}}$ | 273.16 | K | Reference temperature (0°C in Kelvin) |
 | `temperature_water_freeze` | $T_{\text{freeze}}$ | 273.16 | K | Freezing temperature of water |
 | `temperature_water_triple_point` | $T_{\text{triple}}$ | 273.16 | K | Triple point temperature of water |

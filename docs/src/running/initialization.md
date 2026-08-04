@@ -6,11 +6,11 @@ CurrentModule = Terrarium
 
 ## Overview
 
-Model and process types in Terrarium are *stateless* and *immutable*; i.e. they only specify parameters and model configuration. To allocate state variables for a model or process, we need to use the [`initialize`](@ref) method:
+Model and process types in Terrarium are *stateless* and *immutable*; i.e. they only specify parameters and model configuration. To allocate state variables for a model or process, we use the [`StateVariables`](@ref) constructor:
 
 ```@docs; canonical = false
-initialize(model::AbstractModel{NF, Grid}) where {NF, Grid}
-initialize(process::AbstractProcess{NF}, grid::AbstractLandGrid{NF}) where {NF}
+StateVariables(model::AbstractModel)
+StateVariables(process::AbstractProcess{NF}, grid::AbstractLandGrid{NF}) where {NF}
 ```
 
 which will create and return a [`StateVariables`](@ref) structure containing all of the initialized [`Field`](@ref)s corresponding to state variables defined by the model/process.

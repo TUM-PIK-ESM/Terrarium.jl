@@ -51,15 +51,15 @@ The term $(1 - e^{-k_{\text{ext}}(\text{LAI} + \text{SAI})})$ represents the veg
 The canopy water balance is expressed as
 ```math
 \begin{equation}
-\frac{\partial w_{\text{can}}}{\partial t} = I_{\text{can}} - E_{\text{can}} - R_{\text{can}}\,,
+\frac{\partial W_{\text{can}}}{\partial t} = I_{\text{can}} - E_{\text{can}} - R_{\text{can}}\,,
 \end{equation}
 ```
-where $w_{\text{can}}$ is liquid water stored on the canopy (m), $I_{\text{can}}$ is the interception rate (m/s), $E_{\text{can}}$ is evaporation of intercepted water (m/s), and $R_{\text{can}}$ is the removal rate (m/s).
+where $W_{\text{can}}$ is liquid water stored on the canopy (m), $I_{\text{can}}$ is the interception rate (m/s), $E_{\text{can}}$ is evaporation of intercepted water (m/s), and $R_{\text{can}}$ is the removal rate (m/s).
 
-The canopy storage capacity $w_{\text{can, max}}$ (m) is diagnosed from the sum of the leaf and stem area indices,
+The canopy storage capacity $W_{\text{can, max}}$ (m) is diagnosed from the sum of the leaf and stem area indices,
 ```math
 \begin{equation}
-w_{\text{can, max}} = w_0 (\text{LAI} + \text{SAI})\,,
+W_{\text{can, max}} = w_0 (\text{LAI} + \text{SAI})\,,
 \end{equation}
 ```
 where $w_0$ (m) is the specific water capacity per unit leaf/stem area.
@@ -67,7 +67,7 @@ where $w_0$ (m) is the specific water capacity per unit leaf/stem area.
 The removal rate of water from the canopy (e.g. due to gravity-induced drip) is computed as
 ```math
 \begin{equation}
-R_{\text{can}} = \frac{w_{\text{can}}}{\tau_w}\,,
+R_{\text{can}} = \frac{W_{\text{can}}}{\tau_w}\,,
 \end{equation}
 ```
 where $\tau_w$ is the canopy water removal timescale (typically 1 day = 86400 s) (s).
@@ -75,14 +75,14 @@ where $\tau_w$ is the canopy water removal timescale (typically 1 day = 86400 s)
 The saturation fraction of the canopy is
 ```math
 \begin{equation}
-f_{\text{can}} = \frac{w_{\text{can}}}{w_{\text{can, max}}}\,,
+f_{\text{can}} = \frac{W_{\text{can}}}{W_{\text{can, max}}}\,,
 \end{equation}
 ```
 which ranges from 0 (dry) to 1 (saturated) and controls the efficiency of canopy evaporation.
 
 ### Precipitation
 
-After accounting for interception and canopy , the precipitation reaching the ground is
+After accounting for interception and canopy evaporation, the precipitation reaching the ground is
 ```math
 \begin{equation}
 P_{\text{ground}} = P - I_{\text{can}} + R_{\text{can}} - E_{\text{can}}\,.
@@ -101,19 +101,6 @@ compute_auxiliary!(state, grid, canopy_interception::PALADYNCanopyInterception, 
 compute_tendencies!(state, grid, canopy_interception::PALADYNCanopyInterception, evapotranspiration::AbstractEvapotranspiration, args...)
 ```
 
-## Methods
-
-```@docs; canonical = false
-canopy_water
-```
-
-```@docs; canonical = false
-saturation_canopy_water
-```
-
-```@docs; canonical = false
-rainfall_ground
-```
 
 ## Kernel functions
 
@@ -130,11 +117,23 @@ compute_canopy_water_removal
 ```
 
 ```@docs; canonical = false
-compute_w_can_tendency
+compute_canopy_water_tendency
 ```
 
 ```@docs; canonical = false
 compute_precip_ground
+```
+
+```@docs; canonical = false
+canopy_water
+```
+
+```@docs; canonical = false
+saturation_canopy_water
+```
+
+```@docs; canonical = false
+rainfall_ground
 ```
 
 ## [References](@id "canopy_interception.refs")

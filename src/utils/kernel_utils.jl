@@ -4,15 +4,16 @@
 2D kernel function that finds the first coordinate in `z_nodes` where `condition_func(field[i, j, k])`.
 This implementation performs a linear scan over the z-axis and thus has time complexity O(N_z).
 """
-@inline function findfirst_z(i, j, condition_func, z_nodes, field)
+@propagate_inbounds function findfirst_z(i, j, condition_func, z_nodes, field)
     n = length(z_nodes)
     idx = -1
     for k in 1:n
-        if idx < 0 && condition_func(field[i, j, k])
-            idx = k
-        end
+        found = (idx < 0) & condition_func(field[i, j, k])
+        idx = ifelse(found, k, idx)
     end
-    return idx > 0 ? z_nodes[idx] : z_nodes[n]
+    # Select the index (not the nodes): ifelse evaluates both branches, so indexing in the
+    # unselected branch with idx = -1 would be out of bounds.
+    return z_nodes[ifelse(idx > 0, idx, n)]
 end
 
 """

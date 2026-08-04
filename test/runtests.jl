@@ -9,6 +9,7 @@ if FLAG_ENZYME_TESTS
         include("differentiability/soil_energy_diff.jl")
         include("differentiability/soil_hydrology_diff.jl")
         include("differentiability/vegetation_model_diff.jl")
+        include("differentiability/snow_model_diff.jl")
     end
 end
 
@@ -17,12 +18,17 @@ if MAIN_TESTS
         include("grids.jl")
     end
 
+    @testset "Solvers" begin
+        include("solvers/test_solvers.jl")
+    end
+
     @testset "State variables" begin
         include("state_variables.jl")
     end
 
     @testset "Inputs" begin
         include("inputs/inputs.jl")
+        include("inputs/namespaced_inputs.jl")
         include("inputs/input_forcing.jl")
         include("inputs/raster_inputs.jl")
     end
@@ -31,10 +37,21 @@ if MAIN_TESTS
         include("timestepping/explicit_step.jl")
         include("timestepping/run_simulation.jl")
         include("timestepping/heun.jl")
+        include("timestepping/imex.jl")
+    end
+
+    @testset "Thermodynamics" begin
+        include("thermodynamics_test.jl")
     end
 
     @testset "Soil model and processes" begin
         include("soil/soil_model_tests.jl")
+    end
+
+    @testset "Snow processes" begin
+        include("snow/snow_properties_tests.jl")
+        include("snow/snow_energy_tests.jl")
+        include("snow/snow_model_tests.jl")
     end
 
     @testset "Vegetation model and processes" begin
@@ -42,11 +59,12 @@ if MAIN_TESTS
     end
 
     @testset "Surface energy balance" begin
-        include("surface_energy/seb_tests.jl")
+        include("surface/seb_tests.jl")
+        include("surface/diagnostic_albedo_tests.jl")
     end
 
     @testset "Surface hydrology" begin
-        include("surface_hydrology/surface_hydrology_tests.jl")
+        include("surface/surface_hydrology_tests.jl")
     end
 
     @testset "Coupled models" begin

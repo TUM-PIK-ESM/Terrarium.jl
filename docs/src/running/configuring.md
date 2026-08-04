@@ -75,7 +75,7 @@ We could also do something similar for the soil thermal properties:
 
 ```@example configuring
 thermal_properties = SoilThermalProperties(eltype(grid))
-energy = SoilEnergyBalance(eltype(grid); thermal_properties)
+energy = SoilThermodynamics(eltype(grid); thermal_properties)
 hydrology = SoilHydrology(eltype(grid), RichardsEq()) # also a valid constructor, same as above
 biogeochem = ConstantSoilCarbonDensity(eltype(grid))
 soil = SoilEnergyWaterCarbon(eltype(grid); energy, hydrology, biogeochem)
@@ -144,7 +144,7 @@ As an example, consider again the above example with `SoilModel`. Suppose we wan
 ```@example configuring
 conductivities = SoilThermalConductivities(eltype(grid); mineral = 3.0, organic = 0.8)
 thermal_properties = SoilThermalProperties(eltype(grid); conductivities)
-energy = SoilEnergyBalance(eltype(grid); thermal_properties)
+energy = SoilThermodynamics(eltype(grid); thermal_properties)
 soil = SoilEnergyWaterCarbon(eltype(grid); energy)
 model = SoilModel(grid; soil)
 ```

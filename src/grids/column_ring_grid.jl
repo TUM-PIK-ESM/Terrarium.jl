@@ -100,51 +100,49 @@ get_field_grid(grid::ColumnRingGrid) = grid.grid
 Converts the given Oceananigans `Field` to a `RingGrids.Field` with a ring grid matching that of the given `ColumnRingGrid`.
 """
 RingGrids.Field(field::Field{LX, LY, LZ}, grid::ColumnRingGrid; fill_value = NaN) where {LX, LY, LZ} = RingGrids.Field(architecture(field), dropdims(interior(field), dims = 2), grid; fill_value)
+RingGrids.Field(arch::AbstractArchitecture, field::Field{LX, LY, LZ}, grid::ColumnRingGrid; fill_value = NaN) where {LX, LY, LZ} = RingGrids.Field(arch, dropdims(interior(field), dims = 2), grid; fill_value)
 RingGrids.Field(field::AbstractArray, grid::ColumnRingGrid; fill_value = NaN) = RingGrids.Field(architecture(grid), field, grid; fill_value)
 function RingGrids.Field(arch::AbstractArchitecture, field::AbstractArray, grid::ColumnRingGrid; fill_value = NaN)
     # need to be on CPU to do the copying
     grid = on_architecture(arch, grid)
     field = on_architecture(arch, field)
     # create new RingGrids field initialized with fill_value
-    ring_field = RingGrids.Field(grid.rings, size(field)[2:end]...)
+    ring_field = RingGrids.Field(grid.rings, size(field, 2))
     fill!(ring_field, fill_value)
     # need to access underlying data arrays directly to avoid scalar indexing
-    colons = (Colon() for d in size(field)[2:end])
-    ring_field.data[grid.mask.data, colons...] .= field
+    ring_field.data[grid.mask.data, :] .= field
     return ring_field
 end
 
 """
     $SIGNATURES
 
-Converts a `RingGrids.Field` to an Oceananigans `Field` 
+Converts a `RingGrids.Field` to an Oceananigans `Field`
 using the given `ColumnRingGrid`. Only masked grid points are copied to the Oceananigans field.
 For 2D RingGrids fields, returns a 2D Oceananigans field. For 3D fields, returns a 3D field.
 """
 function Oceananigans.Field(ring_field::RingGrids.AbstractField, grid::ColumnRingGrid; default_value = zero(eltype(ring_field)))
-    # Ensure we're on the same architecture
-    arch = architecture(grid)
-    ring_field_data = on_architecture(arch, ring_field.data)
+    mask = grid.mask.data   # host boolean mask (see note above)
 
-    # Create Oceananigans field with appropriate dimensions
     if ndims(ring_field) == 1
-        # 2D field (horizontal only)
-        oceananigans_field = Field{Center, Center, Nothing}(grid.grid)
-        fill!(oceananigans_field, default_value)
-        oceananigans_data = interior(oceananigans_field)
-        oceananigans_data[:, 1, 1] .= ring_field_data[grid.mask.data]
+        # 2D field (horizontal only): treat the data as a single-column matrix so one masked gather
+        # (`data[mask, :]`) serves both the 1D and 2D cases. There's a related Reactant bug that makes this necessary: https://github.com/EnzymeAD/Reactant.jl/issues/3087
+        location = (Center, Center, Nothing)
+        data = reshape(ring_field.data, :, 1)
     elseif ndims(ring_field) == 2
         # 3D field (horizontal + vertical or other dimensions)
         @assert size(grid.grid, 3) == size(ring_field, 2) "Vertical dimension mismatch: grid has $(size(grid.grid, 3)) layers, but field has $(size(ring_field, 2)) layers"
-
-        oceananigans_field = Field{Center, Center, Center}(grid.grid)
-        fill!(oceananigans_field, default_value)
-        oceananigans_data = interior(oceananigans_field)
-        oceananigans_data[:, 1, :] .= ring_field_data[grid.mask.data, :]
+        location = (Center, Center, Center)
+        data = ring_field.data
     else
         error("Unsupported number of dimensions for RingGrids.Field: $(ndims(ring_field))")
     end
 
+    gathered = data[mask, :]                                  # (Nmasked, Nlayers), host mask ⇒ correct
+    values = reshape(gathered, size(gathered, 1), 1, size(gathered, 2))
+    oceananigans_field = Field{location...}(grid.grid)
+    fill!(oceananigans_field, default_value)
+    set!(oceananigans_field, values)
     return oceananigans_field
 end
 

@@ -15,16 +15,16 @@ using Unitful
     @test variables(field_input) == (Terrarium.input(:X1, XY()),)
     ## check state variable is allocated and initialize! copies data
     X1 .= 1.0f0
-    state = initialize(Variables(field_input), grid)
+    state = StateVariables(Variables(field_input), grid)
     @test hasproperty(state.inputs, :X1)
-    initialize!(state.inputs, field_input)
+    initialize!(state.inputs, grid, Clock(time = 0), state, field_input)
     @test all(state.inputs.X1 .≈ 1.0f0)
 
     # Multiple FieldInputSources via InputSources
     X2 = Field(grid, XY())
     field_sources = InputSources(InputSource(grid, X1; name = :X1), InputSource(grid, X2; name = :X2))
     @test variables(field_sources) == (Terrarium.input(:X1, XY()), Terrarium.input(:X2, XY()))
-    state = initialize(Variables(field_sources), grid)
+    state = StateVariables(Variables(field_sources), grid)
     @test hasproperty(state.inputs, :X1)
     @test hasproperty(state.inputs, :X2)
 
@@ -42,11 +42,11 @@ using Unitful
     S1.data .= randn(size(S1))
     fields = (S1 = Field(grid, XY()),)
     clock = Clock(time = 0)
-    update_inputs!(fields, fts_input, clock)
+    update_inputs!(fields, grid, clock, fields, fts_input)
     @test all(fields.S1 .== S1[1])
     # advance clock and check that inputs are updated
     Terrarium.tick!(clock, 1.0)
-    update_inputs!(fields, fts_input, clock)
+    update_inputs!(fields, grid, clock, fields, fts_input)
     @test all(fields.S1 .== S1[2])
 
     # Multiple FTS via InputSources
@@ -55,7 +55,7 @@ using Unitful
     @test variables(fts_sources) == (Terrarium.input(:S1, XY()), Terrarium.input(:S2, XY()))
     fields2 = (S1 = Field(grid, XY()), S2 = Field(grid, XY()))
     clock = Clock(time = 0)
-    update_inputs!(fields2, fts_sources, clock)
+    update_inputs!(fields2, grid, clock, fields2, fts_sources)
     @test all(fields2.S1 .== S1[1])
     @test all(fields2.S2 .== S2[1])
 end
@@ -83,12 +83,12 @@ end
     @test length(variables(sources)) == 2
 
     # Test that data is correctly converted and stored
-    state = initialize(Variables(sources), grid)
+    state = StateVariables(Variables(sources), grid)
     @test hasproperty(state.inputs, :temp)
     @test hasproperty(state.inputs, :pressure)
 
     # Initialize and verify data was copied correctly
-    initialize!(state.inputs, sources, Clock(time = 0.0))
+    initialize!(state.inputs, grid, Clock(time = 0.0), state, sources)
     expected1 = ring_field1.data[Array(grid.mask)]
     expected2 = ring_field2.data[Array(grid.mask)]
     @test all(interior(state.inputs.temp)[:, 1, 1] .≈ expected1)

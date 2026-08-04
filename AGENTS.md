@@ -19,6 +19,20 @@ dynamics are allowed except in very special cases where they must be clearly doc
 - **Key packages**: KernelAbstractions.jl, CUDA.jl, Enzyme.jl
 - **Style**: ExplicitImports.jl for source code; `using Terrarium` for examples/tests
 
+## Testing
+
+- Test-only dependencies (e.g. `SpecialFunctions`, `CUDA`) live in `test/Project.toml`, not the
+  root project, so the test files cannot be `include`d from the bare `--project=.` environment.
+- To run individual test files, activate the test environment from the project environment with
+  [TestEnv.jl](https://github.com/JuliaTesting/TestEnv.jl):
+  ```julia
+  # started with: julia --project=.
+  using TestEnv; TestEnv.activate()
+  include("test/soil/soil_energy_tests.jl")
+  ```
+- To run the full suite, use `julia --project=. -e 'using Pkg; Pkg.test()'` (Enzyme/AD tests run
+  via `Pkg.test(; test_args=["enzyme"])`).
+
 ## Critical Rules
 
 ### Kernels (GPU compatibility)
@@ -27,8 +41,15 @@ dynamics are allowed except in very special cases where they must be clearly doc
 - Functions marked with `@kernel` are called **kernels** which then invoke **kernel functions** with call pattern `compute_something(i, j, k, grid, fields, process::ProcessType, args...)` or `compute_something!(out, i, j, k, grid, fields, proces::ProcessType)`
     - Kernel functions defined for 2D kernels instead have `i, j` instead of `i, j, k`
 - Kernels and their subsequent call graph must be fully **type-stable** and **allocation-free**
-- Use `ifelse` — never short-circuiting `if`/`else` in kernels
-- No error messages, no `AbstractModel`s, and no `state` inside kernels
+- Use `ifelse` — never short-circuiting `if`/`else` in kernels. `ifelse` evaluates **both**
+  branches, so never index in a branch that may be out of range: select the *index*, not the
+  loads (write `x[ifelse(cond, i, n)]`, not `ifelse(cond, x[i], x[n])`)
+- No error messages, no `AbstractModel`s, and no `state` inside kernels. This bans **any reachable
+  throw path** — `@assert`, bounds errors from un-elided `@inbounds`, `InexactError` from
+  `convert`/`round(Int, …)`, integer `DivideError` — because under Reactant these lower to
+  `llvm.intr.trap`, which cannot be raised to StableHLO and fails compilation *even if never
+  triggered*. Put argument validation in host-side (keyword) constructors, not in the positional
+  constructors that kernels call
 - Always extract relevant input/output `Field`s with `get_fields` and related methods
 - Favor explicit enumeration of process types when invoking kernels rather than passing `AbstractCoupledProcesses` types
 - Mark functions called inside kernels with `@inline` or `@propagate_inbounds` when including indices
@@ -44,6 +65,30 @@ is a top priority and must be continuously tested.
 - **No global state**: Initialize all parameters explicitly; never rely on global variables or implicit state
 - **Test differentiability**: Use Enzyme to test that critical functions compute valid adjoints; include in test suite. See existing tests in `test/differentiability` for reference.
 - **Document AD limitations**: If a function cannot be differentiated, mark it clearly with comments and docstrings
+
+### Reactant compatibility
+
+Terrarium runs through Reactant.jl (trace → MLIR/StableHLO → XLA). All Reactant-specific code lives
+in `TerrariumReactantExt`; the user's only knob is the architecture, `ReactantState()`. A model on a
+`ReactantState` grid allocates its state directly on the device grid and is initialized *eagerly*
+on the device (eager KernelAbstractions launches run on the Reactant backend; Oceananigans'
+`set_to_function!` for a device field detours through the CPU internally). Only
+`run!`/`timestep!`/`run_timesteps!` are traced and compiled by XLA. Correctness is tested in
+`test/reactant/` (own `Project.toml`, CI `Reactant_CI.yml`).
+
+- **No reachable throw paths in kernels** — see the Kernels rule above (this is the single most
+  common Reactant compile failure).
+- **`using CUDA` is required alongside Reactant, even on CPU**: it provides the KernelAbstractions↔Reactant
+  glue. Without it, kernel launches fail with `MethodError: ka_with_reactant(::Nothing, …)`.
+- **Closures compiled into kernels must capture only `isbits` values.** A boundary-condition
+  function that closes over a `Type` (e.g. `NF`/`Float32`) becomes a non-`isbits` kernel argument
+  and fails to compile — hoist numeric constants out (`amplitude = NF(5); bc(x, t) = amplitude * …`).
+- **Reverse-mode AD**: differentiate `run_timesteps!` with `Enzyme.autodiff(set_strong_zero(ReverseWithPrimal),
+  …, Duplicated(integrator, dintegrator), …)` inside `@compile raise=true raise_first=true sync=true`.
+  Pass a `checkpointing` scheme (`Reactant.Periodic(n)`) to `run!`/`run_timesteps!` to bound reverse-pass
+  memory; it must not change the gradient. See `test/reactant/autodiff.jl`.
+- **Do not run `test/reactant` under `--check-bounds=yes`**: forced bounds checks make every kernel
+  un-raisable (see the trap rule); `runtests.jl` guards against this.
 
 ### Type Stability & Memory
 
@@ -71,6 +116,8 @@ is a top priority and must be continuously tested.
 - **ALWAYS `jldoctest` blocks, NEVER plain `julia` blocks** — doctests are tested; plain blocks rot
 - Include `# output` with verifiable output; prefer `show` methods over boolean comparisons
 - Use unicode for math (`Δt`, `η`, `ρ`), not LaTeX — LaTeX doesn't render in the REPL
+- Use parentheses instead of brackets for units (e.g. (m/s) instead of [m/s])
+- Use DocumenterCitations.jl for references, e.g. `[GoerzQ2022](@cite)`. Make sure to include the Bibtex entry in `docs/src/references.bib`. Also add a `# References` section to the docstring, where you add e.g. `* [GoerzQ2022](@cite) Goerz et al. Quantum 6, 871 (2022)`
 
 ### Documentation pages
 
@@ -165,6 +212,49 @@ Follow [ColPrac](https://github.com/SciML/ColPrac). Feature branches, descriptiv
 - Do not make unsolicited changes; focus on specific tasks
 - When extending Enzyme.jl compatibility, verify adjoints with `Enzyme.autodiff`
 - Ensure type annotations are restrictive enough to guide dispatch and minimize misuse
+
+## Implementation plans
+
+All major feature additions, bug fixes, or refactoring that requires substantial changes to the existing code must be prefaced with an **implementation plan** that is reviewed and signed off by a human. These plan documents should be organized by date and stored in `docs/dev/YYYY-MM`. Each document should be prefaced by the following template:
+
+```md
+# Descriptive title
+
+> Status: **planned**/**in progress**/**completed**. One sentence summary of current status.
+
+Date of initial draft: YYYY-MM-dd
+
+Base revision: <SHA1 of HEAD when plan was drafted>
+
+## Originating prompt
+
+> User prompts here
+
+## Revision log
+
+> User prompts here
+
+## Problem description
+
+## Background
+
+```
+
+The revision log should, to the greatest extent possible, briefly summarize changes to the plan that are made on-the-fly during development.
+
+The remainder of the plan document may be adapted on a case-by-case basis but should generally follow this structure:
+
+```md
+## Summary of changes
+
+## Testing and verification
+
+## Documentation changes
+
+## Known limitations
+
+## Future work
+```
 
 ## Further Reading
 

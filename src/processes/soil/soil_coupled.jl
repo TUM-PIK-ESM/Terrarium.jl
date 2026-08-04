@@ -2,12 +2,12 @@
     $TYPEDEF
 
 Coupled process type that encapsulates the coupling of soil energy, water, and carbon dynamics.
-The `strat`igraphy parameterization determines how the vertical layering of the soil is parameterized.
+The stratigraphy parameterization determines how the vertical layering of the soil is parameterized.
 """
 struct SoilEnergyWaterCarbon{
         NF,
         Stratigraphy <: AbstractStratigraphy{NF},
-        Energy <: AbstractSoilEnergyBalance{NF},
+        Energy <: AbstractSoilThermodynamics{NF},
         Hydrology <: AbstractSoilHydrology{NF},
         Biogeochemistry <: AbstractSoilBiogeochemistry{NF},
     } <: AbstractSoil{NF}
@@ -26,8 +26,8 @@ end
 
 function SoilEnergyWaterCarbon(
         ::Type{NF};
-        strat = HomogeneousStratigraphy(NF),
-        energy = SoilEnergyBalance(NF),
+        strat = HomogeneousSoilStratigraphy(NF),
+        energy = SoilThermodynamics(NF),
         hydrology = SoilHydrology(NF),
         biogeochem = ConstantSoilCarbonDensity(NF)
     ) where {NF}

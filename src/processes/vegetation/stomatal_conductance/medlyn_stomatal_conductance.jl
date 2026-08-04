@@ -1,0 +1,143 @@
+"""
+    $TYPEDEF
+Stomatal conductance implementation from [willeitPALADYNV10Comprehensive2016](@cite) following the optimal stomatal conductance model
+of [medlynReconcilingOptimalEmpirical2011](@cite).
+
+Authors: Maha Badri and Matteo Willeit
+
+Properties:
+$TYPEDFIELDS
+
+# References
+
+* [linOptimalStomatalBehaviour2015](@cite) Lin et al., Nature Climate Change (2015)
+* [medlynReconcilingOptimalEmpirical2011](@cite) Medlyn et al., Global Change Biology (2011)
+* [willeitPALADYNV10Comprehensive2016](@cite) Willeit & Ganopolski, Geoscientific Model Development (2016)
+"""
+@parameterized @kwdef struct MedlynStomatalConductance{NF} <: AbstractStomatalConductance{NF}
+    "Parameter in optimal stomatal conductance formulation representing the quasi-linear
+    relationship between conductance and net assimilation, [linOptimalStomatalBehaviour2015](@cite). PFT specific."
+    @param g₁::NF = 2.3 (bounds = Positive,) # TODO: value for Needleleaf tree PFT
+
+    "Minimum stomatal conductance parameter"
+    @param g_min::NF = 0.5 (units = u"mm/s", bounds = Positive)
+end
+
+MedlynStomatalConductance(::Type{NF}; kwargs...) where {NF} = MedlynStomatalConductance{NF}(; kwargs...)
+
+variables(::MedlynStomatalConductance) = (
+    auxiliary(:canopy_water_conductance, XY(), units = u"m/s"), # Canopy conducatance for water vapor
+    auxiliary(:leaf_to_air_co2_ratio, XY()), # Ratio of leaf-internal and air CO2 concentration [-]
+)
+
+@inline @propagate_inbounds stomatal_conductance(i, j, grid, fields, ::MedlynStomatalConductance) = fields.canopy_water_conductance[i, j]
+
+"""
+    $TYPEDSIGNATURES
+
+Compute canopy-level water conductance [m/s] from the [medlynReconcilingOptimalEmpirical2011](@cite) optimal stomatal conductance model.
+Includes minimum conductance and light extinction effects based on LAI, scaled by soil moisture factor β.
+
+# References
+
+* [medlynReconcilingOptimalEmpirical2011](@cite) Medlyn et al., Global Change Biology (2011)
+"""
+@inline function compute_stomatal_conductance(
+        stomcond::MedlynStomatalConductance{NF},
+        photo::LUEPhotosynthesis{NF},
+        vpd, An, co2, LAI, β
+    ) where {NF}
+    # Preconditions
+    @assert isfinite(vpd) && abs(vpd) > zero(NF) "vapor pressure deficit must be greater than zero"
+    @assert isfinite(An) "An must be finite"
+    @assert isfinite(co2) && co2 > zero(NF) "CO2 must be positive and finite"
+    @assert isfinite(LAI) "LAI must be finite"
+    @assert isfinite(β) && 0 <= β <= 1 "β must be finite and between 0 and 1"
+    # Compute stomatal conductance g_stm
+    let g_min = stomcond.g_min / 1000, # convert mm/s to m/s
+            g₁ = stomcond.g₁,
+            k_ext = photo.k_ext
+
+        g₀ = g_min * (1 - exp(-k_ext * LAI)) * β
+        g_stm = g₀ + NF(1.6) * (1 + g₁ / sqrt(vpd)) * An / co2 * NF(1.0e6)
+        return g_stm
+    end
+end
+
+"""
+    $SIGNATURES
+
+Computes the ratio of leaf-internal and air CO2 concentration `λc`, 
+derived from the optimal stomatal conductance model ([medlynReconcilingOptimalEmpirical2011](@cite)),
+[willeitPALADYNV10Comprehensive2016; Eq. (71)](@cite).
+
+# References
+
+* [medlynReconcilingOptimalEmpirical2011](@cite) Medlyn et al., Global Change Biology (2011)
+* [willeitPALADYNV10Comprehensive2016](@cite) Willeit & Ganopolski, Geoscientific Model Development (2016)
+"""
+@inline function compute_λc(stomcond::MedlynStomatalConductance{NF}, vpd) where {NF}
+    λc = NF(1.0) - NF(1.0) / (NF(1.0) + stomcond.g₁ / sqrt(vpd * NF(1.0e-3)))
+    return λc
+end
+
+# Top-level interface methods
+
+""" $TYPEDSIGNATURES """
+function compute_auxiliary!(
+        state, grid,
+        stomcond::MedlynStomatalConductance,
+        photo::LUEPhotosynthesis,
+        constants::PhysicalConstants,
+        atmos::AbstractAtmosphere,
+        args...
+    )
+    out = auxiliary_fields(state, stomcond)
+    fields = get_fields(state, stomcond, photo, constants, atmos; except = out)
+    launch!(grid, XY, compute_auxiliary_kernel!, out, fields, stomcond, photo, constants, atmos)
+    return nothing
+end
+
+# Kernel functions
+
+"""
+    $TYPEDSIGNATURES
+
+Compute stomatal conductance (g_stm) and leaf-to-air CO₂ ratio (λc) at a grid point.
+Returns tuple (g_stm, λc) for use in photosynthesis and transpiration calculations.
+"""
+@propagate_inbounds function compute_stomatal_conductance(i, j, grid, fields, stomcond::MedlynStomatalConductance{NF}, photo::LUEPhotosynthesis{NF}, constants::PhysicalConstants, atmos::AbstractAtmosphere, args...) where {NF}
+    # Get inputs
+    An = fields.net_assimilation[i, j]
+    CO2 = fields.CO2[i, j]
+    LAI = fields.leaf_area_index[i, j]
+    β = fields.soil_moisture_limiting_factor[i, j]
+
+    # Compute vpd [Pa]
+    vpd = compute_vapor_pressure_deficit(i, j, grid, fields, atmos, constants)
+
+    # Compute conductance g_stm and internal CO2 ratio λc
+    g_stm = compute_stomatal_conductance(stomcond, photo, vpd, An, CO2, LAI, β)
+    λc = compute_λc(stomcond, vpd)
+
+    return g_stm, λc
+end
+
+"""
+    $TYPEDSIGNATURES
+
+Calls [`compute_stomatal_conductance`](@ref) and stores the result in `out`.
+"""
+@propagate_inbounds function compute_stomatal_conductance!(out, i, j, grid, fields, stomcond::MedlynStomatalConductance{NF}, photo::LUEPhotosynthesis{NF}, constants::PhysicalConstants, atmos::AbstractAtmosphere, args...) where {NF}
+    g_stm, λc = compute_stomatal_conductance(i, j, grid, fields, stomcond, photo, constants, atmos, args...)
+    out.canopy_water_conductance[i, j, 1] = g_stm
+    out.leaf_to_air_co2_ratio[i, j, 1] = λc
+    return out
+end
+
+# Kernels
+
+@kernel function compute_auxiliary_kernel!(out, grid, fields, stomcond::AbstractStomatalConductance, args...)
+    i, j = @index(Global, NTuple)
+    compute_stomatal_conductance!(out, i, j, grid, fields, stomcond, args...)
+end

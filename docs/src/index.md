@@ -62,7 +62,7 @@ grid = ColumnGrid(arch, Float32, ExponentialSpacing(N=10), num_columns)
 model = SoilModel(grid)
 # Prescribe a constant surface temperature of 1°C
 bcs = PrescribedSurfaceTemperature(:T_ub, 1.0)
-integrator = initialize(model, ForwardEuler(eltype(grid)), boundary_conditions = bcs)
+integrator = initialize(model, boundary_conditions = bcs)
 # Run the simulation forward for 10 model days
 @time run!(integrator, period = Day(10))
 ```
@@ -84,7 +84,7 @@ grid = ColumnRingGrid(arch, Float32, ExponentialSpacing(N=10), rings) # create g
 model = SoilModel(grid)
 # Prescribe a constant surface temperature of 1°C
 bcs = PrescribedSurfaceTemperature(:T_ub, 1.0)
-integrator = initialize(model, ForwardEuler(eltype(grid)), boundary_conditions = bcs)
+integrator = initialize(model, boundary_conditions = bcs)
 # Run the simulation forward for 10 model days
 @time run!(integrator, period = Day(10))
 ```

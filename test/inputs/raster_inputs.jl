@@ -53,12 +53,12 @@ const RasterInputSource = TerrariumRastersExt.RasterInputSource
         @test first(vars) == Terrarium.input(:temperature, XY())
 
         # Test initialization
-        state = initialize(Variables(source), grid)
+        state = StateVariables(Variables(source), grid)
         @test hasproperty(state.inputs, :temperature)
 
         # Test that initialize! copies data correctly
         clock = Clock(time = 0.0)
-        initialize!(state.inputs, source, clock)
+        initialize!(state.inputs, grid, clock, state, source)
 
         # Verify data was copied (only masked points)
         # The idxmap maps from grid mask to flattened raster indices
@@ -68,7 +68,7 @@ const RasterInputSource = TerrariumRastersExt.RasterInputSource
 
         # Test that update_inputs! does nothing for static rasters
         original_data = copy(interior(state.inputs.temperature))
-        update_inputs!(state.inputs, source, clock)
+        update_inputs!(state.inputs, grid, clock, state, source)
         @test all(interior(state.inputs.temperature) .== original_data)
     end
 
@@ -108,29 +108,29 @@ const RasterInputSource = TerrariumRastersExt.RasterInputSource
         @test first(vars) == Terrarium.input(:forcing, XY())
 
         # Test initialization and update
-        state = initialize(Variables(source), grid)
+        state = StateVariables(Variables(source), grid)
         @test hasproperty(state.inputs, :forcing)
 
         # Initialize (should be no-op for time-varying)
         clock = Clock(time = 0.0)
-        initialize!(state.inputs, source, clock)
+        initialize!(state.inputs, grid, clock, state, source)
 
         # Update at t=0 (should get first timestep)
-        update_inputs!(state.inputs, source, clock)
+        update_inputs!(state.inputs, grid, clock, state, source)
         flat_t0 = vec(timeseries_data[:, :, 1])
         expected_t0 = flat_t0[source.idxmap]
         @test all(interior(state.inputs.forcing)[:, 1, 1] .≈ expected_t0)
 
         # Advance clock by 1 hour (3600 seconds) and update
         Terrarium.tick!(clock, 3600.0)
-        update_inputs!(state.inputs, source, clock)
+        update_inputs!(state.inputs, grid, clock, state, source)
         flat_t1 = vec(timeseries_data[:, :, 2])
         expected_t1 = flat_t1[source.idxmap]
         @test all(interior(state.inputs.forcing)[:, 1, 1] .≈ expected_t1)
 
         # Test interpolation at t=0.5 hours (1800 seconds from start)
         clock = Clock(time = 1800.0)
-        update_inputs!(state.inputs, source, clock)
+        update_inputs!(state.inputs, grid, clock, state, source)
         # Should be interpolated between t0 and t1
         expected_interp = (flat_t0[source.idxmap] .+ flat_t1[source.idxmap]) ./ 2
         @test all(isapprox.(interior(state.inputs.forcing)[:, 1, 1], expected_interp, atol = 1.0e-5))
@@ -173,13 +173,13 @@ const RasterInputSource = TerrariumRastersExt.RasterInputSource
         @test variables(sources) == (Terrarium.input(:var1, XY()), Terrarium.input(:var2, XY()))
 
         # Test initialization
-        state = initialize(Variables(sources), grid)
+        state = StateVariables(Variables(sources), grid)
         @test hasproperty(state.inputs, :var1)
         @test hasproperty(state.inputs, :var2)
 
         # Initialize and verify both fields
         clock = Clock(time = 0.0)
-        initialize!(state.inputs, sources, clock)
+        initialize!(state.inputs, grid, clock, state, sources)
         source1 = sources.sources[1]
         source2 = sources.sources[2]
         expected1 = vec(data1)[source1.idxmap]

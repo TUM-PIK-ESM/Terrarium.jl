@@ -11,6 +11,7 @@ using Oceananigans
 using Rasters
 
 import Oceananigans.Architectures: on_architecture
+import RingGrids
 
 """
     $TYPEDEF
@@ -38,7 +39,8 @@ end
 """
     InputSource(data::Raster, grid::ColumnRingGrid; name = data.name)
 
-Creates a new `RasterInputSource` from the given `Raster` data and `grid`.
+Creates a new `RasterInputSource` from the given `Raster` data and `grid`. The `name` can either
+be a plain `Symbol` or a namespaced path; see [`Terrarium.varpath`](@ref).
 """
 function Terrarium.InputSource(grid::ColumnRingGrid{NF}, raster::AbstractRaster{NF}; name = raster.name, units = NoUnits, reftime = nothing) where {NF}
     # get indices from grid mask
@@ -47,19 +49,32 @@ function Terrarium.InputSource(grid::ColumnRingGrid{NF}, raster::AbstractRaster{
     vd = Terrarium.vardims(raster)
     # infer reference time
     reftime = default_reftime(raster, reftime)
-    return RasterInputSource{NF, name, typeof(vd), typeof(reftime), typeof(idxmap), typeof(raster), typeof(units)}(vd, units, idxmap, reftime, raster)
+    path = Terrarium.varpath(name)
+    return RasterInputSource{NF, path, typeof(vd), typeof(reftime), typeof(idxmap), typeof(raster), typeof(units)}(vd, units, idxmap, reftime, raster)
 end
 
-Terrarium.variables(source::RasterInputSource{NF, name}) where {NF, name} = (Terrarium.input(name, source.dims; units = source.units),)
+function Terrarium.load_asset(path, name, grid::RingGrids.AbstractGrid, ::Terrarium.NetCDF, ::Type{NF}; indices = (:, :, :), fill_value = NF(NaN)) where {NF}
+    raster = replace(Raster(path, name = name), missing => fill_value)[indices...]
+    data = reconcile_latitudes(raster, grid)
+    field = RingGrids.Field(grid, size(data)[3:end]...)
+    field .= reshape(data, :, size(data)[3:end]...)
+    return field
+end
 
-function Terrarium.initialize!(fields, source::RasterInputSource{NF, name}, clock::Clock) where {NF, name}
-    if hasproperty(fields, name)
-        field = getproperty(fields, name)
+Terrarium.variables(source::RasterInputSource) = Terrarium.with_scope(
+    Base.front(Terrarium.varpath(source)),
+    Terrarium.input(Terrarium.varname(source), source.dims; units = source.units)
+) |> tuple
+
+function Terrarium.initialize!(inputs, grid, clock, fields, source::RasterInputSource)
+    name = Terrarium.varname(source)
+    if hasproperty(inputs, name)
+        field = getproperty(inputs, name)
         timedim = dims(source.raster, Ti)
         current_time = timestamp(source.reftime, clock.time)
         initialize_from_raster!(field, source.raster, source.idxmap, timedim, current_time)
     end
-    return
+    return nothing
 end
 
 # for static rasters initialize once and then don't update anymore
@@ -71,14 +86,15 @@ end
 # for time-varying rasters this just updates once at the start time
 initialize_from_raster!(field, raster, idxmap, timedim, current_time) = update_from_raster!(field, raster, idxmap, timedim, current_time)
 
-function Terrarium.update_inputs!(fields, source::RasterInputSource{NF, name}, clock::Clock) where {NF, name}
-    if hasproperty(fields, name)
-        field = getproperty(fields, name)
+function Terrarium.update_inputs!(inputs, grid, clock, fields, source::RasterInputSource)
+    name = Terrarium.varname(source)
+    if hasproperty(inputs, name)
+        field = getproperty(inputs, name)
         timedim = dims(source.raster, Ti)
         current_time = timestamp(source.reftime, clock.time)
         update_from_raster!(field, source.raster, source.idxmap, timedim, current_time)
     end
-    return
+    return nothing
 end
 
 # For static raster we don't need to update
@@ -145,5 +161,23 @@ on_architecture(to, raster::AbstractRaster) = rebuild(
     data = on_architecture(to, raster.data),
     dims = map(d -> rebuild(d, val = on_architecture(to, d.val)), dims(raster))
 )
+
+# Reconcile the latitude dimension (assumed to be the second, following the (lon, lat, ...)
+# layout used above) with the target grid. Regular lon-lat grids (e.g. ERA5-Land) place points
+# on both poles, whereas RingGrids full grids do not, so such data carries two extra latitude
+# rings. Drop the first and last latitude (the poles) when present; otherwise require an exact
+# match so mismatched data is not silently truncated.
+function reconcile_latitudes(data::AbstractArray, grid::RingGrids.AbstractFullGrid)
+    nlat_data = size(data, 2)
+    nlat_grid = RingGrids.get_nlat(grid)
+    if nlat_data == nlat_grid
+        return data
+    elseif nlat_data == nlat_grid + 2
+        trailing = ntuple(_ -> Colon(), ndims(data) - 2)
+        return data[:, 2:(nlat_data - 1), trailing...]
+    else
+        error("Cannot reconcile source latitude count ($nlat_data) with grid latitude count ($nlat_grid)")
+    end
+end
 
 end

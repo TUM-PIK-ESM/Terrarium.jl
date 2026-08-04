@@ -72,7 +72,7 @@ compute_auxiliary!(state, grid, stomcond::MedlynStomatalConductance, photo::LUEP
 ## Methods
 
 ```@docs; canonical = false
-compute_gw_can
+compute_stomatal_conductance
 ```
 
 ```@docs; canonical = false

@@ -2,7 +2,7 @@
 # ## Part I: Nonlinear heat conduction with phase change
 # This example shows how to set up a simple model of nonlinear heat conduction
 # in a single vertical soil column (similar to the example shown in the README).
-# The [`SoilEnergyBalance`](@ref) process in Terrarium solves the nonlinear form
+# The [`SoilThermodynamics`](@ref) process in Terrarium solves the nonlinear form
 # of the heat equation with phase change. This allows for the simulation of
 # freeze/thaw dynamics in both seasonally and perennially frozen soils.
 
@@ -22,8 +22,9 @@ initializer = SoilInitializer(
     hydrology = ConstantSaturation(eltype(grid), sat = 1.0)
 )
 
-# We're now ready to create our model:
-model = SoilModel(grid; initializer)
+# We're now ready to create our model.
+# We also choose the time stepper to be [`ForwardEuler`](@ref) for this example.
+model = SoilModel(grid; timestepper = ForwardEuler(eltype(grid)), initializer = initializer)
 
 # Boundary conditions are imposed directly on the corresponding `Field`s during
 # initialization. We here set a constant surface temperature of 1°C, while the lower
@@ -31,9 +32,8 @@ model = SoilModel(grid; initializer)
 # to the boundary condition `:T_ub` is arbitrary; you can set it to whatever you want.
 boundary_conditions = PrescribedSurfaceTemperature(:T_ub, 1.0)
 
-# Next we choose a timestepper (here just [`ForwardEuler`](@ref)) and initialize the model:
-timestepper = ForwardEuler(eltype(grid))
-integrator = initialize(model, timestepper; boundary_conditions)
+# Then, we initialize the integrator:
+integrator = initialize(model; boundary_conditions)
 
 # We can now try taking a single one timestep and `@time` it; note that the first evaluation
 # will be slower due to compilation.
@@ -125,7 +125,9 @@ grid = ColumnGrid(CPU(), Float64, ExponentialSpacing(Δz_min = 0.02, N = 50))
 
 biogeochem = ConstantSoilCarbonDensity(eltype(grid), ρ_soc = 0.0);
 soil_porosity = ConstantSoilPorosity(eltype(grid), mineral_porosity = 0.0);
-strat = HomogeneousStratigraphy(eltype(grid); porosity = soil_porosity);
+## a pure-clay (non-quartz) texture makes the bulk solid conductivity equal the `mineral`
+## endpoint `k`, giving the homogeneous slab assumed by the analytical solution
+strat = HomogeneousSoilStratigraphy(eltype(grid); texture = SoilTexture(eltype(grid), :clay), porosity = soil_porosity);
 thermal_properties = SoilThermalProperties(
     eltype(grid);
     conductivities = SoilThermalConductivities(eltype(grid), mineral = k),
@@ -134,7 +136,7 @@ thermal_properties = SoilThermalProperties(
 
 # Here we set up the "soil" processes according to our configuration.
 
-energy = SoilEnergyBalance(eltype(grid); thermal_properties);
+energy = SoilThermodynamics(eltype(grid); thermal_properties);
 soil = SoilEnergyWaterCarbon(eltype(grid); energy, strat, biogeochem);
 model = SoilModel(grid; soil);
 
@@ -144,7 +146,7 @@ model = SoilModel(grid; soil);
 upper_bc(z, t) = T₀ + A * sin(2π * t / P);
 bcs = PrescribedSurfaceTemperature(:T_ub, upper_bc);
 initializers = (temperature = (x, z) -> T_sol(-z, 0.0),);
-integrator = initialize(model, ForwardEuler(); initializers, boundary_conditions = bcs);
+integrator = initialize(model; initializers, boundary_conditions = bcs);
 
 # We integrate forward for two full forcing periods using an Oceananigans
 # Simulation, saving the temperature profile to a JLD2 file at every time step.

@@ -67,7 +67,7 @@ H_l = L \rho_a \frac{\Delta q}{r_a}
 \end{equation}
 ```
 
-where $L$ is the latent heat of vaporization or sublimation (J/kg). $H_l$ is **always non-negative** (≥ 0) and represents energy lost due to evaporation, transpiration, or sublimation. Currently, condensation (dew formation) is neglected so $\Delta q \geq 0$ and negative latent heat fluxes cannot occur.
+where $L$ is the latent heat of vaporization or sublimation (J/kg). $H_l$ represents energy lost due to evaporation, transpiration, or sublimation. While negative values of $H_l$ are theoretically possible when $\Delta q$ is negative, condensation is currently neglected so mass will not be conserved under such conditions.
 
 The latent heat flux is directly tied to:
 - **Vegetation**: Transpiration through stomata (see [Photosynthesis](@ref))
@@ -94,12 +94,22 @@ compute_auxiliary!(state, grid, tur::DiagnosedTurbulentFluxes, seb::AbstractSurf
 
 ## Methods
 
+### Sensible heat flux
+
 ```@docs; canonical = false
 compute_sensible_heat_flux
 ```
 
+### Latent heat flux
+
+The latent heat flux is computed via a unified interface for both standalone flux calculations as well as coupling with [`evapotranpsiration`](@ref "Evapotranspiration"):
+
 ```@docs; canonical = false
-compute_latent_heat_flux
+compute_latent_heat_flux(i, j, grid, fields, tur::DiagnosedTurbulentFluxes, skinT::AbstractSkinTemperature, constants::PhysicalConstants, atmos::AbstractAtmosphere, evtr::Optional{AbstractEvapotranspiration})
+```
+
+```@docs; canonical = false
+compute_latent_heat_flux(::DiagnosedTurbulentFluxes, Q_h, ρₐ, L)
 ```
 
 ```@docs; canonical = false
@@ -111,6 +121,12 @@ specific_humidity_difference
 ```
 
 ## Kernel functions
+
+The fused surface-energy-balance kernel stores the turbulent fluxes through [`compute_turbulent_fluxes!`](@ref): the [`DiagnosedTurbulentFluxes`](@ref) variant computes and stores the sensible and latent heat fluxes, while the [`PrescribedTurbulentFluxes`](@ref) variant is a no-op because the fluxes are supplied as input fields.
+
+```@docs; canonical = false
+compute_turbulent_fluxes!
+```
 
 ```@docs; canonical = false
 compute_vapor_pressure_difference(i, j, grid, fields, atmos::AbstractAtmosphere, c::PhysicalConstants, Ts)

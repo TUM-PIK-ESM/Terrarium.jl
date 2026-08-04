@@ -9,21 +9,6 @@ can be replaced with `nothing`.
 """
 const Optional{T} = Union{Nothing, T}
 
-"""
-    $SIGNATURES
-
-Convert `Δt`s of type `Period` to a numeric value in seconds. Return `Δt` if already a number.
-"""
-convert_dt(Δt::Number) = Δt
-convert_dt(Δt::Period) = Second(Δt).value
-
-"""
-    $SIGNATURES
-
-Evaluates `x / (y + eps(NF))` if and only if `y != zero(y)`; returns `Inf` otherwise.
-"""
-safediv(x::NF, y::NF) where {NF} = ifelse(iszero(y), NF(Inf), x / (y + eps(NF)))
-
 # fastmap and fastiterate
 
 # Note that fastmap and fastiterate are borrowed (with self permission!) from CryoGrid.jl:
@@ -75,9 +60,18 @@ Same as `fastmap` but simply invokes `f!` on each argument set without construct
     push!(expr.args, :(return nothing))
     return expr
 end
-fastiterate(f!::F, iters::NamedTuple) where {F} = fastiterate(f!, values(iters))
+
+@generated function fastiterate(f::F, nts::NamedTuple...) where {F}
+    expr = Expr(:block)
+    # get keys from first named tuple
+    keys = nts[1].parameters[1]
+    for key in keys
+        push!(expr.args, :(f($(map(i -> :(nts[$i].$key), 1:length(nts))...))))
+    end
+    return expr
+end
 
 include("tuple_utils.jl")
-include("interpolation_utils.jl")
+include("math.jl")
 include("kernel_utils.jl")
 include("adaptors.jl")

@@ -38,14 +38,25 @@ variables(SurfaceEnergyBalance(Float32))
 !!! warning "Prescribed energy fluxes"
     `SurfaceEnergyBalance` allows you to mix and match which terms in the SEB are diagnosed vs. prescribed depending on the choice of implementation. While this has the potential to be convenient in cases where data on skin temperature or turbulent heat fluxes is available, it should be noted that this may result in surface energy fluxes that are inconsistent and do not fully satisfy the SEB equation.
 
+!!! note "Coupling: deferring the SEB to an external model"
+    A fully prescribed configuration — [`PrescribedSkinTemperature`](@ref) + [`PrescribedTurbulentFluxes`](@ref) with [`DiagnosedRadiativeFluxes`](@ref) — lets an external coupler (e.g. an atmosphere model computing turbulent fluxes via Monin-Obukhov similarity theory) supply the skin temperature and turbulent fluxes as inputs. Terrarium then simply closes the ground heat flux as the residual $G = R_\text{net} + H_s + H_l$, which drives the subsurface. See [Skin temperature and ground heat flux](@ref).
+
 ## Process interface
 
 ```@docs; canonical = false
-compute_auxiliary!(state, grid, seb::SurfaceEnergyBalance, constants::PhysicalConstants, atmos::AbstractAtmosphere, hydrology::Optional{AbstractSurfaceHydrology}, args...)
+compute_auxiliary!(state, grid, seb::SurfaceEnergyBalance, constants::PhysicalConstants, atmos::AbstractAtmosphere, hydrology::Optional{AbstractSurfaceHydrology}, vegetation::Optional{AbstractVegetation}, snow::Optional{AbstractSnow}, args...)
 ```
 
 ## Methods
 
+The `SurfaceEnergyBalance` process provides two primary method interfaces:
+
 ```@docs; canonical = false
-compute_surface_energy_fluxes!
+compute_surface_energy_fluxes!(state, grid, seb::SurfaceEnergyBalance, constants::PhysicalConstants, atmos::AbstractAtmosphere, hydrology::Optional{AbstractSurfaceHydrology}, args...)
 ```
+
+```@docs; canonical = false
+solve_surface_energy_balance!(state, grid, seb::SurfaceEnergyBalance{NF}, constants::PhysicalConstants, atmos::AbstractAtmosphere, hydrology::Optional{AbstractSurfaceHydrology}, snow::Optional{AbstractSnow}, args...) where {NF}
+```
+
+The fused kernel evaluates each flux group through a per-process *mutating* variant, so a diagnosed process computes and stores its fluxes while a prescribed one (whose fluxes are supplied as input fields) is a no-op: [`compute_radiative_fluxes!`](@ref), [`compute_turbulent_fluxes!`](@ref), and [`compute_ground_heat_flux!`](@ref). The ground heat flux is always closed last as the residual $G = R_\text{net} + H_s + H_l$.

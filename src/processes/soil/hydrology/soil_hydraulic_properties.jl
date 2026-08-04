@@ -70,24 +70,24 @@ measurements of hydraulic properites are available.
 Properties:
 $TYPEDFIELDS
 """
-@kwdef struct ConstantSoilHydraulics{NF, RC, UnsatK <: AbstractUnsatK{NF}} <: AbstractSoilHydraulics{NF, RC, UnsatK}
+@parameterized @kwdef struct ConstantSoilHydraulics{NF, RC, UnsatK <: AbstractUnsatK{NF}} <: AbstractSoilHydraulics{NF, RC, UnsatK}
     "Soil water retention curve"
-    swrc::RC
+    @component swrc::RC
 
-    "Unsaturated hydraulic conductivity formulation; defaults to `sat_hydraulic_cond`"
-    unsat_hydraulic_cond::UnsatK
+    "Unsaturated hydraulic conductivity formulation; defaults to `saturated_conductivity`"
+    @component unsat_hydraulic_cond::UnsatK
 
-    "Hydraulic conductivity at saturation [m/s]"
-    sat_hydraulic_cond::NF = 1.0e-5
+    "Hydraulic conductivity at saturation"
+    @param saturated_conductivity::NF = 1.0e-5 (units = u"m/s", bounds = Positive, scale = 1.0e-5)
 
-    "Constant field capacity [-]"
-    field_capacity::NF = 0.25
+    "Constant field capacity"
+    @param field_capacity::NF = 0.25 (bounds = UnitInterval,)
 
-    "Constant wilting point [-]"
-    wilting_point::NF = 0.05
+    "Constant wilting point"
+    @param wilting_point::NF = 0.05 (bounds = UnitInterval,)
 
-    "Residual (minimum) saturation level [-]"
-    residual::NF = 0.01
+    "Residual (minimum) saturation level"
+    @param residual::NF = 0.01 (bounds = UnitInterval,)
 end
 
 function ConstantSoilHydraulics(
@@ -100,7 +100,7 @@ function ConstantSoilHydraulics(
     return ConstantSoilHydraulics{NF, typeof(swrc), typeof(unsat_hydraulic_cond)}(; swrc, unsat_hydraulic_cond, kwargs...)
 end
 
-@inline saturated_hydraulic_conductivity(hydraulics::ConstantSoilHydraulics, args...) = hydraulics.sat_hydraulic_cond
+@inline saturated_hydraulic_conductivity(hydraulics::ConstantSoilHydraulics, args...) = hydraulics.saturated_conductivity
 
 @inline wilting_point(hydraulics::ConstantSoilHydraulics, args...) = hydraulics.wilting_point
 
@@ -121,27 +121,27 @@ $TYPEDFIELDS
 
 * [noilhanISBA1996](@cite) Noilhan & Mahfouf, Global and Planetary Change (1996)
 """
-@kwdef struct SoilHydraulicsSURFEX{NF, RC, UnsatK <: AbstractUnsatK{NF}} <: AbstractSoilHydraulics{NF, RC, UnsatK}
+@parameterized @kwdef struct SoilHydraulicsSURFEX{NF, RC, UnsatK <: AbstractUnsatK{NF}} <: AbstractSoilHydraulics{NF, RC, UnsatK}
     "Soil water retention curve"
-    swrc::RC
+    @component swrc::RC
 
-    "Unsaturated hydraulic conductivity formulation; defaults to `sat_hydraulic_cond`"
-    unsat_hydraulic_cond::UnsatK
+    "Unsaturated hydraulic conductivity formulation; defaults to `saturated_conductivity`"
+    @component unsat_hydraulic_cond::UnsatK
 
-    "Hydraulic conductivity at saturation [m/s]"
-    sat_hydraulic_cond::NF = 1.0e-5
+    "Hydraulic conductivity at saturation"
+    @param saturated_conductivity::NF = 1.0e-5 (units = u"m/s", bounds = Positive, scale = 1.0e-5)
 
-    "Linear coeficient of wilting point adjustment due to clay content [-]"
-    wilting_point_coef::NF = 37.13e-3
+    "Linear coefficient of wilting point adjustment due to clay content"
+    @param wilting_point_effect::NF = 37.13e-3 (bounds = Positive,)
 
-    "Linear coeficient of field capacity adjustment due to clay content [-]"
-    field_capacity_coef::NF = 89.0e-3
+    "Linear coefficient of field capacity adjustment due to clay content"
+    @param field_capacity_effect::NF = 89.0e-3 (bounds = Positive,)
 
-    "Exponent of field capacity adjustment due to clay content [-]"
-    field_capacity_exp::NF = 0.35
+    "Exponent of field capacity adjustment due to clay content"
+    @param field_capacity_exp::NF = 0.35 (bounds = Positive,)
 
-    "Residual (minimum) saturation level [-]"
-    residual::NF = 0.01
+    "Residual (minimum) saturation level"
+    @param residual::NF = 0.01 (bounds = UnitInterval,)
 end
 
 function SoilHydraulicsSURFEX(
@@ -155,19 +155,19 @@ function SoilHydraulicsSURFEX(
 end
 
 # TODO: this is not quite correct, SURFEX uses a hydraulic conductivity function that decreases exponentially with depth
-@inline saturated_hydraulic_conductivity(hydraulics::SoilHydraulicsSURFEX, args...) = hydraulics.sat_hydraulic_cond
+@inline saturated_hydraulic_conductivity(hydraulics::SoilHydraulicsSURFEX, args...) = hydraulics.saturated_conductivity
 
 @inline residual_saturation(hydraulics::SoilHydraulicsSURFEX, args...) = hydraulics.residual
 
 @inline function wilting_point(hydraulics::SoilHydraulicsSURFEX, texture::SoilTexture)
-    β_w = hydraulics.wilting_point_coef
+    β_w = hydraulics.wilting_point_effect
     wp = β_w * sqrt(texture.clay * 100)
     return wp
 end
 
 @inline function field_capacity(hydraulics::SoilHydraulicsSURFEX, texture::SoilTexture)
     η = hydraulics.field_capacity_exp
-    β_c = hydraulics.field_capacity_coef
+    β_c = hydraulics.field_capacity_effect
     fc = β_c * (texture.clay * 100)^η
     return fc
 end
@@ -186,7 +186,7 @@ UnsatKLinear(::Type{NF}) where {NF} = UnsatKLinear{NF}()
 
 function hydraulic_conductivity(
         hydraulics::AbstractSoilHydraulics{NF, RC, UnsatKLinear{NF}},
-        soil::SoilVolume
+        soil::SoilComposition
     ) where {NF, RC}
     let fracs = volumetric_fractions(soil)
         θw = fracs.water # unfrozen water content
@@ -210,16 +210,16 @@ formulation [vangenuchtenHydraulicConductivity1980](@cite) extended with an ice 
 * [vangenuchtenHydraulicConductivity1980](@cite) Van Genuchten, Soil Science Society of America Journal (1980)
 * [westermannCryoGridCommunityModel2023](@cite) Westermann et al., Geoscientific Model Development (2023)
 """
-struct UnsatKVanGenuchten{NF} <: AbstractUnsatK{NF}
+@parameterized @kwdef struct UnsatKVanGenuchten{NF} <: AbstractUnsatK{NF}
     "Exponential scaling factor for ice impedance"
-    impedance::NF
+    @param impedance::NF = 7 (bounds = Positive,)
 end
 
 UnsatKVanGenuchten(::Type{NF}; impedance::NF = NF(7)) where {NF} = UnsatKVanGenuchten(NF(impedance))
 
 function hydraulic_conductivity(
         hydraulics::AbstractSoilHydraulics{NF, <:VanGenuchten, UnsatKVanGenuchten{NF}},
-        soil::SoilVolume
+        soil::SoilComposition
     ) where {NF}
     # TODO: The SWRC parameters will need to also be spatially varying at some point
     let n = hydraulics.swrc.n # van Genuchten parameter `n`

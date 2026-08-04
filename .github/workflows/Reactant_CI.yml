@@ -1,0 +1,48 @@
+name: Reactant CI
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+  workflow_dispatch: # allow manual triggering
+
+jobs:
+  correctness:
+    name: Reactant correctness - Julia v${{ matrix.version }}, ${{ matrix.os }}
+    # skip if the PR is labeled accordingly (Reactant compilation is minutes-scale)
+    if: >
+      !(
+      contains(github.event.pull_request.labels.*.name, 'skip-ci') ||
+      contains(github.event.pull_request.labels.*.name, 'skip-reactant-ci')
+      )
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        version:
+          - '1.12'
+        os:
+          - ubuntu-latest
+        arch:
+          - x64
+    steps:
+      - uses: actions/checkout@v4
+      - uses: julia-actions/setup-julia@v2
+        with:
+          version: ${{ matrix.version }}
+          arch: ${{ matrix.arch }}
+      - uses: julia-actions/cache@v2
+      - name: Instantiate Reactant test environment
+        run: |
+          julia --color=yes --project=test/reactant -e '
+            using Pkg
+            Pkg.develop(PackageSpec(path = "."))
+            Pkg.instantiate()
+          '
+      - name: Run CPU vs Reactant correctness tests
+        run: julia --color=yes --project=test/reactant test/reactant/runtests.jl
+        env:
+          GITHUB_AUTH: ${{ secrets.GITHUB_TOKEN }}

@@ -52,9 +52,18 @@ Infiltration is limited by both the type and hydrological state of the soil. The
 I = \min(P_{\text{ground}}, I_{\max}) \times (1 - f_{\text{sat}})
 \end{equation}
 ```
-where $I_{\max}$ is here the maximum infiltration capacity determined by soil hydraulic conductivity (m/s) and $f_{\text{sat}}$ is the saturation fraction of the upper soil layer (0 = dry, 1 = saturated) (-).
+where $I_{\max}$ is the maximum infiltration capacity determined by soil hydraulic conductivity (m/s) and $f_{\text{sat}}$ is the saturation fraction of the upper soil layer (0 = dry, 1 = saturated) (-).
 
 When soil becomes saturated ($f_{\text{sat}} = 1$), infiltration drops to zero and all precipitation is routed to either surface runoff or surface water storage.
+
+### Excess water at the surface
+
+The `DirectSurfaceRunoff` scheme tracks excess water accumulated at the surface. When excess water is present:
+- Precipitation adds to the excess water reservoir
+- Infiltration is computed from the drainage flux (not directly from precipitation)
+- The infiltration rate is limited by hydraulic conductivity and soil saturation state
+
+When no excess water is present, precipitation is routed directly to infiltration (subject to the same limits).
 
 ### Water table and drainage processes
 
@@ -68,7 +77,7 @@ In riparian areas or regions with high water tables, more sophisticated approach
 ## Process interface
 
 ```@docs; canonical = false
-compute_auxiliary!(state, grid, runoff::DirectSurfaceRunoff, canopy_interception::AbstractCanopyInterception, soil::AbstractSoil, args...)
+compute_auxiliary!(state, grid, runoff::DirectSurfaceRunoff, canopy_interception::AbstractCanopyInterception, soil::AbstractSoil, snow::Optional{AbstractSnow}, args...)
 ```
 
 ## Kernel functions

@@ -14,10 +14,10 @@ using Test
     grid = ColumnGrid(UniformSpacing(Δz = 0.2, N = 10))
     hydraulic_properties = ConstantSoilHydraulics(eltype(grid), unsat_hydraulic_cond = UnsatKLinear(eltype(grid)))
     hydrology = SoilHydrology(eltype(grid); hydraulic_properties)
-    strat = HomogeneousStratigraphy(eltype(grid), porosity = ConstantSoilPorosity(mineral_porosity = 0.5))
+    strat = HomogeneousSoilStratigraphy(eltype(grid), porosity = ConstantSoilPorosity(mineral_porosity = 0.5))
     soil = SoilEnergyWaterCarbon(eltype(grid); hydrology, strat)
     soilvars = Variables(soil)
-    state = initialize(merge(vars, soilvars), grid)
+    state = StateVariables(merge(vars, soilvars), grid)
     set!(state.temperature, 10.0)
 
     # Soil moisture limiting factor
