@@ -17,6 +17,19 @@ This implementation performs a linear scan over the z-axis and thus has time com
 end
 
 """
+    pad_indices(field, indices)
+
+Expand the index tuple `indices` to the dimensionality of `field`, padding with trailing ones.
+
+`Field`s are always three-dimensional and only define `setindex!` for exactly three indices, so a 2D
+write falls back to `Base`'s generic `AbstractArray` path. That path calls `axes(::AbstractField)` →
+`size(::AbstractGrid, ...)`, which is a dynamic dispatch on the device and fails to compile under
+Reactant. Solvers operating on a 2D (`XY`) slice therefore pad their indices before writing to the
+target field.
+"""
+@inline pad_indices(field, indices::NTuple{N, Integer}) where {N} = ntuple(d -> d <= N ? indices[d] : 1, Val(ndims(field)))
+
+"""
     min_zᵃᵃᶠ(i, j, k, grid, x)
     min_zᵃᵃᶠ(i, j, k, grid, f, args...)
 
