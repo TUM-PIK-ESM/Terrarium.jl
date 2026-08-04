@@ -116,8 +116,10 @@ end
     por = porosity(i, j, k, grid, fields, strat, bgc)
     sat_res = residual_saturation(get_hydraulic_properties(hydrology))
     # compute matric pressure head
-    ψm = inv_swrc(max(sat * por, sat_res); θsat = por)
-    @assert isfinite(ψm) "NaN/infinite matric potential ψm = $ψm with sat=$sat por=$por resid=$sat_res"
+    # Note that `sat` is clamped from above as well as below: the inverse SWRC is evaluated with a
+    # non-negative base (see `VanGenuchten`/`BrooksCorey`), which oversaturated states (sat > 1) would
+    # violate, raising a `DomainError` from `^` — a throw path that cannot be compiled in a kernel.
+    ψm = inv_swrc(clamp(sat * por, sat_res, por); θsat = por)
     # compute elevation pressure head
     ψz = z - z_ref
     # compute hydrostatic pressure head assuming impermeable lower boundary

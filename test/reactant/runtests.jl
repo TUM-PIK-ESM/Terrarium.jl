@@ -38,6 +38,7 @@ include("setup.jl")
     test_model(:soil_heat_column_stretched)   # array-valued (ExponentialSpacing) vertical coordinates
     test_model(:soil_heat_global)
     test_model(:snow_column)                  # standalone single-layer snow (closure + tendencies)
+    test_model(:land_soil_snow)               # coupled soil (Richards + heat) + snow + SEB, no vegetation
 end
 
 include("autodiff.jl")
