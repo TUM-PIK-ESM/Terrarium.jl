@@ -52,6 +52,35 @@ Base revision: b53747d7fb9bd12c213d3a144a3fc064cf519dfd
 >   regimes, the evergreen limit, the GDD tendency (warm accumulation, cold relaxation, zero at base),
 >   and in-model `PALADYNPhenology`/`PrescribedPhenology`. Full vegetation suite green. Regime values
 >   verified against hand calculations (e.g. gdd=100/gdd_crit=200 ⇒ ϕ=0.5; T_air=2 °C ⇒ ϕ=0.4).
+>
+> 2026-07-22 — Prescribed-LAI input pipeline + global example (`PrescribedPhenology` driven by an
+> ERA5-Land LAI climatology). This extended the work to the input-source layer and a runnable example.
+> - **Rasters extension refactor** (`ext/TerrariumRastersExt/TerrariumRastersExt.jl`):
+>   - Static (time-invariant) rasters now reduce to a plain `FieldInputSource` — `InputSource(grid,
+>     raster)` dispatches on `dims(raster, Ti)`, regridding a static raster once into a `RingGrids.Field`
+>     (scattering masked cells via `idxmap`, which `Field(ring_field, grid)` gathers back out) and
+>     deferring to the core input source. The bespoke static branches of `RasterInputSource` are deleted.
+>   - `RasterInputSource` is now time-varying-only and gained a `cycle::Bool` field. With `cycle = true`,
+>     `update_from_raster_cyclic!` maps the requested time into one period (`span + mean spacing`, so no
+>     phase drift) and interpolates, wrapping the last record back to the first across the period
+>     boundary; the non-cyclic path is unchanged. This is the climatology-repeat mechanism.
+>   - Updated `test/inputs/raster_inputs.jl`: static/multiple-raster cases expect `FieldInputSource`;
+>     added a "Cyclic time-varying raster input" testset (5→record 1, 6 h→record 2, wrap-gap
+>     interpolation). All 27 raster tests pass; the broader `test/inputs` suite is green.
+> - **Assets** (`src/input_output/assets.jl`, `src/Terrarium.jl`): fixed a stale `include` that still
+>   pointed at the renamed `get_asset.jl` (now `assets.jl`) — this had blocked precompilation of the
+>   whole package — and exported the new `ERA5LandLeafAreaIndex` asset type (daily 1980–2010 LAI
+>   climatology, `lai_hv`/`lai_lv`, native `FullClenshawGrid(900)` ≈ 6.48 M points).
+> - **`VegetationCarbon` → `VegetationCarbonCycle` rename** propagated through the phenology tests.
+> - **Example** `examples/simulations/vegetation_global.jl` (name being iterated by the author): a
+>   global `VegetationModel` with `PrescribedPhenology`, driven by the regridded `lai_hv` climatology
+>   as a cyclic input (`InputSource(grid, lai_raster; cycle = true)`). Config per the design decision
+>   below: `vegetation_dynamics = nothing` and `carbon_vegetation` initialized to a constant.
+> - **Verification.** The full data-flow (regrid → model-grid raster → cyclic input → `VegetationModel`
+>   with `PrescribedPhenology` → `run!`) was validated on **synthetic** small-grid data: LAI cycles
+>   seasonally (5.0 → 1.02 → 4.995 after 365 days) and `ϕ` tracks it and repeats — confirming cyclic
+>   input + prescribed phenology work together end-to-end. All real-asset API calls were statically
+>   checked. The real 2.5 GB LAI artifact was **not** downloaded/run locally.
 
 ## Problem description
 
@@ -204,6 +233,10 @@ each PFT-specific in PALADYN:
   for `PrescribedPhenology` (below).
 - Cite eqs. 82–83 of Willeit & Ganopolski (2016) and Sitch et al. (2003) in the PALADYN section.
 - Use `jldoctest` blocks and unicode math per project rules.
+- Added a global example, `examples/simulations/vegetation_global.jl` (Literate style), driving a
+  `VegetationModel` + `PrescribedPhenology` with the cyclic `lai_hv` climatology. It is intentionally
+  **not** registered in `docs/make.jl`'s `running_scripts` (like the other asset-heavy examples), since
+  it downloads the 2.5 GB LAI artifact and regrids it.
 
 ## Known limitations
 
@@ -226,13 +259,30 @@ each PFT-specific in PALADYN:
   raw accumulator grows without bound over very long runs; acceptable for now.
 - **Parameter defaults are placeholders.** `T_gdd_base`, `gdd_crit`, `T_senescence_range` and the
   deciduous classification are PFT-specific (PALADYN Table 5) and must be calibrated per PFT.
-- **Bare-`VegetationModel` timestepping is blocked by an unrelated, pre-existing assertion**
-  (`@assert isfinite(LAI)` in `medlyn_stomatal_conductance.jl`) that fires when `carbon_vegetation`
-  is zero-initialized, making `balanced_leaf_area_index` non-finite. This is independent of the
-  phenology changes (GDD-tendency correctness was verified directly) but should be revisited — it is
-  also a throw path in a kernel, which the kernel rules disallow.
+- **Bare-`VegetationModel` timestepping needs a nonzero initial `carbon_vegetation`.** A
+  pre-existing assertion (`@assert isfinite(LAI)` in `medlyn_stomatal_conductance.jl`) fires when
+  `carbon_vegetation` is zero-initialized, making `balanced_leaf_area_index` non-finite. Workaround
+  (used by the example and confirmed working): initialize `carbon_vegetation` to a constant and set
+  `vegetation_dynamics = nothing`. Still worth revisiting — it is also a throw path in a kernel,
+  which the kernel rules disallow.
+- **Prescribed phenology paired with prognostic `carbon_dynamics` is physically inconsistent.**
+  Normally leaf area and carbon are coupled (`LAI_b = f(C_veg)`); prescribed phenology deliberately
+  breaks that link by imposing observed LAI, so an evolving carbon pool alongside it can drift out of
+  consistency. The coherent modes are (a) prescribed LAI with carbon dynamics off, or (b) prognostic
+  carbon with `PALADYNPhenology`. The example uses mode (a)-like behavior but with the default carbon
+  dynamics left on (see the decision in Future work), which is why `carbon_vegetation` is just
+  initialized to a constant and annotated as not coupled to the imposed LAI.
 
 ## Future work / remaining TODOs observed nearby
+
+**Deferred: make `carbon_dynamics` optional for prescribed phenology.** The clean design for mode
+(a) above is `carbon_dynamics = nothing` with `PrescribedPhenology` producing `carbon_vegetation`
+from a linear LAI relationship (`C_veg = c · LAI`). This was scoped for this session but deferred to
+keep the PR minimal, because it is larger than a one-field `Optional` change: autotrophic respiration
+depends on `carbon_dynamics` for more than `C_veg` — `compute_Rm` reads the `SLA` and `awl`
+parameters from `PALADYNCarbonDynamics` and consumes the NPP feedback. So dropping `carbon_dynamics`
+requires either relocating those PFT parameters (`SLA`, `awl`) so respiration stands alone, or making
+respiration itself optional. Recommended as its own focused change with its own plan entry.
 
 These are pre-existing TODOs in the vegetation code, surfaced here for tracking; they are **out of
 scope** for this plan unless noted:
