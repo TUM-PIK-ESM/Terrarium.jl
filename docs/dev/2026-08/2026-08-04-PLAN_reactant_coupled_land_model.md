@@ -143,12 +143,35 @@ Two remaining constructs could not be raised to StableHLO:
   select the *indices* and issue two unconditional stores (AGENTS.md: `ifelse`, never `if`/`else`, in
   kernels).
 - **Convergence-tested loops.** The default skin-temperature solver is `RootSolver`, wrapping
-  RootSolvers.jl's Newton iteration. Its `while` loop has a data-dependent trip count and lowers to an
-  `scf.while` that the raise pass rejects: `error: cannot raise op to stablehlo`.
+  RootSolvers.jl's Newton iteration. Its `for i in 1:maxiters` loop lowers to an `scf.while` that the
+  raise pass rejects: `error: cannot raise op to stablehlo`, located at `RootSolvers.jl:1484` (the `end`
+  of that loop) via `solve_skin_temperature!` → `gpu_solve_surface_energy_balance_kernel!`.
 
 **Fix**: the masked stores are fixed in place. For the solver, a new `NewtonSolver` performs a *fixed*
 number of iterations carried in the type, so the loop unrolls into straight-line code. The Reactant test
 configuration selects it explicitly; **the default is unchanged** (see Known limitations).
+
+### Can RootSolvers.jl be used instead, with a never-satisfied tolerance?
+
+No — tested, twice. `RootSolver(NF; tolerance = RootSolvers.ResidualTolerance(0), max_iterations = 5)`
+makes the convergence test `(abs(y) < 0) | (abs(y) < eps(y))` false except at an exact root, so the
+iteration always runs its full budget. It still fails to raise. There are two independent causes:
+
+1. **The trip count is a runtime value.** `max_iterations` is an `Int` *field* of `RootSolver`, and the
+   solver reaches the kernel as an argument, so the value is data rather than a constant — there is no
+   literal for constant propagation to fold. (RootSolvers' `maxiters::Int` positional argument is not
+   itself the problem: a literal at the call site would constant-propagate into the `@inline`d
+   `_find_zero_newton` normally.)
+2. **Making it constant is not sufficient.** Hard-coding the literal `5` at the `find_zero` call site —
+   strictly stronger than lifting `max_iterations` to a type parameter — still produces an `scf.while`
+   and still fails. The `if !isfinite(y_new); return …; end` line-search abort inside the loop is a
+   data-dependent exit, so the loop never becomes a counted `scf.for`; and LLVM will not unroll it
+   either, since the body carries the nested Armijo backtracking `while` plus two full evaluations of
+   the surface-energy-balance residual.
+
+Making RootSolvers usable here would mean restructuring `_find_zero_newton` upstream: replacing the
+in-loop `return`s with a carried `done` flag so the loop runs to completion with a genuinely static trip
+count. That is the same shape as `NewtonSolver`, which does it in ~15 lines with no early exits.
 
 ## Summary of changes
 
