@@ -99,6 +99,9 @@ include("vegetation/dynamics/carbon_dynamics.jl")
 export PALADYNVegetationDynamics
 include("vegetation/dynamics/vegetation_dynamics.jl")
 
+export PlantTraits
+include("vegetation/plant_traits.jl")
+
 export PALADYNPhenology, PrescribedPhenology
 include("vegetation/phenology/paladyn_phenology.jl")
 include("vegetation/phenology/prescribed_phenology.jl")
@@ -120,6 +123,9 @@ include("vegetation/respiration/autotrophic_respiration.jl")
 
 export VegetationCarbonCycle
 include("vegetation/vegetation_carbon_cycle.jl")
+
+export PrescribedVegetation
+include("vegetation/prescribed_vegetation.jl")
 
 # Surface
 

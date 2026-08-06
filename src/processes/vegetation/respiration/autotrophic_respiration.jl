@@ -34,7 +34,6 @@ variables(::PALADYNAutotrophicRespiration) = (
     auxiliary(:net_primary_production, XY(), units = u"kg/m^2/s"), # Net Primary Production [kgC/m²/s]
     input(:gross_primary_production, XY(), units = u"kg/m^2/s"), # Gross Primary Production [kgC/m²/s]
     input(:daily_leaf_respiration, XY(), units = u"g/m^2/s"), # Daily leaf respiration [gC/m²/s]
-    input(:phenology_factor, XY()), # Phenology factor [-]
     input(:ground_temperature, XY(), default = 10.0, units = u"°C"), # Ground surface temperature [°C]
 )
 
@@ -158,11 +157,12 @@ function compute_auxiliary!(
         state, grid,
         autoresp::PALADYNAutotrophicRespiration,
         vegcarbon::AbstractVegetationCarbonDynamics,
+        phenology::AbstractPhenology,
         atmos::AbstractAtmosphere
     )
     out = auxiliary_fields(state, autoresp)
-    fields = get_fields(state, autoresp, vegcarbon, atmos; except = out)
-    launch!(grid, XY, compute_auxiliary_kernel!, out, fields, autoresp, vegcarbon, atmos)
+    fields = get_fields(state, autoresp, vegcarbon, phenology, atmos; except = out)
+    launch!(grid, XY, compute_auxiliary_kernel!, out, fields, autoresp, vegcarbon, phenology, atmos)
     return nothing
 end
 
@@ -181,6 +181,7 @@ Compute autotrophic respiration following the scheme of [willeitPALADYNV10Compre
         i, j, grid, fields,
         autoresp::PALADYNAutotrophicRespiration,
         vegcarbon_dynamics::PALADYNCarbonDynamics,
+        phenology::AbstractPhenology,
         atmos::AbstractAtmosphere
     )
     # Get inputs

@@ -1,5 +1,5 @@
 using Terrarium
-using Terrarium: compute_phenology_factor, compute_LAI, compute_gdd_tendency,
+using Terrarium: compute_phenology_factor, compute_leaf_area_index, compute_gdd_tendency,
     compute_auxiliary!, initialize, VegetationCarbonCycle, PALADYNPhenology, PrescribedPhenology,
     seconds_per_day
 using Oceananigans: set!, interior
@@ -33,7 +33,7 @@ end
     @test compute_phenology_factor(phenol, 0.0, 20.0) == 1.0
     @test compute_phenology_factor(phenol, 0.0, -10.0) == 1.0
     # LAI = LAI_b when ϕ = 1
-    @test compute_LAI(phenol, 1.0, 5.0) == 5.0
+    @test compute_leaf_area_index(phenol, 1.0, 5.0) == 5.0
 end
 
 @testset "PALADYNPhenology GDD tendency" begin
@@ -58,7 +58,7 @@ end
     set!(state.balanced_leaf_area_index, 5.0)
     set!(state.growing_degree_days, 100.0)
     # run only the phenology auxiliary computation
-    compute_auxiliary!(state, model.grid, model.vegetation.phenology, model.atmosphere)
+    compute_auxiliary!(state, model.grid, model.vegetation.phenology, model.vegetation.carbon_dynamics, model.atmosphere)
     @test Array(interior(state.phenology_factor))[1] ≈ 0.5
     @test Array(interior(state.leaf_area_index))[1] ≈ 2.5
 end

@@ -68,7 +68,7 @@ compute_phenology_factor
 ```
 
 ```@docs; canonical = false
-compute_LAI
+compute_leaf_area_index
 ```
 
 ## Kernel functions

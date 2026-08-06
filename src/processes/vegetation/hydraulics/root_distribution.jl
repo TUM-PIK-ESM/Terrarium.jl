@@ -62,3 +62,5 @@ function root_fraction(grid::AbstractColumnGrid, clock, fields, rootdist::Static
     R_norm = R / sum(R, dims = 3)
     return R_norm
 end
+
+compute_auxiliary!(state, grid, ::StaticExponentialRootDistribution, args...) = nothing

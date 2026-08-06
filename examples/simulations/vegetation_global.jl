@@ -51,11 +51,7 @@ lai_input = InputSource(grid, lai_highveg; name = :leaf_area_index, cycle = true
 # the prognostic vegetation-fraction dynamics (`vegetation_dynamics = nothing`). The carbon pool
 # `carbon_vegetation` is still needed by the respiration parameterization, so we initialize it to a
 # constant; note that with prescribed LAI this pool is not consistently coupled to the imposed leaf area.
-vegetation = VegetationCarbonCycle(
-    NF;
-    phenology = PrescribedPhenology(NF; max_leaf_area_index = 6),
-    vegetation_dynamics = nothing,
-)
+vegetation = PrescribedVegetation(NF)
 model = VegetationModel(grid; vegetation)
 
 # Initialize the model with the LAI input source and a uniform initial vegetation carbon pool.

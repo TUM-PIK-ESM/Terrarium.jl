@@ -183,7 +183,7 @@ linear ramp from ≈0, keeping the variable bounded and event-free.
 **Deciduous/evergreen classification:** the coldest-month-temperature test is an annual statistic
 that does not reduce to a clean ODE. Represent `f_deciduous` as a prescribed PFT/site property (or an
 infrequently-updated input), consistent with the current `compute_f_deciduous` stub and with the fact
-that needleleaf PFTs are always evergreen. Combine as in the existing `compute_LAI`:
+that needleleaf PFTs are always evergreen. Combine as in the existing `compute_leaf_area_index`:
 
 ```
 ϕ_effective = f_deciduous · ϕ_deciduous + (1 − f_deciduous) · 1

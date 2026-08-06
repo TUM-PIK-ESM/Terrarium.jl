@@ -57,7 +57,6 @@ variables(::PALADYNPhenology) = (
     prognostic(:growing_degree_days, XY(), units = u"K*d"), # Growing degree days [K⋅day]
     auxiliary(:phenology_factor, XY()), # Phenology factor [-]
     auxiliary(:leaf_area_index, XY()), # Leaf Area Index [m²/m²]
-    input(:balanced_leaf_area_index, XY()), # Balanced Leaf Area Index [m²/m²]
 )
 
 """
@@ -91,7 +90,7 @@ end
 Compute the instantaneous leaf area index `LAI = ϕ·LAI_b` from the phenology factor `ϕ` and the balanced
 leaf area index `LAI_b`.
 """
-@inline compute_LAI(phenol::PALADYNPhenology, ϕ, LAI_b) = ϕ * LAI_b
+@inline compute_leaf_area_index(phenol::PALADYNPhenology, ϕ, LAI_b) = ϕ * LAI_b
 
 """
     $SIGNATURES
@@ -116,9 +115,9 @@ end
 # Top-level interface methods
 
 """ $TYPEDSIGNATURES """
-function compute_auxiliary!(state, grid, phenol::PALADYNPhenology, atmos::AbstractAtmosphere)
+function compute_auxiliary!(state, grid, phenol::PALADYNPhenology, vegcarbon::PALADYNCarbonDynamics, atmos::AbstractAtmosphere)
     out = auxiliary_fields(state, phenol)
-    fields = get_fields(state, phenol, atmos; except = out)
+    fields = get_fields(state, phenol, vegcarbon, atmos; except = out)
     launch!(grid, XY, compute_auxiliary_kernel!, out, fields, phenol, atmos)
     return nothing
 end
@@ -140,13 +139,13 @@ Compute the phenology factor and instantaneous leaf area index (LAI) at a single
 """
 @propagate_inbounds function compute_phenology(i, j, grid, fields, phenol::PALADYNPhenology, atmos::AbstractAtmosphere)
     # Get inputs and prognostic state
-    LAI_b = fields.balanced_leaf_area_index[i, j]
     gdd = fields.growing_degree_days[i, j]
+    LAI_b = fields.balanced_leaf_area_index[i, j]
     T_air = air_temperature(i, j, grid, fields, atmos)
 
     # Compute phenology factor and LAI
     ϕ = compute_phenology_factor(phenol, gdd, T_air)
-    LAI = compute_LAI(phenol, ϕ, LAI_b)
+    LAI = compute_leaf_area_index(phenol, ϕ, LAI_b)
 
     return ϕ, LAI
 end

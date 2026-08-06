@@ -46,9 +46,6 @@ $TYPEDFIELDS
     "Conversion factor for solar radiation at 550 nm from J/m² to mol/m²"
     @param cq::NF = 4.6e-6 (units = u"mol/J", bounds = Positive, scale = 1.0e-6)
 
-    "Extinction coefficient for radiation through vegetation"
-    @param k_ext::NF = 0.5 (bounds = Positive,)
-
     "Upper temperature threshold for CO₂/O₂ specificity factor. Above this, photosynthesis rapidly declines. PFT-specific, needleleaf tree value."
     @param T_CO2_high::NF = 42.0 (units = u"°C",)
 

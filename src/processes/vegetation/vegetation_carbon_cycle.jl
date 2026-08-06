@@ -37,6 +37,9 @@ Coupled process type representing the major carbon cycle processes for natural v
 
     "Plant available water"
     plant_available_water::PAW
+
+    "Plant-specific trait parameters"
+    traits::PlantTraits{NF}
 end
 
 function VegetationCarbonCycle(
@@ -48,7 +51,8 @@ function VegetationCarbonCycle(
         carbon_dynamics = PALADYNCarbonDynamics(NF),
         vegetation_dynamics = PALADYNVegetationDynamics(NF),
         root_distribution = StaticExponentialRootDistribution(NF),
-        plant_available_water = FieldCapacityLimitedPAW(NF)
+        plant_available_water = FieldCapacityLimitedPAW(NF),
+        traits = PlantTraits(NF)
     ) where {NF}
     return VegetationCarbonCycle(;
         photosynthesis,
@@ -58,13 +62,14 @@ function VegetationCarbonCycle(
         carbon_dynamics,
         vegetation_dynamics,
         root_distribution,
-        plant_available_water
+        plant_available_water,
+        traits
     )
 end
 
 # TODO: Remove once dedicated vegetation surface parameterizations are added
 # Also may be a good reason to rename VegetationCarbonCycle to NaturalVegetation or similar
-@propagate_inbounds compute_albedo(i, j, grid, fields, ::AbstractVegetation{NF}) where {NF} = NF(0.02)
+@propagate_inbounds compute_albedo(i, j, grid, fields, veg::AbstractVegetation{NF}) where {NF} = veg.traits.albedo
 
 # TODO: will need to change once PFTs are added
 @propagate_inbounds vegetation_area_fraction(i, j, grid, fields, veg::AbstractVegetation) = vegetation_area_fraction(i, j, grid, fields, veg.vegetation_dynamics)
@@ -86,25 +91,26 @@ function compute_auxiliary!(
         args...
     )
     # Compute auxiliary variables for each component
+    # Roots: need soil state and computes root_fraction
+    compute_auxiliary!(state, grid, veg.root_distribution, soil)
+
     # PAW: needs soil saturation profile and computes soil_moisture_limiting_factor
     compute_auxiliary!(state, grid, veg.plant_available_water, soil)
 
     # Veg. carbon dynamics: needs C_veg(t) and computes LAI_b(t)
-    compute_auxiliary!(state, grid, veg.carbon_dynamics)
+    compute_auxiliary!(state, grid, veg.carbon_dynamics, veg.traits)
 
     # Phenology: needs LAI_b(t) and air temperature(t) and computes LAI(t) and phen(t)
-    compute_auxiliary!(state, grid, veg.phenology, atmos)
+    compute_auxiliary!(state, grid, veg.phenology, veg.carbon_dynamics, atmos)
 
     # Stomatal conductance: needs atm. inputs(t) and computes λc(t)
-    # TODO: Note the (implicit) circular dependency between photosynthesis and stomatal conductance;
-    # can this be refactored?
-    compute_auxiliary!(state, grid, veg.stomatal_conductance, veg.photosynthesis, constants, atmos)
+    compute_auxiliary!(state, grid, veg.stomatal_conductance, veg.traits, constants, atmos)
 
     # Photosynthesis: needs atm. inputs(t), λc(t), LAI(t), and computes Rd(t) and GPP(t)
     compute_auxiliary!(state, grid, veg.photosynthesis, veg.stomatal_conductance, constants, atmos)
 
     # Autotrophic respiration: needs atm. inputs(t), GPP(t), Rd(t), C_veg(t), phen(t) and computes Ra(t) and NPP(t)
-    compute_auxiliary!(state, grid, veg.autotrophic_respiration, veg.carbon_dynamics, atmos)
+    compute_auxiliary!(state, grid, veg.autotrophic_respiration, veg.carbon_dynamics, veg.phenology, atmos)
 
     # Note: vegetation_dynamics compute_auxiliary! does nothing for now
     compute_auxiliary!(state, grid, veg.vegetation_dynamics)
