@@ -67,14 +67,13 @@ The `name` can either be a plain `Symbol` or a namespaced path; see [`Terrarium.
 function Terrarium.InputSource(
         grid::ColumnRingGrid{NF},
         raster::AbstractRaster{NF};
-        source_grid = nothing,
+        source_grid = grid.rings,
         name = raster.name,
         units = NoUnits,
         reftime = nothing,
         cycle = false
     ) where {NF}
     raster = reconcile_latitudes(raster)
-    source_grid = isnothing(source_grid) ? infer_grid(raster) : source_grid
     extrapolation = cycle ? Cyclical() : Clamp()
     return RasterInputSource(grid, source_grid, raster, dims(raster, Ti), name, units, reftime, extrapolation)
 end
@@ -148,26 +147,31 @@ function update_from_raster!(field, grid, clock, source::RasterInputSource)
     raster = source.raster
     idxmap = source.idxmap
     timedim = dims(raster, Ti)
+    N = length(timedim)
     t1 = timestamp(source.reftime, first(timedim.val))
     tN = timestamp(source.reftime, last(timedim.val))
     ti = timestamp(source.reftime, clock.time)
+    Δt₀ = (tN - t1) / (N - 1)
+    period = tN - t1 + Δt₀ # approximate for non-equidistant spacing
     # search for indices between which t lies, converting everything to relative time in seconds;
     # note that we use clock.time again here because searchsorted applies by to the second argument
-    indexes = searchsorted(timedim.val, clock.time, by = t -> t1 + mod(timestamp(source.reftime, t) - t1, tN - t1))
-    left, right = last(indexes), first(indexes)
+    indexes = searchsorted(timedim.val, clock.time, by = t -> t1 + mod(timestamp(source.reftime, t) - t1, period))
+    lower, upper = last(indexes), first(indexes)
     @inbounds if t1 < ti < tN || source.extrapolation isa Cyclical
+        lower = lower < 1 ? N : lower
+        upper = upper > N ? 1 : upper
+        x1 = interpolate_to_grid(grid, source.source_grid, raster[Ti(lower)])[idxmap]
+        x2 = interpolate_to_grid(grid, source.source_grid, raster[Ti(upper)])[idxmap]
+        t1 = timestamp(source.reftime, timedim[lower])
+        t2 = timestamp(source.reftime, timedim[upper])
         # Linear interpolation between points
-        x1 = interpolate_to_grid(grid, source.source_grid, raster[Ti(left)])[idxmap]
-        x2 = interpolate_to_grid(grid, source.source_grid, raster[Ti(right)])[idxmap]
-        t1 = timestamp(source.reftime, timedim[left])
-        t2 = timestamp(source.reftime, timedim[right])
-        Δt = Terrarium.convert_dt(t2 - t1)
+        Δt = t2 > t1 ? Terrarium.convert_dt(t2 - t1) : Δt₀
         ϵ = Terrarium.convert_dt(ti - t1)
-        x_interp = Δt > 0 ? x1 + ϵ * (x2 - x1) / Δt : x2
+        x_interp = x1 + ϵ * (x2 - x1) / Δt
         return set!(field, x_interp)
     else
         # Flat extrapolation (corresponding to Clamp)
-        x_end = interpolate_to_grid(grid, source.source_grid, raster[Ti(min(right, length(timedim)))])
+        x_end = interpolate_to_grid(grid, source.source_grid, raster[Ti(min(upper, N))])
         return set!(field, x_end[idxmap])
     end
 end
@@ -176,12 +180,16 @@ function interpolate_to_grid(grid::ColumnRingGrid, source_grid::RingGrids.Abstra
     arch = architecture(grid)
     data_device = on_architecture(arch, reshape(data.data, :)) # NOTE: only works if underlying data is an in-memory 2D array
     field = RingGrids.Field(data_device, on_architecture(arch, source_grid))
-    return RingGrids.interpolate(grid.rings, field)
+    if grid.rings === source_grid
+        return field
+    else
+        return RingGrids.interpolate(grid.rings, field)
+    end
 end
 
 # conversions of simulation time to standard time units (seconds since reftime)
 timestamp(reftime::DateTime, time::Real) = time # assume already in relative time
-timestamp(reftime::DateTime, time::DateTime) = convert(Nanosecond, time - reftime) / 1.0e9
+timestamp(reftime::DateTime, time::DateTime) = Dates.value(convert(Millisecond, time - reftime)) / 1.0e3
 timestamp(reftime::Real, time::Real) = time - reftime # assume matching units of seconds
 timestamp(reftime::Period, time::Real) = time - to_seconds(reftime)
 timestamp(reftime::Period, time::Period) = to_seconds(time - reftime)
@@ -225,9 +233,5 @@ on_architecture(to, raster::AbstractRaster) = rebuild(
 
 # Drop latitudes at the poles
 reconcile_latitudes(raster::AbstractRaster) = @view(raster[Y(Where(lat -> -90 < lat < 90))])
-
-# Infer grid from raster; currently defaults to assuming Clenshaw
-# TODO: We could add more sophisticated logic but this seems like something that should be in RingGrids
-infer_grid(raster::AbstractRaster) = RingGrids.FullClenshawGrid(Int((length(dims(raster, Y)) + 1) // 2))
 
 end
