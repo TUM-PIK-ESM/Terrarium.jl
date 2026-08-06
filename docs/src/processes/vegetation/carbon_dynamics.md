@@ -108,7 +108,7 @@ compute_tendencies!(state, grid, vegcarbon_dynamics::PALADYNCarbonDynamics, args
 ## Methods
 
 ```@docs; canonical = false
-compute_LAI_b
+compute_balanced_leaf_area_index
 ```
 
 ```@docs; canonical = false

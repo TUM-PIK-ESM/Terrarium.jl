@@ -1,4 +1,4 @@
-@parameterized @kwdef struct PrescribedVegetation{NF, Phenology, StomatalConductance, RootDistribution, PAW} <: AbstractCoupledProcesses{NF}
+@parameterized @kwdef struct PrescribedVegetation{NF, Phenology, StomatalConductance, RootDistribution, PAW} <: AbstractVegetation{NF}
     "Phenology scheme"
     @component phenology::Phenology
 
@@ -52,7 +52,7 @@ function compute_auxiliary!(
     compute_auxiliary!(state, grid, veg.phenology, atmos)
 
     # Stomatal conductance: needs atm. inputs(t) and computes λc(t)
-    compute_auxiliary!(state, grid, veg.stomatal_conductance, traits, constants, atmos)
+    compute_auxiliary!(state, grid, veg.stomatal_conductance, veg.traits, constants, atmos)
     return nothing
 end
 

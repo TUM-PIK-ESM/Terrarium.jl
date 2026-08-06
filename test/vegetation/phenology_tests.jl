@@ -65,8 +65,9 @@ end
 
 @testset "PrescribedPhenology derives phenology factor" begin
     grid = ColumnGrid(CPU(), Float64, ExponentialSpacing(N = 5))
-    phenol = PrescribedPhenology(Float64; max_leaf_area_index = 4.0)
-    model = VegetationModel(grid; vegetation = VegetationCarbonCycle(Float64; phenology = phenol))
+    traits = PlantTraits(eltype(grid); maximum_leaf_area_index = 4.0)
+    phenol = PrescribedPhenology(eltype(grid))
+    model = VegetationModel(grid; vegetation = PrescribedVegetation(eltype(grid); phenology = phenol, traits = traits))
     integrator = initialize(model)
     state = integrator.state
     # ϕ = clamp(LAI / max_leaf_area_index, 0, 1)

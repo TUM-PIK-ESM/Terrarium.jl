@@ -126,9 +126,10 @@ Computes absorbed PAR limited by the fraction of PAR assimilated at ecosystem le
 
 * [willeitPALADYNV10Comprehensive2016](@cite) Willeit & Ganopolski, Geoscientific Model Development (2016)
 """
-@inline function compute_APAR(photo::LUEPhotosynthesis{NF}, swdown::NF, LAI::NF) where {NF}
+@inline function compute_APAR(photo::LUEPhotosynthesis{NF}, traits::PlantTraits{NF}, swdown::NF, LAI::NF) where {NF}
     PAR = compute_PAR(photo, swdown)
-    APAR = photo.α_a * PAR * (NF(1.0) - exp(-photo.k_ext * LAI))
+    k_ext = traits.extinction_coefficient
+    APAR = photo.α_a * PAR * (NF(1.0) - exp(-k_ext * LAI))
     return APAR
 end
 
@@ -280,6 +281,7 @@ Compute and return leaf respiration [gC/m²/s] and net assimilation [gC/m²/s] r
 """
 function compute_respiration_assimilation(
         photo::LUEPhotosynthesis{NF},
+        traits::PlantTraits{NF},
         constants::MaterialConstants{NF},
         T_air::NF, swdown::NF, pres::NF, co2::NF, LAI::NF, λc::NF, β::NF,
     ) where {NF}
@@ -300,7 +302,7 @@ function compute_respiration_assimilation(
         if LAI > zero(NF)
 
             # Compute absorbed PAR [mol/m²/s]
-            APAR = compute_APAR(photo, swdown, LAI)
+            APAR = compute_APAR(photo, traits, swdown, LAI)
 
             # Compute pres_i, intercellular CO2 partial pressure [Pa]
             pres_i = compute_pres_i(photo, λc, pres_a)
@@ -358,13 +360,14 @@ function compute_auxiliary!(
         state, grid,
         photo::LUEPhotosynthesis,
         stomcond::AbstractStomatalConductance,
+        traits::PlantTraits,
         constants::PhysicalConstants,
         atmos::AbstractAtmosphere,
         args...
     )
     out = auxiliary_fields(state, photo)
     fields = get_fields(state, photo, stomcond, atmos; except = out)
-    launch!(grid, XY, compute_auxiliary_kernel!, out, fields, photo, constants, atmos)
+    launch!(grid, XY, compute_auxiliary_kernel!, out, fields, photo, traits, constants, atmos)
     return nothing
 end
 
@@ -379,6 +382,7 @@ Returns instantaneous rates in [gC/m²/s] and [kgC/m²/s] for integration by the
 @propagate_inbounds function compute_photosynthesis(
         i, j, grid, fields,
         photo::LUEPhotosynthesis,
+        traits::PlantTraits,
         constants::PhysicalConstants,
         atmos::AbstractAtmosphere
     )
@@ -393,7 +397,7 @@ Returns instantaneous rates in [gC/m²/s] and [kgC/m²/s] for integration by the
 
     # Compute Rd, leaf respiration rate in [gC/m²/s],
     # An, net photosynthesis rate in [gC/m²/s]
-    Rd, An = compute_respiration_assimilation(photo, constants.material, T_air, swdown, pres, co2, LAI, λc, β)
+    Rd, An = compute_respiration_assimilation(photo, traits, constants.material, T_air, swdown, pres, co2, LAI, λc, β)
 
     # Compute GPP, Gross Primary Production in [kgC/m²/s]
     GPP = compute_GPP(photo, An)
@@ -409,10 +413,11 @@ Calls [`compute_photosynthesis`](@ref) and stores the results in `out`.
 @propagate_inbounds function compute_photosynthesis!(
         out, i, j, grid, fields,
         photo::LUEPhotosynthesis,
+        traits::PlantTraits,
         constants::PhysicalConstants,
         atmos::AbstractAtmosphere
     )
-    Rd, An, GPP = compute_photosynthesis(i, j, grid, fields, photo, constants, atmos)
+    Rd, An, GPP = compute_photosynthesis(i, j, grid, fields, photo, traits, constants, atmos)
     out.leaf_respiration[i, j, 1] = Rd
     out.net_assimilation[i, j, 1] = An
     out.gross_primary_production[i, j, 1] = GPP

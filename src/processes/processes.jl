@@ -93,14 +93,14 @@ include("snow/energy/snow_energy.jl")
 
 # Vegetation
 
+export PlantTraits
+include("vegetation/plant_traits.jl")
+
 export PALADYNCarbonDynamics
 include("vegetation/dynamics/carbon_dynamics.jl")
 
 export PALADYNVegetationDynamics
 include("vegetation/dynamics/vegetation_dynamics.jl")
-
-export PlantTraits
-include("vegetation/plant_traits.jl")
 
 export PALADYNPhenology, PrescribedPhenology
 include("vegetation/phenology/paladyn_phenology.jl")

@@ -107,10 +107,10 @@ function compute_auxiliary!(
     compute_auxiliary!(state, grid, veg.stomatal_conductance, veg.traits, constants, atmos)
 
     # Photosynthesis: needs atm. inputs(t), λc(t), LAI(t), and computes Rd(t) and GPP(t)
-    compute_auxiliary!(state, grid, veg.photosynthesis, veg.stomatal_conductance, constants, atmos)
+    compute_auxiliary!(state, grid, veg.photosynthesis, veg.stomatal_conductance, veg.traits, constants, atmos)
 
     # Autotrophic respiration: needs atm. inputs(t), GPP(t), Rd(t), C_veg(t), phen(t) and computes Ra(t) and NPP(t)
-    compute_auxiliary!(state, grid, veg.autotrophic_respiration, veg.carbon_dynamics, veg.phenology, atmos)
+    compute_auxiliary!(state, grid, veg.autotrophic_respiration, veg.carbon_dynamics, veg.phenology, veg.traits, atmos)
 
     # Note: vegetation_dynamics compute_auxiliary! does nothing for now
     compute_auxiliary!(state, grid, veg.vegetation_dynamics)
@@ -124,10 +124,10 @@ Compute tendencies for carbon and vegetation dynamics.
 """
 function compute_tendencies!(state, grid, veg::VegetationCarbonCycle, constants::PhysicalConstants, atmos::AbstractAtmosphere, args...)
     # Needs NPP(t), C_veg(t), LAI_b(t) and computes tendency for C_veg
-    compute_tendencies!(state, grid, veg.carbon_dynamics)
+    compute_tendencies!(state, grid, veg.carbon_dynamics, veg.traits)
 
     # Needs NPP(t), C_veg(t), LAI_b(t), ν(t) and computes tendency for ν
-    compute_tendencies!(state, grid, veg.vegetation_dynamics, veg.carbon_dynamics)
+    compute_tendencies!(state, grid, veg.vegetation_dynamics, veg.carbon_dynamics, veg.traits)
 
     # Needs air temperature(t) and computes tendency for growing degree days (prognostic phenology)
     compute_tendencies!(state, grid, veg.phenology, atmos)

@@ -240,7 +240,7 @@ each PFT-specific in PALADYN:
 
 ## Known limitations
 
-- **`PrescribedPhenology` assumes deciduous-like behavior.** `ϕ = LAI/LAI_max` conflates a
+- **`PrescribedPhenology` assumes deciduous-like behavior.** `ϕ = LAI/maximum_leaf_area_index` conflates a
   *structural* LAI ratio with a *phenological* leaf-out state. For an evergreen PFT (where PALADYN
   sets `ϕ = 1` regardless of LAI), a dip in prescribed LAI would spuriously suppress root
   respiration. Document this; if evergreen support is needed, allow `phenology_factor` to be a second
