@@ -27,7 +27,7 @@ MedlynStomatalConductance(::Type{NF}; kwargs...) where {NF} = MedlynStomatalCond
 
 variables(::MedlynStomatalConductance) = (
     auxiliary(:canopy_water_conductance, XY(), units = u"m/s"), # Canopy conducatance for water vapor
-    auxiliary(:leaf_to_air_co2_ratio, XY()), # Ratio of leaf-internal and air CO2 concentration [-]
+    input(:net_assimilation, XY(), units = u"g/m^2/s"), # Net photosynthesis rate [gC/m²/s]
 )
 
 @inline @propagate_inbounds stomatal_conductance(i, j, grid, fields, ::MedlynStomatalConductance) = fields.canopy_water_conductance[i, j]
@@ -119,9 +119,8 @@ Returns tuple (g_stm, λc) for use in photosynthesis and transpiration calculati
 
     # Compute conductance g_stm and internal CO2 ratio λc
     g_stm = compute_stomatal_conductance(stomcond, traits, vpd, An, CO2, LAI, β)
-    λc = compute_λc(stomcond, vpd)
 
-    return g_stm, λc
+    return g_stm
 end
 
 """
@@ -137,9 +136,8 @@ Calls [`compute_stomatal_conductance`](@ref) and stores the result in `out`.
         atmos::AbstractAtmosphere,
         args...
     ) where {NF}
-    g_stm, λc = compute_stomatal_conductance(i, j, grid, fields, stomcond, traits, constants, atmos, args...)
+    g_stm = compute_stomatal_conductance(i, j, grid, fields, stomcond, traits, constants, atmos, args...)
     out.canopy_water_conductance[i, j, 1] = g_stm
-    out.leaf_to_air_co2_ratio[i, j, 1] = λc
     return out
 end
 

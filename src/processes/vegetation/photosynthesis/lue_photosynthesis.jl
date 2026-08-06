@@ -366,8 +366,9 @@ function compute_auxiliary!(
         args...
     )
     out = auxiliary_fields(state, photo)
-    fields = get_fields(state, photo, stomcond, atmos; except = out)
-    launch!(grid, XY, compute_auxiliary_kernel!, out, fields, photo, traits, constants, atmos)
+    # N.B. in this specific case, we do not need state fields from the stomatal condctuance dependency
+    fields = get_fields(state, photo, atmos; except = out)
+    launch!(grid, XY, compute_auxiliary_kernel!, out, fields, photo, stomcond, traits, constants, atmos)
     return nothing
 end
 
@@ -382,18 +383,24 @@ Returns instantaneous rates in [gC/m²/s] and [kgC/m²/s] for integration by the
 @propagate_inbounds function compute_photosynthesis(
         i, j, grid, fields,
         photo::LUEPhotosynthesis,
+        stomcond::AbstractStomatalConductance,
         traits::PlantTraits,
         constants::PhysicalConstants,
         atmos::AbstractAtmosphere
     )
-    # Get inputs from fields/atmosphere
+    # Get inputs from atmosphere
     T_air = air_temperature(i, j, grid, fields, atmos)
     pres = air_pressure(i, j, grid, fields, atmos)
     swdown = shortwave_down(i, j, grid, fields, atmos)
-    co2 = fields.CO2[i, j]
+    co2 = ambient_co2(i, j, grid, fields, atmos)
+
+    # Get vegetation inputs
     β = fields.soil_moisture_limiting_factor[i, j]
     LAI = fields.leaf_area_index[i, j]
-    λc = fields.leaf_to_air_co2_ratio[i, j]
+
+    # Compute VPD + leaf-to-air CO2 ratio λc
+    vpd = compute_vapor_pressure_deficit(i, j, grid, fields, atmos, constants)
+    λc = compute_λc(stomcond, vpd)
 
     # Compute Rd, leaf respiration rate in [gC/m²/s],
     # An, net photosynthesis rate in [gC/m²/s]

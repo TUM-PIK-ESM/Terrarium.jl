@@ -1,14 +1,17 @@
-@parameterized @kwdef struct PrescribedVegetation{NF, Phenology, StomatalConductance, RootDistribution, PAW} <: AbstractVegetation{NF}
+@parameterized @kwdef struct PrescribedVegetation{NF, Phenology, Photosynthesis, StomatalConductance, RootDistribution, PAW} <: AbstractVegetation{NF}
     "Phenology scheme"
     @component phenology::Phenology
 
-    "Stomatal conductance"
+    "Photosynthesis scheme"
+    @component photosynthesis::Photosynthesis
+
+    "Stomatal conductance scheme"
     @component stomatal_conductance::StomatalConductance
 
-    "Vegetation root distribution"
+    "Plant vertical root distribution"
     @component root_distribution::RootDistribution
 
-    "Plant available water"
+    "Plant available water determining soil moisture stress"
     @component plant_available_water::PAW
 
     "Plant physical traits"
@@ -18,12 +21,13 @@ end
 function PrescribedVegetation(
         ::Type{NF};
         phenology = PrescribedPhenology(NF),
+        photosyntheis = LUEPhotosynthesis(NF),
         stomatal_conductance = MedlynStomatalConductance(NF),
         root_distribution = StaticExponentialRootDistribution(NF),
         plant_available_water = FieldCapacityLimitedPAW(NF),
         traits = PlantTraits(NF)
     ) where {NF}
-    return PrescribedVegetation(; phenology, stomatal_conductance, root_distribution, plant_available_water, traits)
+    return PrescribedVegetation(; phenology, photosyntheis, stomatal_conductance, root_distribution, plant_available_water, traits)
 end
 
 """
@@ -48,8 +52,11 @@ function compute_auxiliary!(
     # PAW: needs soil saturation profile and computes soil_moisture_limiting_factor
     compute_auxiliary!(state, grid, veg.plant_available_water, soil)
 
-    # Phenology: needs LAI(t) and air temperature(t) as inputs and computes phen(t)
+    # Phenology (prescribed): needs LAI(t) and air temperature(t) as inputs and computes phen(t)
     compute_auxiliary!(state, grid, veg.phenology, atmos)
+
+    # Photosynthesis: needs atm. inputs(t), LAI(t), and computes Rd(t) and GPP(t)
+    compute_auxiliary!(state, grid, veg.photosynthesis, veg.stomatal_conductance, veg.traits, constants, atmos)
 
     # Stomatal conductance: needs atm. inputs(t) and computes λc(t)
     compute_auxiliary!(state, grid, veg.stomatal_conductance, veg.traits, constants, atmos)

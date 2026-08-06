@@ -103,11 +103,14 @@ function compute_auxiliary!(
     # Phenology: needs LAI_b(t) and air temperature(t) and computes LAI(t) and phen(t)
     compute_auxiliary!(state, grid, veg.phenology, veg.carbon_dynamics, atmos)
 
-    # Stomatal conductance: needs atm. inputs(t) and computes λc(t)
-    compute_auxiliary!(state, grid, veg.stomatal_conductance, veg.traits, constants, atmos)
-
-    # Photosynthesis: needs atm. inputs(t), λc(t), LAI(t), and computes Rd(t) and GPP(t)
+    # Photosynthesis: needs atm. inputs(t), LAI(t), and computes Rd(t) and GPP(t)
+    # N.B. We break the usual dependency pattern here to resolve the tight coupling between photosynthesis and
+    # stomatal conductance. Photosynthesis does *not* depend on the auxiliary state of stomatal conductance but
+    # requires its parameters to compute λc.
     compute_auxiliary!(state, grid, veg.photosynthesis, veg.stomatal_conductance, veg.traits, constants, atmos)
+
+    # Stomatal conductance: needs atm. inputs(t) and computes g_can(t)
+    compute_auxiliary!(state, grid, veg.stomatal_conductance, veg.traits, constants, atmos)
 
     # Autotrophic respiration: needs atm. inputs(t), GPP(t), Rd(t), C_veg(t), phen(t) and computes Ra(t) and NPP(t)
     compute_auxiliary!(state, grid, veg.autotrophic_respiration, veg.carbon_dynamics, veg.phenology, veg.traits, atmos)
