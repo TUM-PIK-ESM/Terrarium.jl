@@ -32,6 +32,9 @@ dynamics are allowed except in very special cases where they must be clearly doc
   ```
 - To run the full suite, use `julia --project=. -e 'using Pkg; Pkg.test()'` (Enzyme/AD tests run
   via `Pkg.test(; test_args=["enzyme"])`).
+- Julia errors and associated stack traces are often very long due to long type signatures. To
+  mitigate this, always write test output to temporary files and analyze this output using `grep`
+  and similar tools.
 
 ## Critical Rules
 
