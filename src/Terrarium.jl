@@ -54,6 +54,8 @@ import DomainSets
 import Downloads
 import Interpolations
 import ModelParameters
+import ClimaTimeSteppers
+import Enzyme
 import Oceananigans
 import Oceananigans.Diagnostics
 import Pkg
@@ -163,5 +165,7 @@ export Heun
 include("timesteppers/heun.jl")
 export IMEX, AbstractIMEX
 include("timesteppers/imex.jl")
+export BackwardEuler
+include("timesteppers/backward_euler.jl")
 
 end # module Terrarium

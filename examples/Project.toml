@@ -2,6 +2,7 @@
 ADTypes = "47edcb42-4c32-4615-8424-f2b9edc5f35b"
 Ariadne = "0be81120-40bf-4f8b-adf0-26103efb66f1"
 BenchmarkTools = "6e4b80f9-dd63-53aa-95a3-0cdb28fa8baf"
+ClimaTimeSteppers = "595c0a79-7f3d-439a-bc5a-b232dc3bde79"
 CUDA = "052768ef-5323-5732-b1bb-66c8b64840ba"
 CairoMakie = "13f3f980-e62b-5c42-98c6-ff1f3baf88f0"
 Checkpointing = "eb46d486-4f9c-4c3d-b445-a617f2a2f1ca"
@@ -35,7 +36,6 @@ Terrarium = "80418d68-07fa-499d-ae2b-c12e531f5cd8"
 Thermodynamics = "b60c26fb-14c3-4610-9d3e-2d17fe7ff00c"
 
 [sources]
-NumericalEarth = {rev = "main", url = "https://github.com/NumericalEarth/NumericalEarth.jl.git"}
 Terrarium = {path = ".."}
 
 [compat]
