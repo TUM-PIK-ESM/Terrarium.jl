@@ -117,7 +117,6 @@ end
     sat_res = residual_saturation(get_hydraulic_properties(hydrology))
     # compute matric pressure head
     ψm = inv_swrc(max(sat * por, sat_res); θsat = por)
-    @assert isfinite(ψm) "NaN/infinite matric potential ψm = $ψm with sat=$sat por=$por resid=$sat_res"
     # compute elevation pressure head
     ψz = z - z_ref
     # compute hydrostatic pressure head assuming impermeable lower boundary

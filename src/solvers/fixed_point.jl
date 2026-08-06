@@ -42,7 +42,7 @@ end
     # updated iterate is g(x) = x - F(x). Take the first (un-relaxed) step.
     residual = objective_func!(out, indices..., grid, fields, func_args...; func_kwargs...)
     x₁ = x₀ - residual
-    target_field[indices...] = x₁
+    target_field[field_indices(indices)...] = x₁
     iteration = 1
     while abs(x₁ - x₀) > solver.tolerance && iteration <= solver.max_iterations
         x₀ = x₁
@@ -50,7 +50,7 @@ end
         residual = objective_func!(out, indices..., grid, fields, func_args...; func_kwargs...)
         x₁ = target_field[indices...] - residual
         # Apply (optionally relaxed) update
-        target_field[indices...] = relaxed_update(solver.relax, x₁, x₀)
+        target_field[field_indices(indices)...] = relaxed_update(solver.relax, x₁, x₀)
         iteration += 1
     end
     return x₁, iteration

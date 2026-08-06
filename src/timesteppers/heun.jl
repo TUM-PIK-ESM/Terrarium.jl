@@ -40,6 +40,13 @@ function initialize(heun::Heun, state::AbstractStateVariables)
     return HeunCache{eltype(state), typeof(prognostic), typeof(tendencies), typeof(namespaces)}(prognostic, tendencies, namespaces)
 end
 
+function Adapt.adapt_structure(to, cache::HeunCache{NF}) where {NF}
+    prognostic = Adapt.adapt_structure(to, cache.prognostic)
+    tendencies = Adapt.adapt_structure(to, cache.tendencies)
+    namespaces = Adapt.adapt_structure(to, cache.namespaces)
+    return HeunCache{NF, typeof(prognostic), typeof(tendencies), typeof(namespaces)}(prognostic, tendencies, namespaces)
+end
+
 # Save the prognostic/tendency fields named in `names` into the Heun cache, recursing into namespaces.
 # As in `explicit_step!`, iterating the (static) prognostic names with an `∈ names` guard keeps this type
 # stable; the same `names` selection is threaded into each namespace.

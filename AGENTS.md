@@ -190,32 +190,6 @@ src/
 14. **Mutable function closures in kernels**: function closures that capture mutable state will not differentiate correctly — use explicit parameters instead
 15. **Non-local dependencies in process equations**: process functions must not depend on global state; pass all dependencies as arguments for traceability and differentiability
 
-## Benchmarks
-
-Performance benchmarks live in `benchmark/` and are run manually, one architecture at a time:
-
-```bash
-cd benchmark
-julia --project=. manual_benchmarking.jl                # CPU (auto-labelled cpu-arm or cpu-x86)
-julia --project=. manual_benchmarking.jl gpu            # CUDA GPU
-julia --project=. manual_benchmarking.jl reactant-cpu   # Reactant/XLA, CPU backend
-julia --project=. manual_benchmarking.jl reactant-gpu   # Reactant/XLA, CUDA backend
-```
-
-A second argument sets the duration: `quick` (0.25x time steps, resolution sweeps capped — use this to
-check that the harness and configurations still run), `long` (10x, for numbers worth publishing), or a
-numeric multiplier.
-
-Each run merges its results into `benchmark/assets/benchmark_results.json` and regenerates
-`benchmark/README.md` from the whole store, so running on one machine never overwrites another
-architecture's numbers. The documentation page `docs/src/benchmarks.md` is generated from the same JSON
-at doc-build time.
-
-The committed README numbers are the regression baseline: deviations of ±20% are normal, larger ones
-should be reported. Model configurations are defined in `benchmark/model_configurations.jl`; add one by
-adding a `build_model(::Val{:name}, arch, NF; nlat_half, nz, model_kwargs)` method, following the same
-registry pattern as `test/reactant/setup.jl`.
-
 ## Git Workflow
 
 Follow [ColPrac](https://github.com/SciML/ColPrac). Feature branches, descriptive commits, update tests and docs with code changes, check CI before merging.

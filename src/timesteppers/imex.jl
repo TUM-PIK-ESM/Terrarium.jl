@@ -94,6 +94,10 @@ function IMEXCache{classes}(explicit::EC, implicit::IC) where {classes, NF, EC <
     return IMEXCache{classes, NF, EC, IC}(explicit, implicit)
 end
 
+function Adapt.adapt_structure(to, cache::IMEXCache{classes}) where {classes}
+    return IMEXCache{classes}(Adapt.adapt_structure(to, cache.explicit), Adapt.adapt_structure(to, cache.implicit))
+end
+
 """
     timestepping(cache::IMEXCache)
 
