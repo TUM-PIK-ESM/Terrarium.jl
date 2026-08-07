@@ -13,11 +13,13 @@ using Checkpointing
 using CairoMakie
 using Statistics
 
-grid = ColumnGrid(ExponentialSpacing())
-initializer = SoilInitializer(eltype(grid))
-model = SoilModel(grid; initializer)
+arch = CPU()
+FT = Float32
+grid = ColumnGrid(arch, FT, ExponentialSpacing())
+initializer = SoilInitializer(FT)
+model = SoilModel(grid; timestepper = ForwardEuler(FT), initializer = initializer)
 # constant surface temperature of 1°C
-bcs = PrescribedSurfaceTemperature(:T_ub, 1.0)
+bcs = PrescribedSurfaceTemperature(:T_ub, FT(1.0))
 integrator = initialize(model, boundary_conditions = bcs)
 
 # So far, this is just our usual setup. In this case, for a soil column with a prescribed surface temperature.
@@ -74,11 +76,11 @@ f2
 #
 # We re-initialize a fresh integrator so the state starts at ``t = 0``:
 
-grid = ColumnGrid(ExponentialSpacing())
-initializer = SoilInitializer(eltype(grid))
-model = SoilModel(grid; initializer)
-bcs = PrescribedSurfaceTemperature(:T_ub, 1.0)
-integrator = initialize(model, ForwardEuler(), boundary_conditions = bcs)
+grid = ColumnGrid(arch, FT, ExponentialSpacing())
+initializer = SoilInitializer(FT)
+model = SoilModel(grid; timestepper = ForwardEuler(FT), initializer = initializer)
+bcs = PrescribedSurfaceTemperature(:T_ub, FT(1.0))
+integrator = initialize(model, boundary_conditions = bcs)
 
 # TODO
 
