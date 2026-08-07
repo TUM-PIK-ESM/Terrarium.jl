@@ -1,9 +1,9 @@
 """
     $TYPEDEF
 
-Represents a generic coupling of vegetation carbon processes.
+Coupled process type representing the major carbon cycle processes for natural vegetation.
 """
-@kwdef struct VegetationCarbon{
+@kwdef struct VegetationCarbonCycle{
         NF,
         Photosynthesis <: AbstractPhotosynthesis{NF},
         StomatalConductance <: AbstractStomatalConductance{NF},
@@ -37,9 +37,12 @@ Represents a generic coupling of vegetation carbon processes.
 
     "Plant available water"
     plant_available_water::PAW
+
+    "Plant-specific trait parameters"
+    traits::PlantTraits{NF}
 end
 
-function VegetationCarbon(
+function VegetationCarbonCycle(
         ::Type{NF};
         photosynthesis = LUEPhotosynthesis(NF),
         stomatal_conductance = MedlynStomatalConductance(NF),
@@ -48,9 +51,10 @@ function VegetationCarbon(
         carbon_dynamics = PALADYNCarbonDynamics(NF),
         vegetation_dynamics = PALADYNVegetationDynamics(NF),
         root_distribution = StaticExponentialRootDistribution(NF),
-        plant_available_water = FieldCapacityLimitedPAW(NF)
+        plant_available_water = FieldCapacityLimitedPAW(NF),
+        traits = PlantTraits(NF)
     ) where {NF}
-    return VegetationCarbon(;
+    return VegetationCarbonCycle(;
         photosynthesis,
         stomatal_conductance,
         autotrophic_respiration,
@@ -58,17 +62,15 @@ function VegetationCarbon(
         carbon_dynamics,
         vegetation_dynamics,
         root_distribution,
-        plant_available_water
+        plant_available_water,
+        traits
     )
 end
 
-# TODO: Remove once dedicated vegetation surface parameterizations are added
-# Also may be a good reason to rename VegetationCarbon to NaturalVegetation or similar
-@propagate_inbounds compute_albedo(i, j, grid, fields, ::AbstractVegetation{NF}) where {NF} = NF(0.02)
-
-# TODO: will need to change once PFTs are added
-@propagate_inbounds vegetation_area_fraction(i, j, grid, fields, veg::AbstractVegetation) = vegetation_area_fraction(i, j, grid, fields, veg.vegetation_dynamics)
-@propagate_inbounds vegetation_area_fraction(i, j, grid, fields, ::Nothing) = zero(eltype(grid))
+function initialize!(state, grid, veg::VegetationCarbonCycle)
+    initialize!(state, grid, veg.plant_available_water)
+    return nothing
+end
 
 """
     $TYPEDSIGNATURES
@@ -79,32 +81,36 @@ stress factors due to soil temperature and moisture availability will be ignored
 """
 function compute_auxiliary!(
         state, grid,
-        veg::VegetationCarbon,
+        veg::VegetationCarbonCycle,
         constants::PhysicalConstants,
         atmos::AbstractAtmosphere,
         soil::Optional{AbstractSoil} = nothing,
         args...
     )
     # Compute auxiliary variables for each component
+    # Roots: need soil state and computes root_fraction
+    compute_auxiliary!(state, grid, veg.root_distribution, soil)
+
     # PAW: needs soil saturation profile and computes soil_moisture_limiting_factor
     compute_auxiliary!(state, grid, veg.plant_available_water, soil)
 
-    # Veg. carbon dynamics: needs C_veg(t-1) and computes LAI_b(t-1)
-    compute_auxiliary!(state, grid, veg.carbon_dynamics)
+    # Veg. carbon dynamics: needs C_veg(t) and computes LAI_b(t)
+    compute_auxiliary!(state, grid, veg.carbon_dynamics, veg.traits)
 
-    # Phenology: needs LAI_b(t-1) and computes LAI(t-1) and phen(t-1)
-    compute_auxiliary!(state, grid, veg.phenology)
+    # Phenology: needs LAI_b(t) and air temperature(t) and computes LAI(t) and phen(t)
+    compute_auxiliary!(state, grid, veg.phenology, veg.carbon_dynamics, atmos)
 
-    # Stomatal conductance: needs atm. inputs(t) and computes λc(t)
-    # TODO: Note the (implicit) circular dependency between photosynthesis and stomatal conductance;
-    # can this be refactored?
-    compute_auxiliary!(state, grid, veg.stomatal_conductance, veg.photosynthesis, constants, atmos)
+    # Photosynthesis: needs atm. inputs(t), LAI(t), and computes Rd(t) and GPP(t)
+    # N.B. We break the usual dependency pattern here to resolve the tight coupling between photosynthesis and
+    # stomatal conductance. Photosynthesis does *not* depend on the auxiliary state of stomatal conductance but
+    # requires its parameters to compute λc.
+    compute_auxiliary!(state, grid, veg.photosynthesis, veg.stomatal_conductance, veg.traits, constants, atmos)
 
-    # Photosynthesis: needs atm. inputs(t), λc(t), LAI(t-1), and computes Rd(t) and GPP(t)
-    compute_auxiliary!(state, grid, veg.photosynthesis, veg.stomatal_conductance, constants, atmos)
+    # Stomatal conductance: needs atm. inputs(t) and computes g_can(t)
+    compute_auxiliary!(state, grid, veg.stomatal_conductance, veg.traits, constants, atmos)
 
-    # Autotrophic respiration: needs atm. inputs(t), GPP(t), Rd(t), C_veg(t-1), phen(t-1) and computes Ra(t) and NPP(t)
-    compute_auxiliary!(state, grid, veg.autotrophic_respiration, veg.carbon_dynamics, atmos)
+    # Autotrophic respiration: needs atm. inputs(t), GPP(t), Rd(t), C_veg(t), phen(t) and computes Ra(t) and NPP(t)
+    compute_auxiliary!(state, grid, veg.autotrophic_respiration, veg.carbon_dynamics, veg.phenology, veg.traits, atmos)
 
     # Note: vegetation_dynamics compute_auxiliary! does nothing for now
     compute_auxiliary!(state, grid, veg.vegetation_dynamics)
@@ -116,12 +122,15 @@ end
 
 Compute tendencies for carbon and vegetation dynamics.
 """
-function compute_tendencies!(state, grid, veg::VegetationCarbon, args...)
-    # Needs NPP(t), C_veg(t-1), LAI_b(t-1) and computes tendency for C_veg
-    compute_tendencies!(state, grid, veg.carbon_dynamics)
+function compute_tendencies!(state, grid, veg::VegetationCarbonCycle, constants::PhysicalConstants, atmos::AbstractAtmosphere, args...)
+    # Needs NPP(t), C_veg(t), LAI_b(t) and computes tendency for C_veg
+    compute_tendencies!(state, grid, veg.carbon_dynamics, veg.traits)
 
-    # Needs NPP(t), C_veg(t-1), LAI_b(t-1), ν(t-1) and computes tendency for ν
-    compute_tendencies!(state, grid, veg.vegetation_dynamics, veg.carbon_dynamics)
+    # Needs NPP(t), C_veg(t), LAI_b(t), ν(t) and computes tendency for ν
+    compute_tendencies!(state, grid, veg.vegetation_dynamics, veg.carbon_dynamics, veg.traits)
+
+    # Needs air temperature(t) and computes tendency for growing degree days (prognostic phenology)
+    compute_tendencies!(state, grid, veg.phenology, atmos)
 
     return nothing
 end

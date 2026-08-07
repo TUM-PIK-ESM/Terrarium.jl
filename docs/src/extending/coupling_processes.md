@@ -26,7 +26,7 @@ variables(energy::SoilThermodynamics) = (
     auxiliary(:ground_temperature, XY(), ground_temperature, energy, units = u"°C", desc = "Temperature of the uppermost ground or soil grid cell in °C"),
 )
 
-function ground_temperature(energy::SoilThermodynamics, grid, clock, fields)
+function ground_temperature(grid, clock, fields, energy::SoilThermodynamics)
     fgrid = get_field_grid(grid)
     # Use uppermost soil layer as ground temperature
     return @view fields.temperature[:, :, fgrid.Nz]
@@ -146,7 +146,7 @@ These coupling types also have another key benefit: they can define their own cu
 
 Current examples of coupled process types include:
 - [`SoilEnergyWaterCarbon`](@ref) which couples soil energy, hydrology, and biogeochemistry processes,
-- [`VegetationCarbon`](@ref) which couples vegetation biochemical processes,
+- [`VegetationCarbonCycle`](@ref) which couples vegetation biochemical processes,
 - [`SurfaceHydrology`](@ref) which couples surface hydrological processes like canopy interception, evapotranspiration, and runoff,
 - [`SurfaceEnergyBalance`](@ref) which couples the various flux terms of the surface energy balance.
 

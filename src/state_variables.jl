@@ -483,7 +483,7 @@ function initialize(@nospecialize(var::AuxiliaryVariable), grid::AbstractLandGri
         return Field(grid, vardims(var), bcs)
     else
         # invoke field constructor if specified
-        return var.ctor(grid, clock, fields)
+        return var.ctor(var, grid, clock, fields)
     end
 end
 
