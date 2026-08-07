@@ -368,7 +368,7 @@ function compute_auxiliary!(
     out = auxiliary_fields(state, photo)
     # N.B. in this specific case, we do not need state fields from the stomatal condctuance dependency
     fields = get_fields(state, photo, atmos; except = out)
-    launch!(grid, XY, compute_auxiliary_kernel!, out, fields, photo, stomcond, traits, constants, atmos)
+    launch!(grid, XY, compute_auxiliary_kernel!, out, fields, photo, stomcond, traits, constants, atmos, args...)
     return nothing
 end
 
@@ -420,11 +420,12 @@ Calls [`compute_photosynthesis`](@ref) and stores the results in `out`.
 @propagate_inbounds function compute_photosynthesis!(
         out, i, j, grid, fields,
         photo::LUEPhotosynthesis,
+        stomcond::AbstractStomatalConductance,
         traits::PlantTraits,
         constants::PhysicalConstants,
         atmos::AbstractAtmosphere
     )
-    Rd, An, GPP = compute_photosynthesis(i, j, grid, fields, photo, traits, constants, atmos)
+    Rd, An, GPP = compute_photosynthesis(i, j, grid, fields, photo, stomcond, traits, constants, atmos)
     out.leaf_respiration[i, j, 1] = Rd
     out.net_assimilation[i, j, 1] = An
     out.gross_primary_production[i, j, 1] = GPP

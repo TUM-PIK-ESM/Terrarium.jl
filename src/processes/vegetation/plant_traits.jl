@@ -20,8 +20,8 @@ that will be soon be replaced will full support for PFTs and other trait paramet
     "Extinction coefficient for radiation through vegetation"
     @param extinction_coefficient::NF = 0.5 (bounds = Positive,)
 
-    "Snow-free visble canopy albedo for shortwave radiation"
-    @param albedo::NF = 0.02 (bounds = UnitInterval,)
+    "Snow-free canopy albedo for broadband shortwave radiation"
+    @param albedo::NF = 0.15 (bounds = UnitInterval,)
 end
 
 PlantTraits(::Type{NF}; kwargs...) where {NF} = PlantTraits{NF}(; kwargs...)

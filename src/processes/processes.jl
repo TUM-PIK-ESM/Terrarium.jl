@@ -93,6 +93,8 @@ include("snow/energy/snow_energy.jl")
 
 # Vegetation
 
+include("vegetation/vegetation_base.jl")
+
 export PlantTraits
 include("vegetation/plant_traits.jl")
 

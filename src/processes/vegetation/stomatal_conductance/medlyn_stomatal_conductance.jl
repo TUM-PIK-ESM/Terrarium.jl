@@ -27,7 +27,9 @@ MedlynStomatalConductance(::Type{NF}; kwargs...) where {NF} = MedlynStomatalCond
 
 variables(::MedlynStomatalConductance) = (
     auxiliary(:canopy_water_conductance, XY(), units = u"m/s"), # Canopy conducatance for water vapor
+    input(:leaf_area_index, XY(), units = u"m^2/m^2"),
     input(:net_assimilation, XY(), units = u"g/m^2/s"), # Net photosynthesis rate [gC/m²/s]
+    input(:soil_moisture_limiting_factor, XY())
 )
 
 @inline @propagate_inbounds stomatal_conductance(i, j, grid, fields, ::MedlynStomatalConductance) = fields.canopy_water_conductance[i, j]

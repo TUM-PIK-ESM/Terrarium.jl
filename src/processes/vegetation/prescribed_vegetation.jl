@@ -21,14 +21,22 @@ end
 function PrescribedVegetation(
         ::Type{NF};
         phenology = PrescribedPhenology(NF),
-        photosyntheis = LUEPhotosynthesis(NF),
+        photosynthesis = LUEPhotosynthesis(NF),
         stomatal_conductance = MedlynStomatalConductance(NF),
         root_distribution = StaticExponentialRootDistribution(NF),
         plant_available_water = FieldCapacityLimitedPAW(NF),
         traits = PlantTraits(NF)
     ) where {NF}
-    return PrescribedVegetation(; phenology, photosyntheis, stomatal_conductance, root_distribution, plant_available_water, traits)
+    return PrescribedVegetation(; phenology, photosynthesis, stomatal_conductance, root_distribution, plant_available_water, traits)
 end
+
+variables(vegetation::PrescribedVegetation) = tuplejoin(
+    variables(vegetation.phenology, vegetation.traits), # include traits in variables
+    variables(vegetation.photosynthesis),
+    variables(vegetation.stomatal_conductance),
+    variables(vegetation.root_distribution),
+    variables(vegetation.plant_available_water)
+)
 
 """
     $TYPEDSIGNATURES

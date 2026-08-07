@@ -63,7 +63,7 @@ end
     @test Array(interior(state.leaf_area_index))[1] ≈ 2.5
 end
 
-@testset "PrescribedPhenology derives phenology factor" begin
+@testset "PrescribedPhenology" begin
     grid = ColumnGrid(CPU(), Float64, ExponentialSpacing(N = 5))
     traits = PlantTraits(eltype(grid); maximum_leaf_area_index = 4.0)
     phenol = PrescribedPhenology(eltype(grid))
