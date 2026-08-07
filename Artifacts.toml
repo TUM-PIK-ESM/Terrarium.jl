@@ -13,3 +13,11 @@ lazy = true
     [[era5-land-invariants.download]]
     sha256 = "6b556983c7cec6c10337a1532f95ba7ab42ddfe73556e2f8eedd541d1e7050ca"
     url = "https://syncandshare.lrz.de/dl/fiDVufWFritjBSp8uWZ3Pj/era5_land_invariants.nc.tar.gz"
+
+[era5-land-leaf-area-index]
+git-tree-sha1 = "25462bc449d13311e49fcc0fb95ad6d99018bdfb"
+lazy = true
+
+    [[era5-land-leaf-area-index.download]]
+    sha256 = "1a7c7a2661384a90d3158bdf7dbb056a1c1602f378af6a7ec3bf41fabbe83920"
+    url = "https://syncandshare.lrz.de/dl/fiG3BzbEkoY7VF31dx6wrg/era5_land_leaf_area_index_daily_climatology_1980-2010.nc.tar.gz"

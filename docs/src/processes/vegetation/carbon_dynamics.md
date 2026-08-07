@@ -98,17 +98,17 @@ Therefore, $\text{LAI}_b$ can be diagnosed from the total vegetation carbon pool
 ## Process interface
 
 ```@docs; canonical = false
-compute_auxiliary!(state, grid, vegcarbon_dynamics::PALADYNCarbonDynamics, args...)
+compute_auxiliary!(state, grid, vegcarbon_dynamics::PALADYNCarbonDynamics, traits::PlantTraits, args...)
 ```
 
 ```@docs; canonical = false
-compute_tendencies!(state, grid, vegcarbon_dynamics::PALADYNCarbonDynamics, args...)
+compute_tendencies!(state, grid, vegcarbon_dynamics::PALADYNCarbonDynamics, traits::PlantTraits, args...)
 ```
 
 ## Methods
 
 ```@docs; canonical = false
-compute_LAI_b
+compute_balanced_leaf_area_index
 ```
 
 ```@docs; canonical = false

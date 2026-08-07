@@ -80,6 +80,19 @@ pressure is computed over ice for `T <= 0°C` and over water for `T > 0°C`. Wra
 end
 
 """
+    $SIGNATURES
+Computes the vapor pressure deficit for an air parcel at temperature `T` [°C] with 
+pressure `pres` [Pa] and specific humidity `q_air` [kg/kg].
+Assumes that air parcel is over water when `T > 0°C` and over ice when `T < 0°C`.
+Wrapper around [`vapor_pressure_deficit`](@extref Thermodynamics.vapor_pressure_deficit).
+"""
+@inline function vapor_pressure_deficit(c::ThermodynamicConstants, T, pres, q_air)
+    T_K = celsius_to_kelvin(c, T)
+    vpd = Thermodynamics.vapor_pressure_deficit(c, T_K, pres, q_air)
+    return vpd
+end
+
+"""
     saturation_specific_humidity_vapor(c::ThermodynamicConstants, T, ρ)
 
 Saturation specific humidity at temperature `T` [°C] and density `ρ` [kg/m³]. Dispatches

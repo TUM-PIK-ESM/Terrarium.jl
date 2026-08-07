@@ -66,7 +66,7 @@ The ratio of intercellular to atmosphere CO₂ concentration $\lambda_c$ can the
 ## Process interface
 
 ```@docs; canonical = false
-compute_auxiliary!(state, grid, stomcond::MedlynStomatalConductance, photo::LUEPhotosynthesis, constants::PhysicalConstants, atmos::AbstractAtmosphere, args...)
+compute_auxiliary!(state, grid, stomcond::MedlynStomatalConductance, traits::PlantTraits, constants::PhysicalConstants, atmos::AbstractAtmosphere, args...)
 ```
 
 ## Methods
