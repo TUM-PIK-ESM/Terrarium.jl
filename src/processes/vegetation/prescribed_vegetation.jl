@@ -1,3 +1,17 @@
+"""
+    $TYPEDEF
+
+Coupled vegetation process representing natural vegetation with a *prescribed* leaf area index. Unlike
+[`VegetationCarbonCycle`](@ref), the vegetation carbon pool and leaf area are not prognostic: leaf area
+index is imposed externally (via the [`PrescribedPhenology`](@ref) scheme) and drives photosynthesis,
+stomatal conductance, and the associated water/energy exchange. There is consequently no prognostic
+carbon-pool or vegetation-dynamics component and no autotrophic respiration; `compute_tendencies!` is a
+no-op. Plant functional-type parameters (including the maximum leaf area index used to derive the
+phenology factor) are supplied through the `traits` component.
+
+Properties:
+$TYPEDFIELDS
+"""
 @parameterized @kwdef struct PrescribedVegetation{NF, Phenology, Photosynthesis, StomatalConductance, RootDistribution, PAW} <: AbstractVegetation{NF}
     "Phenology scheme"
     @component phenology::Phenology
