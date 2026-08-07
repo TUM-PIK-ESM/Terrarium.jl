@@ -32,21 +32,26 @@ scheme = Revolve(1)
 #
 # We want to perform a sensitivity analysis of the temperature of the second lowest soil layer ``T_f`` at the end of our simulation with respect to the initial conditions of our simulation ``\mathbf{U}_0``, ``\mathbf{T}_0``, where ``\mathbf{U}`` is the internal energy.
 #
-# Enzyme's `autodiff` is it's core function that we can use to compute vector-Jacobian products (vJP) for the reverse-mode AD of our `run!` function that integrates our model using the `integrator` that we initialized. In order to compute the gradient of the just one layer of the soil, we set a "one-hot" seed for the vJP like so:
+# Enzyme's `autodiff` is it's core function that we can use to compute vector-Jacobian products (vJP) for the reverse-mode AD of our `run!` function that integrates our model using the `integrator` that we initialized. We define a function that returns the temperature of the second lowest soil layer after a time integration of 10 steps.
 
 dintegrator = make_zero(integrator)
 # set a one hot seed for a sensitivity analysis of T for now
 interior(dintegrator.state.temperature)[1, 1, 2] = 1.0
 
-function mean_temperature(integrator)
-    run!(integrator, steps = 1)
-    return mean(interior(integrator.state.temperature))
+function layer_temperature(integrator)
+    run!(integrator, scheme, 10)
+    return interior(integrator.state.temperature)[1, 1, 2]
 end
 
 # While doing that we allocated a shadow memory `dintegrator` for Enzyme in which it can accumulate the vJP (see Enzyme docs for more information).
-# We just need to call `autodiff` now. Executing this for the first time, might take a few minutes. Subsequent executions will be very fast though.
+# We just need to call `autodiff` now. Some notes ion its arguments:
+# - `set_runtime_activity(Reverse)` tells Enzyme to use reverse-mode AD while enabling runtime activity (see [here](https://enzymead.github.io/Enzyme.jl/dev/faq/#faq-runtime-activity) for details)
+# - `Active` tells Enzyme that we want to take the derivative of the scalar output of `layer_temperature` with respect to the function's input. The cotangent of the function output is set to 1.0 in this way for the vJP calculation.
+# - `Duplicated(integrator, dintegrator)` `dintegrator` is shadow memory that Enzyme uses to accumulate the vJP of the `integrator` state variables.
 
-autodiff(set_runtime_activity(Reverse), mean_temperature, Active, Duplicated(integrator, dintegrator))
+#Executing this for the first time, might take a few minutes. Subsequent executions will be very fast though.
+
+autodiff(set_runtime_activity(Reverse), layer_temperature, Active, Duplicated(integrator, dintegrator))
 
 # Let's look at the results that were accumulated in our shadow memory `dintegrator` by Enzyme and plot them!
 
@@ -55,16 +60,16 @@ dT = interior(dintegrator.state.temperature)[1, 1, :]
 zs = znodes(integrator.state.temperature)
 
 f = Makie.Figure()
-Makie.Axis(f[1, 1], ylabel = "Soil depth", xlabel = "Sensitivity dT_f/dU_0")
+Makie.Axis(f[1, 1], ylabel = "Soil depth", xlabel = "Sensitivity dT_f/dT_0")
 Makie.scatterlines!(f[1, 1], dT, zs)
 f
 
 f2 = Makie.Figure()
-Makie.Axis(f2[1, 1], ylabel = "Soil depth", xlabel = "Sensitivity dU_f/dU_0")
+Makie.Axis(f2[1, 1], ylabel = "Soil depth", xlabel = "Sensitivity dT_f/dU_0")
 Makie.scatterlines!(f2[1, 1], dU, zs)
 f2
 
-# As expected the sensitivity is the highest locally, with the same and neighboring soil layers contributing and no sensitivity wrt higher soil layers for our still rather short integration of only ``N_t\cdot 300s``.
+# As expected the sensitivity is the highest locally, with the same and neighboring soil layers contributing and no sensitivity wrt higher soil layers for our still rather short integration.
 
 # ## Parameter sensitivities
 #
