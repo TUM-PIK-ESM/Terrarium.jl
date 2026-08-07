@@ -153,7 +153,7 @@ where $p_a$ is the atmospheric CO₂ partial pressure.
 ## Process interface
 
 ```@docs; canonical = false
-compute_auxiliary!(state, grid, photo::LUEPhotosynthesis, stomcond::AbstractStomatalConductance, constants::PhysicalConstants, atmos::AbstractAtmosphere, args...)
+compute_auxiliary!(state, grid, photo::LUEPhotosynthesis, stomcond::AbstractStomatalConductance, traits::PlantTraits, constants::PhysicalConstants, atmos::AbstractAtmosphere, args...)
 ```
 
 ## Methods
