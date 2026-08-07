@@ -7,6 +7,8 @@
 # Without much further ado, let us look into how we can differentiate Terrarium hands-on and perform a small sensitivity analysis of a one column soil model. First, we set up our model as usual:
 
 using Terrarium
+
+using Accessors
 using Enzyme
 using Enzyme: Forward, Reverse, set_runtime_activity
 using Checkpointing
@@ -72,60 +74,67 @@ f2
 # ## Parameter sensitivities
 #
 # We can also compute sensitivities with respect to *model parameters* rather than initial
-# conditions. Since we are interested in only a single parameter — the soil mineral thermal
-# conductivity ``\lambda_\text{mineral}`` — forward-mode AD is the natural choice: it
+# conditions. Since we are interested in only a single parameter — the soil quartz thermal
+# conductivity ``\kappa_\text{quartz}`` — forward-mode AD is the natural choice: it
 # propagates one tangent vector forward through the computation in a single pass, without
 # the memory overhead of reverse mode.
-#
-# We re-initialize a fresh integrator so the state starts at ``t = 0``:
-
-grid = ColumnGrid(arch, FT, ExponentialSpacing())
+# As a consequence, there is no need to use Checkpointing.jl for this example.
+# To make sure that ``\kappa_\text{quartz}`` has a physical effect, we construct the model with a soil consisting of 100% sand.
+grid = ColumnGrid(arch, FT, UniformSpacing())
 initializer = SoilInitializer(FT)
+text = SoilTexture(FT; sand = FT(1.0))
+strat = HomogeneousSoilStratigraphy(FT; texture = text)
+soil = SoilEnergyWaterCarbon(FT; strat)
 model = SoilModel(grid; timestepper = ForwardEuler(FT), initializer = initializer)
+
+# We re-initialize a fresh integrator so the state starts at ``t = 0`` and set a constant surface temperature of 1°C
 bcs = PrescribedSurfaceTemperature(:T_ub, FT(1.0))
 integrator = initialize(model, boundary_conditions = bcs)
-
-# TODO
-
-function mean_temperature(clock, model, inputs, state, inits, timestepper)
-    integrator = Terrarium.ModelIntegrator(clock, model, inputs, state, inits, timestepper)
-    run!(integrator, steps = 1)
-    return mean(interior(integrator.state.temperature))
-end
-
-scheme = Revolve(1)
-dmodel = Ref(make_zero(model))
 dintegrator = make_zero(integrator)
-dstate = dintegrator.state
 
-grads = autodiff(
-    set_runtime_activity(Reverse), mean_temperature,
-    Active,
-    Const(integrator.clock),
-    MixedDuplicated(model, dmodel),
-    Const(integrator.inputs),
-    Duplicated(integrator.state, dstate),
-    Const(integrator.initializers),
-    Duplicated(integrator.timestepper, make_zero(integrator.timestepper))
-)
-
-dTdp = dstate.temperature ./ dmodel.x.soil.energy.thermal_properties.conductivities.mineral
-zs = znodes(integrator.state.temperature)
-lines(dTdp[1, 1, :])
-
-# The temperature tangent accumulated in `dintegrator` now holds
-# ``\partial T(k) / \partial \lambda_\text{mineral}`` for each layer ``k``:
-
-dT_mineral = interior(dintegrator.state.temperature)[1, 1, :]
-zs = znodes(integrator.state.temperature)
+# For physical interpretation, we first plot the initial temperature profile of the soil column:
 
 f3 = Makie.Figure()
-Makie.Axis(f3[1, 1], ylabel = "Soil depth", xlabel = "Sensitivity ∂T/∂λ_mineral  (K m K W⁻¹)")
-Makie.scatterlines!(f3[1, 1], dT_mineral, zs)
+Makie.Axis(f3[1, 1], ylabel = "Soil depth (m)", xlabel = "Temperature (°C)")
+Makie.scatter!(f3[1, 1], integrator.state.temperature)
 f3
 
-# A positive sensitivity in the upper layers is consistent with a more conductive mineral
-# matrix transferring surface warmth downward more efficiently over one time step.
+# By setting a surface temperature of 1°C, the soil will be heated up from above.
+# At the bottom, there is a no flux boundary condition.
+# As the initial profile gets warmer with depth, the bottom will start cooling down towards thermal equilibrium.
+# Only for ``\kappa_\text{quartz}`` we set the tangent to 1.0, so that the jacobian-vector products (jVPs) computed by forward-mode AD can accumulate the sensitivity to it.
+
+@reset dintegrator.model.soil.energy.thermal_properties.conductivities.quartz = FT(1.0)
+
+# Define a function which returns the entire temperature profile after a time integration of 400 time steps.
+
+function final_temperatures(integrator)
+    run!(integrator; steps = 400) # No checkpointing!
+    return interior(integrator.state.temperature)[1, 1, :]
+end
+
+# Now we call `autodiff` in Forward mode over this function. Some notes on the arguments:
+# - As for reverse-mode, we use `set_runtime_activity(Forward)` to enable runtime activity.
+# - `Duplicated` to denote that we want to take the derivative of `final_temperatures`
+# - `Duplicated(integrator, dintegrator)` to make clear that we want to differentiate with respect to the `integrator` state variables, and that the vJP (the gradient) should be accumulated in `dintegrator`.
+
+(∂T_∂κ_quartz,) = autodiff(set_runtime_activity(Forward), final_temperatures, Duplicated, Duplicated(integrator, dintegrator))
+
+# The output `∂T_∂κ_quartz` holds the sensitivities ``\partial T(k) / \partial \kappa_\text{quartz}`` for each layer ``k``.
+# We can plot the final temperature profile and the sensitivities as a function of soil depth:
+
+zs = znodes(integrator.state.temperature)
+
+f4 = Makie.Figure()
+Makie.Axis(f4[1, 1], ylabel = "Soil depth (m)", xlabel = "Temperature (°C)")
+Makie.scatter!(f4[1, 1], integrator.state.temperature)
+f4
+
+f5 = Makie.Figure()
+Makie.Axis(f5[1, 1], ylabel = "Soil depth (m)", xlabel = "Sensitivity ∂T/∂κ_quartz  (K / (W·m⁻¹⋅K⁻¹))")
+Makie.scatterlines!(f5[1, 1], ∂T_∂κ_quartz, zs)
+f5
+
+# The behavior of the sensitivity is physically consistent: the higher the conductivity, the quicker the heating from above (with the surface temperature higher than the initial soil temperature) can propagate downwards. Logically, there is only sensitivity for layer that have already seen a change in temperature during this (short) time integration.
 #
-# This example should just demonstrate the technical possibilities of Terrarium.jl in an
-# easy and fast to compute setup, stay tuned for more complex examples.
+# These examples should just demonstrate the technical possibilities of Terrarium.jl in an easy and fast to compute setup, stay tuned for more complex examples.
