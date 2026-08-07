@@ -15,13 +15,14 @@ using BenchmarkTools
 using LinearAlgebra
 using CairoMakie
 using Statistics
+using Oceananigans
 
 FT = Float64
 grid = ColumnGrid(CPU(), FT, UniformSpacing(), 1) # Easier Jacobian
 initializer = SoilInitializer(eltype(grid))
 model = SoilModel(grid; initializer)
 # constant surface temperature of 1°C
-bcs = PrescribedSurfaceTemperature(:T_ub, 1.0)
+bcs = PrescribedSurfaceTemperature(:T_ub, FT(1.0))
 integrator = initialize(model, boundary_conditions = bcs)
 
 # So far, this is just our usual setup. In this case, for a soil column with a prescribed surface temperature.
@@ -157,7 +158,7 @@ f3
 
 Terrarium.initialize!(integrator)
 state = integrator.state
-Δt = integrator.timestepper.Δt   # or any chosen implicit timestep
+Δt = integrator.model.timestepper.Δt   # or any chosen implicit timestep
 
 N_z = size(interior(state.internal_energy), 3)
 
@@ -168,6 +169,10 @@ function compute_f!(state, grid, soil, constants)
     Terrarium.closure!(state, grid, soil, constants)
     Terrarium.compute_tendencies!(state, grid, soil, constants)
     return nothing
+end
+
+function compute_f!(integrator)
+    return Oceananigans.TimeSteppers.update_state!(integrator.state, integrator.model, integrator.inputs)
 end
 
 # Only internal_energy has a non-trivial tendency with NoFlow hydrology.
@@ -191,6 +196,16 @@ CUDA.@allowscalar  interior(getproperty(dstate.prognostic, :internal_energy))[1,
     Const(model.grid),
     Const(model.soil),
     Const(model.constants),
+)
+
+# On built in methods
+dintegrator = make_zero(integrator)
+CUDA.@allowscalar  interior(getproperty(dintegrator.state.prognostic, :internal_energy))[1, 1, 1] = one(eltype(grid))
+@time Enzyme.autodiff(
+    set_runtime_activity(Forward),
+    compute_f!,
+    Const,
+    Duplicated(integrator, dintegrator),
 )
 
 # Benchmark after compilation for the first time
