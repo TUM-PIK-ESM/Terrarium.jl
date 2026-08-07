@@ -50,7 +50,7 @@ end
     x_root = result.root
 
     # Ensure the target field holds the final estimate
-    target_field[indices...] = x_root
+    target_field[field_indices(indices)...] = x_root
 
     if S <: RootSolvers.CompactSolution
         return x_root
@@ -80,12 +80,12 @@ build_residual(
     dstep_func! = step_func!.dfunc
 
     function residual!(x)
-        target_field[indices...] = x
+        target_field[field_indices(indices)...] = x
         return step_func!(out, indices..., grid, fields, func_args...; func_kwargs...)
     end
 
     function dresidual!(x)
-        target_field[indices...] = x
+        target_field[field_indices(indices)...] = x
         return dstep_func!(out, indices..., grid, fields, func_args...; func_kwargs...)
     end
 
@@ -102,7 +102,7 @@ end
     ) where {NF, F}
 
     function residual!(x)
-        target_field[indices...] = x
+        target_field[field_indices(indices)...] = x
         return step_func!(out, indices..., grid, fields, func_args...; func_kwargs...)
     end
 
