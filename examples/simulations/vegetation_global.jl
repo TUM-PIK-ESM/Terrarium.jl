@@ -43,19 +43,17 @@ lai_asset_path = Terrarium.get_asset(lai_asset)
 # cycle = true` makes the LAI climatology repeat every year over the whole simulation.
 lai_raster = RasterStack(lai_asset_path, lazy = true)
 lai_highveg = replace_missing(lai_raster[:lai_hv], NaN32)
-lai_input = InputSource(grid, lai_highveg; name = :leaf_area_index, cycle = true)
+lai_input = InputSource(grid, lai_highveg; source_grid = Terrarium.native_grid(lai_asset), name = :leaf_area_index, cycle = true)
 
 # ## Vegetation model
 # We build a [`VegetationCarbonCycle`](@ref) with the [`PrescribedPhenology`](@ref) scheme. Prescribed
 # phenology imposes LAI externally rather than deriving it from a prognostic carbon pool, so we disable
-# the prognostic vegetation-fraction dynamics (`vegetation_dynamics = nothing`). The carbon pool
-# `carbon_vegetation` is still needed by the respiration parameterization, so we initialize it to a
-# constant; note that with prescribed LAI this pool is not consistently coupled to the imposed leaf area.
+# the prognostic vegetation-fraction dynamics (`vegetation_dynamics = nothing`).
 vegetation = PrescribedVegetation(NF)
 model = VegetationModel(grid; vegetation)
 
 # Initialize the model with the LAI input source and a uniform initial vegetation carbon pool.
-integrator = initialize(model; inputs = lai_input, initializers = (carbon_vegetation = NF(0.5),))
+integrator = initialize(model; inputs = lai_input)
 
 # Helper to plot a horizontal field on the ring grid.
 plot_field(field; kwargs...) = heatmap(RingGrids.Field(arch, interior(field), grid)[:, 1, 1]; kwargs...)
