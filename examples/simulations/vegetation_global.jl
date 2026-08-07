@@ -51,8 +51,6 @@ lai_input = InputSource(grid, lai_highveg; source_grid = Terrarium.native_grid(l
 # the prognostic vegetation-fraction dynamics (`vegetation_dynamics = nothing`).
 vegetation = PrescribedVegetation(NF)
 model = VegetationModel(grid; vegetation)
-
-# Initialize the model with the LAI input source and a uniform initial vegetation carbon pool.
 integrator = initialize(model; inputs = lai_input)
 
 # Helper to plot a horizontal field on the ring grid.
@@ -69,4 +67,10 @@ DisplayAs.PNG(fig) #hide
 
 # The mid-summer LAI after half a year:
 fig = plot_field(integrator.state.leaf_area_index, title = "Leaf area index (Jul)", colorrange = (0, 6))
+DisplayAs.PNG(fig) #hide
+
+
+# The mid-summer Gross Primary Product (GPP) in kg C / m² / day:
+GPP = Field(on_architecture(CPU(), integrator.state.gross_primary_production) * 24 * 3600)
+fig = plot_field(GPP, title = "Gross Primary Production (Jul)")
 DisplayAs.PNG(fig) #hide

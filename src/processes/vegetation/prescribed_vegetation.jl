@@ -52,6 +52,11 @@ variables(vegetation::PrescribedVegetation) = tuplejoin(
     variables(vegetation.plant_available_water)
 )
 
+function initialize!(state, grid, veg::PrescribedVegetation, args...)
+    initialize!(state, grid, veg.plant_available_water)
+    return nothing
+end
+
 """
     $TYPEDSIGNATURES
 

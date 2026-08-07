@@ -67,6 +67,11 @@ function VegetationCarbonCycle(
     )
 end
 
+function initialize!(state, grid, veg::VegetationCarbonCycle)
+    initialize!(state, grid, veg.plant_available_water)
+    return nothing
+end
+
 """
     $TYPEDSIGNATURES
 

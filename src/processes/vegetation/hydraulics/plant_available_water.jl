@@ -40,7 +40,7 @@ end
 # Top-level interface methods
 
 # No-op when no soil is available; soil_moisture_limiting_factor defaults to 1
-compute_auxiliary!(state, grid, ::AbstractPlantAvailableWater, ::Nothing, args...) = nothing
+compute_auxiliary!(state, grid, ::AbstractPlantAvailableWater, soil::Nothing, args...) = nothing
 
 """ $TYPEDSIGNATURES """
 function compute_auxiliary!(
@@ -58,7 +58,14 @@ function compute_auxiliary!(
     fields = get_fields(state, paw, soil; except = out)
     launch!(grid, XYZ, compute_auxiliary_kernel!, out, fields, paw, strat, hydrology, bgc)
     # compute the derived soil moisture limiting factor field
-    return compute!(state.soil_moisture_limiting_factor)
+    compute!(state.soil_moisture_limiting_factor)
+    return nothing
+end
+
+function initialize!(state, grid, ::AbstractPlantAvailableWater, args...)
+    set!(state.plant_available_water, one(eltype(grid))) # set PAW to one by default
+    compute!(state.soil_moisture_limiting_factor)
+    return nothing
 end
 
 # Kernel functions

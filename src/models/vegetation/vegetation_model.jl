@@ -35,6 +35,11 @@ $TYPEDFIELDS
     @component timestepper::Timestepper = default_timestepper(eltype(grid))
 end
 
+function initialize!(state, model::VegetationModel)
+    initialize!(state, model.grid, model.vegetation)
+    return nothing
+end
+
 function compute_auxiliary!(state, model::VegetationModel)
     # Unpack vegetation model
     (; grid, atmosphere, vegetation, constants) = model
