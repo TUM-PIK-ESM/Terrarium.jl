@@ -18,15 +18,12 @@ $TYPEDFIELDS
 """
 @parameterized @kwdef struct PALADYNCarbonDynamics{NF} <: AbstractVegetationCarbonDynamics{NF}
     "Leaf turnover rate ([kattgeTRYGlobalDatabase2011](@cite)). PFT specific."
-    # TODO this parameter is yearly, should be changed to daily for now
     @param γL::NF = 0.3 (units = u"yr^-1", bounds = Positive) # Value for Needleleaf tree PFT
 
     "Root turnover rate. PFT specific."
-    # TODO this parameter is yearly, should be changed to daily for now
     @param γR::NF = 0.3 (units = u"yr^-1", bounds = Positive) # Value for Needleleaf tree PFT
 
     "Stem src/processes/vegetation/hydraulicsturnover rate modified from [clarkJointUKLand2011](@cite). PFT specific."
-    # TODO this parameter is yearly, should be changed to daily for now
     @param γS::NF = 0.05 (units = u"yr^-1", bounds = Positive) # Value for Needleleaf tree PFT
 end
 
@@ -50,13 +47,17 @@ vegetated area and spreading of the given PFT based on the balanced Leaf Area In
 * [willeitPALADYNV10Comprehensive2016](@cite) Willeit & Ganopolski, Geoscientific Model Development (2016)
 """
 @inline function compute_λ_NPP(vegcarbon_dynamics::PALADYNCarbonDynamics{NF}, traits::PlantTraits{NF}, LAI_b) where {NF}
-    if LAI_b < traits.minimum_leaf_area_index
-        λ_NPP = zero(NF)
-    elseif LAI_b <= traits.maximum_leaf_area_index
-        λ_NPP = (LAI_b - traits.minimum_leaf_area_index) / (traits.maximum_leaf_area_index - traits.minimum_leaf_area_index)
-    else
-        λ_NPP = NF(1.0)
-    end
+    LAI_min = traits.minimum_leaf_area_index
+    LAI_max = traits.maximum_leaf_area_index
+    λ_NPP = ifelse(
+        LAI_b < LAI_min,
+        zero(NF),
+        ifelse(
+            LAI_b <= LAI_max,
+            (LAI_b - LAI_min) / (LAI_max - LAI_min),
+            one(NF)
+        )
+    )
     return λ_NPP
 end
 
@@ -87,11 +88,15 @@ Computes the local litterfall rate `Λ_loc` based on the balanced Leaf Area Inde
 * [willeitPALADYNV10Comprehensive2016](@cite) Willeit & Ganopolski, Geoscientific Model Development (2016)
 """
 @inline function compute_Λ_loc(vegcarbon_dynamics::PALADYNCarbonDynamics{NF}, traits::PlantTraits{NF}, LAI_b) where {NF}
-    Λ_loc = (
-        vegcarbon_dynamics.γL / traits.specific_leaf_area +
-            vegcarbon_dynamics.γR / traits.specific_leaf_area +
-            vegcarbon_dynamics.γS * traits.awl
-    ) * LAI_b
+    # TODO: Change tendencies to units of per day and add automatic unit normalization
+    γL = vegcarbon_dynamics.γL / (365.25 * 24 * 3600) # convert to seconds
+    γR = vegcarbon_dynamics.γR / (365.25 * 24 * 3600)
+    γS = vegcarbon_dynamics.γS / (365.25 * 24 * 3600)
+    Λ_loc = LAI_b * (
+        γL / traits.specific_leaf_area +
+            γR / traits.specific_leaf_area +
+            γS * traits.awl
+    )
     return Λ_loc
 end
 
