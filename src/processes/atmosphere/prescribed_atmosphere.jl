@@ -154,7 +154,7 @@ Represents a windspeed as direct input/forcing variable.
 struct Windspeed <: AbstractWind end
 
 variables(::Windspeed) = (
-    input(:windspeed, XY(), default = NF(0.1), units = u"m/s", desc = "Wind speed in m/s"),
+    input(:windspeed, XY(), default = 0.1, units = u"m/s", desc = "Wind speed in m/s"),
 )
 
 """
@@ -172,8 +172,8 @@ Represents a windspeed given as `u` (east-west) and `v` (south-north) velocity c
 struct WindVelocity <: AbstractWind end
 
 variables(::WindVelocity) = (
-    input(:wind_u, XY(), default = NF(0.1), units = u"m/s", desc = "Wind velocity u-component in m/s"),
-    input(:wind_v, XY(), default = NF(0.1), units = u"m/s", desc = "Wind velocity v-component in m/s"),
+    input(:wind_u, XY(), default = 0.1, units = u"m/s", desc = "Wind velocity u-component in m/s"),
+    input(:wind_v, XY(), default = 0.1, units = u"m/s", desc = "Wind velocity v-component in m/s"),
 )
 
 @propagate_inbounds windspeed(i, j, grid, fields, atmos::AbstractAtmosphere{NF, PR, IR, HD, WindVelocity}) where {NF, PR, IR, HD} = sqrt(fields.wind_u[i, j]^2 + fields.wind_v[i, j]^2)
