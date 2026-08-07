@@ -27,8 +27,14 @@ jobs:
       - uses: julia-actions/cache@v2
       - name: Install dependencies (scripts)
         run: julia --project=examples/ -e 'using Pkg; Pkg.develop(PackageSpec(path=pwd())); Pkg.instantiate()'
-      - name: Run Vegetation-Soil Column
+      - name: Run Soil Heat Column
+        run: julia --project=examples/ examples/simulations/soil_heat_column.jl
+      - name: Run Land Column
         run: julia --project=examples/ examples/simulations/land_column.jl
+      - name: Run Snow Global
+        run: julia --project=examples/ examples/simulations/snow_global.jl
+      - name: Run Vegetation Global
+        run: julia --project=examples/ examples/simulations/vegetation_global.jl
       # - name: Run SpeedyWeather Wet coupling
       #   run: julia --project=examples/ examples/simulations/speedy_wet_land.jl
       
