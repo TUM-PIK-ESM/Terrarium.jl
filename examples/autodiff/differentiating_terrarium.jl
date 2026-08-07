@@ -35,8 +35,6 @@ scheme = Revolve(1)
 # Enzyme's `autodiff` is it's core function that we can use to compute vector-Jacobian products (vJP) for the reverse-mode AD of our `run!` function that integrates our model using the `integrator` that we initialized. We define a function that returns the temperature of the second lowest soil layer after a time integration of 10 steps.
 
 dintegrator = make_zero(integrator)
-# set a one hot seed for a sensitivity analysis of T for now
-interior(dintegrator.state.temperature)[1, 1, 2] = 1.0
 
 function layer_temperature(integrator)
     run!(integrator, scheme, 10)
