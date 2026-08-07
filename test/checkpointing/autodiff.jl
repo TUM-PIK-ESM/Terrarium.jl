@@ -1,4 +1,6 @@
 using Terrarium
+using Test
+
 using Checkpointing
 using Enzyme
 
