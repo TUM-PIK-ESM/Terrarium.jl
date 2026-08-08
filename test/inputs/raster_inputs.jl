@@ -1,10 +1,13 @@
 using Terrarium
 using Terrarium: Clock, Variables, InputSource, initialize!, update_inputs!, variables, interior, InputSources, varname
 using Test
+
 using Dates
 using NCDatasets
+using Oceananigans.OutputReaders: Cyclical
 using Rasters
 using Rasters: X, Y, Ti
+
 import RingGrids
 
 # Get RasterInputSource from the loaded extension
@@ -18,17 +21,18 @@ const RasterInputSource = TerrariumRastersExt.RasterInputSource
 
     # Set up a ColumnRingGrid for testing
     ring_grid = RingGrids.FullHEALPixGrid(8)
+    lat, lon = RingGrids.get_lat(ring_grid), RingGrids.get_lon(ring_grid)
     npoints = RingGrids.get_npoints(ring_grid)
+
     grid = ColumnRingGrid(UniformSpacing(Δz = 0.5, N = 5), ring_grid)
+
+    # Generate random data matching the ring grid size
+    nx, ny = length(lon), length(lat)
+    static_data = rand(Float32, nx, ny)
 
     @testset "Static raster input" begin
         # Create a dummy NetCDF file with static (no time dimension) data
         static_file = joinpath(testdir, "static_data.nc")
-
-        # Generate random data matching the ring grid size
-        # Use 2D layout with X and Y dimensions (flattened to match ring grid)
-        nx, ny = 32, 24  # arbitrary 2D shape that gives npoints when flattened
-        static_data = rand(Float32, nx, ny)
 
         NCDataset(static_file, "c") do ds
             defDim(ds, "x", nx)
@@ -41,9 +45,9 @@ const RasterInputSource = TerrariumRastersExt.RasterInputSource
         # Load with Rasters
         raster = Raster(static_file; name = :temperature)
 
-        # Create RasterInputSource (name defaults to raster.name)
+        # A static (time-invariant) raster reduces to a plain FieldInputSource
         source = InputSource(grid, raster)
-        @test isa(source, RasterInputSource)
+        @test isa(source, Terrarium.FieldInputSource)
         @test source.dims == XY()
         @test varname(source) == :temperature
 
@@ -61,9 +65,9 @@ const RasterInputSource = TerrariumRastersExt.RasterInputSource
         initialize!(state.inputs, grid, clock, state, source)
 
         # Verify data was copied (only masked points)
-        # The idxmap maps from grid mask to flattened raster indices
+        idxmap = findall(vec(Array(grid.mask)))
         flat_data = vec(static_data)
-        expected = flat_data[source.idxmap]
+        expected = flat_data[idxmap]
         @test all(interior(state.inputs.temperature)[:, 1, 1] .≈ expected)
 
         # Test that update_inputs! does nothing for static rasters
@@ -76,8 +80,6 @@ const RasterInputSource = TerrariumRastersExt.RasterInputSource
         # Create a dummy NetCDF file with time-varying data
         timeseries_file = joinpath(testdir, "timeseries_data.nc")
 
-        # Generate random data with time dimension
-        nx, ny = 32, 24
         ntimes = 5
         times = DateTime(2020, 1, 1):Hour(1):DateTime(2020, 1, 1, 4)
         timeseries_data = rand(Float32, nx, ny, ntimes)
@@ -136,12 +138,52 @@ const RasterInputSource = TerrariumRastersExt.RasterInputSource
         @test all(isapprox.(interior(state.inputs.forcing)[:, 1, 1], expected_interp, atol = 1.0e-5))
     end
 
+    @testset "Cyclic time-varying raster input" begin
+        # Reuse the 5-record hourly series but treat the time axis as periodic
+        timeseries_file = joinpath(testdir, "cyclic_data.nc")
+        ntimes = 5
+        times = DateTime(2020, 1, 1):Hour(1):DateTime(2020, 1, 1, 4)
+        timeseries_data = rand(Float32, nx, ny, ntimes)
+        NCDataset(timeseries_file, "c") do ds
+            defDim(ds, "x", nx)
+            defDim(ds, "y", ny)
+            defDim(ds, "time", ntimes)
+            defVar(ds, "x", collect(1:nx), ("x",))
+            defVar(ds, "y", collect(1:ny), ("y",))
+            defVar(ds, "time", collect(times), ("time",))
+            defVar(ds, "forcing", timeseries_data, ("x", "y", "time"))
+        end
+        raster = Raster(timeseries_file; name = :forcing)
+        source = InputSource(grid, raster; reftime = DateTime(2020, 1, 1), cycle = true)
+        @test isa(source, RasterInputSource)
+        @test isa(source.extrapolation, Cyclical)
+
+        state = StateVariables(Variables(source), grid)
+        idxmap = source.idxmap
+        flat(n) = vec(timeseries_data[:, :, n])[idxmap]
+
+        # span = 4 h, spacing Δ = 1 h, so the period is 5 h; t = 5 h wraps back to record 1
+        clock = Clock(time = 5 * 3600.0)
+        update_inputs!(state.inputs, grid, clock, state, source)
+        @test all(isapprox.(interior(state.inputs.forcing)[:, 1, 1], flat(1), atol = 1.0e-5))
+
+        # t = 6 h wraps to 1 h -> record 2
+        clock = Clock(time = 6 * 3600.0)
+        update_inputs!(state.inputs, grid, clock, state, source)
+        @test all(isapprox.(interior(state.inputs.forcing)[:, 1, 1], flat(2), atol = 1.0e-5))
+
+        # t = 4.5 h lies in the wrap gap: halfway between record 5 and record 1
+        clock = Clock(time = 4.5 * 3600.0)
+        update_inputs!(state.inputs, grid, clock, state, source)
+        expected_wrap = (flat(5) .+ flat(1)) ./ 2
+        @test all(isapprox.(interior(state.inputs.forcing)[:, 1, 1], expected_wrap, atol = 1.0e-5))
+    end
+
     @testset "Multiple rasters" begin
         # Create two NetCDF files
         file1 = joinpath(testdir, "var1.nc")
         file2 = joinpath(testdir, "var2.nc")
 
-        nx, ny = 32, 24
         data1 = rand(Float32, nx, ny)
         data2 = rand(Float32, nx, ny) .* 100
 
@@ -180,10 +222,9 @@ const RasterInputSource = TerrariumRastersExt.RasterInputSource
         # Initialize and verify both fields
         clock = Clock(time = 0.0)
         initialize!(state.inputs, grid, clock, state, sources)
-        source1 = sources.sources[1]
-        source2 = sources.sources[2]
-        expected1 = vec(data1)[source1.idxmap]
-        expected2 = vec(data2)[source2.idxmap]
+        idxmap = findall(vec(Array(grid.mask)))
+        expected1 = vec(data1)[idxmap]
+        expected2 = vec(data2)[idxmap]
         @test all(interior(state.inputs.var1)[:, 1, 1] .≈ expected1)
         @test all(interior(state.inputs.var2)[:, 1, 1] .≈ expected2)
     end

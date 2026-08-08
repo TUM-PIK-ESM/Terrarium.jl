@@ -140,7 +140,7 @@ struct AuxiliaryVariable{
         UT <: Units,
         Var <: Variable{name, VD, UT},
         BT <: DomainSets.AbstractInterval,
-        FC <: Union{Nothing, Function},
+        FC,
     } <: AbstractProcessVariable{name, VD, UT}
     "State variable"
     var::Var
@@ -437,7 +437,10 @@ Convenience constructor method for `AuxiliaryVariable`.
 """
 @inline auxiliary(name::Symbol, dims::VarDims, ctor = nothing, params = nothing; units = NoUnits, bounds = Unbounded, desc = "") = auxiliary(var(name, dims, units), ctor, params; bounds, desc)
 @inline auxiliary(var::Variable, ::Nothing, ::Nothing; bounds = Unbounded, desc = "") = AuxiliaryVariable(var, nothing, bounds, desc)
-@inline auxiliary(var::Variable, ctor::Function, params; bounds = Unbounded, desc = "") = AuxiliaryVariable(var, (args...) -> ctor(params, args...), bounds, desc)
+@inline auxiliary(var::Variable, ctor::Function, params; bounds = Unbounded, desc = "") = AuxiliaryVariable(var, (_, grid, clock, fields) -> ctor(grid, clock, fields, params), bounds, desc)
+# `KernelFunction` constructors (from `kernel`) are callable structs, not `Function`s; they define
+# their own `(var, grid, clock, fields)` call convention, so store them directly as the ctor.
+@inline auxiliary(var::Variable, ctor::KernelFunction, ::Nothing; bounds = Unbounded, desc = "") = AuxiliaryVariable(var, ctor, bounds, desc)
 
 """
     $SIGNATURES

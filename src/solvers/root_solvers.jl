@@ -36,9 +36,7 @@ end
         func_kwargs...
     ) where {NF, N, M, S, target}
     target_field = getproperty(out, target)
-    # `Field`s must always be indexed in 3D; see `pad_indices`
-    field_indices = pad_indices(target_field, indices)
-
+  
     # Build the residual function, with derivatives if necessary
     residual! = build_residual(out, indices, grid, fields, step_func!, target_field, solver, func_args...; func_kwargs...)
 
@@ -52,7 +50,7 @@ end
     x_root = result.root
 
     # Ensure the target field holds the final estimate
-    target_field[field_indices...] = x_root
+    target_field[field_indices(indices)...] = x_root
 
     if S <: RootSolvers.CompactSolution
         return x_root
@@ -80,15 +78,14 @@ build_residual(
     ) where {NF, F, DF}
 
     dstep_func! = step_func!.dfunc
-    field_indices = pad_indices(target_field, indices)
 
     function residual!(x)
-        target_field[field_indices...] = x
+        target_field[field_indices(indices)...] = x
         return step_func!(out, indices..., grid, fields, func_args...; func_kwargs...)
     end
 
     function dresidual!(x)
-        target_field[field_indices...] = x
+        target_field[field_indices(indices)...] = x
         return dstep_func!(out, indices..., grid, fields, func_args...; func_kwargs...)
     end
 
@@ -106,7 +103,7 @@ end
     field_indices = pad_indices(target_field, indices)
 
     function residual!(x)
-        target_field[field_indices...] = x
+        target_field[field_indices(indices)...] = x
         return step_func!(out, indices..., grid, fields, func_args...; func_kwargs...)
     end
 

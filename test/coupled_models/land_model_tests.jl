@@ -41,7 +41,7 @@ end
     hydraulic_properties = ConstantSoilHydraulics(eltype(grid); swrc, unsat_hydraulic_cond = UnsatKVanGenuchten(eltype(grid)))
     hydrology = SoilHydrology(eltype(grid), RichardsEq(); hydraulic_properties)
     soil = SoilEnergyWaterCarbon(eltype(grid); hydrology)
-    vegetation = VegetationCarbon(eltype(grid))
+    vegetation = VegetationCarbonCycle(eltype(grid))
     land = LandModel(grid; soil, vegetation)
     @test land.surface_hydrology.evapotranspiration isa Terrarium.PALADYNCanopyEvapotranspiration
     @test land.surface_hydrology.canopy_interception isa Terrarium.PALADYNCanopyInterception

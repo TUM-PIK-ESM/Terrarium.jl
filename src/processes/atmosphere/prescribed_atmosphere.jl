@@ -106,25 +106,13 @@ variables(atmos::PrescribedAtmosphere{NF}) where {NF} = (
 @inline compute_tendencies!(state, grid, atmos::PrescribedAtmosphere) = nothing
 
 """
-    $SIGNATURES
-Computes the vapor pressure deficit for an air parcel at temperature `T` [°C] with 
-pressure `pres` [Pa] and specific humidity `q_air` [kg/kg].
-Assumes that air parcel is over water when `T > 0°C` and over ice when `T < 0°C`.
-Wrapper around [`vapor_pressure_deficit`](@extref Thermodynamics.vapor_pressure_deficit).
-"""
-@inline function vapor_pressure_deficit(c::ThermodynamicConstants, T, pres, q_air)
-    T_K = celsius_to_kelvin(c, T)
-    vpd = Thermodynamics.vapor_pressure_deficit(c, T_K, pres, q_air)
-    return vpd
-end
-"""
     aerodynamic_resistance(i, j, grid, fields, atmos::PrescribedAtmosphere)
 
 Compute the aerodynamic resistance (inverse conductance) at grid cell `i, j`.
 """
-@inline function aerodynamic_resistance(i, j, grid, fields, atmos::PrescribedAtmosphere)
+@inline function aerodynamic_resistance(i, j, grid, fields, atmos::PrescribedAtmosphere{NF}) where {NF}
     let C = drag_coefficient(i, j, grid, fields, atmos.aerodynamics),
-            Vₐ = max(windspeed(i, j, grid, fields, atmos), 1.0e-6)  # clip windspeed to small value
+            Vₐ = max(windspeed(i, j, grid, fields, atmos), NF(1.0e-6))  # clip windspeed to small value
         rₐ = 1 / (C * Vₐ)
         return rₐ
     end
@@ -150,6 +138,13 @@ Retrieve or compute the air pressure at the current time step.
 Retrieve or compute the windspeed at the current time step.
 """
 @propagate_inbounds windspeed(i, j, grid, fields, atmos::PrescribedAtmosphere) = max(fields.windspeed[i, j], atmos.min_windspeed)
+
+"""
+    ambient_co2(i, j, grid, fields, ::PrescribedAtmosphere)
+
+Return the current prescribed ambient CO2 concentration level.
+"""
+@propagate_inbounds ambient_co2(i, j, grid, fields, ::PrescribedAtmosphere) = fields.CO2[i, j, 1]
 
 """
     $TYPEDEF

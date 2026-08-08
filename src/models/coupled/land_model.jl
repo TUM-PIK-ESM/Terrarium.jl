@@ -23,7 +23,7 @@ $(TYPEDFIELDS)
     grid::GridType
 
     "Vegetation processes"
-    @component vegetation::Vegetation = VegetationCarbon(eltype(grid))
+    @component vegetation::Vegetation = VegetationCarbonCycle(eltype(grid))
 
     "Soil processes"
     @component soil::Soil = default_soil(grid, vegetation)
@@ -119,9 +119,9 @@ function compute_tendencies!(state, model::LandModel)
     grid = get_grid(model)
     compute_tendencies!(state, grid, model.surface_hydrology)
     compute_tendencies!(state, grid, model.soil, model.constants)
-    compute_tendencies!(state, grid, model.vegetation)
     # Snow tendencies after surface hydrology; no-op without snow (`nothing`)
     compute_tendencies!(state, grid, model.snow, model.constants, model.atmosphere)
+    compute_tendencies!(state, grid, model.vegetation, model.constants, model.atmosphere)
     return nothing
 end
 
