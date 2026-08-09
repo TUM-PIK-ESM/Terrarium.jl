@@ -706,7 +706,7 @@
             "threads": 1,
             "terrarium_version": "0.1.4",
             "mode": "default",
-            "timestamp": "Sun, 09 Aug 2026 18:38:21",
+            "timestamp": "Sun, 09 Aug 2026 19:10:30",
             "timestep_multiplier": 1
         },
         "overview": {
@@ -835,26 +835,26 @@
                     30
                 ],
                 "sypd": [
-                    110297.78852559799,
-                    111034.1029418567,
-                    94067.06655955469,
-                    62505.68067411563,
-                    50494.58201334659,
-                    21212.170105760022,
-                    11339.275218634508,
-                    7822.464923618066,
-                    4614.269424539775
+                    110311.91579700114,
+                    109088.88404247728,
+                    86288.89870925224,
+                    70685.31967307327,
+                    42155.63223551558,
+                    21979.05621780664,
+                    9052.425166329831,
+                    6869.076421636801,
+                    4658.886405249032
                 ],
                 "throughput": [
-                    257.83211045743786,
-                    1038.2132761475368,
-                    3518.2587966338406,
-                    5260.0780491772575,
-                    7554.312634521536,
-                    7140.321912848347,
-                    8588.167479349928,
-                    10532.617347138963,
-                    13979.065804018215
+                    257.86513436706986,
+                    1020.0247013507795,
+                    3227.342873963969,
+                    5948.424117639939,
+                    6306.752378479438,
+                    7398.466821323252,
+                    6856.147498295286,
+                    9248.920152893676,
+                    14114.234267739535
                 ],
                 "ncolumns": [
                     128,
@@ -868,15 +868,15 @@
                     165888
                 ],
                 "compile_time": [
-                    14.707910602,
-                    14.60122363,
-                    14.840364873,
-                    1.144976116,
-                    15.777892598,
-                    15.658775859,
-                    16.66240722,
-                    18.295265675,
-                    23.025090347
+                    15.304028424,
+                    14.529333142,
+                    14.763658559,
+                    1.090422676,
+                    14.965710463,
+                    15.528718068,
+                    16.673453963,
+                    18.398139081,
+                    22.767025311
                 ],
                 "status": [
                     "ok",
@@ -901,15 +901,15 @@
                     "soil_heat"
                 ],
                 "ms_per_step": [
-                    0.014893412590026855,
-                    0.014794648029348878,
-                    0.017463183793865265,
-                    0.02628097885764689,
-                    0.03253241054347304,
-                    0.0774418866192853,
-                    0.14486908912658691,
-                    0.20999908447265625,
-                    0.3560066223144531
+                    0.014891505241394043,
+                    0.015058458858554448,
+                    0.01903733269113009,
+                    0.023239768595190093,
+                    0.038967757928566854,
+                    0.07473980938946759,
+                    0.18146634101867676,
+                    0.23914575576782227,
+                    0.3525972366333008
                 ],
                 "nlat_half": [
                     4,
@@ -1047,7 +1047,7 @@
                 ]
             }
         },
-        "markdown": "\n### Model configurations, default resolution\n\n| Configuration | Res | Columns | Δt | Steps | SYPD | ms/step | Mcell-steps/s | Memory | Compile | Status |\n| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |\n| land | 3.75° | 4608 | — | — | — | — | — | — | — | failed: UndefVarError |\n| land_no_vegetation | 3.75° | 4608 | — | — | — | — | — | — | — | failed: ErrorException |\n| soil_heat | 3.75° | 4608 | 600 | 217 | 65324 | 0.0251 | 5500 | 3.85 MiB | 31.7 s | ok |\n\n### Land model, horizontal resolution\n\n| Configuration | Res | Columns | Δt | Steps | SYPD | ms/step | Mcell-steps/s | Memory | Status |\n| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |\n| land | 22.50° | 128 | — | — | — | — | — | — | failed: UndefVarError |\n| land | 11.25° | 512 | — | — | — | — | — | — | failed: UndefVarError |\n| land | 5.62° | 2048 | — | — | — | — | — | — | failed: UndefVarError |\n| land | 3.75° | 4608 | — | — | — | — | — | — | failed: UndefVarError |\n| land | 2.81° | 8192 | — | — | — | — | — | — | failed: UndefVarError |\n| land | 1.88° | 18432 | — | — | — | — | — | — | failed: UndefVarError |\n| land | 1.25° | 41472 | — | — | — | — | — | — | failed: UndefVarError |\n| land | 0.94° | 73728 | — | — | — | — | — | — | failed: UndefVarError |\n| land | 0.62° | 165888 | — | — | — | — | — | — | failed: UndefVarError |\n\n### Land model without vegetation, horizontal resolution\n\n| Configuration | Res | Columns | Δt | Steps | SYPD | ms/step | Mcell-steps/s | Memory | Status |\n| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |\n| land_no_vegetation | 22.50° | 128 | — | — | — | — | — | — | failed: ErrorException |\n| land_no_vegetation | 11.25° | 512 | — | — | — | — | — | — | failed: ErrorException |\n| land_no_vegetation | 5.62° | 2048 | — | — | — | — | — | — | failed: ErrorException |\n| land_no_vegetation | 3.75° | 4608 | — | — | — | — | — | — | failed: ErrorException |\n| land_no_vegetation | 2.81° | 8192 | — | — | — | — | — | — | failed: ErrorException |\n| land_no_vegetation | 1.88° | 18432 | — | — | — | — | — | — | failed: ErrorException |\n| land_no_vegetation | 1.25° | 41472 | — | — | — | — | — | — | failed: ErrorException |\n| land_no_vegetation | 0.94° | 73728 | — | — | — | — | — | — | failed: ErrorException |\n| land_no_vegetation | 0.62° | 165888 | — | — | — | — | — | — | failed: ErrorException |\n\n### Soil heat conduction, horizontal resolution\n\n| Configuration | Res | Columns | Δt | Steps | SYPD | ms/step | Mcell-steps/s | Memory | Compile |\n| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |\n| soil_heat | 22.50° | 128 | 600 | 2000 | 110298 | 0.0149 | 258 | 114.63 KiB | 14.7 s |\n| soil_heat | 11.25° | 512 | 600 | 1953 | 111034 | 0.0148 | 1040 | 443.13 KiB | 14.6 s |\n| soil_heat | 5.62° | 2048 | 600 | 488 | 94067 | 0.0175 | 3520 | 1.72 MiB | 14.8 s |\n| soil_heat | 3.75° | 4608 | 600 | 217 | 62506 | 0.0263 | 5260 | 3.85 MiB | 1.1 s |\n| soil_heat | 2.81° | 8192 | 600 | 122 | 50495 | 0.0325 | 7550 | 6.85 MiB | 15.8 s |\n| soil_heat | 1.88° | 18432 | 600 | 54 | 21212 | 0.0774 | 7140 | 15.40 MiB | 15.7 s |\n| soil_heat | 1.25° | 41472 | 600 | 24 | 11339 | 0.145 | 8590 | 34.65 MiB | 16.7 s |\n| soil_heat | 0.94° | 73728 | 600 | 20 | 7822 | 0.21 | 10500 | 61.60 MiB | 18.3 s |\n| soil_heat | 0.62° | 165888 | 600 | 20 | 4614 | 0.356 | 14000 | 138.59 MiB | 23.0 s |\n\n### Number of soil layers\n\n| Configuration | Res | Columns | L | Δt | Steps | SYPD | ms/step | Mcell-steps/s | Memory | Status |\n| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |\n| land | 3.75° | 4608 | 10 | — | — | — | — | — | — | failed: UndefVarError |\n| land | 3.75° | 4608 | 20 | — | — | — | — | — | — | failed: UndefVarError |\n| land | 3.75° | 4608 | 30 | — | — | — | — | — | — | failed: UndefVarError |\n| land | 3.75° | 4608 | 60 | — | — | — | — | — | — | failed: UndefVarError |\n| land | 3.75° | 4608 | 100 | — | — | — | — | — | — | failed: UndefVarError |\n\n### Number format, Float32 vs Float64\n\n| Configuration | NF | Res | Columns | Δt | Steps | SYPD | ms/step | Mcell-steps/s | Memory | Status |\n| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |\n| land | Float32 | 3.75° | 4608 | — | — | — | — | — | — | failed: UndefVarError |\n| land | Float64 | 3.75° | 4608 | — | — | — | — | — | — | failed: UndefVarError |\n\n### Time stepper\n\n| Configuration | Variant | Res | Columns | Δt | Steps | SYPD | ms/step | Mcell-steps/s | Memory | Status |\n| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |\n| land | ForwardEuler | 3.75° | 4608 | — | — | — | — | — | — | failed: UndefVarError |\n| land | Heun | 3.75° | 4608 | — | — | — | — | — | — | failed: UndefVarError |\n"
+        "markdown": "\n### Model configurations, default resolution\n\n| Configuration | Res | Columns | Δt | Steps | SYPD | ms/step | Mcell-steps/s | Memory | Compile | Status |\n| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |\n| land | 3.75° | 4608 | — | — | — | — | — | — | — | failed: UndefVarError |\n| land_no_vegetation | 3.75° | 4608 | — | — | — | — | — | — | — | failed: ErrorException |\n| soil_heat | 3.75° | 4608 | 600 | 217 | 65037 | 0.0253 | 5470 | 3.85 MiB | 31.5 s | ok |\n\n### Land model, horizontal resolution\n\n| Configuration | Res | Columns | Δt | Steps | SYPD | ms/step | Mcell-steps/s | Memory | Status |\n| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |\n| land | 22.50° | 128 | — | — | — | — | — | — | failed: UndefVarError |\n| land | 11.25° | 512 | — | — | — | — | — | — | failed: UndefVarError |\n| land | 5.62° | 2048 | — | — | — | — | — | — | failed: UndefVarError |\n| land | 3.75° | 4608 | — | — | — | — | — | — | failed: UndefVarError |\n| land | 2.81° | 8192 | — | — | — | — | — | — | failed: UndefVarError |\n| land | 1.88° | 18432 | — | — | — | — | — | — | failed: UndefVarError |\n| land | 1.25° | 41472 | — | — | — | — | — | — | failed: UndefVarError |\n| land | 0.94° | 73728 | — | — | — | — | — | — | failed: UndefVarError |\n| land | 0.62° | 165888 | — | — | — | — | — | — | failed: UndefVarError |\n\n### Land model without vegetation, horizontal resolution\n\n| Configuration | Res | Columns | Δt | Steps | SYPD | ms/step | Mcell-steps/s | Memory | Status |\n| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |\n| land_no_vegetation | 22.50° | 128 | — | — | — | — | — | — | failed: ErrorException |\n| land_no_vegetation | 11.25° | 512 | — | — | — | — | — | — | failed: ErrorException |\n| land_no_vegetation | 5.62° | 2048 | — | — | — | — | — | — | failed: ErrorException |\n| land_no_vegetation | 3.75° | 4608 | — | — | — | — | — | — | failed: ErrorException |\n| land_no_vegetation | 2.81° | 8192 | — | — | — | — | — | — | failed: ErrorException |\n| land_no_vegetation | 1.88° | 18432 | — | — | — | — | — | — | failed: ErrorException |\n| land_no_vegetation | 1.25° | 41472 | — | — | — | — | — | — | failed: ErrorException |\n| land_no_vegetation | 0.94° | 73728 | — | — | — | — | — | — | failed: ErrorException |\n| land_no_vegetation | 0.62° | 165888 | — | — | — | — | — | — | failed: ErrorException |\n\n### Soil heat conduction, horizontal resolution\n\n| Configuration | Res | Columns | Δt | Steps | SYPD | ms/step | Mcell-steps/s | Memory | Compile |\n| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |\n| soil_heat | 22.50° | 128 | 600 | 2000 | 110312 | 0.0149 | 258 | 114.63 KiB | 15.3 s |\n| soil_heat | 11.25° | 512 | 600 | 1953 | 109089 | 0.0151 | 1020 | 443.13 KiB | 14.5 s |\n| soil_heat | 5.62° | 2048 | 600 | 488 | 86289 | 0.019 | 3230 | 1.72 MiB | 14.8 s |\n| soil_heat | 3.75° | 4608 | 600 | 217 | 70685 | 0.0232 | 5950 | 3.85 MiB | 1.1 s |\n| soil_heat | 2.81° | 8192 | 600 | 122 | 42156 | 0.039 | 6310 | 6.85 MiB | 15.0 s |\n| soil_heat | 1.88° | 18432 | 600 | 54 | 21979 | 0.0747 | 7400 | 15.40 MiB | 15.5 s |\n| soil_heat | 1.25° | 41472 | 600 | 24 | 9052 | 0.181 | 6860 | 34.65 MiB | 16.7 s |\n| soil_heat | 0.94° | 73728 | 600 | 20 | 6869 | 0.239 | 9250 | 61.60 MiB | 18.4 s |\n| soil_heat | 0.62° | 165888 | 600 | 20 | 4659 | 0.353 | 14100 | 138.59 MiB | 22.8 s |\n\n### Number of soil layers\n\n| Configuration | Res | Columns | L | Δt | Steps | SYPD | ms/step | Mcell-steps/s | Memory | Status |\n| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |\n| land | 3.75° | 4608 | 10 | — | — | — | — | — | — | failed: UndefVarError |\n| land | 3.75° | 4608 | 20 | — | — | — | — | — | — | failed: UndefVarError |\n| land | 3.75° | 4608 | 30 | — | — | — | — | — | — | failed: UndefVarError |\n| land | 3.75° | 4608 | 60 | — | — | — | — | — | — | failed: UndefVarError |\n| land | 3.75° | 4608 | 100 | — | — | — | — | — | — | failed: UndefVarError |\n\n### Number format, Float32 vs Float64\n\n| Configuration | NF | Res | Columns | Δt | Steps | SYPD | ms/step | Mcell-steps/s | Memory | Status |\n| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |\n| land | Float32 | 3.75° | 4608 | — | — | — | — | — | — | failed: UndefVarError |\n| land | Float64 | 3.75° | 4608 | — | — | — | — | — | — | failed: UndefVarError |\n\n### Time stepper\n\n| Configuration | Variant | Res | Columns | Δt | Steps | SYPD | ms/step | Mcell-steps/s | Memory | Status |\n| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |\n| land | ForwardEuler | 3.75° | 4608 | — | — | — | — | — | — | failed: UndefVarError |\n| land | Heun | 3.75° | 4608 | — | — | — | — | — | — | failed: UndefVarError |\n"
     },
     "cpu-x86": {
         "meta": {

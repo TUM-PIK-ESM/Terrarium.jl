@@ -56,15 +56,15 @@ Simulated years per wallclock day (SYPD) for each model configuration across hor
 | land_no_vegetation | 41472 | 1.03 | 115 | — | — |
 | land_no_vegetation | 73728 | 0.57 | 102 | — | — |
 | land_no_vegetation | 165888 | 0.26 | 100 | — | — |
-| soil_heat | 128 | 593 | 11470 | 85314 | 110298 |
-| soil_heat | 512 | 152 | 9918 | 12579 | 111034 |
-| soil_heat | 2048 | 38 | 6096 | 3151 | 94067 |
-| soil_heat | 4608 | 17 | 16641 | 2346 | 62506 |
-| soil_heat | 8192 | 9.51 | 3255 | 917 | 50495 |
-| soil_heat | 18432 | 4.24 | 1637 | 415 | 21212 |
-| soil_heat | 41472 | 1.87 | 760 | 150 | 11339 |
-| soil_heat | 73728 | 1.06 | 320 | 93 | 7822 |
-| soil_heat | 165888 | 0.47 | 595 | 42 | 4614 |
+| soil_heat | 128 | 593 | 11470 | 85314 | 110312 |
+| soil_heat | 512 | 152 | 9918 | 12579 | 109089 |
+| soil_heat | 2048 | 38 | 6096 | 3151 | 86289 |
+| soil_heat | 4608 | 17 | 16641 | 2346 | 70685 |
+| soil_heat | 8192 | 9.51 | 3255 | 917 | 42156 |
+| soil_heat | 18432 | 4.24 | 1637 | 415 | 21979 |
+| soil_heat | 41472 | 1.87 | 760 | 150 | 9052 |
+| soil_heat | 73728 | 1.06 | 320 | 93 | 6869 |
+| soil_heat | 165888 | 0.47 | 595 | 42 | 4659 |
 
 ## Architecture: `cpu-x86`
 
@@ -299,7 +299,7 @@ Toolchain:
 
 ## Architecture: `reactant-cpu`
 
-Created for Terrarium.jl v0.1.4 on Sun, 09 Aug 2026 18:53:09 in `default` mode (1.0x time steps, 1 thread(s)).
+Created for Terrarium.jl v0.1.4 on Sun, 09 Aug 2026 18:53:09 in `default` mode (1x time steps, 1 thread(s)).
 
 ### Machine details
 
@@ -399,7 +399,7 @@ Reactant backend: `cpu` (selected with `Reactant.set_default_backend("cpu")`).
 
 ## Architecture: `reactant-gpu`
 
-Created for Terrarium.jl v0.1.4 on Sun, 09 Aug 2026 18:38:21 in `default` mode (1x time steps, 1 thread(s)).
+Created for Terrarium.jl v0.1.4 on Sun, 09 Aug 2026 19:10:30 in `default` mode (1.0x time steps, 1 thread(s)).
 
 ### Machine details
 
@@ -464,7 +464,7 @@ Reactant backend: `gpu` (selected with `Reactant.set_default_backend("gpu")`).
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | land | 3.75° | 4608 | — | — | — | — | — | — | — | failed: UndefVarError |
 | land_no_vegetation | 3.75° | 4608 | — | — | — | — | — | — | — | failed: ErrorException |
-| soil_heat | 3.75° | 4608 | 600 | 217 | 65324 | 0.0251 | 5500 | 3.85 MiB | 31.7 s | ok |
+| soil_heat | 3.75° | 4608 | 600 | 217 | 65037 | 0.0253 | 5470 | 3.85 MiB | 31.5 s | ok |
 
 ### Land model, horizontal resolution
 
@@ -498,15 +498,15 @@ Reactant backend: `gpu` (selected with `Reactant.set_default_backend("gpu")`).
 
 | Configuration | Res | Columns | Δt | Steps | SYPD | ms/step | Mcell-steps/s | Memory | Compile |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| soil_heat | 22.50° | 128 | 600 | 2000 | 110298 | 0.0149 | 258 | 114.63 KiB | 14.7 s |
-| soil_heat | 11.25° | 512 | 600 | 1953 | 111034 | 0.0148 | 1040 | 443.13 KiB | 14.6 s |
-| soil_heat | 5.62° | 2048 | 600 | 488 | 94067 | 0.0175 | 3520 | 1.72 MiB | 14.8 s |
-| soil_heat | 3.75° | 4608 | 600 | 217 | 62506 | 0.0263 | 5260 | 3.85 MiB | 1.1 s |
-| soil_heat | 2.81° | 8192 | 600 | 122 | 50495 | 0.0325 | 7550 | 6.85 MiB | 15.8 s |
-| soil_heat | 1.88° | 18432 | 600 | 54 | 21212 | 0.0774 | 7140 | 15.40 MiB | 15.7 s |
-| soil_heat | 1.25° | 41472 | 600 | 24 | 11339 | 0.145 | 8590 | 34.65 MiB | 16.7 s |
-| soil_heat | 0.94° | 73728 | 600 | 20 | 7822 | 0.21 | 10500 | 61.60 MiB | 18.3 s |
-| soil_heat | 0.62° | 165888 | 600 | 20 | 4614 | 0.356 | 14000 | 138.59 MiB | 23.0 s |
+| soil_heat | 22.50° | 128 | 600 | 2000 | 110312 | 0.0149 | 258 | 114.63 KiB | 15.3 s |
+| soil_heat | 11.25° | 512 | 600 | 1953 | 109089 | 0.0151 | 1020 | 443.13 KiB | 14.5 s |
+| soil_heat | 5.62° | 2048 | 600 | 488 | 86289 | 0.019 | 3230 | 1.72 MiB | 14.8 s |
+| soil_heat | 3.75° | 4608 | 600 | 217 | 70685 | 0.0232 | 5950 | 3.85 MiB | 1.1 s |
+| soil_heat | 2.81° | 8192 | 600 | 122 | 42156 | 0.039 | 6310 | 6.85 MiB | 15.0 s |
+| soil_heat | 1.88° | 18432 | 600 | 54 | 21979 | 0.0747 | 7400 | 15.40 MiB | 15.5 s |
+| soil_heat | 1.25° | 41472 | 600 | 24 | 9052 | 0.181 | 6860 | 34.65 MiB | 16.7 s |
+| soil_heat | 0.94° | 73728 | 600 | 20 | 6869 | 0.239 | 9250 | 61.60 MiB | 18.4 s |
+| soil_heat | 0.62° | 165888 | 600 | 20 | 4659 | 0.353 | 14100 | 138.59 MiB | 22.8 s |
 
 ### Number of soil layers
 
