@@ -45,9 +45,9 @@ Base revision: e015a29db9d97090edfd112a5eea165640134404
   longer passes values that are already component defaults. Fixed the vegetation process name in
   `:land` (`VegetationCarbon` → `VegetationCarbonCycle`), which had made every `:land` run fail with
   an `UndefVarError` on all architectures.
-- 2026-08-09: dropped the `γL`/`γR`/`γS` rescaling from `:land` — `compute_Λ_loc` converts them to
-  s⁻¹ upstream since `903530eb`, so the benchmark was applying the conversion a second time. Only
-  `γv_min` is still rescaled.
+- 2026-08-09: dropped the yr⁻¹→s⁻¹ rescaling of the PALADYN rates from `:land` entirely.
+  `compute_Λ_loc` converts `γL`/`γR`/`γS` upstream since `903530eb`, so the benchmark was applying
+  that conversion a second time; `γv_min` is left at its default too. See defect 1 below.
 
 ## Problem description
 
@@ -220,13 +220,16 @@ The model then aborts inside a kernel on `@assert isfinite(β) && 0 <= β <= 1` 
 because `test/coupled_models/land_model_tests.jl` takes a single time step. (`γv_min` already carries
 a `# TODO this parameter is yearly` comment.)
 
-Benchmark workaround: the `:land` configuration rescales the four rates by `1/(365.25·24·3600)`. Only
-parameter values change, so the code path and the cost per step are unaffected.
+Benchmark workaround (2026-08-03, since removed): the `:land` configuration rescaled the four rates
+by `1/(365.25·24·3600)`.
 
-Partly fixed upstream since: `compute_Λ_loc` converts `γL`, `γR` and `γS` to s⁻¹ itself as of
-`903530eb` (2026-08-07), so the benchmark no longer touches them — rescaling them there would have
-been a double conversion. `compute_γv` still returns `γv_min` unconverted, so that one rate is still
-rescaled in `:land`.
+Superseded 2026-08-09. `compute_Λ_loc` converts `γL`, `γR` and `γS` to s⁻¹ itself as of `903530eb`
+(2026-08-07), so rescaling them in the benchmark had become a *double* conversion — litterfall was
+effectively switched off. `:land` now takes the `PALADYNCarbonDynamics` and
+`PALADYNVegetationDynamics` defaults and rescales nothing. `compute_γv` still returns `γv_min`
+unconverted, so the yr⁻¹/s⁻¹ mismatch remains open for that one rate; it damps the vegetation
+fraction on a ~500 s timescale but does not abort the run, because `ν_star` floors at `ν_seed` and
+the tendency degenerates to a linear drift rather than a growing oscillation.
 
 ### 2. The default soil texture makes the vegetation soil-moisture factor non-finite
 
