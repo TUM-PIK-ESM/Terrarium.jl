@@ -58,8 +58,6 @@ function resolve_model_kwargs(nt::NamedTuple, ::Type{NF}) where {NF}
     return NamedTuple{keys(nt)}(map(v -> _resolve_kwarg_value(v, NF), values(nt)))
 end
 
-const SECONDS_PER_YEAR = 365.25 * 24 * 3600
-
 """
 Initial state shared by the coupled land configurations: a warm, variably saturated soil column
 under a thin cold snowpack. `carbon_vegetation` is only meaningful with vegetation enabled.
@@ -95,14 +93,7 @@ function build_model(::Val{:land}, arch, ::Type{NF}; nlat_half::Integer, nz::Int
     strat = HomogeneousSoilStratigraphy(NF; texture)
     soil = SoilEnergyWaterCarbon(NF; strat, hydrology = SoilHydrology(NF, RichardsEq()))
 
-    ## `γv_min` is documented as yr⁻¹ but `compute_γv` returns it unconverted into a `ν` tendency that
-    ## is integrated in seconds, so the vegetation fraction is damped on a ~500 s timescale instead of
-    ## ~500 yr and oscillates with growing amplitude under an explicit stepper at Δt = 600 s. The
-    ## turnover rates `γL`, `γR`, `γS` no longer need this — `compute_Λ_loc` converts them to s⁻¹
-    ## itself — so only the disturbance rate is rescaled here. Only a parameter *value* changes: the
-    ## code path, and therefore the cost per step, is the same, and removing this once `compute_γv`
-    ## converts too will not change the timings.
-    vegetation_dynamics = PALADYNVegetationDynamics(NF; γv_min = NF(0.002 / SECONDS_PER_YEAR))
+    vegetation_dynamics = PALADYNVegetationDynamics(NF)
     vegetation = VegetationCarbonCycle(NF; vegetation_dynamics)
 
     snow = SingleLayerSnow(NF)
