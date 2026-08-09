@@ -40,6 +40,14 @@ Base revision: e015a29db9d97090edfd112a5eea165640134404
 - 2026-08-03: `:bench500` benchmarks `ForwardEuler` against `Heun` only. `IMEX` needs an implicit
   sub-stepper and Terrarium has no concrete one yet — nothing implements
   `timestepping(…) == Implicit()`.
+- 2026-08-09: the shared `benchmark_texture`/`benchmark_soil`/`benchmark_vegetation` helpers were
+  dropped; each `build_model` method now spells out its own soil, texture and vegetation, and no
+  longer passes values that are already component defaults. Fixed the vegetation process name in
+  `:land` (`VegetationCarbon` → `VegetationCarbonCycle`), which had made every `:land` run fail with
+  an `UndefVarError` on all architectures.
+- 2026-08-09: dropped the `γL`/`γR`/`γS` rescaling from `:land` — `compute_Λ_loc` converts them to
+  s⁻¹ upstream since `903530eb`, so the benchmark was applying the conversion a second time. Only
+  `γv_min` is still rescaled.
 
 ## Problem description
 
@@ -212,8 +220,13 @@ The model then aborts inside a kernel on `@assert isfinite(β) && 0 <= β <= 1` 
 because `test/coupled_models/land_model_tests.jl` takes a single time step. (`γv_min` already carries
 a `# TODO this parameter is yearly` comment.)
 
-Benchmark workaround: `benchmark_vegetation` rescales the four rates by `1/(365.25·24·3600)`. Only
+Benchmark workaround: the `:land` configuration rescales the four rates by `1/(365.25·24·3600)`. Only
 parameter values change, so the code path and the cost per step are unaffected.
+
+Partly fixed upstream since: `compute_Λ_loc` converts `γL`, `γR` and `γS` to s⁻¹ itself as of
+`903530eb` (2026-08-07), so the benchmark no longer touches them — rescaling them there would have
+been a double conversion. `compute_γv` still returns `γv_min` unconverted, so that one rate is still
+rescaled in `:land`.
 
 ### 2. The default soil texture makes the vegetation soil-moisture factor non-finite
 
@@ -223,7 +236,8 @@ zero, so the plant available water `(θ − θ_wp)/(θ_fc − θ_wp)` is `0/0`. 
 `max(min(1, ·), 0)` clamp, β is `NaN`, and the same assertion aborts the run — during initialization
 this time. So `LandModel(grid)` with default vegetation and default soil cannot be initialized.
 
-Benchmark workaround: `benchmark_texture` prescribes a loam (`sand = 0.4, clay = 0.2, silt = 0.4`).
+Benchmark workaround: the land configurations prescribe a loam (`sand = 0.4, clay = 0.2`, so
+`silt = 0.4`).
 
 A fix could give the SURFEX hydraulics a floor on `θ_fc − θ_wp`, or default `SoilTexture` to a
 non-degenerate loam. Either way the assertion should also move out of the kernel: a reachable throw

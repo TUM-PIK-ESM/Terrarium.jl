@@ -58,49 +58,7 @@ function resolve_model_kwargs(nt::NamedTuple, ::Type{NF}) where {NF}
     return NamedTuple{keys(nt)}(map(v -> _resolve_kwarg_value(v, NF), values(nt)))
 end
 
-"""
-Soil texture used by the coupled land configurations: a loam with 20% clay.
-
-This has to be prescribed. The default `SoilTexture` is pure sand (`clay = 0`), for which the SURFEX
-field capacity `0.089·(100·clay)^0.35` and wilting point `0.03713·√(100·clay)` both collapse to zero,
-so the plant available water `(θ − θ_wp)/(θ_fc − θ_wp)` — and with it the soil moisture limiting
-factor β — is not finite, and the Medlyn stomatal conductance asserts during initialization.
-"""
-benchmark_texture(::Type{NF}) where {NF} = SoilTexture(NF; sand = NF(0.4), clay = NF(0.2), silt = NF(0.4))
-
-"""
-Soil process shared by the coupled land configurations: energy, water (Richards equation) and
-carbon on a homogeneous loam stratigraphy.
-"""
-function benchmark_soil(::Type{NF}) where {NF}
-    strat = HomogeneousSoilStratigraphy(NF; texture = benchmark_texture(NF))
-    hydrology = SoilHydrology(NF, RichardsEq())
-    return SoilEnergyWaterCarbon(NF; strat, hydrology)
-end
-
 const SECONDS_PER_YEAR = 365.25 * 24 * 3600
-
-"""
-Vegetation process shared by the coupled land configurations.
-
-The PALADYN turnover and disturbance rates (`γL`, `γR`, `γS`, `γv_min`) are documented as yr⁻¹ but
-are used unconverted in tendencies that are integrated in seconds, which gives the vegetation carbon
-pool an e-folding time of ~14 seconds instead of ~14 years. With an explicit time stepper that makes
-`carbon_vegetation` oscillate with growing amplitude for any Δt ≳ 25 s until the model aborts; the
-unit tests never see it because they take a single time step. Until this is fixed upstream the
-benchmark rescales the four rates to s⁻¹, so that the headline configuration measures a converging
-simulation. Only parameter *values* change: the code path, and therefore the cost per step, is the
-same, and removing this once the rates are converted upstream will not change the timings.
-"""
-function benchmark_vegetation(::Type{NF}) where {NF}
-    per_second(rate) = NF(rate / SECONDS_PER_YEAR)
-    carbon_dynamics = PALADYNCarbonDynamics(
-        NF;
-        γL = per_second(0.3), γR = per_second(0.3), γS = per_second(0.05),
-    )
-    vegetation_dynamics = PALADYNVegetationDynamics(NF; γv_min = per_second(0.002))
-    return VegetationCarbon(NF; carbon_dynamics, vegetation_dynamics)
-end
 
 """
 Initial state shared by the coupled land configurations: a warm, variably saturated soil column
@@ -123,8 +81,8 @@ function land_initializers(::Type{NF}; vegetation::Bool) where {NF}
 end
 
 # --- :land — fully coupled land model ---------------------------------------------------
-# Vegetation carbon + soil energy/water/carbon with Richards equation + single-layer snow, on top of
-# the default surface energy balance, surface hydrology and prescribed atmosphere. This is the
+# Vegetation carbon cycle + soil energy/water/carbon with Richards equation + single-layer snow, on
+# top of the default surface energy balance, surface hydrology and prescribed atmosphere. This is the
 # headline configuration: the cross-architecture overview table is its resolution sweep.
 #
 # Δt = 600 s: the coupled model raises a DomainError in the turbulent-flux thermodynamics
@@ -132,9 +90,22 @@ end
 
 function build_model(::Val{:land}, arch, ::Type{NF}; nlat_half::Integer, nz::Integer, model_kwargs = (;)) where {NF}
     grid = benchmark_grid(arch, NF; nlat_half, nz)
-    soil = benchmark_soil(NF)
+
+    texture = SoilTexture(NF; sand = NF(0.4), clay = NF(0.2))
+    strat = HomogeneousSoilStratigraphy(NF; texture)
+    soil = SoilEnergyWaterCarbon(NF; strat, hydrology = SoilHydrology(NF, RichardsEq()))
+
+    ## `γv_min` is documented as yr⁻¹ but `compute_γv` returns it unconverted into a `ν` tendency that
+    ## is integrated in seconds, so the vegetation fraction is damped on a ~500 s timescale instead of
+    ## ~500 yr and oscillates with growing amplitude under an explicit stepper at Δt = 600 s. The
+    ## turnover rates `γL`, `γR`, `γS` no longer need this — `compute_Λ_loc` converts them to s⁻¹
+    ## itself — so only the disturbance rate is rescaled here. Only a parameter *value* changes: the
+    ## code path, and therefore the cost per step, is the same, and removing this once `compute_γv`
+    ## converts too will not change the timings.
+    vegetation_dynamics = PALADYNVegetationDynamics(NF; γv_min = NF(0.002 / SECONDS_PER_YEAR))
+    vegetation = VegetationCarbonCycle(NF; vegetation_dynamics)
+
     snow = SingleLayerSnow(NF)
-    vegetation = benchmark_vegetation(NF)
     model = LandModel(grid; soil, snow, vegetation, resolve_model_kwargs(model_kwargs, NF)...)
     initializers = land_initializers(NF; vegetation = true)
     return (; model, boundary_conditions = (;), initializers, Δt = NF(600))
@@ -146,7 +117,11 @@ end
 
 function build_model(::Val{:land_no_vegetation}, arch, ::Type{NF}; nlat_half::Integer, nz::Integer, model_kwargs = (;)) where {NF}
     grid = benchmark_grid(arch, NF; nlat_half, nz)
-    soil = benchmark_soil(NF)
+
+    texture = SoilTexture(NF; sand = NF(0.4), clay = NF(0.2))
+    strat = HomogeneousSoilStratigraphy(NF; texture)
+    soil = SoilEnergyWaterCarbon(NF; strat, hydrology = SoilHydrology(NF, RichardsEq()))
+
     snow = SingleLayerSnow(NF)
     model = LandModel(grid; soil, snow, vegetation = nothing, resolve_model_kwargs(model_kwargs, NF)...)
     initializers = land_initializers(NF; vegetation = false)
