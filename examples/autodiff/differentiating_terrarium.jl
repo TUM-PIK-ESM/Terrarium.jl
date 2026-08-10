@@ -135,6 +135,6 @@ Makie.Axis(f5[1, 1], ylabel = "Soil depth (m)", xlabel = "Sensitivity ∂T/∂κ
 Makie.scatterlines!(f5[1, 1], ∂T_∂κ_quartz, zs)
 f5
 
-# The behavior of the sensitivity is physically consistent: the higher the conductivity, the quicker the heating from above (with the surface temperature higher than the initial soil temperature) can propagate downwards. Logically, there is only sensitivity for layer that have already seen a change in temperature during this (short) time integration.
+# The behavior of the sensitivity is physically consistent: the higher the conductivity, the quicker the heating from above (with the surface temperature higher than the initial soil temperature) can propagate downwards. Logically, there is only sensitivity for layers that have already seen a change in temperature during this (short) time integration.
 #
 # These examples should just demonstrate the technical possibilities of Terrarium.jl in an easy and fast to compute setup, stay tuned for more complex examples.
