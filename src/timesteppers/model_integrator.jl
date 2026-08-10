@@ -89,33 +89,38 @@ function Oceananigans.Simulations.run!(
         integrator::ModelIntegrator;
         steps::Union{Int, Nothing} = nothing,
         period::Union{Period, Nothing} = nothing,
-        Δt = default_dt(timestepper(integrator))
+        Δt = default_dt(timestepper(integrator)),
+        checkpointing = false,
+        show_progress = false
     )
     Δt = convert_dt(Δt)
     steps = get_steps(steps, period, Δt)
-
-    for _ in 1:steps
-        timestep!(integrator, Δt, finalize = false)
-    end
-
+    # Run for the specified number of time steps
+    run_timesteps!(integrator, Δt, steps, checkpointing; show_progress)
     # Update auxiliary variables for final timestep
     compute_auxiliary!(integrator.state, integrator.model)
     return integrator
 end
 
 """
-    run_timesteps!(integrator, Δt, Nt, checkpointing = false)
+    run_timesteps!(integrator, Δt, steps, checkpointing = false)
 
-Advance `integrator` by `Nt` steps of size `Δt`.
+Advance `integrator` for the given number of `steps` of size `Δt`.
 
 The generic (host) implementation is a plain loop and ignores `checkpointing`. `ReactantState`
 integrators override this method in `TerrariumReactantExt`, compiling the loop into a single
 traced program in which `checkpointing` selects the reverse-mode-AD checkpointing scheme
 (`false`, or a scheme such as `Reactant.Periodic(n)`).
 """
-function run_timesteps!(integrator::ModelIntegrator, Δt, Nt, checkpointing = false)
-    for _ in 1:Nt
-        timestep!(integrator, Δt)
+function run_timesteps!(integrator::ModelIntegrator, Δt, steps, checkpointing = false; show_progress = false)
+    if show_progress
+        @showprogress "Integrating $(nameof(typeof(integrator.model))) for $steps steps" for _ in 1:steps
+            timestep!(integrator, Δt, finalize = false)
+        end
+    else
+        for _ in 1:steps
+            timestep!(integrator, Δt, finalize = false)
+        end
     end
     compute_auxiliary!(integrator.state, integrator.model)
     return nothing
