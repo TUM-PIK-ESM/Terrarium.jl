@@ -117,17 +117,18 @@ end
         temperature = (x, z) -> 1.0 - 0.02 * z,
         saturation_water_ice = (x, z) -> 0.5,
         snow_water_equivalent = 0.2,
-        snow_temperature = 0.0,   # invclosure -> fully-liquid pack (θ_liq = 1)
+        snow_temperature = 0.0,
     )
     integrator = initialize(land; initializers)
     state = integrator.state
     set!(state.rainfall, 0.0)
+    set!(state.snow_energy, 0.0) # set snow energy to zero -> fully melted (not realistic...)
     Terrarium.closure!(state, land)
     compute_auxiliary!(state, land)
     # meltwater outflow implied by the diagnosed liquid fraction
     θ_liq = Array(interior(state.snow_liquid_fraction))
     M_r = Terrarium.compute_meltwater_outflow.(Ref(snow.hydraulic_properties), θ_liq)
-    @test all(θ_liq .≈ 1)                    # melting pack
+    @test all(θ_liq .≈ 1)                     # fully melted pack
     @test all(M_r .> 0)                       # meltwater draining
     infil = Array(interior(state.infiltration))
     runoff = Array(interior(state.surface_runoff))
@@ -161,4 +162,34 @@ end
     @test all(isapprox.(E, (1 .- f) .* g .* Δq; rtol = 1.0e-6))   # ground evaporation scaled by (1 − f_snow)
     @test all(isfinite.(interior(it.state.sublimation)))
     @test all(isfinite.(interior(it.state.latent_heat_flux)))
+end
+
+@testset "LandModel: thin snow over frozen soil stays stable" begin
+    # Regression for the thin-snowpack instability: a vanishing snowpack over cold soil made the
+    # snow→soil basal flux diverge (denominator ∝ d_snow → 0), driving the snow temperature far below
+    # physical bounds and eventually a DomainError in the vapor-pressure closure. With the basal-flux
+    # conduction depth floored at `min_conduction_thickness`, a thin pack must stay finite and bounded.
+    grid = ColumnGrid(CPU(), ExponentialSpacing(Δz_max = 1.0, N = 50))
+    soil = SoilEnergyWaterCarbon(eltype(grid); hydrology = SoilHydrology(eltype(grid), RichardsEq()))
+    land = LandModel(grid; soil, snow = SingleLayerSnow(eltype(grid)), vegetation = nothing)
+    # 1 mm SWE pack (d_snow ≈ 3 mm) over deeply frozen soil
+    initializers = (
+        temperature = (x, z) -> -10.0 - 0.02 * z,
+        saturation_water_ice = (x, z) -> min(1, 0.8 - 0.05 * z),
+        snow_water_equivalent = 1.0e-3,
+        snow_temperature = -10.0,
+    )
+    integrator = initialize(land; initializers)
+    # step several times at a coupling-scale Δt; without the floor this blows up within a few steps
+    for _ in 1:20
+        timestep!(integrator, 300.0)
+    end
+    T_snow = interior(integrator.state.snow_temperature)
+    @test all(isfinite.(T_snow))
+    @test all(isfinite.(interior(integrator.state.skin_temperature)))
+    @test all(isfinite.(interior(integrator.state.basal_heat_flux)))
+    @test all(isfinite.(interior(integrator.state.internal_energy)))
+    # snow temperature must remain physically bounded (never dive toward absolute zero)
+    @test all(T_snow .>= -60)
+    @test all(T_snow .<= 0)
 end

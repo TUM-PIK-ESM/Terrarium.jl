@@ -37,6 +37,9 @@ function PALADYNCanopyEvapotranspiration(
     return PALADYNCanopyEvapotranspiration{NF, typeof(ground_resistance)}(C_can, ground_resistance)
 end
 
+""" $TYPEDSIGNATURES """
+@inline ground_evaporation_conductance(::PALADYNCanopyEvapotranspiration, β, rₐ, rₛ) = β / (rₐ + rₛ)
+
 """
     $TYPEDSIGNATURES
 
@@ -138,14 +141,14 @@ of the skin temperature.
 
     # Compute aerodynamic resistances and resistance factors
     rₐ = aerodynamic_resistance(i, j, grid, fields, atmos) # aerodynamic resistance
-    rₑ = aerodynamic_resistance(i, j, grid, fields, atmos, evapotranspiration, vegetation) # aerodynamic resistance between ground and canopy
+    rₛ = aerodynamic_resistance(i, j, grid, fields, atmos, evapotranspiration, vegetation) # aerodynamic resistance between ground and canopy
     f_can = saturation_canopy_water(i, j, grid, fields, canopy_interception)
     β = ground_evaporation_resistance_factor(i, j, grid, fields, evapotranspiration.ground_resistance, soil)
 
     # Compute skin-driven vapor conductances (independent of skin temperature). These are the
     # source of truth from which the SEB derives the latent heat flux lazily during the skin
     # temperature solve (see the lazy `surface_humidity_flux` method above).
-    g_gnd = ground_evaporation_conductance(evapotranspiration, β, rₑ)
+    g_gnd = ground_evaporation_conductance(evapotranspiration, β, rₐ, rₛ)
     g_can = canopy_evaporation_conductance(evapotranspiration, f_can, rₐ)
     g_trp = transpiration_conductance(evapotranspiration, rₐ, g_stm)
     return g_gnd, g_trp, g_can
@@ -245,12 +248,13 @@ Compute the aerodynamic resistance between the ground and canopy as a function o
         evapotranspiration::PALADYNCanopyEvapotranspiration{NF},
         ::AbstractVegetation # included just to make explicit the dependence on vegetation fields
     ) where {NF}
-    @inbounds let LAI = max(fields.leaf_area_index[i, j], zero(NF)),
-            SAI = max(fields.stem_area_index[i, j], zero(NF)),
-            Vₐ = windspeed(i, j, grid, fields, atmos),
-            C = evapotranspiration.C_can  # drag coefficient for the canopy
-        rₙ = (1 - exp(-LAI - SAI)) / (C * Vₐ)
-        return rₙ
+    @inbounds let
+        LAI = max(fields.leaf_area_index[i, j], zero(NF))
+        SAI = max(fields.stem_area_index[i, j], zero(NF))
+        Vₐ = windspeed(i, j, grid, fields, atmos)
+        C = evapotranspiration.C_can  # drag coefficient for the canopy
+        rₛ = (1 - exp(-LAI - SAI)) / (C * Vₐ)
+        return rₛ
     end
 end
 
