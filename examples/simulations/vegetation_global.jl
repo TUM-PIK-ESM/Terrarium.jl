@@ -27,7 +27,7 @@ NF = Float32
 # [`ColumnRingGrid`](@ref) at ~1° resolution (72 Gaussian rings), keeping only grid points with
 # >50% land cover. The land-sea mask is loaded from the ERA5-Land invariants asset and regridded
 # onto the model grid.
-land_sea_frac_native = on_architecture(arch, Terrarium.load_asset(ERA5LandInvariants(), "lsm"; NF))
+land_sea_frac_native = RingGrids.Field(arch, ERA5LandInvariants(), "lsm"; NF)
 model_rings = on_architecture(arch, RingGrids.FullGaussianGrid(72))
 land_sea_frac = RingGrids.interpolate(model_rings, land_sea_frac_native)
 land_mask = land_sea_frac .> 0.5

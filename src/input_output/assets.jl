@@ -106,20 +106,26 @@ end
     $TYPEDSIGNATURES
 
 Download (if necessary) the given `asset` via [`get_asset`](@ref) and read the variable `name`
-from its data file, returning a suitable `Field` based on the asset's `native_grid` with element type
-`NF`. The asset's `indices` are applied when reading (e.g. to select a single time record), and `fill_value`
+from its data file, returning a suitable Array-type based on the asset's file format. The asset's
+`indices` are applied when reading (e.g. to select a single time record), and `fill_value`
 replaces missing data; it defaults to `NF(NaN)`.
 
 The underlying read is dispatched to an I/O extension based on the asset's [`format`](@ref); load
 Rasters.jl and NCDatasets.jl to enable reading NetCDF and other raster files.
 """
-load_asset(asset::AbstractLandAsset, name::String; NF = Float32, fill_value = NF(NaN)) = load_asset(CPU(), asset, name; NF, fill_value)
-function load_asset(arch, asset::AbstractLandAsset, name::String; NF = Float32, fill_value = NF(NaN))
+function load_asset(asset::AbstractLandAsset, name::String; NF = Float32, fill_value = NF(NaN))
     path = get_asset(asset)
     fmt = format(asset)
-    grid = on_architecture(arch, native_grid(asset))
+    grid = native_grid(asset)
     return load_asset(path, name, grid, fmt, NF; indices = indices(asset), fill_value)
 end
+
+"""
+    load_asset(path, name, fmt, ::Type{NF}; indices, fill_value) where {NF}
+
+Dispatch implemented by I/O backends which reads variable `name` from the asset file at `path`.
+"""
+load_asset(path, name, fmt::FileFormat, ::Type{NF}; kwargs...) where {NF} = error("no extension loaded that handles $fmt; did you call `using Rasters`?")
 
 """
     $TYPEDSIGNATURES
@@ -154,4 +160,13 @@ function get_artifact(name::String)
     @assert !isnothing(hash) "no artifact with name $name found"
     Pkg.Artifacts.ensure_artifact_installed(name, artifact_toml)
     return Pkg.Artifacts.artifact_path(hash)
+end
+
+RingGrids.Field(asset::AbstractLandAsset, name::String; kwargs...) = RingGrids.Field(CPU(), asset, name; kwargs...)
+RingGrids.Field(arch, asset::AbstractLandAsset, name::String; kwargs...) = RingGrids.Field(arch, native_grid(asset), asset, name; kwargs...)
+function RingGrids.Field(arch, grid::RingGrids.AbstractGrid, asset::AbstractLandAsset, name::String; kwargs...)
+    data = on_architecture(arch, Matrix(load_asset(asset, name; kwargs...)))
+    field = RingGrids.Field(on_architecture(arch, grid), size(data)[3:end]...)
+    field .= reshape(data, :, size(data)[3:end]...)
+    return field
 end
