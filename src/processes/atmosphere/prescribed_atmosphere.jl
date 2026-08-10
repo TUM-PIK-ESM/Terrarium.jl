@@ -176,7 +176,7 @@ variables(::WindVelocity) = (
     input(:wind_v, XY(), default = 0.1, units = u"m/s", desc = "Wind velocity v-component in m/s"),
 )
 
-@propagate_inbounds windspeed(i, j, grid, fields, atmos::AbstractAtmosphere{NF, PR, IR, HD, WindVelocity}) where {NF, PR, IR, HD} = sqrt(fields.wind_u[i, j]^2 + fields.wind_v[i, j]^2)
+@propagate_inbounds windspeed(i, j, grid, fields, atmos::AbstractAtmosphere{NF, PR, IR, HD, WindVelocity}) where {NF, PR, IR, HD} = max(sqrt(fields.wind_u[i, j]^2 + fields.wind_v[i, j]^2), minimum_windspeed(atmos))
 
 
 """
