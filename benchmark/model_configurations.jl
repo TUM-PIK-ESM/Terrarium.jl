@@ -7,10 +7,6 @@
 # resolutions stay comparable.
 #
 # This mirrors the registry pattern used by `test/reactant/setup.jl`.
-#
-# Reactant note: closures that end up inside a traced time step (boundary conditions in particular)
-# must capture only `isbits` values — a closure over `NF` captures a `Type` and fails to compile.
-# Numeric constants are therefore hoisted into local variables before the closure is formed.
 
 import RingGrids
 
@@ -47,8 +43,8 @@ function benchmark_grid(arch, ::Type{NF}; nlat_half::Integer, nz::Integer) where
     return ColumnRingGrid(arch, NF, spacing, benchmark_rings(nlat_half))
 end
 
-# Resolve a NamedTuple of per-run model kwargs. Convention (as in SpeedyWeather's benchmark suite):
-# a `Type` or `Function` value is called with `NF` — every Terrarium component has an `T(NF)`
+# Resolve a NamedTuple of per-run model kwargs.
+# Convention: a `Type` or `Function` value is called with `NF` — every Terrarium component has an `T(NF)`
 # constructor — so a suite can write `model_kwargs = (timestepper = Heun,)`. Everything else is
 # passed through unchanged.
 _resolve_kwarg_value(v::Type, ::Type{NF}) where {NF} = v(NF)

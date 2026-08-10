@@ -19,10 +19,6 @@ An optional second argument sets how long the suite runs:
 numbers worth publishing. The mode is recorded alongside the results: SYPD is a rate and so is
 comparable across modes, but the noise level is not.
 
-The CPU label is derived from `Sys.ARCH`. GPU runs require a CUDA device. Both Reactant variants load
-`CUDA` as well — it provides the KernelAbstractions↔Reactant glue and is required even on the CPU
-backend — and select the XLA backend with `Reactant.set_default_backend`.
-
 Results are merged into `assets/benchmark_results.json`, keyed by architecture label. `README.md` is
 then regenerated from the whole store, so a run on one machine never clobbers another's numbers. The
 documentation page `docs/src/benchmarks.md` is generated from the same JSON at doc-build time; see
