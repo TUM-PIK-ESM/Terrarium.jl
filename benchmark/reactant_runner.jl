@@ -6,6 +6,9 @@
 # handed back (see `ext/TerrariumReactantExt/integrator.jl`). Timing `run!` would therefore time the
 # XLA compiler, not the model. We compile once here — with exactly the flags the extension uses — and
 # report the compile time as its own metric, since for Reactant it is a headline number in itself.
+#
+# TODO: This should be regarded as a temporaray approach, the next Reactant related revision should rather 
+# allow the compiled call to be handed over directly without redefining this here
 
 function build_runner(::ReactantState, integrator, Δt, nsteps)
     Δt = Terrarium.convert_dt(Δt)
