@@ -111,7 +111,7 @@ Wait for all pending device work so that a wallclock measurement covers it. Reac
 already synchronous (the compiled program is built with `sync = true`).
 """
 device_synchronize(arch) = KernelAbstractions.synchronize(device(arch))
-device_synchronize(::ReactantState) = nothing
+device_synchronize(::ReactantState) = Reactant.
 
 "Steps taken before the timed run, to move JIT compilation and first kernel launches out of it."
 const WARMUP_STEPS = 3
