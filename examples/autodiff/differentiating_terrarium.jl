@@ -16,12 +16,12 @@ using CairoMakie
 using Statistics
 
 arch = CPU()
-FT = Float32
-grid = ColumnGrid(arch, FT, ExponentialSpacing())
-initializer = SoilInitializer(FT)
-model = SoilModel(grid; timestepper = ForwardEuler(FT), initializer = initializer)
+NF = Float32
+grid = ColumnGrid(arch, NF, ExponentialSpacing())
+initializer = SoilInitializer(NF)
+model = SoilModel(grid; timestepper = ForwardEuler(NF), initializer = initializer)
 # constant surface temperature of 1°C
-bcs = PrescribedSurfaceTemperature(:T_ub, FT(1.0))
+bcs = PrescribedSurfaceTemperature(:T_ub, NF(1.0))
 integrator = initialize(model, boundary_conditions = bcs)
 
 # So far, this is just our usual setup. In this case, for a soil column with a prescribed surface temperature.
@@ -84,15 +84,15 @@ f2
 # the memory overhead of reverse mode.
 # As a consequence, there is no need to use Checkpointing.jl for this example.
 # To make sure that ``\kappa_\text{quartz}`` has a physical effect, we construct the model with a soil consisting of 100% sand.
-grid = ColumnGrid(arch, FT, UniformSpacing())
-initializer = SoilInitializer(FT)
-text = SoilTexture(FT; sand = FT(1.0))
-strat = HomogeneousSoilStratigraphy(FT; texture = text)
-soil = SoilEnergyWaterCarbon(FT; strat)
-model = SoilModel(grid; timestepper = ForwardEuler(FT), initializer = initializer)
+grid = ColumnGrid(arch, NF, UniformSpacing())
+initializer = SoilInitializer(NF)
+text = SoilTexture(NF; sand = NF(1.0))
+strat = HomogeneousSoilStratigraphy(NF; texture = text)
+soil = SoilEnergyWaterCarbon(NF; strat)
+model = SoilModel(grid; timestepper = ForwardEuler(NF), initializer = initializer)
 
 # We re-initialize a fresh integrator so the state starts at ``t = 0`` and set a constant surface temperature of 1°C
-bcs = PrescribedSurfaceTemperature(:T_ub, FT(1.0))
+bcs = PrescribedSurfaceTemperature(:T_ub, NF(1.0))
 integrator = initialize(model, boundary_conditions = bcs)
 dintegrator = make_zero(integrator)
 
@@ -108,7 +108,7 @@ f3
 # As the initial profile gets warmer with depth, the bottom will start cooling down towards thermal equilibrium.
 # Only for ``\kappa_\text{quartz}`` we set the tangent to 1.0, so that the jacobian-vector products (jVPs) computed by forward-mode AD can accumulate the sensitivity to it.
 
-@reset dintegrator.model.soil.energy.thermal_properties.conductivities.quartz = FT(1.0)
+@reset dintegrator.model.soil.energy.thermal_properties.conductivities.quartz = NF(1.0)
 
 # Define a function which returns the entire temperature profile after a time integration of 400 time steps.
 

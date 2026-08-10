@@ -7,12 +7,12 @@ using Enzyme
 @testset "Soil energy model: timestepping with checkpointing" begin
     # Model setup
     arch = CPU()
-    FT = Float32
-    grid = ColumnGrid(arch, FT, UniformSpacing(N = 10))
-    initializer = SoilInitializer(FT)
-    model = SoilModel(grid; timestepper = ForwardEuler(FT), initializer = initializer)
+    NF = Float32
+    grid = ColumnGrid(arch, NF, UniformSpacing(N = 10))
+    initializer = SoilInitializer(NF)
+    model = SoilModel(grid; timestepper = ForwardEuler(NF), initializer = initializer)
     # constant surface temperature of 1°C
-    bcs = PrescribedSurfaceTemperature(:T_ub, FT(1.0))
+    bcs = PrescribedSurfaceTemperature(:T_ub, NF(1.0))
     integrator = initialize(model, boundary_conditions = bcs)
 
     # AD setup
