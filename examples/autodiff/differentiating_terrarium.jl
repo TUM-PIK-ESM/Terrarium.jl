@@ -48,7 +48,7 @@ end
 # - `set_runtime_activity(Reverse)` tells Enzyme to use reverse-mode AD while enabling runtime activity (see [here](https://enzymead.github.io/Enzyme.jl/dev/faq/#faq-runtime-activity) for details)
 # - `Active` tells Enzyme that we want to take the derivative of the scalar output of `layer_temperature` with respect to the function's input. The cotangent of the function output is set to 1.0 in this way for the vJP calculation.
 # - `Duplicated(integrator, dintegrator)` `dintegrator` is shadow memory that Enzyme uses to accumulate the vJP of the `integrator` state variables.
-
+#
 #Executing this for the first time, might take a few minutes. Subsequent executions will be very fast though.
 
 autodiff(set_runtime_activity(Reverse), layer_temperature, Active, Duplicated(integrator, dintegrator))
@@ -59,10 +59,14 @@ dU = interior(dintegrator.state.internal_energy)[1, 1, :]
 dT = interior(dintegrator.state.temperature)[1, 1, :]
 zs = znodes(integrator.state.temperature)
 
+# For temperature:
+
 f = Makie.Figure()
 Makie.Axis(f[1, 1], ylabel = "Soil depth", xlabel = "Sensitivity dT_f/dT_0")
 Makie.scatterlines!(f[1, 1], dT, zs)
 f
+
+# For internal energy:
 
 f2 = Makie.Figure()
 Makie.Axis(f2[1, 1], ylabel = "Soil depth", xlabel = "Sensitivity dT_f/dU_0")
@@ -125,10 +129,14 @@ end
 
 zs = znodes(integrator.state.temperature)
 
+# Final temperature profile:
+
 f4 = Makie.Figure()
 Makie.Axis(f4[1, 1], ylabel = "Soil depth (m)", xlabel = "Temperature (°C)")
 Makie.scatter!(f4[1, 1], integrator.state.temperature)
 f4
+
+# Sensitivities:
 
 f5 = Makie.Figure()
 Makie.Axis(f5[1, 1], ylabel = "Soil depth (m)", xlabel = "Sensitivity ∂T/∂κ_quartz  (K / (W·m⁻¹⋅K⁻¹))")
