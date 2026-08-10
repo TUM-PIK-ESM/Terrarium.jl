@@ -85,7 +85,7 @@ land = Speedy.LandModel(
 # Build the coupled PrimitiveWetModel
 surface_heat_flux = Speedy.SurfaceHeatFlux(land.spectral_grid, land = Speedy.PrescribedLandHeatFlux())
 surface_humidity_flux = Speedy.SurfaceHumidityFlux(land.spectral_grid, land = Speedy.PrescribedLandHumidityFlux())
-output = Speedy.NetCDFOutput(land.spectral_grid, Speedy.PrimitiveDryModel; interval = Hour(3), nlayers_soil = land.geometry.nlayers, path = "outputs/")
+output = Speedy.NetCDFOutput(land.spectral_grid, Speedy.PrimitiveDryModel; interval = Hour(4), nlayers_soil = land.geometry.nlayers, path = "outputs/")
 time_stepping = Speedy.Leapfrog(land.spectral_grid, Δt_at_T32 = Minute(15))
 primitive_wet_coupled = Speedy.PrimitiveWetModel(
     land.spectral_grid;
@@ -102,7 +102,7 @@ Speedy.add!(primitive_wet_coupled.output, Speedy.SnowDepthOutput())
 # Run the coupled simulation
 @info "Initializing coupled simulation"
 sim_coupled = @time Speedy.initialize!(primitive_wet_coupled)
-period = Month(6)
+period = Year(1)
 @info "Running simulation for $period"
 @time Speedy.run!(sim_coupled, period = period, output = true)
 
@@ -143,8 +143,8 @@ Makie.scatterlines(f, zs)
 
 # Make some animations!
 sim_copuled_cpu = on_architecture(CPU(), sim_coupled)
-Speedy.animate(sim_copuled_cpu, output_file = "plots/speedy_terrarium_tair_animation.mp4", variable = "temp", framerate = 12, level = spectral_grid.nlayers, transient_timesteps = 1)
-Speedy.animate(sim_copuled_cpu, output_file = "plots/speedy_terrarium_tsoil_animation.mp4", variable = "st", framerate = 12, level = 1, transient_timesteps = 1)
+Speedy.animate(sim_copuled_cpu, output_file = "plots/speedy_terrarium_sd_animation.mp4", variable = "sd", framerate = 12, colorrange = (0, 0.2), transient_timesteps = 1)
+Speedy.animate(sim_copuled_cpu, output_file = "plots/speedy_terrarium_tsoil_animation.mp4", variable = "st", framerate = 12, layer = 1, transient_timesteps = 1)
+Speedy.animate(sim_copuled_cpu, output_file = "plots/speedy_terrarium_tair_animation.mp4", variable = "temp", framerate = 12, layer = spectral_grid.nlayers, transient_timesteps = 1)
 Speedy.animate(sim_copuled_cpu, output_file = "plots/speedy_terrarium_shf_animation.mp4", variable = "shf", framerate = 12, transient_timesteps = 1)
 Speedy.animate(sim_copuled_cpu, output_file = "plots/speedy_terrarium_shuf_animation.mp4", variable = "shuf", framerate = 12, transient_timesteps = 1)
-Speedy.animate(sim_copuled_cpu, output_file = "plots/speedy_terrarium_sd_animation.mp4", variable = "sd", framerate = 12, transient_timesteps = 1)
