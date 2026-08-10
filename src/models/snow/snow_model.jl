@@ -67,3 +67,11 @@ function invclosure!(state, model::SnowModel)
     invclosure!(state, model.grid, get_closure(model.snow), model.snow, model.constants)
     return nothing
 end
+
+# Time stepping
+function Terrarium.timestep!(state::StateVariables, model::SnowModel, timestepper::Terrarium.AbstractTimeStepper, Δt)
+    # Enforce SWE >= 0
+    # TODO: Rewrite to ensure mass conservation
+    interior(state.snow_water_equivalent) .= max.(interior(state.snow_water_equivalent), 0)
+    return nothing
+end

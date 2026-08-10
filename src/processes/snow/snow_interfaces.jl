@@ -47,7 +47,7 @@ the snow→soil basal conductive flux `Q_base` and the bare-ground surface energ
     T_soil = fields.ground_temperature[i, j]
     ρ_snow = compute_snow_density(i, j, grid, fields, snow.density)
     κ_snow = compute_thermal_conductivity(snow, constants.material, ρ_snow)
-    Q_base = compute_snow_basal_heat_flux(κ_snow, T_soil, T_snow, d_snow)
+    Q_base = compute_snow_basal_heat_flux(κ_snow, T_soil, T_snow, d_snow, snow.min_conduction_thickness)
     return f * Q_base + (one(f) - f) * G
 end
 

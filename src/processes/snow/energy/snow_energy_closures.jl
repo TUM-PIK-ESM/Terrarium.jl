@@ -56,7 +56,7 @@ function closure!(
     )
     kernel_args = (closure, snow, constants)
     out = closure_fields(state, snow)
-    fields = get_fields(state, kernel_args...; except = out)
+    fields = get_fields(state, kernel_args...)
     launch!(grid, XY, snow_energy_to_temperature_kernel!, out, fields, kernel_args...)
     return nothing
 end
@@ -78,9 +78,9 @@ function invclosure!(
         args...
     )
     kernel_args = (closure, snow, constants)
-    # snow_energy is the prognostic variable, so collect the output fields manually
-    out = (snow_energy = state.snow_energy, snow_liquid_fraction = state.snow_liquid_fraction)
-    fields = get_fields(state, kernel_args...; except = out)
+    # manually add prognostic snow_energy to output fields
+    out = merge(closure_fields(state, snow), (snow_energy = state.snow_energy,))
+    fields = get_fields(state, kernel_args...)
     launch!(grid, XY, snow_temperature_to_energy_kernel!, out, fields, kernel_args...)
     return nothing
 end
@@ -106,9 +106,9 @@ Recover the snow temperature and liquid water fraction from the depth-integrated
     d_snow = compute_snow_depth(snow, W_snow, ρ_snow, ρ_w)
     # Volumetric latent heat of fusion
     ρLθ = ρ_snow * L_sl # ρ_snow L_sl = ρ_w θ L_sl by definition
-    U_snow = compute_volumetric_snow_energy(Ū_snow, d_snow)
+    U_snow = compute_snow_volumetric_energy(Ū_snow, d_snow, snow.min_conduction_thickness)
     liq = liquid_water_fraction(FreeWater(), U_snow, ρLθ)
-    out.snow_liquid_fraction[i, j, 1] = liq
+    out.snow_liquid_fraction[i, j, 1] = liq * (W_snow > 0)
     C_snow = compute_snow_volumetric_heat_capacity(snow, constants, ρ_snow, liq)
     # Snow temperature cannot exceed 0°C, so clip the free-water temperature at zero. The energy above
     # the fully-melted (0°C, all-liquid) reference, i.e. the positive part `U_snow > 0`, is not stored; it
@@ -129,17 +129,14 @@ Compute the depth-integrated snow energy from a prescribed temperature at grid c
         snow::SingleLayerSnow,
         constants::PhysicalConstants
     )
-    T = fields.snow_temperature[i, j] # assumed given (initialization)
+    T = min(fields.snow_temperature[i, j], zero(eltype(grid))) # assumed given (initialization)
     W_snow = fields.snow_water_equivalent[i, j] # assumed given (prognostic)
     L_sl = constants.thermodynamics.latent_heat_fusion
     ρ_w = constants.material.density_water
     ρ_snow = compute_snow_density(i, j, grid, fields, snow.density)
     d_snow = compute_snow_depth(snow, W_snow, ρ_snow, ρ_w)
     ρLθ = ρ_snow * L_sl # ρ_snow L_sl = ρ_w θ L_sl by definition
-    # N.B. For the free-water characteristic the liquid fraction is indeterminate at T = 0; assume
-    # frozen for T < 0 and thawed otherwise. This mapping is for initialization only and must **not**
-    # be used in the calculation of tendencies.
-    liq = ifelse(T >= zero(T), one(T), zero(T))
+    liq = zero(eltype(grid)) # always initialize snow fully frozen
     out.snow_liquid_fraction[i, j, 1] = liq
     C_snow = compute_snow_volumetric_heat_capacity(snow, constants, ρ_snow, liq)
     U_snow = T * C_snow - ρLθ * (one(liq) - liq)

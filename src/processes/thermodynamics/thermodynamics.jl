@@ -71,7 +71,9 @@ pressure is computed over ice for `T <= 0°C` and over water for `T > 0°C`. Wra
 [`saturation_vapor_pressure`](@extref Thermodynamics.saturation_vapor_pressure).
 """
 @inline function saturation_vapor_pressure(c::ThermodynamicConstants, T::NF) where {NF}
-    T_K = celsius_to_kelvin(c, T)
+    # Floor the absolute temperature at `eps` before entering Thermodynamics.jl: its Clausius–Clapeyron
+    # form evaluates `log(T_K / T_triple)`, which throws a `DomainError` for `T_K ≤ 0`
+    T_K = max(celsius_to_kelvin(c, T), eps(NF))
     return ifelse(
         T <= zero(T),
         Thermodynamics.saturation_vapor_pressure(c, T_K, Thermodynamics.Ice()),
@@ -100,7 +102,11 @@ over ice for `T <= 0°C` and over liquid water otherwise. Wrapper around
 [`q_vap_saturation`](@extref Thermodynamics.q_vap_saturation).
 """
 @inline function saturation_specific_humidity_vapor(c::ThermodynamicConstants, T, ρ)
+    # Floor the absolute temperature at `eps` before entering Thermodynamics.jl, which internally
+    # evaluates the `log(T_K / T_triple)` Clausius–Clapeyron form and would throw a `DomainError`
+    # (a Reactant-incompatible trap) for `T_K ≤ 0`; see [`saturation_vapor_pressure`](@ref).
     T_K = celsius_to_kelvin(c, T)
+    T_K = max(T_K, eps(typeof(T_K)))
     return ifelse(
         T <= zero(T),
         Thermodynamics.q_vap_saturation(c, T_K, ρ, Thermodynamics.Ice()),

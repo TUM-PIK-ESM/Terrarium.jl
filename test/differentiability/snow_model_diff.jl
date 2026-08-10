@@ -55,11 +55,12 @@ end
 end
 
 @testset "Snow basal heat flux: differentiability" begin
-    # Q_base = 2·κ·(T_soil − T_snow)/(d_snow + eps); gradient w.r.t. the soil temperature is 2·κ/(d_snow + eps)
+    # Q_base = 2·κ·(T_soil − T_snow)/max(d_snow, d_min); gradient w.r.t. the soil temperature is 2·κ/d_snow for d_snow > d_min
     κ = 0.3
     d_snow = 0.5
-    grad, = Enzyme.autodiff(Reverse, Terrarium.compute_snow_basal_heat_flux, Active, Const(κ), Active(1.0), Const(-2.0), Const(d_snow))
-    @test grad[2] ≈ 2κ / (d_snow + eps(Float64))
+    d_min = 1.0e-3
+    grad, = Enzyme.autodiff(Reverse, Terrarium.compute_snow_basal_heat_flux, Active, Const(κ), Active(1.0), Const(-2.0), Const(d_snow), Const(d_min))
+    @test grad[2] ≈ 2κ / d_snow
 end
 
 @testset "Snow model: timestep!" begin

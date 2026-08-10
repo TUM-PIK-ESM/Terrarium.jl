@@ -46,15 +46,19 @@ where `S` is snowfall, `R_snow = f_snow · rainfall` the rain intercepted by the
 """
 @propagate_inbounds function compute_snow_water_tendency(
         i, j, grid, fields,
-        snow::SingleLayerSnow,
+        snow::SingleLayerSnow{NF},
         atmos::AbstractAtmosphere
-    )
+    ) where {NF}
     f_snow = snow_cover_fraction(i, j, grid, fields, snow)
+    # TODO: account for canopy interception
     S = snowfall(i, j, grid, fields, atmos)
     M = snow_meltwater_flux(i, j, grid, fields, snow)
     R = rainfall(i, j, grid, fields, atmos)
     R_snow = f_snow * R
     E_subl = fields.sublimation[i, j]
+    W = fields.snow_water_equivalent[i, j]
+    # @assert W > zero(NF) || E_subl ≈ zero(NF)
+    # @assert W > zero(NF) || M ≈ zero(NF)
     dWdt = S + R_snow - M - E_subl
     return dWdt
 end
