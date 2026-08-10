@@ -188,7 +188,6 @@ makedocs(
             "Reactant acceleration" => "running/reactant.md",
             running_example_docpages...,
         ],
-        "Benchmarks" => "benchmarks.md",
         "Extending Terrarium" => [
             "Core interfaces" => "extending/core_interfaces.md",
             "State variables" => "extending/state_variables.md",
@@ -250,6 +249,7 @@ makedocs(
             ],
         ],
         "Numerical solvers" => "solvers/solvers.md",
+        "Benchmarks" => "benchmarks.md",
         "Contributing" => "contributing.md",
         "Index of API" => "api_index.md",
         "References" => "references.md",
