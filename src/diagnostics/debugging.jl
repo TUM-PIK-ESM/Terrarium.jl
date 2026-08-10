@@ -1,15 +1,4 @@
-global DEBUG::Bool = haskey(ENV, "TERRARIUM_DEBUG") && ENV["TERRARIUM_DEBUG"] == "true"
-
-"""
-    debug!(debug::Bool)
-
-Enable or disable global debug mode for Terrarium. Debug mode 
-"""
-function debug!(debug::Bool)
-    global DEBUG = debug
-    DEBUG && @warn "Debug mode enabled! Debugging hooks will now be active and performance may be degraded."
-    return DEBUG
-end
+const DEBUG::Bool = haskey(ENV, "TERRARIUM_DEBUG") && ENV["TERRARIUM_DEBUG"] == "true"
 
 """
     $SIGNATURES
