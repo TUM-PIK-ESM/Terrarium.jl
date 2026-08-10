@@ -44,12 +44,12 @@ function layer_temperature(integrator)
 end
 
 # While doing that we allocated a shadow memory `dintegrator` for Enzyme in which it can accumulate the vJP (see Enzyme docs for more information).
-# We just need to call `autodiff` now. Some notes ion its arguments:
+# We just need to call `autodiff` now. Some notes on its arguments:
 # - `set_runtime_activity(Reverse)` tells Enzyme to use reverse-mode AD while enabling runtime activity (see [here](https://enzymead.github.io/Enzyme.jl/dev/faq/#faq-runtime-activity) for details)
 # - `Active` tells Enzyme that we want to take the derivative of the scalar output of `layer_temperature` with respect to the function's input. The cotangent of the function output is set to 1.0 in this way for the vJP calculation.
 # - `Duplicated(integrator, dintegrator)` `dintegrator` is shadow memory that Enzyme uses to accumulate the vJP of the `integrator` state variables.
 #
-#Executing this for the first time, might take a few minutes. Subsequent executions will be very fast though.
+# Executing this for the first time, might take a few minutes. Subsequent executions will be very fast though.
 
 autodiff(set_runtime_activity(Reverse), layer_temperature, Active, Duplicated(integrator, dintegrator))
 
