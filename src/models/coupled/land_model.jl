@@ -28,8 +28,8 @@ $(TYPEDFIELDS)
     "Soil processes"
     @component soil::Soil = default_soil(grid, vegetation)
 
-    "Snow processes (default `nothing`: no snowpack)"
-    @component snow::Snow = nothing
+    "Snow processes"
+    @component snow::Snow = SingleLayerSnow(eltype(grid))
 
     "Surface energy balance"
     @component surface_energy_balance::SEB = default_surface_energy_balance(grid, vegetation, soil)
@@ -136,6 +136,17 @@ function invclosure!(state, model::LandModel)
     grid = get_grid(model)
     invclosure!(state, grid, model.soil, model.constants)
     invclosure!(state, grid, model.snow, model.constants)
+    return nothing
+end
+
+# Time time_stepping
+
+function Terrarium.timestep!(state::StateVariables, model::LandModel, timestepper::Terrarium.AbstractTimeStepper, Δt)
+    if !isnothing(model.snow)
+        # Enforce SWE >= 0
+        # TODO: Rewrite to ensure mass conservation
+        interior(state.snow_water_equivalent) .= max.(interior(state.snow_water_equivalent), 0)
+    end
     return nothing
 end
 
