@@ -42,7 +42,7 @@ lai_asset_path = Terrarium.get_asset(lai_asset)
 # We next load the asset into a `RasterStack` with `lazy = true` to avoid loading the full dataset.
 # cycle = true` makes the LAI climatology repeat every year over the whole simulation.
 lai_raster = RasterStack(lai_asset_path, lazy = true)
-lai_highveg = replace_missing(lai_raster[:lai_hv], NaN32)
+lai_highveg = convert.(NF, replace_missing(lai_raster[:lai_hv], zero(NF)))
 lai_input = InputSource(grid, lai_highveg; source_grid = Terrarium.native_grid(lai_asset), name = :leaf_area_index, cycle = true)
 
 # ## Vegetation model
