@@ -31,6 +31,9 @@ const RingGridOrField = Union{RingGrids.AbstractGrid, RingGrids.AbstractField}
 Architectures.on_architecture(::GPU, obj::RingGridOrField) = RingGrids.Architectures.on_architecture(RingGrids.Architectures.GPU(), obj)
 Architectures.on_architecture(::CPU, obj::RingGridOrField) = RingGrids.Architectures.on_architecture(RingGrids.Architectures.CPU(), obj)
 
+RingGrids.Architectures.architecture(::GPU) = RingGrids.Architectures.GPU()
+RingGrids.Architectures.architecture(::CPU) = RingGrids.Architectures.CPU()
+
 # Field construction
 
 """
