@@ -111,7 +111,7 @@ land_state = sim_coupled.variables.prognostic.land.terrarium
 Terrarium.checkfinite!(land_state.prognostic)
 
 # Here we declare some plotting helpers that ensure all Fields/arrays are transferred to CPU before attempting to plot:
-plot_land_field(field, z_idx=1; kwargs...) = heatmap(RingGrids.Field(CPU(), interior(field)[:, :, z_idx], land_grid); kwargs...)
+plot_land_field(field, z_idx = 1; kwargs...) = heatmap(RingGrids.Field(CPU(), interior(field)[:, :, z_idx], land_grid); kwargs...)
 plot_speedy_field(field; kwargs...) = heatmap(on_architecture(CPU(), field); kwargs...)
 
 # Land variables (use the SpeedyWeather-owned Terrarium state)
