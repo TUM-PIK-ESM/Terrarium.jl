@@ -139,16 +139,15 @@ function invclosure!(state, model::LandModel)
     return nothing
 end
 
-# Time time_stepping
+# Time stepping
 
 function Terrarium.timestep!(state::StateVariables, model::LandModel, timestepper::Terrarium.AbstractTimeStepper, Δt)
     if !isnothing(model.snow)
-        # Enforce SWE >= 0
-        # TODO: Rewrite to ensure mass conservation
-        interior(state.snow_water_equivalent) .= max.(interior(state.snow_water_equivalent), 0)
+        timestep!(state, model, model.snow, timestepper, Δt)
     end
     return nothing
 end
+
 
 # Default soil types
 default_soil(grid::AbstractLandGrid, ::Nothing) = SoilEnergyWaterCarbon(eltype(grid))
