@@ -97,12 +97,12 @@ run!(sim)
 println(&quot;Simulation data saved to $(output_file)&quot;)</code></pre><pre><code class="nohighlight hljs">[ Info: Initializing simulation...
 ┌ Warning: error ArgumentError(&quot;a group or dataset named grid is already present within this group&quot;) thrown when trying to serialize the grid at serialized/grid
 └ @ Oceananigans.OutputWriters ~/.julia/packages/Oceananigans/rCeKI/src/OutputWriters/jld2_writer.jl:234
-[ Info:     ... simulation initialization complete (12.439 seconds)
+[ Info:     ... simulation initialization complete (12.595 seconds)
 [ Info: Executing initial time step...
 [ Info:     ... initial time step complete (2.243 seconds).
-[ Info: Simulation is stopping after running for 17.171 seconds.
+[ Info: Simulation is stopping after running for 17.202 seconds.
 [ Info: Simulation time 5 minutes equals or exceeds stop time 5 minutes.
-Simulation data saved to /tmp/jl_WdYhAVsNoj/simulation.jld2
+Simulation data saved to /tmp/jl_fKBC7wfK5C/simulation.jld2
 </code></pre><p>Then load the output data and plot the results:</p><pre><code class="language-julia hljs">using CairoMakie
 
 fts = FieldTimeSeries(output_file, &quot;u&quot;)
