@@ -162,7 +162,7 @@ end
     canopy_ET = PALADYNCanopyEvapotranspiration(Float64)
 
     rₐ = 100.0
-    rₛ = zero(rₐ) # stomatal resistance
+    rₐ_can = zero(rₐ)
     g_stm = 0.1
     f_can = 0.8
     β = 0.7
