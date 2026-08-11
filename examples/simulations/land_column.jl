@@ -3,7 +3,7 @@ using CUDA
 
 arch = CUDA.functional() ? GPU() : CPU()
 # Define a simple grid with 1 column
-grid = ColumnGrid(arch, Float32)
+grid = ColumnGrid(arch, Float32, ExponentialSpacing(N = 30))
 # Set up Richards model for soil hydrology
 swrc = VanGenuchten(α = 2.0, n = 2.0)
 hydraulic_properties = ConstantSoilHydraulics(eltype(grid); swrc, unsat_hydraulic_cond = UnsatKVanGenuchten(eltype(grid)))
