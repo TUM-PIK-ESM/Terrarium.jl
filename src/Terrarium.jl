@@ -103,6 +103,7 @@ function __init__()
     if debug_mode()
         @warn "Debug mode enabled; debug hooks will be active and performance may be degraded."
     end
+    return nothing
 end
 
 # internal utility types and methods
