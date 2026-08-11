@@ -6,7 +6,7 @@ using Test
     veg_dynamics = PALADYNVegetationDynamics()
     # For now, test that γv = γv_min
     γv = compute_γv(veg_dynamics)
-    @test γv == veg_dynamics.γv_min
+    @test γv == veg_dynamics.γv_min / (365.25 * 24 * 3600) # in seconds r^-1
 end
 
 @testset "compute_ν_star test" begin
