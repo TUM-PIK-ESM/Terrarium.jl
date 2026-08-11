@@ -24,10 +24,10 @@ using Oceananigans.Forcings: Forcing, ContinuousForcing, DiscreteForcing
 using Oceananigans.Grids: Periodic, Flat, Bounded, znodes, znode, zspacings
 using Oceananigans.Operators: ∂zᵃᵃᶜ, ∂zᵃᵃᶠ, ℑzᵃᵃᶠ, Δzᵃᵃᶜ
 using Oceananigans.OutputReaders: FieldTimeSeries
-using Oceananigans.Simulations: Simulation, run!, timestepper
+using Oceananigans.Simulations: Simulation, run!, timestepper, TimeStepWizard, conjure_time_step_wizard!, Callback, add_callback!
 using Oceananigans.TimeSteppers: Clock, update_state!, time_step!, tick!, reset!
 using Oceananigans.Units: Time, seconds, hours, days
-using Oceananigans.Utils: launch!
+using Oceananigans.Utils: launch!, IterationInterval, TimeInterval
 
 # Boundary conditions
 using Oceananigans.BoundaryConditions: BoundaryConditions, BoundaryCondition, DefaultBoundaryCondition, FieldBoundaryConditions,
@@ -58,7 +58,8 @@ import Downloads
 import Interpolations
 import ModelParameters
 import Oceananigans
-import Oceananigans.Diagnostics
+import Oceananigans.Advection: cell_advection_timescale
+import Oceananigans.Diagnostics: cell_diffusion_timescale
 import Pkg
 import RingGrids
 import RootSolvers
@@ -83,6 +84,7 @@ const BCType = AbstractBoundaryConditionClassification
 export Simulation, Field, FieldTimeSeries, CPU, GPU, ReactantState, Clock, Center, Face
 export Value, Flux, Gradient, ValueBoundaryCondition, GradientBoundaryCondition, FluxBoundaryCondition, NoFluxBoundaryCondition
 export run!, time_step!, set!, reset!, compute!, interior, architecture, on_architecture, znodes, zspacings, location
+export TimeStepWizard, conjure_time_step_wizard!, Callback, add_callback!, IterationInterval, TimeInterval
 
 # Re-export selected types from FreezeCurves
 export SFCC, SWRC, FreeWater, VanGenuchten, BrooksCorey
@@ -169,11 +171,16 @@ include("models/models.jl")
 export ModelIntegrator, initialize, current_time, iteration, run_timesteps!
 include("timesteppers/model_integrator.jl")
 
+# adaptive-timestepping diagnostics (cell_diffusion_timescale for the TimeStepWizard)
+include("timesteppers/cell_diffusion_timescale.jl")
+
 # Concrete timestepper implementations
 export ForwardEuler
 include("timesteppers/forward_euler.jl")
+
 export Heun
 include("timesteppers/heun.jl")
+
 export IMEX, AbstractIMEX
 include("timesteppers/imex.jl")
 

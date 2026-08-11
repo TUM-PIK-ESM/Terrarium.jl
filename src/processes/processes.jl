@@ -73,6 +73,8 @@ include("soil/energy/soil_energy_closures.jl")
 export SoilEnergyWaterCarbon
 include("soil/soil_coupled.jl")
 
+include("soil/soil_diffusion_timescales.jl")
+
 # Snow
 
 export ConstantSnowHydraulics

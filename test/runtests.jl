@@ -39,6 +39,7 @@ if MAIN_TESTS
         include("timestepping/run_simulation.jl")
         include("timestepping/heun.jl")
         include("timestepping/imex.jl")
+        include("timestepping/adaptive_timestep.jl")
     end
 
     @testset "Thermodynamics" begin
