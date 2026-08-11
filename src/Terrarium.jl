@@ -96,6 +96,15 @@ export @u_str, uconvert, ustrip
 # Re-export adapt
 export adapt
 
+const DEBUG = Ref(false)
+
+function __init__()
+    DEBUG[] = haskey(ENV, "TERRARIUM_DEBUG") && ENV["TERRARIUM_DEBUG"] == "true"
+    if debug_mode()
+        @warn "Debug mode enabled; debug hooks will be active and performance may be degraded."
+    end
+end
+
 # internal utility types and methods
 include("utils/utils.jl")
 

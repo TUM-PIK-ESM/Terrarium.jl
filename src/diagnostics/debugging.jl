@@ -1,4 +1,5 @@
-const DEBUG::Bool = haskey(ENV, "TERRARIUM_DEBUG") && ENV["TERRARIUM_DEBUG"] == "true"
+# Return true if debug mode is enabled, false otherwise
+@inline debug_mode() = DEBUG[]
 
 """
     $SIGNATURES
@@ -30,7 +31,7 @@ Utility method that forwards `args` to `debughook!` *if and only if debug mode i
 the global variable `DEBUG` which can be toggled by the user facing API [`debug!`](@ref).
 """
 @inline function debugsite!(args...)
-    if DEBUG
+    if debug_mode()
         debughook!(args...)
     end
     return nothing
