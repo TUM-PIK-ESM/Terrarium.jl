@@ -79,12 +79,13 @@ strd = load_forcing("strd")   # downwelling longwave radiation (J/m², cumulativ
 # Near-surface specific humidity is not provided directly by ERA5-Land, so we derive it from the
 # dewpoint temperature and surface pressure with [`Terrarium.dewpoint_specific_humidity`](@ref),
 # using a standalone set of thermodynamic constants.
-air_temperature = Terrarium.kelvin_to_celsius.(t2m)   # K -> °C
 air_pressure = sp                     # Pa
 wind_u = u10                          # m/s
 wind_v = v10                          # m/s
 constants = ThermodynamicConstants(NF)
-specific_humidity = Terrarium.dewpoint_specific_humidity.(Ref(constants), d2m .- NF(273.15), sp)
+air_temperature = Terrarium.kelvin_to_celsius.(constants, t2m)   # K -> °C
+d2m_C = Terrarium.kelvin_to_celsius.(constants, d2m)
+specific_humidity = Terrarium.dewpoint_specific_humidity.(constants, d2m_C, sp)
 
 # The *accumulated* fields (radiation and precipitation) are cumulative since 00 UTC and reset each
 # day, so dividing the raw values by the output interval would badly overestimate the flux. We
@@ -177,7 +178,7 @@ DisplayAs.PNG(fig) #hide
 # very slow due to the lack of I/O memory buffering. This will improve in the near future!
 Terrarium.initialize!(integrator)
 @profview @time timestep!(integrator)
-run!(integrator, period = Hour(1), Δt = Minute(15), show_progress = true)
+run!(integrator, period = Day(1), Δt = Minute(15), show_progress = true)
 
 # The surface soil temperature and accumulated snow water equivalent after three months of forcing.
 # Snow has built up over the high latitudes and elevated terrain of the winter (northern) hemisphere.
