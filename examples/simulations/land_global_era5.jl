@@ -93,9 +93,8 @@ specific_humidity = Terrarium.dewpoint_specific_humidity.(constants, d2m_C, sp)
 # records divided by the accumulation window; `max(·, 0)` discards the daily reset, which falls at
 # night where the radiative and (typically) precipitation fluxes are negligible. `deaccumulate`
 # returns a lazy raster spanning the records from the second hour onward.
-accumulation_window = NF(3600) # seconds
-function deaccumulate(accumulated)
-    n = length(dims(accumulated, Ti))
+function deaccumulate(accumulated, accumulation_window = NF(3600))
+    n = size(accumulated, Ti)
     ## the forcing rasters are dimensioned (X, Y, Ti), so the time axis is the third dimension
     current = @view accumulated[Ti(2:n)]
     previous = @view accumulated[Ti(1:(n - 1))]
@@ -173,18 +172,18 @@ fig = plot_surface(integrator.state.leaf_area_index, title = "Leaf area index (J
 DisplayAs.PNG(fig) #hide
 
 # ## Run through the first three months
-# We advance the coupled model for 2 days with a 15-minute step. The default explicit `ForwardEuler`
-# stepper requires a step size small enough to keep the soil dynamics stable. Note that this is currently
-# very slow due to the lack of I/O memory buffering. This will improve in the near future!
+# We will advance the coupled model for one day. Note that, due to  both timestepping restrictions and I/O overhead,
+# the simulation is currently very slow. This will improve in the near future!
 Terrarium.initialize!(integrator)
 @profview @time timestep!(integrator)
-run!(integrator, period = Day(1), Δt = Minute(15), show_progress = true)
+run!(integrator, period = Day(1), Δt = Minute(5), show_progress = true)
 
-# The surface soil temperature and accumulated snow water equivalent after three months of forcing.
-# Snow has built up over the high latitudes and elevated terrain of the winter (northern) hemisphere.
+# Let's look at the results:
+# First we'll inspect the topsoil temperature after one month of forcing.
 fig = plot_surface(integrator.state.temperature, title = "Surface soil temperature")
 DisplayAs.PNG(fig) #hide
 
+# We can also see that snow has built up over the high latitudes and elevated terrain of the winter (northern) hemisphere.
 fig = plot_surface(integrator.state.snow_water_equivalent, title = "Snow water equivalent (m)")
 DisplayAs.PNG(fig) #hide
 
