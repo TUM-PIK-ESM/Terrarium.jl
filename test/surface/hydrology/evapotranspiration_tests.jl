@@ -183,7 +183,7 @@ end
     @test E_trp > 0
     @test E_can > 0
     @test E_gnd > 0
-    
+
     # Check that evaporation from the canopy is higher than from the ground
     @test E_can > E_gnd
 
