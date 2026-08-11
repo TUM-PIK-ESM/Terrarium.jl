@@ -27,13 +27,6 @@ of the total specific humidity `q` [kg/kg]. Wrapper around
 @inline specific_heat_capacity_moist_air(c::ThermodynamicConstants, q) = Thermodynamics.cp_m(c, q)
 
 """
-    celsius_to_kelvin(c::ThermodynamicConstants, T)
-
-Convert the given temperature in °C to Kelvin based on the constant `temperature_water_freeze`.
-"""
-@inline celsius_to_kelvin(c::ThermodynamicConstants, T) = T + c.temperature_water_freeze
-
-"""
     psychrometric_constant(c::ThermodynamicConstants, p)
 
 Calcualte the psychrometric constant at the given atmospheric pressure `p`.
