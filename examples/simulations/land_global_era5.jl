@@ -177,7 +177,7 @@ DisplayAs.PNG(fig) #hide
 # We will advance the coupled model for one day. Note that, due to  both timestepping restrictions and I/O overhead,
 # the simulation is currently very slow. This will improve in the near future!
 Terrarium.initialize!(integrator)
-@profview @time timestep!(integrator)
+@time timestep!(integrator)
 run!(integrator, period = Day(1), Δt = Minute(15), show_progress = true)
 
 # Let's look at the results:
