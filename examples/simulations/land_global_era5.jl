@@ -1,7 +1,7 @@
 # # [Global land simulation forced by ERA5-Land](@id land_global_era5)
 #
 # This example configures a fully-coupled global [`LandModel`](@ref) at ~1° resolution (N72, 72
-# Gaussian rings) and drives it with one year of ERA5-Land reanalysis. The model couples
+# Gaussian rings) and drives it using ERA5-Land reanalysis data. The model couples
 #
 # * a [`SoilEnergyWaterCarbon`](@ref) column solving for transient heat conduction in all soil columns,
 # * a single-layer snowpack ([`SingleLayerSnow`](@ref)),
@@ -20,8 +20,6 @@
 #     the nightly accumulation reset is discarded. The script is intended to be run directly and is
 #     *not* executed during the documentation build, as it downloads several gigabytes of forcing
 #     data and integrates the full global grid.
-
-ENV["TERRARIUM_DEBUG"] = true
 
 using Terrarium
 
@@ -174,11 +172,11 @@ fig = plot_surface(integrator.state.leaf_area_index, title = "Leaf area index (J
 DisplayAs.PNG(fig) #hide
 
 # ## Run through the first three months
-# We will advance the coupled model for one day. Note that, due to  both timestepping restrictions and I/O overhead,
-# the simulation is currently very slow. This will improve in the near future!
+# We will advance the coupled model for just six hours to minimize computational cost.
+# Note that, due to  both timestepping restrictions and I/O overhead, the simulation is currently very slow. This will improve in the near future!
 Terrarium.initialize!(integrator)
 @time timestep!(integrator)
-run!(integrator, period = Day(1), Δt = Minute(15), show_progress = true)
+run!(integrator, period = Hour(6), Δt = Minute(2), show_progress = true)
 
 # Let's look at the results:
 # First we'll inspect the topsoil temperature after one month of forcing.
