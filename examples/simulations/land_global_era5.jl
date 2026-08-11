@@ -3,7 +3,7 @@
 # This example configures a fully-coupled global [`LandModel`](@ref) at ~1° resolution (N72, 72
 # Gaussian rings) and drives it with one year of ERA5-Land reanalysis. The model couples
 #
-# * a [`SoilEnergyWaterCarbon`](@ref) column solving the heat and Richards equations,
+# * a [`SoilEnergyWaterCarbon`](@ref) column solving for transient heat conduction in all soil columns,
 # * a single-layer snowpack ([`SingleLayerSnow`](@ref)),
 # * prescribed vegetation ([`PrescribedVegetation`](@ref)) whose leaf area index is imposed from the
 #   ERA5-Land LAI climatology, and
@@ -46,13 +46,15 @@ NF = Float32
 # [`ColumnRingGrid`](@ref) at ~1° resolution (72 Gaussian rings), keeping only grid points with more
 # than 50% land cover. The land-sea mask is loaded from the ERA5-Land invariants asset and regridded
 # onto the model grid. We use an exponentially-spaced soil column so that the near-surface layers,
-# where the diurnal and seasonal signals are strongest, are resolved most finely.
+# where the diurnal and seasonal signals are strongest, are resolved most finely. The minimum layer
+# thickness is set to a relatively coarse 10 cm for now to maintain numerical stability. Future Development
+# of improved timestepping methods will relax this constraint.
 model_rings = on_architecture(arch, RingGrids.FullGaussianGrid(72))
 land_sea_frac_native = RingGrids.Field(arch, ERA5LandInvariants(), "lsm"; NF)
 land_sea_frac = RingGrids.interpolate(model_rings, land_sea_frac_native)
 land_mask = land_sea_frac .> 0.5
 Nz = 30 # number of soil layers
-grid = ColumnRingGrid(arch, NF, ExponentialSpacing(N = Nz), land_mask)
+grid = ColumnRingGrid(arch, NF, ExponentialSpacing(N = Nz, Δz_min = 0.1), land_mask)
 
 # ## Meteorological forcings from ERA5-Land
 # The [`ERA5LandForcings`](@ref) asset holds one year of hourly ERA5-Land fields already regridded to
@@ -116,11 +118,11 @@ lai_asset = ERA5LandLeafAreaIndex()
 lai_highveg = Terrarium.load_asset(lai_asset, "lai_hv"; NF, fill_value = zero(NF))
 
 # ## Coupled land model
-# We assemble the [`LandModel`](@ref) from its process components. The soil solves coupled heat and
-# Richards flow; the vegetation is prescribed (LAI imposed, no prognostic carbon pool); a single-layer
-# snowpack accumulates snowfall and couples to the surface energy balance. The atmosphere uses the
-# [`WindVelocity`](@ref) parameterization so that the ERA5 `u`/`v` wind components map directly to the
-# `wind_u`/`wind_v` inputs. The surface energy balance and surface hydrology use their defaults.
+# We assemble the [`LandModel`](@ref) from its process components. The soil simulates transient heat conduction
+# with static soil hydrology (for now); the vegetation is prescribed (LAI imposed, no prognostic carbon pool);
+# a single-layer snowpack accumulates snowfall and couples to the surface energy balance. The `PrescribedAtmosphere`
+# uses the [`WindVelocity`](@ref) parameterization so that the ERA5 `u`/`v` wind components can be mapped directly to
+# the `windspeed` input required for the surface energy balance.
 soil = SoilEnergyWaterCarbon(NF)
 vegetation = PrescribedVegetation(NF)
 snow = SingleLayerSnow(NF)
@@ -176,7 +178,7 @@ DisplayAs.PNG(fig) #hide
 # the simulation is currently very slow. This will improve in the near future!
 Terrarium.initialize!(integrator)
 @profview @time timestep!(integrator)
-run!(integrator, period = Day(1), Δt = Minute(5), show_progress = true)
+run!(integrator, period = Day(1), Δt = Minute(15), show_progress = true)
 
 # Let's look at the results:
 # First we'll inspect the topsoil temperature after one month of forcing.
