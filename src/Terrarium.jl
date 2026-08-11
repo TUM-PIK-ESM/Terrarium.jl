@@ -96,14 +96,6 @@ export @u_str, uconvert, ustrip
 # Re-export adapt
 export adapt
 
-function __init__()
-    DEBUG = haskey(ENV, "TERRARIUM_DEBUG") && parse(Bool, string(ENV["TERRARIUM_DEBUG"]))
-    Core.eval(@__MODULE__, :(const DEBUG::Bool = $DEBUG))
-    if DEBUG
-        @warn "Debug mode enabled; debug hooks will be active and performance may be degraded. Restart Julia with TERRARIUM_DEBUG=\"false\" or unset to disable."
-    end
-end
-
 # internal utility types and methods
 include("utils/utils.jl")
 
