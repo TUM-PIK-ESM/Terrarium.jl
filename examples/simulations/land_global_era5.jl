@@ -21,6 +21,8 @@
 #     *not* executed during the documentation build, as it downloads several gigabytes of forcing
 #     data and integrates the full global grid.
 
+ENV["TERRARIUM_DEBUG"] = true
+
 using Terrarium
 
 using CUDA
@@ -50,7 +52,7 @@ land_sea_frac_native = RingGrids.Field(arch, ERA5LandInvariants(), "lsm"; NF)
 land_sea_frac = RingGrids.interpolate(model_rings, land_sea_frac_native)
 land_mask = land_sea_frac .> 0.5
 Nz = 30 # number of soil layers
-grid = ColumnRingGrid(arch, NF, ExponentialSpacing(N = Nz, Δz_min = 0.05, Δz_max = 2.0), land_mask)
+grid = ColumnRingGrid(arch, NF, ExponentialSpacing(N = Nz), land_mask)
 
 # ## Meteorological forcings from ERA5-Land
 # The [`ERA5LandForcings`](@ref) asset holds one year of hourly ERA5-Land fields already regridded to
@@ -77,7 +79,7 @@ strd = load_forcing("strd")   # downwelling longwave radiation (J/m², cumulativ
 # Near-surface specific humidity is not provided directly by ERA5-Land, so we derive it from the
 # dewpoint temperature and surface pressure with [`Terrarium.dewpoint_specific_humidity`](@ref),
 # using a standalone set of thermodynamic constants.
-air_temperature = t2m .- NF(273.15)   # K -> °C
+air_temperature = Terrarium.kelvin_to_celsius.(t2m)   # K -> °C
 air_pressure = sp                     # Pa
 wind_u = u10                          # m/s
 wind_v = v10                          # m/s
@@ -94,10 +96,10 @@ accumulation_window = NF(3600) # seconds
 function deaccumulate(accumulated)
     n = length(dims(accumulated, Ti))
     ## the forcing rasters are dimensioned (X, Y, Ti), so the time axis is the third dimension
-    current = accumulated[Ti(2:n)]
-    previous = view(parent(accumulated), :, :, 1:(n - 1))
-    rate = max.(parent(current) .- previous, zero(NF)) ./ accumulation_window
-    return rebuild(current; data = rate)
+    current = @view accumulated[Ti(2:n)]
+    previous = @view accumulated[Ti(1:(n - 1))]
+    rate = max.(parent(current) .- parent(previous), zero(NF)) ./ accumulation_window
+    return rebuild(previous; data = rate)
 end
 
 shortwave_down = deaccumulate(ssrd)                                           # J/m² -> W/m²
@@ -123,7 +125,7 @@ soil = SoilEnergyWaterCarbon(NF)
 vegetation = PrescribedVegetation(NF)
 snow = SingleLayerSnow(NF)
 atmosphere = PrescribedAtmosphere(NF; wind = WindVelocity())
-land = LandModel(grid; soil, vegetation, snow, atmosphere, timestepper = ForwardEuler(NF))
+land = LandModel(grid; soil, vegetation, snow, atmosphere)
 @show variables(land)
 
 # ## Assembling the input sources
@@ -155,9 +157,7 @@ inputs = InputSources(
 # re-initialize with a soil temperature profile built from it plus a mild geothermal gradient. Reading
 # the air temperature back from the state guarantees it is ordered consistently with the land columns.
 initializers = (
-    # saturation_water_ice = (x, z) -> min(one(NF), NF(0.6) - NF(0.05) * z),
-    snow_water_equivalent = 0.0,
-    snow_temperature = 0.0,
+    saturation_water_ice = (x, z) -> min(one(NF), NF(0.6) - NF(0.05) * z),
 )
 integrator = initialize(land; inputs, initializers)
 
@@ -172,11 +172,12 @@ fig = plot_surface(integrator.state.leaf_area_index, title = "Leaf area index (J
 DisplayAs.PNG(fig) #hide
 
 # ## Run through the first three months
-# We advance the coupled model for 2 days with a 15-minute step. The explicit `ForwardEuler`
-# stepper requires a step size small enough to keep the soil dynamics stable.
+# We advance the coupled model for 2 days with a 15-minute step. The default explicit `ForwardEuler`
+# stepper requires a step size small enough to keep the soil dynamics stable. Note that this is currently
+# very slow due to the lack of I/O memory buffering. This will improve in the near future!
 Terrarium.initialize!(integrator)
 @profview @time timestep!(integrator)
-run!(integrator, period = Minute(30), Δt = Minute(1))
+run!(integrator, period = Hour(1), Δt = Minute(15), show_progress = true)
 
 # The surface soil temperature and accumulated snow water equivalent after three months of forcing.
 # Snow has built up over the high latitudes and elevated terrain of the winter (northern) hemisphere.
