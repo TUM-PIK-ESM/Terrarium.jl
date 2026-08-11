@@ -1,5 +1,3 @@
-const DEBUG::Bool = haskey(ENV, "TERRARIUM_DEBUG") && ENV["TERRARIUM_DEBUG"] == "true"
-
 """
     $SIGNATURES
 
