@@ -16,8 +16,8 @@ ring_grid = RingGrids.FullGaussianGrid(72)
 lon, lat = RingGrids.get_londlatds(ring_grid)
 
 # Load land-sea mask at native ~0.1° resolution
-land_sea_frac_10km = Terrarium.load_asset(ERA5LandInvariants(), "lsm")
-land_sea_frac_N72 = RingGrids.interpolate(ring_grid, land_sea_frac_10km)
+land_sea_frac_native = RingGrids.Field(arch, ERA5LandInvariants(), "lsm"; NF)
+land_sea_frac_N72 = RingGrids.interpolate(ring_grid, land_sea_frac_native)
 heatmap(land_sea_frac_N72)
 
 # Load ERA-5 2 meter air temperature at ~1° resolution

@@ -74,12 +74,12 @@ end
 @testset "transpiration_conductance" begin
     canopy_ET = PALADYNCanopyEvapotranspiration(Float64)
 
-    # g_trp = 1 / (rₐ + rₛ) where rₛ = 1/g_stm
+    # g_trp = 1 / (rₐ + rₐ_can) where rₐ_can = 1/g_stm
     g_stm = 0.1
     rₐ = 100.0
-    rₛ = 1 / g_stm
+    rₐ_can = 1 / g_stm
     g_trp = transpiration_conductance(canopy_ET, rₐ, g_stm)
-    @test g_trp ≈ 1 / (rₐ + rₛ)
+    @test g_trp ≈ 1 / (rₐ + rₐ_can)
 
     # Zero stomatal conductance gives a small but finite value
     g_trp_zero = transpiration_conductance(canopy_ET, rₐ, 0.0)
@@ -155,13 +155,14 @@ end
 end
 
 # ==============================================================================
-# Integration tests - full ET workflows
+# Integration tests
 # ==============================================================================
 
-@testset "Full canopy ET workflow" begin
+@testset "Canopy ET flux" begin
     canopy_ET = PALADYNCanopyEvapotranspiration(Float64)
 
     rₐ = 100.0
+    rₐ_can = 200.0
     g_stm = 0.1
     f_can = 0.8
     β = 0.7
@@ -171,7 +172,7 @@ end
     # Step 1: conductances
     g_trp = transpiration_conductance(canopy_ET, rₐ, g_stm)
     g_can = canopy_evaporation_conductance(canopy_ET, f_can, rₐ)
-    g_gnd = ground_evaporation_conductance(canopy_ET, β, rₐ)
+    g_gnd = ground_evaporation_conductance(canopy_ET, β, rₐ, rₐ_can)
 
     # Step 2: partitioned fluxes
     E_trp = compute_evaporation_flux(canopy_ET, Δq_skin, g_trp)
@@ -183,8 +184,11 @@ end
     @test E_can > 0
     @test E_gnd > 0
 
+    # Check that evaporation from the canopy is higher than from the ground
+    @test E_can > E_gnd
+
     # Dry soil (β = 0) suppresses ground evaporation
-    @test iszero(ground_evaporation_conductance(canopy_ET, zero(β), rₐ))
+    @test iszero(ground_evaporation_conductance(canopy_ET, zero(β), rₐ, rₐ_can))
     @test iszero(compute_evaporation_flux(canopy_ET, Δq_ground, 0.0))
 
     # Saturated canopy evaporates more than partially wet canopy
@@ -192,7 +196,7 @@ end
     @test compute_evaporation_flux(canopy_ET, Δq_skin, g_can_sat) > E_can
 end
 
-@testset "Full bare ground ET workflow" begin
+@testset "Bare ground ET flux" begin
     bg = BareGroundEvaporation(Float64)
 
     rₐ = 50.0
@@ -202,7 +206,6 @@ end
     β = 0.5
     g = β / rₐ
     @test compute_evaporation_flux(bg, Δq, g) ≈ g * Δq
-
 end
 
 # ==============================================================================

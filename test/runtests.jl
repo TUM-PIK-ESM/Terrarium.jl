@@ -65,7 +65,7 @@ if MAIN_TESTS
     end
 
     @testset "Surface hydrology" begin
-        include("surface/surface_hydrology_tests.jl")
+        include("surface/hydrology/surface_hydrology_tests.jl")
     end
 
     @testset "Coupled models" begin

@@ -30,7 +30,7 @@ import RingGrids
 # the [Reactant page](@ref)), so we use `UniformSpacing` instead of `ExponentialSpacing`.
 
 ## Load land-sea mask at ~1° resolution
-land_sea_frac_10km = Terrarium.load_asset(ERA5LandInvariants(), "lsm")
+land_sea_frac_10km = RingGrids.Field(ERA5LandInvariants(), "lsm")
 land_sea_frac_N72 = RingGrids.interpolate(ring_grid, land_sea_frac_10km)
 land_mask = land_sea_frac_N72 .> 0.5 # select only grid points with > 50% land
 

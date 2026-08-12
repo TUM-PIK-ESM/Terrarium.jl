@@ -32,6 +32,9 @@ $FIELDS
 
     "Snow energy-temperature closure"
     @component closure::Closure
+
+    "Minimum snow thickness (m) used to regularize the thermodynamics for thin snowpacks"
+    @param min_conduction_thickness::NF (units = u"m", bounds = Positive)
 end
 
 function SingleLayerSnow(
@@ -41,11 +44,13 @@ function SingleLayerSnow(
         thermal_conductivity = PowerLawSnowThermalConductivity(NF),
         hydraulic_properties = ConstantSnowHydraulics(NF),
         albedo = ConstantSnowAlbedo(NF),
-        closure = SnowEnergyTemperatureClosure(NF)
+        closure = SnowEnergyTemperatureClosure(NF),
+        min_conduction_thickness::NF = NF(5.0e-3),
     ) where {NF}
-    # `NF` is not carried by any field, so it must be supplied explicitly to the type constructor
+    # `NF` is only carried by the `min_conduction_thickness` scalar, so the remaining type parameters
+    # are supplied explicitly from the component types
     return SingleLayerSnow{NF, typeof(cover), typeof(density), typeof(thermal_conductivity), typeof(hydraulic_properties), typeof(albedo), typeof(closure)}(
-        cover, density, thermal_conductivity, hydraulic_properties, albedo, closure
+        cover, density, thermal_conductivity, hydraulic_properties, albedo, closure, min_conduction_thickness
     )
 end
 
@@ -88,6 +93,7 @@ variables(snow::SingleLayerSnow) = (
     input(:surface_heat_flux, XY(); units = u"W/m^2", desc = "Net heat flux at the snow surface (positive upward)"),
     input(:basal_heat_flux, XY(); units = u"W/m^2", desc = "Conductive heat flux at the snow base (positive upward, soil → snow)"),
     input(:sublimation, XY(); units = u"m/s", desc = "Sublimation/evaporation rate from the snow surface (SWE)"),
+    variables(snow.closure)...,
 )
 
 """
@@ -125,7 +131,7 @@ function compute_tendencies!(
     )
     tendencies = tendency_fields(state, snow)
     # pass the closure so `snow_liquid_fraction` (needed for meltwater outflow) is collected
-    fields = get_fields(state, get_closure(snow), snow, atmos; except = tendencies)
+    fields = get_fields(state, snow, atmos)
     launch!(grid, XY, compute_tendencies_kernel!, tendencies, fields, snow, atmos, constants)
     return nothing
 end

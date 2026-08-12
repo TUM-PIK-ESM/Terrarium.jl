@@ -28,3 +28,31 @@ Compute partial pressure of CO2 from surface pressure and CO2 concentration in P
     pres_co2 = conc_co2 * NF(1.0e-6) * pres
     return pres_co2
 end
+
+"""
+    celsius_to_kelvin(c::ThermodynamicConstants, T)
+
+Convert the given temperature in °C to Kelvin based on the constant `temperature_water_freeze`.
+"""
+@inline celsius_to_kelvin(c::ThermodynamicConstants, T) = T + c.temperature_water_freeze
+
+"""
+    kelvin_to_celsius(c::ThermodynamicConstants, T)
+
+Convert the given temperature in °C to Kelvin based on the constant `temperature_water_freeze`.
+"""
+@inline kelvin_to_celsius(c::ThermodynamicConstants, T) = T - c.temperature_water_freeze
+
+"""
+    $SIGNATURES
+
+Compute near-surface specific humidity [kg/kg] from the dewpoint temperature `T_dew` [°C] and air
+pressure `p` [Pa]. By definition, the actual vapor pressure of the air equals the saturation vapor
+pressure at the dewpoint, so this delegates to [`saturation_vapor_pressure`](@ref) — dispatching over
+ice for `T_dew <= 0°C` and over liquid water otherwise — and then to
+[`vapor_pressure_to_specific_humidity`](@ref).
+"""
+@inline function dewpoint_specific_humidity(c::ThermodynamicConstants, T_dew, p)
+    vapor_pressure = saturation_vapor_pressure(c, T_dew)
+    return vapor_pressure_to_specific_humidity(c, vapor_pressure, p)
+end

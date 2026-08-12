@@ -82,7 +82,7 @@ function solve_surface_energy_balance!(
     # Construct outputs as auxiliaries + skin temperature (which is prognostic)
     out = (skin_temperature = state.skin_temperature, auxiliary_fields(state, seb)...)
     # Merge the snow thermal auxiliaries so the (optionally snow-aware) conduction target can be evaluated
-    fields = merge(get_fields(state, seb, atmos, evtr), get_fields(state, snow))
+    fields = get_fields(state, seb, atmos, evtr, snow)
     launch!(grid, XY, solve_surface_energy_balance_kernel!, out, fields, seb, constants, atmos, evtr, snow, args...)
     return nothing
 end
@@ -150,7 +150,7 @@ end
     i, j = @index(Global, NTuple)
 
     # Solve for skin temperature; `snow` (after `seb`) makes the conduction target and latent flux snow-aware
-    solve_skin_temperature!(out, i, j, grid, fields, seb.skin_temperature, seb, snow, constants, atmos, args...)
+    solve_skin_temperature!(out, i, j, grid, fields, seb.skin_temperature, seb, constants, atmos, evtr, snow, args...)
     if !isnothing(evtr)
         # Recompute evapotranspiration component fluxes from final skin temperature; `snow` scales the
         # ground evaporation by the snow-free fraction (1 − f_snow)
@@ -158,7 +158,7 @@ end
         compute_evapotranspiration_fluxes!(out_ET, i, j, grid, fields, evtr, constants, atmos, snow, args...)
     end
     # Recompute fluxes from final skin temperature; `snow` partitions the latent flux (evaporation vs. sublimation)
-    compute_surface_energy_fluxes!(out, i, j, grid, fields, seb, constants, atmos, nothing, snow, args...)
+    compute_surface_energy_fluxes!(out, i, j, grid, fields, seb, constants, atmos, evtr, snow, args...)
 end
 
 @kernel inbounds = true function compute_surface_energy_fluxes_kernel!(

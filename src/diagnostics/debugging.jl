@@ -1,15 +1,5 @@
-global DEBUG::Bool = haskey(ENV, "TERRARIUM_DEBUG") && ENV["TERRARIUM_DEBUG"] == "true"
-
-"""
-    debug!(debug::Bool)
-
-Enable or disable global debug mode for Terrarium. Debug mode 
-"""
-function debug!(debug::Bool)
-    global DEBUG = debug
-    DEBUG && @warn "Debug mode enabled! Debugging hooks will now be active and performance may be degraded."
-    return DEBUG
-end
+# Return true if debug mode is enabled, false otherwise
+@inline debug_mode() = DEBUG[]
 
 """
     $SIGNATURES
@@ -41,7 +31,7 @@ Utility method that forwards `args` to `debughook!` *if and only if debug mode i
 the global variable `DEBUG` which can be toggled by the user facing API [`debug!`](@ref).
 """
 @inline function debugsite!(args...)
-    if DEBUG
+    if debug_mode()
         debughook!(args...)
     end
     return nothing
