@@ -43,7 +43,7 @@ end
 
     # implied thermal diffusivity α = Δz²/τ should be a physically plausible soil value
     α = 0.1^2 / τ
-    @test 1e-8 < α < 1e-4
+    @test 1.0e-8 < α < 1.0e-4
 
     # land models have no advective restriction
     @test cell_advection_timescale(integrator) == Inf
