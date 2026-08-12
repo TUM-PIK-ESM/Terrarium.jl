@@ -5,8 +5,7 @@ import Oceananigans.Advection: cell_advection_timescale
 import Oceananigans.Diagnostics: cell_diffusion_timescale
 
 # Recompute the thermal diffusion timescale independently from the public pointwise property
-# functions, mirroring the face-conductance form
-# τ_k = C_k Δz_k / (κ_kᶠ/Δz_kᶠ + κ_{k+1}ᶠ/Δz_{k+1}ᶠ), and return the per-cell minimum.
+# functions, mirroring τ = Δz² C / κ, and return the per-cell minimum over the interior.
 function reference_thermal_timescale(integrator)
     model = integrator.model
     soil = model.soil
@@ -15,20 +14,16 @@ function reference_thermal_timescale(integrator)
     hydrology = Terrarium.get_hydrology(soil)
     strat = Terrarium.get_stratigraphy(soil)
     bgc = Terrarium.get_biogeochemistry(soil)
-    props = energy.thermal_properties
     fgrid = Terrarium.get_field_grid(model.grid)
     fields = Terrarium.get_fields(state, energy, hydrology, strat, bgc)
     Nx, Ny, Nz = size(fgrid)
-    κcell(i, j, k) = Terrarium.compute_thermal_conductivity(props, Terrarium.soil_volume(i, j, k, fgrid, fields, strat, hydrology, bgc))
     τmin = Inf
     for k in 1:Nz, j in 1:Ny, i in 1:Nx
         soilvol = Terrarium.soil_volume(i, j, k, fgrid, fields, strat, hydrology, bgc)
-        C = Terrarium.compute_heat_capacity(props, soilvol)
+        κ = Terrarium.compute_thermal_conductivity(energy.thermal_properties, soilvol)
+        C = Terrarium.compute_heat_capacity(energy.thermal_properties, soilvol)
         Δz = Terrarium.Δzᵃᵃᶜ(i, j, k, fgrid)
-        conductance_lower = k > 1 ? 0.5 * (κcell(i, j, k - 1) + κcell(i, j, k)) / Terrarium.Δzᵃᵃᶠ(i, j, k, fgrid) : 0.0
-        conductance_upper = k < Nz ? 0.5 * (κcell(i, j, k) + κcell(i, j, k + 1)) / Terrarium.Δzᵃᵃᶠ(i, j, k + 1, fgrid) : 0.0
-        inv_τ = (conductance_lower + conductance_upper) / (C * Δz)
-        τmin = min(τmin, inv_τ > 0 ? inv(inv_τ) : Inf)
+        τmin = min(τmin, Δz^2 * C / κ)
     end
     return τmin
 end

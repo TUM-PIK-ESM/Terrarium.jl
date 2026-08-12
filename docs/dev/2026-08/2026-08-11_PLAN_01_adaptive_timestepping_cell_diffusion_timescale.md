@@ -22,17 +22,6 @@ Base revision: 9ece81381cb88a1b8a8418c25545ca41d7a0923e
 > - Both the thermal and hydraulic (Richards) diffusion timescales should be implemented. The
 >   moisture-capacity derivative ∂θ/∂ψ needed for the hydraulic timescale is available analytically
 >   from FreezeCurves.jl (`swrc(FreezeCurves.derivative, ψ)`).
->
-> 2026-08-12 — Adaptive stepping did not resolve a localized instability (a few cells reaching
-> massively negative enthalpy within ~2 h) in the ERA5-Land global run on a graded
-> `ExponentialSpacing` grid. Refined the **thermal** timescale from the naive cell-centered
-> `τ = Δz² C / κ` to the face-conductance (Gershgorin) form
-> `τ = C·Δzᶜ / (κᶠ_k/Δzᶠ_k + κᶠ_{k+1}/Δzᶠ_{k+1})`, using the same face-interpolated conductivities and
-> center-to-center spacings as the conduction operator. On graded grids this is much stricter at thin
-> surface layers (where the center-to-center spacing, not the cell thickness, sets the limit) and
-> reduces to `Δz² C / (2κ)` on a uniform grid. The kernel/diagnostic code was reorganized into
-> `src/timesteppers/cell_diffusion_timescale.jl` (integrator/model methods) and
-> `src/processes/soil/soil_diffusion_timescales.jl` (soil-process methods and kernel functions).
 
 ## Problem description
 

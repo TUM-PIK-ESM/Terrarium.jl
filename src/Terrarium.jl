@@ -22,7 +22,7 @@ using Oceananigans.Architectures: Architectures, AbstractArchitecture, CPU, GPU,
 using Oceananigans.Fields: Field, FunctionField, AbstractField, Center, Face, set!, compute!, interior, location
 using Oceananigans.Forcings: Forcing, ContinuousForcing, DiscreteForcing
 using Oceananigans.Grids: Periodic, Flat, Bounded, znodes, znode, zspacings
-using Oceananigans.Operators: ∂zᵃᵃᶜ, ∂zᵃᵃᶠ, ℑzᵃᵃᶠ, Δzᵃᵃᶜ, Δzᵃᵃᶠ
+using Oceananigans.Operators: ∂zᵃᵃᶜ, ∂zᵃᵃᶠ, ℑzᵃᵃᶠ, Δzᵃᵃᶜ
 using Oceananigans.OutputReaders: FieldTimeSeries
 using Oceananigans.Simulations: Simulation, run!, timestepper, TimeStepWizard, conjure_time_step_wizard!, Callback, add_callback!
 using Oceananigans.TimeSteppers: Clock, update_state!, time_step!, tick!, reset!
