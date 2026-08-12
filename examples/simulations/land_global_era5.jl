@@ -25,6 +25,7 @@ using Terrarium
 
 using CUDA
 using Dates
+using Oceananigans.OutputWriters: JLD2Writer
 using Rasters, NCDatasets
 using Rasters: Ti
 
@@ -156,7 +157,23 @@ inputs = InputSources(
 # loads the forcings at `t = 0`), read the resulting per-column air temperature from the state, and
 # re-initialize with a soil temperature profile built from it plus a mild geothermal gradient. Reading
 # the air temperature back from the state guarantees it is ordered consistently with the land columns.
+mean_annual_temperature(lat) = 20 - abs(40 * sin(lat)) # maximum at equator
+
+grid_lon, grid_lat = RingGrids.get_lonlats(grid.rings) # in radians
+lat_masked = grid_lat[on_architecture(CPU(), land_mask)]
+
+# The initial temperature profiles will be linear temperature profiles similar to what we would get from
+# [`QuasiThermalSteadyState`](@ref) but with a hardcoded geothermal gradient of 0.05 K/m. We don't use
+# the `QuasiThermalSteadyState` initializer here because it does not (yet) support spatially variable parameters.
+function initial_soil_temperature(x, z)
+    latᵢ = lat_masked[round(Int, x)]
+    T₀ = mean_annual_temperature(latᵢ)
+    T = T₀ - NF(0.05) * z
+    return T
+end
+
 initializers = (
+    temperature = initial_soil_temperature,
     saturation_water_ice = (x, z) -> min(one(NF), NF(0.6) - NF(0.05) * z),
 )
 integrator = initialize(land; inputs, initializers)
@@ -172,11 +189,23 @@ fig = plot_surface(integrator.state.leaf_area_index, title = "Leaf area index (J
 DisplayAs.PNG(fig) #hide
 
 # ## Running the simulation
+# Set up a `Simulation` and configure a time stepping wizard (necessary for stability):
+simulation = Simulation(integrator, Δt = 300.0, stop_time = 24 * 3600.0)
+conjure_time_step_wizard!(simulation, show_progress = true)
+simulation.output_writers[:snapshots] = JLD2Writer(
+    integrator,
+    (temperature = integrator.state.temperature,);
+    filename = "outputs/land_model_era5_output.jl2",
+    overwrite_existing = true,
+    schedule = TimeInterval(900)
+)
+display(simulation) #hide
+
 # We will advance the coupled model for just six hours to minimize computational cost.
 # Note that, due to  both timestepping restrictions and I/O overhead, the simulation is currently very slow. This will improve in the near future!
-Terrarium.initialize!(integrator)
-@time timestep!(integrator)
-run!(integrator, period = Hour(6), Δt = Minute(2), show_progress = true)
+run!(simulation)
+
+findall(<(-100), on_architecture(CPU(), integrator.state.ground_temperature))
 
 # Let's look at the results:
 # First we'll inspect the topsoil temperature after one month of forcing.
