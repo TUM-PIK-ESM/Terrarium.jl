@@ -27,6 +27,8 @@ Thermodynamics = "b60c26fb-14c3-4610-9d3e-2d17fe7ff00c"
 
 [compat]
 SpeedyWeather = "0.21"
+Thermodynamics = "1.2"
+julia = "1.10, 1.12"
 
 [sources.NumericalEarth]
 rev = "main"
