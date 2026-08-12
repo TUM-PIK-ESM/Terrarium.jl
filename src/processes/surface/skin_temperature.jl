@@ -70,7 +70,7 @@ Construct the default solver for the implicit skin temperature: a Newton root-fi
 """
 function default_skin_temperature_solver(::Type{NF}) where {NF}
     # Default to a Newton root-finder (via RootSolvers.jl) with a small iteration budget
-    return RootSolver(NF; max_iterations = 5)
+    return RootSolver(NF; max_iterations = 10)
 end
 
 """
@@ -307,7 +307,8 @@ Run a full nonlinear solve to determine the `skin_temperature` at grid cell `i, 
     )
     objective = ObjectiveFunction(compute_skin_temperature_residual!, :skin_temperature)
     # `snow` is forwarded (after `seb`) so the residual's conduction target can be snow-aware
-    return solve!(out, (i, j), grid, fields, objective, skinT.solver, skinT, seb, args...)
+    Ts = solve!(out, (i, j), grid, fields, objective, skinT.solver, skinT, seb, args...)
+    return Ts
 end
 
 # Kernels
