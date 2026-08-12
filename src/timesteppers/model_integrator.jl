@@ -68,6 +68,8 @@ function Base.getproperty(integrator::ModelIntegrator, name::Symbol)
     end
 end
 
+Oceananigans.initialize!(integrator::ModelIntegrator) = initialize!(integrator)
+
 Oceananigans.Solvers.iteration(integrator::ModelIntegrator) = integrator.clock.iteration
 
 Oceananigans.Architectures.architecture(integrator::ModelIntegrator) = architecture(get_grid(integrator.model))
@@ -79,6 +81,22 @@ Oceananigans.TimeSteppers.update_state!(integrator::ModelIntegrator; compute_ten
 Oceananigans.TimeSteppers.time_step!(integrator::ModelIntegrator, Δt; kwargs...) = timestep!(integrator, Δt)
 
 Oceananigans.Simulations.timestepper(integrator::ModelIntegrator) = get_timestepper(integrator.model)
+
+function Oceananigans.Simulations.conjure_time_step_wizard!(
+        simulation::Simulation{<:ModelIntegrator},
+        schedule = IterationInterval(1);
+        diffusive_cfl = 0.25,
+        min_change = 0.2,
+        show_progress = true,
+        kwargs...
+    )
+    wizard = TimeStepWizard(; diffusive_cfl, min_change, kwargs...)
+    simulation.callbacks[:time_step_wizard] = Callback(wizard, schedule)
+    if show_progress
+        simulation.callbacks[:progress] = ProgressCallback(simulation)
+    end
+    return nothing
+end
 
 """
     $SIGNATURES

@@ -8,10 +8,14 @@ cell_diffusion_timescale(state, grid, ::AbstractSoilThermodynamics{NF}, soil, ar
 """
     $TYPEDSIGNATURES
 
-Return the minimum thermal diffusion timescale ``τ = Δz² C / κ`` over the soil column for the
-`SoilThermodynamics` energy process, where `κ` is the bulk thermal conductivity (W m⁻¹ K⁻¹) and `C`
-the bulk volumetric heat capacity (J m⁻³ K⁻¹). This is the diffusive stability limit of the explicit
-heat conduction operator, whose effective temperature diffusivity is ``α = κ / C``.
+Return the minimum thermal diffusion timescale over the soil column for the `SoilThermodynamics`
+energy process. The per-cell timescale is the reciprocal of the diagonal decay rate of the discrete
+heat-conduction operator, ``τ = C·Δzᶜ / (κᶠ_k/Δzᶠ_k + κᶠ_{k+1}/Δzᶠ_{k+1})``, where `C` is the bulk
+volumetric heat capacity (J m⁻³ K⁻¹), `Δzᶜ` the cell thickness, `κᶠ` the thermal conductivity
+interpolated to a face (as used by the conduction operator), and `Δzᶠ` the center-to-center spacing at
+a face. This is the Gershgorin stability bound of the explicit operator: it reduces to `Δz²·C/(2κ)` on
+a uniform grid but is much stricter at thin surface layers of a graded grid, where the center-to-center
+spacing `Δzᶠ` — not the cell thickness — sets the limit.
 
 The sensible heat capacity is used (not the apparent capacity, which includes the latent heat of
 phase change); since the apparent capacity is never smaller, the reported timescale is conservative
@@ -37,8 +41,12 @@ end
 """
     $TYPEDSIGNATURES
 
-Kernel function returning the thermal diffusion timescale ``Δz² C / κ`` at cell `i, j, k`, with the
-bulk thermal conductivity `κ` and heat capacity `C` computed from the local soil composition.
+Kernel function returning the thermal diffusion timescale ``τ_k = C_k Δz_k^C / (κ_k^F/Δz_k^F +
+κ_{k+1}^F/Δz_{k+1}^F)`` at cell `i, j, k`. The heat capacity `C` is computed at the cell centre from
+the local soil composition; the face conductivities `κ^F` are interpolated from the adjacent cell
+centres exactly as in the heat conduction operator, and `Δz^F` is the center-to-center spacing at the
+face. Boundary faces (below cell `1` and above cell `Nz`) carry the surface/bottom boundary flux
+rather than an interior conduction term and are excluded from the sum.
 """
 @inline @propagate_inbounds function compute_thermal_diffusion_timescale(
         i, j, k, grid, fields,
@@ -48,11 +56,19 @@ bulk thermal conductivity `κ` and heat capacity `C` computed from the local soi
         bgc::AbstractSoilBiogeochemistry
     )
     soil = soil_volume(i, j, k, grid, fields, strat, hydrology, bgc)
-    κ = compute_thermal_conductivity(energy.thermal_properties, soil)
     C = compute_heat_capacity(energy.thermal_properties, soil)
     Δz = Δzᵃᵃᶜ(i, j, k, grid)
-    # thermal diffusivity α = κ / C ⟹ τ = Δz² / α = Δz² C / κ
-    return Δz^2 * C / κ
+    Nz = grid.Nz
+    # Conductance of the lower face k (between cells k-1 and k) and the upper face k+1 (between cells
+    # k and k+1): κ interpolated to the face, divided by the center-to-center spacing at the face.
+    # These are the same face conductivities and spacings the explicit conduction operator uses.
+    κ_lower = ℑzᵃᵃᶠ(i, j, k, grid, compute_thermal_conductivity, fields, energy, hydrology, strat, bgc)
+    κ_upper = ℑzᵃᵃᶠ(i, j, k + 1, grid, compute_thermal_conductivity, fields, energy, hydrology, strat, bgc)
+    conductance_lower = ifelse(k > 1, κ_lower / Δzᵃᵃᶠ(i, j, k, grid), zero(Δz))
+    conductance_upper = ifelse(k < Nz, κ_upper / Δzᵃᵃᶠ(i, j, k + 1, grid), zero(Δz))
+    # diagonal decay rate of the discrete operator; τ is its reciprocal
+    inverse_timescale = (conductance_lower + conductance_upper) / (C * Δz)
+    return ifelse(inverse_timescale > zero(inverse_timescale), inv(inverse_timescale), convert(eltype(Δz), Inf))
 end
 
 """
@@ -72,7 +88,7 @@ end
 #####
 
 # Fallback
-cell_diffusion_timescale(state, grid, ::AbstractSoilHydrology{NF}, args...) where {NF} = NF(Inf) 
+cell_diffusion_timescale(state, grid, ::AbstractSoilHydrology{NF}, args...) where {NF} = NF(Inf)
 
 """
     $TYPEDSIGNATURES
