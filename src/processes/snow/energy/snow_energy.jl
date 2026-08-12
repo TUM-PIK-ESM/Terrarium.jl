@@ -84,6 +84,7 @@ out of the snowpack.
     )
     ρ_w = constants.material.density_water
     L_sl = constants.thermodynamics.latent_heat_fusion
+    W = fields.snow_water_equivalent[i, j]
     Q_top = fields.surface_heat_flux[i, j]   # positive upward: energy leaving the snow top
     Q_base = fields.basal_heat_flux[i, j]    # positive upward: energy entering the snow base from soil
     E_subl = fields.sublimation[i, j]        # positive upward: snow mass loss to water vapor
@@ -95,7 +96,7 @@ out of the snowpack.
     Q_prcp = compute_snow_precip_heat_flux(snow, constants, P_s, R_snow, T_air)
     Q_subl = ρ_w * L_sl * E_subl # correction to account for enthalpy of lost ice
     dUdt = Q_base - Q_top + Q_prcp + Q_subl
-    return dUdt
+    return dUdt * (W > 0) # the W > 0 gate *should* be unnecessary but is included just in case
 end
 
 # Helper functions

@@ -74,9 +74,21 @@ function Terrarium.timestep!(state::StateVariables, model::SnowModel, timesteppe
     return timestep!(state, model, model.snow, timestepper, Δt)
 end
 
-function Terrarium.timestep!(state::StateVariables, model::AbstractModel, snow::AbstractSnow, timestepper::Terrarium.AbstractTimeStepper, Δt)
+function Terrarium.timestep!(
+        state::StateVariables,
+        model::AbstractModel{NF},
+        snow::AbstractSnow,
+        args...
+    ) where {NF}
     # Enforce SWE >= 0
     # TODO: Rewrite to ensure mass conservation
-    interior(state.snow_water_equivalent) .= max.(interior(state.snow_water_equivalent), 0)
+    out = (; snow_water_equivalent, snow_energy) = state
+    launch!(model.grid, XY, enforce_snow_constraints!, out, snow)
     return nothing
+end
+
+@kernel inbounds = true function enforce_snow_constraints!(out, grid, snow::AbstractSnow{NF}) where {NF}
+    i, j = @index(Global, NTuple)
+    out.snow_water_equivalent[i, j, 1] = max(out.snow_water_equivalent[i, j], zero(NF))
+    out.snow_energy[i, j, 1] = out.snow_energy[i, j] * (out.snow_water_equivalent[i, j] > zero(NF))
 end
