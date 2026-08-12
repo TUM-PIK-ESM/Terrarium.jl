@@ -72,7 +72,7 @@ end
 #####
 
 # Fallback
-cell_diffusion_timescale(state, grid, ::AbstractSoilHydrology{NF}, args...) where {NF} = NF(Inf) 
+cell_diffusion_timescale(state, grid, ::AbstractSoilHydrology{NF}, args...) where {NF} = NF(Inf)
 
 """
     $TYPEDSIGNATURES
