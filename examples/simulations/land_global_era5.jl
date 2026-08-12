@@ -171,7 +171,7 @@ DisplayAs.PNG(fig) #hide
 fig = plot_surface(integrator.state.leaf_area_index, title = "Leaf area index (Jan)", colorrange = (0, 6))
 DisplayAs.PNG(fig) #hide
 
-# ## Run through the first three months
+# ## Running the simulation
 # We will advance the coupled model for just six hours to minimize computational cost.
 # Note that, due to  both timestepping restrictions and I/O overhead, the simulation is currently very slow. This will improve in the near future!
 Terrarium.initialize!(integrator)
