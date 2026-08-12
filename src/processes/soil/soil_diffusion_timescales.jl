@@ -71,6 +71,9 @@ end
 ##### Soil hydrology (Richards) timescale
 #####
 
+# Fallback
+cell_diffusion_timescale(state, grid, ::AbstractSoilHydrology{NF}, args...) where {NF} = NF(Inf) 
+
 """
     $TYPEDSIGNATURES
 
