@@ -61,6 +61,7 @@ import Oceananigans
 import Oceananigans.Advection: cell_advection_timescale
 import Oceananigans.Diagnostics: cell_diffusion_timescale
 import Pkg
+import ProgressMeter
 import RingGrids
 import RootSolvers
 import Thermodynamics
@@ -113,6 +114,7 @@ include("utils/utils.jl")
 
 # debugging utilities
 include("diagnostics/debugging.jl")
+include("diagnostics/progress.jl")
 
 export XY, XYZ
 include("abstract_variables.jl")
