@@ -52,7 +52,7 @@ followed by
 using Terrarium
 ```
 
-Once you have the package installed, head over the [Quick start](https://numericalearth.github.io/Terrarium.jl/dev/#Quick-start) section of the documentation to get started.
+Once you have the package installed, head over to the [Quick start](https://numericalearth.github.io/Terrarium.jl/dev/#Quick-start) section of the documentation to get started.
 
 If you would like to not only use Terrarium but also actively develop it (or fix bugs 🐛), you can also install it as a [development package](https://pkgdocs.julialang.org/v1/toml-files/#Developed-package):
 ```
