@@ -58,6 +58,8 @@ end
 
 ThermodynamicConstants(::Type{NF}; kwargs...) where {NF} = ThermodynamicConstants{NF}(; kwargs...)
 
+Base.eltype(::ThermodynamicConstants{NF}) where {NF} = NF
+
 # Material constants
 
 """
@@ -87,6 +89,8 @@ end
 
 MaterialConstants(::Type{NF}; kwargs...) where {NF} = MaterialConstants{NF}(; kwargs...)
 
+Base.eltype(::MaterialConstants{NF}) where {NF} = NF
+
 # Universal constants
 
 """
@@ -115,6 +119,8 @@ $FIELDS
 end
 
 UniversalConstants(::Type{NF}; kwargs...) where {NF} = UniversalConstants{NF}(; kwargs...)
+
+Base.eltype(::UniversalConstants{NF}) where {NF} = NF
 
 # Container type
 
@@ -165,3 +171,5 @@ function PhysicalConstants(
     ) where {NF}
     return PhysicalConstants{NF}(thermodynamics, material, universal)
 end
+
+Base.eltype(::PhysicalConstants{NF}) where {NF} = NF
