@@ -53,7 +53,10 @@ land_sea_frac_native = RingGrids.Field(arch, ERA5LandInvariants(), "lsm"; NF)
 land_sea_frac = RingGrids.interpolate(model_rings, land_sea_frac_native)
 land_mask = land_sea_frac .> 0.5
 Nz = 30 # number of soil layers
-grid = ColumnRingGrid(arch, NF, ExponentialSpacing(N = Nz, Δz_min = 0.1), land_mask)
+grid = ColumnRingGrid(arch, NF, ExponentialSpacing(N = Nz, Δz_min = 0.05), land_mask)
+grid_lon, grid_lat = RingGrids.get_lonlats(grid.rings) # in radians
+land_mask_cpu = on_architecture(CPU(), land_mask)
+lat_masked = grid_lat[land_mask_cpu]
 
 # ## Meteorological forcings from ERA5-Land
 # The [`ERA5LandForcings`](@ref) asset holds one year of hourly ERA5-Land fields already regridded to
@@ -159,9 +162,6 @@ inputs = InputSources(
 # the air temperature back from the state guarantees it is ordered consistently with the land columns.
 mean_annual_temperature(lat) = 20 - abs(40 * sin(lat)) # maximum at equator
 
-grid_lon, grid_lat = RingGrids.get_lonlats(grid.rings) # in radians
-lat_masked = grid_lat[on_architecture(CPU(), land_mask)]
-
 # The initial temperature profiles will be linear temperature profiles similar to what we would get from
 # [`QuasiThermalSteadyState`](@ref) but with a hardcoded geothermal gradient of 0.05 K/m. We don't use
 # the `QuasiThermalSteadyState` initializer here because it does not (yet) support spatially variable parameters.
@@ -194,8 +194,15 @@ simulation = Simulation(integrator, Δt = 300.0, stop_time = 24 * 3600.0)
 conjure_time_step_wizard!(simulation, show_progress = true)
 simulation.output_writers[:snapshots] = JLD2Writer(
     integrator,
-    (temperature = integrator.state.temperature,);
-    filename = "outputs/land_model_era5_output.jl2",
+    (
+        soil_temperature = integrator.state.temperature,
+        skin_temperature = integrator.state.skin_temperature,
+        snow_water_equivalent = integrator.state.snow_water_equivalent,
+        snow_temperature = integrator.state.snow_temperature,
+        latent_heat_flux = integrator.state.latent_heat_flux,
+        canopy_water_conductance = integrator.state.canopy_water_conductance,
+    );
+    filename = "outputs/land_model_era5_output.jld2",
     overwrite_existing = true,
     schedule = TimeInterval(900)
 )
@@ -203,9 +210,35 @@ display(simulation) #hide
 
 # We will advance the coupled model for just six hours to minimize computational cost.
 # Note that, due to  both timestepping restrictions and I/O overhead, the simulation is currently very slow. This will improve in the near future!
+Terrarium.initialize!(integrator)
 run!(simulation)
 
-findall(<(-100), on_architecture(CPU(), integrator.state.ground_temperature))
+failed_idx = findall(<(-100), on_architecture(CPU(), integrator.state.ground_temperature))
+idx = failed_idx[1][1]
+
+soilT_fts = FieldTimeSeries("outputs/land_model_era5_output.jld2", "soil_temperature")
+skinT_fts = FieldTimeSeries("outputs/land_model_era5_output.jld2", "skin_temperature")
+let fig = Figure()
+    ax = Axis(fig[1, 1])
+    lines!(ax, skinT_fts[idx, 1, 1, :])
+    lines!(ax, soilT_fts[idx, 1, 30, :])
+    fig
+end
+
+swe_fts = FieldTimeSeries("outputs/land_model_era5_output.jld2", "snow_water_equivalent")
+lines(swe_fts[idx, 1, 1, :])
+
+lhf_fts = FieldTimeSeries("outputs/land_model_era5_output.jld2", "latent_heat_flux")
+lines(lhf_fts[idx, 1, 1, :])
+
+snt_fts = FieldTimeSeries("outputs/land_model_era5_output.jld2", "snow_temperature")
+lines(snt_fts[idx, 1, 1, :])
+
+lond, latd = RingGrids.get_londlatds(grid.rings)
+lines(shortwave_down[X(Near(lond[land_mask_cpu][idx])), Y(Near(latd[land_mask_cpu][idx])), Ti(1:12)])
+lines(longwave_down[X(Near(lond[land_mask_cpu][idx])), Y(Near(latd[land_mask_cpu][idx])), Ti(1:12)])
+lines(air_temperature[X(Near(lond[land_mask_cpu][idx])), Y(Near(latd[land_mask_cpu][idx])), Ti(1:12)])
+lines(wind_u[X(Near(lond[land_mask_cpu][idx])), Y(Near(latd[land_mask_cpu][idx])), Ti(1:12)])
 
 # Let's look at the results:
 # First we'll inspect the topsoil temperature after one month of forcing.
