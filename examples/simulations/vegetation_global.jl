@@ -27,7 +27,7 @@ NF = Float32
 # [`ColumnRingGrid`](@ref) at ~1° resolution (72 Gaussian rings), keeping only grid points with
 # >50% land cover. The land-sea mask is loaded from the ERA5-Land invariants asset and regridded
 # onto the model grid.
-land_sea_frac_native = on_architecture(arch, Terrarium.load_asset(ERA5LandInvariants(), "lsm"; NF))
+land_sea_frac_native = RingGrids.Field(arch, ERA5LandInvariants(), "lsm"; NF)
 model_rings = on_architecture(arch, RingGrids.FullGaussianGrid(72))
 land_sea_frac = RingGrids.interpolate(model_rings, land_sea_frac_native)
 land_mask = land_sea_frac .> 0.5
@@ -42,7 +42,7 @@ lai_asset_path = Terrarium.get_asset(lai_asset)
 # We next load the asset into a `RasterStack` with `lazy = true` to avoid loading the full dataset.
 # cycle = true` makes the LAI climatology repeat every year over the whole simulation.
 lai_raster = RasterStack(lai_asset_path, lazy = true)
-lai_highveg = replace_missing(lai_raster[:lai_hv], NaN32)
+lai_highveg = convert.(NF, replace_missing(lai_raster[:lai_hv], zero(NF)))
 lai_input = InputSource(grid, lai_highveg; source_grid = Terrarium.native_grid(lai_asset), name = :leaf_area_index, cycle = true)
 
 # ## Vegetation model

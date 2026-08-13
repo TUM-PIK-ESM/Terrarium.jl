@@ -44,7 +44,7 @@ Computes the disturbance rate`γv`,
 @inline function compute_γv(veg_dynamics::PALADYNVegetationDynamics)
     # TODO add PALADYN implemetation for the disturbance rate (depends on soil moisture)
     # Placeholder for now γv = min. disturbance rate
-    return veg_dynamics.γv_min
+    return veg_dynamics.γv_min / (365.25 * 24 * 3600) # convert to seconds
 end
 
 """

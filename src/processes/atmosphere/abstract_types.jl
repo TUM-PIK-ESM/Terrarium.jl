@@ -27,6 +27,14 @@ abstract type AbstractIncomingRadiation end
 """
     $TYPEDEF
 
+Base type for representations of wind input fields. The target input variable is
+[`windspeed`](@ref) but subtypes may define different input formulations (e.g. u/v component velocities).
+"""
+abstract type AbstractWind end
+
+"""
+    $TYPEDEF
+
 Base type for aerodynamic parameterizations that compute the bulk drag coefficient
 for turbulent heat and moisture exchange between the land surface and atmosphere.
 """
@@ -39,13 +47,14 @@ abstract type AbstractAerodynamics{NF} end
 
 Base type for representations of the atmosphere that provide meterological state
 variables such as air temperature and pressure, humidity, precipitation, incoming
-solar radiation, tracer gas concentrations, wind speed, and near-surface aerodynamics.
+solar radiation, gas concentrations, wind speed, and near-surface aerodynamics.
 """
 abstract type AbstractAtmosphere{
     NF,
     PR <: AbstractPrecipitation,
     IR <: AbstractIncomingRadiation,
     HM <: AbstractHumidity,
+    WS <: AbstractWind,
     AD <: AbstractAerodynamics{NF},
 } <: AbstractProcess{NF}
 end

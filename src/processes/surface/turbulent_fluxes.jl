@@ -186,10 +186,10 @@ snow-covered fraction sublimates from the snowpack (latent heat of sublimation, 
         Tₛ = skin_temperature(i, j, grid, fields, skinT)
         rₐ = aerodynamic_resistance(i, j, grid, fields, atmos) # aerodynamic resistance
         Δq = compute_specific_humidity_difference(i, j, grid, fields, atmos, constants, Tₛ)
-        Δq / rₐ  # humidity flux
+        Δq / rₐ  # simplified humidity flux w/o separate ET
     else
         # Compute humidity flux using the given ET scheme
-        compute_surface_humidity_flux(i, j, grid, fields, evtr, atmos, constants)
+        compute_surface_humidity_flux(i, j, grid, fields, evtr, constants, atmos)
     end
 
     # Get atmospheric variables and constants
@@ -242,4 +242,4 @@ end
 Prescribed turbulent fluxes are input fields supplied by an external coupler (already present in
 `fields`), so there is nothing to compute or store.
 """
-@propagate_inbounds compute_turbulent_fluxes!(out, i, j, grid, fields, ::PrescribedTurbulentFluxes, skinT, constants, atmos, evtr, snow) = nothing
+@propagate_inbounds compute_turbulent_fluxes!(out, i, j, grid, fields, ::PrescribedTurbulentFluxes, args...) = nothing

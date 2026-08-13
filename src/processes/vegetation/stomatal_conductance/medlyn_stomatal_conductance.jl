@@ -53,7 +53,6 @@ Includes minimum conductance and light extinction effects based on LAI, scaled b
     let g_min = stomcond.g_min / 1000 # convert mm/s to m/s
         g₁ = stomcond.g₁
         k_ext = traits.extinction_coefficient
-
         g₀ = g_min * (1 - exp(-k_ext * LAI)) * β
         g_stm = g₀ + NF(1.6) * (1 + g₁ / sqrt(vpd)) * An / co2 * NF(1.0e6)
         return g_stm

@@ -17,12 +17,10 @@ import RingGrids
 
 const Extrapolation = Union{Cyclical, Clamp}
 
-function Terrarium.load_asset(path, name, grid::RingGrids.AbstractGrid, ::Terrarium.NetCDF, ::Type{NF}; indices = (:, :, :), fill_value = NF(NaN)) where {NF}
-    raster = replace(Raster(path, name = name, lazy = true), missing => fill_value)[indices...]
-    data = reconcile_latitudes(raster)
-    field = RingGrids.Field(grid, size(data)[3:end]...)
-    field .= reshape(data, :, size(data)[3:end]...)
-    return field
+function Terrarium.load_asset(path, name, grid, ::Terrarium.NetCDF, ::Type{NF}; indices = (:, :, :), fill_value = NF(NaN), lazy = true) where {NF}
+    raster = convert.(NF, replace_missing(Raster(path; name, lazy), fill_value))
+    data = reconcile_latitudes(view(raster, indices...), grid)
+    return data
 end
 
 """
@@ -73,7 +71,7 @@ function Terrarium.InputSource(
         reftime = nothing,
         cycle = false
     ) where {NF}
-    raster = reconcile_latitudes(raster)
+    raster = reconcile_latitudes(raster, grid.rings)
     extrapolation = cycle ? Cyclical() : Clamp()
     return RasterInputSource(grid, source_grid, raster, dims(raster, Ti), name, units, reftime, extrapolation)
 end
@@ -231,7 +229,8 @@ on_architecture(to, raster::AbstractRaster) = rebuild(
     dims = map(d -> rebuild(d, val = on_architecture(to, d.val)), dims(raster))
 )
 
-# Drop latitudes at the poles
-reconcile_latitudes(raster::AbstractRaster) = @view(raster[Y(Where(lat -> -90 < lat < 90))])
+# Drop latitudes at the poles for RingGrids
+reconcile_latitudes(raster::AbstractRaster, ::RingGrids.AbstractGrid) = @view(raster[Y(Where(lat -> -90 < lat < 90))])
+reconcile_latitudes(raster::AbstractRaster, grid) = raster
 
 end

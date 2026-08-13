@@ -25,6 +25,7 @@ include("thermodynamics/heat_conduction.jl")
 export ConstantAerodynamics
 include("atmosphere/aerodynamics.jl")
 export PrescribedAtmosphere, RainSnow, LongShortWaveRadiation, TracerGas, TracerGases, AmbientCO2
+export Windspeed, WindVelocity, SpecificHumidity
 include("atmosphere/prescribed_atmosphere.jl")
 
 # Ground (soil and other subsurface media)

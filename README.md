@@ -12,7 +12,7 @@
 <img alt="code style: runic" src="https://img.shields.io/badge/code_style-%E1%9A%B1%E1%9A%A2%E1%9A%BE%E1%9B%81%E1%9A%B2-black.svg?style=flat-square">
 </a>
 
-[Terrarium.jl](https://numericalearth.github.io/Terrarium.jl/dev) is a framework for hybrid physics- and data-driven land modeling across spatial and temporal scales. We envision Terrarium to be part of a new generation of Earth system component models that combine modularity, interactivity, GPU-compability and auto-differentiability (AD) for seamless integration of process-based and data-driven model components in both global and regional scale simulations.
+[Terrarium.jl](https://numericalearth.github.io/Terrarium.jl/dev) is a framework for hybrid physics- and data-driven land modeling across spatial and temporal scales. We envision Terrarium to be part of a new generation of Earth system component models that combine modularity, interactivity, GPU-compatibility and auto-differentiability (AD) for seamless integration of process-based and data-driven model components in both global and regional scale simulations.
 
 Terrarium is being developed alongside [SpeedyWeather.jl](https://github.com/SpeedyWeather/SpeedyWeather.jl) and [Oceananigans.jl](https://github.com/CliMA/Oceananigans.jl) as the land component of a new, user-friendly, and fully GPU/AD-compatible Earth System Model in the Julia programming language.
 
@@ -52,6 +52,8 @@ followed by
 using Terrarium
 ```
 
+Once you have the package installed, head over to the [Quick start](https://numericalearth.github.io/Terrarium.jl/dev/#Quick-start) section of the documentation to get started.
+
 If you would like to not only use Terrarium but also actively develop it (or fix bugs 🐛), you can also install it as a [development package](https://pkgdocs.julialang.org/v1/toml-files/#Developed-package):
 ```
 pkg> dev Terrarium
@@ -80,47 +82,6 @@ julia --project=examples examples/simulations/soil_heat_global.jl
 ```
 
 You can also `activate` the example project environment from your REPL by first entering the package manager with `]` and then running the command `activate examples`. This will let you interactively execute the examples from the REPL or your preferred IDE.
-
-## Quick start
-
-A natural first step with `Terrarium` is to set up and run your very first `SoilModel`. This represents a standalone model of transient heat, water, and carbon transport over a particular choice of `grid`. We start by chosing a `ColumnGrid` which represents one or more laterally independent vertical columns:
-
-```julia
-using Terrarium
-
-# Set up a SoilModel on a ColumnGrid with 10 vertical soil layers that will run on the CPU with 32-bit precision
-num_columns = 1
-arch = CPU()
-grid = ColumnGrid(arch, Float32, ExponentialSpacing(N=10), num_columns)
-model = SoilModel(grid, timesteppers=ForwardEuler(eltype(grid)))
-# Prescribe a constant surface temperature of 1°C
-bcs = PrescribedSurfaceTemperature(:T_ub, 1.0)
-integrator = initialize(model, boundary_conditions = bcs)
-# Run the simulation forward for 10 model days
-@time run!(integrator, period = Day(10))
-```
-
-That's it! You already succesfully ran a (very simple) simulation with Terrarium!
-
-Note that setting `num_columns = 1` here corresponds to a point simulation for a single vertical column. However, we can easily scale this up by set `num_columns` to any positive integer (up to the memory limit of your system, of course).
-
-We can also easily adapt this code to run a *global* simulation over a suitable spatial grid. For this, we'll need to have [`RingGrids`](https://github.com/SpeedyWeather/SpeedyWeather.jl/tree/main/RingGrids) installed (or import it directly from Terrarium with `using Terrarium.RingGrids`). Optionally, if a GPU is available and [CUDA.jl](https://github.com/JuliaGPU/CUDA.jl) is installed in the current project or global Julia environment, we can accelerate the global simulation by simply changing `CPU` to `GPU`:
-
-```julia
-using RingGrids: FullGaussianGrid
-using CUDA # needs to be separately installed
-
-rings = FullGaussianGrid(8) # Gaussian grid with 16 latitudinal rings (512 points, ~9.5˚)
-arch = GPU() # run on the GPU!
-grid = ColumnRingGrid(arch, Float32, ExponentialSpacing(N=10), rings)
-model = SoilModel(grid, timesteppers=ForwardEuler(eltype(grid)))
-# Prescribe a constant surface temperature of 1°C
-bcs = PrescribedSurfaceTemperature(:T_ub, 1.0)
-integrator = initialize(model, boundary_conditions = bcs)
-# Run the simulation forward for 10 model days
-@time run!(integrator, period = Day(10))
-```
-and voila! We have just run a GPU-accelerated, global-scale simulation of soil thermal dynamics with minimal additional effort. While more realistic simulations are of course more involved, this simple example demonstrates the core of what we aim to accomplish with Terrarium; a fast, user-friendly, and highly adaptable land model that can easily be configured to run on local, regional, and global scales.
 
 ## Why Oceananigans?
 It might initially seem strange that a land model would be built on top of a framework for ocean modeling. There are, however, some key advantages in doing so:
