@@ -60,6 +60,7 @@ import ModelParameters
 import Oceananigans
 import Oceananigans.Diagnostics
 import Pkg
+import ReactantCore
 import RingGrids
 import RootSolvers
 import Thermodynamics
