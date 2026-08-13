@@ -50,7 +50,7 @@ end
 settings = ArgParseSettings(;
     prog = "manual_benchmarking.jl",
     description = "Run the Terrarium benchmark suite on one architecture and merge the result into " *
-                  "`assets/benchmark_results.json` and `README.md`.",
+        "`assets/benchmark_results.json` and `README.md`.",
 )
 @add_arg_table! settings begin
     "arch"
@@ -60,7 +60,7 @@ settings = ArgParseSettings(;
     range_tester = arg -> lowercase(arg) in ARCH_CHOICES
     "mode"
     help = "Duration modifier: `quick` (0.25x steps, sweeps capped), `default`, `long` (10x steps), " *
-           "or a positive numeric timestep multiplier"
+        "or a positive numeric timestep multiplier"
     arg_type = String
     default = "default"
     range_tester = valid_mode
@@ -82,6 +82,7 @@ end
 using Terrarium
 using Dates, InteractiveUtils, JSON3, Printf
 
+# `arg` is one of `ARCH_CHOICES`; ArgParse has already rejected anything else.
 function pick_architecture(arg::AbstractString)
     if arg == "gpu"
         CUDA.functional() || error("No functional CUDA device found for architecture `gpu`.")
