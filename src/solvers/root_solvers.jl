@@ -40,7 +40,7 @@ end
     residual! = build_residual(out, indices, grid, fields, step_func!, target_field, solver, func_args...; func_kwargs...)
 
     # Solve for the root using RootSolvers.jl
-    x₀ = target_field[indices...]
+    x₀ = target_field[field_indices(indices)...]
     method = M(x₀)
     tolerance = solver.tolerance
     result = RootSolvers.find_zero(residual!, method, solver.solution_type, tolerance, solver.max_iterations)

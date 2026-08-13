@@ -39,17 +39,17 @@ Number of Newton iterations performed by the given solver.
         func_kwargs...
     ) where {NF, M, N, target}
     target_field = getproperty(out, target)
-    # `Field`s must always be indexed in 3D; see `pad_indices`
-    field_indices = pad_indices(target_field, indices)
+    # `Field`s must always be indexed in 3D; see `field_indices`
+    target_indices = field_indices(indices)
     # Forward-difference step size, scaled with the magnitude of the iterate
     h = cbrt(eps(NF))
-    x = target_field[field_indices...]
+    x = target_field[target_indices...]
     for _ in 1:N
         # The objective reads the target field, so it must be set before each evaluation
-        target_field[field_indices...] = x
+        target_field[target_indices...] = x
         residual = objective_func!(out, indices..., grid, fields, func_args...; func_kwargs...)
         δ = h * (one(NF) + abs(x))
-        target_field[field_indices...] = x + δ
+        target_field[target_indices...] = x + δ
         residual_perturbed = objective_func!(out, indices..., grid, fields, func_args...; func_kwargs...)
         ∂residual∂x = (residual_perturbed - residual) / δ
         # A vanishing derivative would send the step to ±Inf; hold the iterate instead. Note that
@@ -57,6 +57,6 @@ Number of Newton iterations performed by the given solver.
         step = ifelse(iszero(∂residual∂x), zero(NF), residual / ∂residual∂x)
         x = x - step
     end
-    target_field[field_indices...] = x
+    target_field[target_indices...] = x
     return x, N
 end

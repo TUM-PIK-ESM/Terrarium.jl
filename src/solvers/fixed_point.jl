@@ -37,7 +37,7 @@ end
         func_kwargs...
     ) where {NF, N, target}
     target_field = getproperty(out, target)
-    x₀ = target_field[indices...]
+    x₀ = target_field[field_indices(indices)...]
     # The objective returns the fixed-point residual F(x) = x - g(x), so the
     # updated iterate is g(x) = x - F(x). Take the first (un-relaxed) step.
     residual = objective_func!(out, indices..., grid, fields, func_args...; func_kwargs...)
@@ -48,7 +48,7 @@ end
         x₀ = x₁
         # Compute residual at the current field value and form the new iterate g(x) = x - F(x)
         residual = objective_func!(out, indices..., grid, fields, func_args...; func_kwargs...)
-        x₁ = target_field[field_indices...] - residual
+        x₁ = target_field[field_indices(indices)...] - residual
         # Apply (optionally relaxed) update
         target_field[field_indices(indices)...] = relaxed_update(solver.relax, x₁, x₀)
         iteration += 1
