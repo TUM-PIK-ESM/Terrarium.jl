@@ -2,23 +2,6 @@
 Run the Terrarium benchmark suite on one architecture and merge the result into a shared `README.md`
 without overwriting the results of the other architectures.
 
-Usage, from `benchmark/`:
-
-    julia --project=. manual_benchmarking.jl                # CPU, auto-labelled cpu-arm or cpu-x86
-    julia --project=. manual_benchmarking.jl gpu            # CUDA GPU
-    julia --project=. manual_benchmarking.jl reactant-cpu   # Reactant/XLA, CPU backend
-    julia --project=. manual_benchmarking.jl reactant-gpu   # Reactant/XLA, CUDA backend
-
-An optional second argument sets how long the suite runs:
-
-    julia --project=. manual_benchmarking.jl gpu quick      # 0.25x steps, sweeps capped at 8192 columns
-    julia --project=. manual_benchmarking.jl gpu long       # 10x steps, full sweeps (publication-ready)
-    julia --project=. manual_benchmarking.jl gpu 3.5        # explicit timestep multiplier, full sweeps
-
-`quick` is for checking that the benchmarking and the model configurations still run; `long` is for
-numbers (hopefully) worth publishing. The mode is recorded alongside the results: SYPD is a rate and so is
-comparable across modes, but the noise level is not.
-
 Run `julia --project=. manual_benchmarking.jl --help` for the argument documentation.
 
 Results are merged into `assets/benchmark_results.json`, keyed by architecture label. `README.md` is
