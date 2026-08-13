@@ -23,7 +23,7 @@ $TYPEDFIELDS
     @component atmosphere::Atmosphere = PrescribedAtmosphere(eltype(grid))
 
     "Vegetation processes"
-    @component vegetation::Vegetation = VegetationCarbon(eltype(grid))
+    @component vegetation::Vegetation = VegetationCarbonCycle(eltype(grid))
 
     "Physical constants"
     @component constants::PhysicalConstants{NF} = PhysicalConstants(eltype(grid))
@@ -33,6 +33,11 @@ $TYPEDFIELDS
 
     "Time stepper: a single `AbstractTimeStepper` (e.g. `ForwardEuler`, `Heun`) or an `IMEX`"
     @component timestepper::Timestepper = default_timestepper(eltype(grid))
+end
+
+function initialize!(state, model::VegetationModel)
+    initialize!(state, model.grid, model.vegetation)
+    return nothing
 end
 
 function compute_auxiliary!(state, model::VegetationModel)
@@ -45,8 +50,8 @@ end
 
 function compute_tendencies!(state, model::VegetationModel)
     # Unpack vegetation model
-    (; grid, vegetation, constants) = model
-    # Compute auxiliary variables for coupled vegetation processes
-    compute_tendencies!(state, grid, vegetation, constants)
+    (; grid, atmosphere, vegetation, constants) = model
+    # Compute tendencies for coupled vegetation processes
+    compute_tendencies!(state, grid, vegetation, constants, atmosphere)
     return nothing
 end

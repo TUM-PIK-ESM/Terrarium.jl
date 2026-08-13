@@ -102,10 +102,11 @@ Base type for vegetation phenology schemes.
 abstract type AbstractPhenology{NF} <: AbstractProcess{NF} end
 
 """
-	compute_phenology(i, j, grid, fields, phenol::AbstractPhenology)
+	compute_phenology(i, j, grid, fields, phenol::AbstractPhenology, atmos::AbstractAtmosphere)
 
 Cell-level phenology computation. Implementations return phenology factors
-and derived LAI at the given index `i, j`.
+and derived LAI at the given index `i, j`, using atmospheric inputs (e.g. air temperature)
+where required by the scheme.
 """
 function compute_phenology end
 

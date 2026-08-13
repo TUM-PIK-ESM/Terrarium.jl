@@ -17,12 +17,12 @@ function Terrarium.run!(
         integrator::ModelIntegrator,
         checkpointing_scheme::Checkpointing.Scheme,
         steps::Int,
-        Δt = default_dt(timestepper(integrator))
+        Δt = default_dt(integrator)
     )
     Δt = Terrarium.convert_dt(Δt)
 
     @ad_checkpoint checkpointing_scheme for _ in 1:steps
-        timestep!(integrator, Δt, finalize = false)
+        timestep!(integrator, Δt; finalize = false)
     end
 
     # Update auxiliary variables for final timestep

@@ -49,9 +49,10 @@ struct PrescribedAtmosphere{
         Precip <: AbstractPrecipitation,
         IncomingRad <: AbstractIncomingRadiation,
         Humidity <: AbstractHumidity,
+        Wind <: AbstractWind,
         Aerodynamics <: AbstractAerodynamics,
         Gases <: Tuple{Vararg{TracerGas{NF}}},
-    } <: AbstractAtmosphere{NF, Precip, IncomingRad, Humidity, Aerodynamics}
+    } <: AbstractAtmosphere{NF, Precip, IncomingRad, Humidity, Wind, Aerodynamics}
     "Surface-relative altitude in meters at which the atmospheric forcings are assumed to be applied"
     altitude::NF
 
@@ -67,6 +68,9 @@ struct PrescribedAtmosphere{
     "Specific or relative humidity"
     humidity::Humidity
 
+    "Wind velocity formulation"
+    wind::Wind
+
     "Aerodynamic resistances and drag coefficients"
     aerodynamics::Aerodynamics
 
@@ -81,18 +85,21 @@ function PrescribedAtmosphere(
         precip::AbstractPrecipitation = RainSnow(),
         radiation::AbstractIncomingRadiation = LongShortWaveRadiation(),
         humidity::AbstractHumidity = SpecificHumidity(),
+        wind::AbstractWind = Windspeed(),
         aerodynamics::AbstractAerodynamics = ConstantAerodynamics(NF),
         tracers::NamedTuple = TracerGases(AmbientCO2(NF)),
     ) where {NF}
-    return PrescribedAtmosphere(altitude, min_windspeed, precip, radiation, humidity, aerodynamics, tracers)
+    return PrescribedAtmosphere(altitude, min_windspeed, precip, radiation, humidity, wind, aerodynamics, tracers)
 end
 
 ParameterEditing.parameters(::PrescribedAtmosphere) = (;)
 
+minimum_windspeed(atmos::PrescribedAtmosphere) = atmos.min_windspeed
+
 variables(atmos::PrescribedAtmosphere{NF}) where {NF} = (
     input(:air_temperature, XY(), default = NF(10), units = u"°C", desc = "Near-surface air temperature in °C"),
     input(:air_pressure, XY(), default = NF(101_325), units = u"Pa", desc = "Atmospheric pressure at the surface in Pa"),
-    input(:windspeed, XY(), default = NF(0.1), units = u"m/s", desc = "Wind speed in m/s"),
+    variables(atmos.wind)...,
     variables(atmos.humidity)...,
     variables(atmos.precip)...,
     variables(atmos.radiation)...,
@@ -106,25 +113,13 @@ variables(atmos::PrescribedAtmosphere{NF}) where {NF} = (
 @inline compute_tendencies!(state, grid, atmos::PrescribedAtmosphere) = nothing
 
 """
-    $SIGNATURES
-Computes the vapor pressure deficit for an air parcel at temperature `T` [°C] with 
-pressure `pres` [Pa] and specific humidity `q_air` [kg/kg].
-Assumes that air parcel is over water when `T > 0°C` and over ice when `T < 0°C`.
-Wrapper around [`vapor_pressure_deficit`](@extref Thermodynamics.vapor_pressure_deficit).
-"""
-@inline function vapor_pressure_deficit(c::ThermodynamicConstants, T, pres, q_air)
-    T_K = celsius_to_kelvin(c, T)
-    vpd = Thermodynamics.vapor_pressure_deficit(c, T_K, pres, q_air)
-    return vpd
-end
-"""
     aerodynamic_resistance(i, j, grid, fields, atmos::PrescribedAtmosphere)
 
 Compute the aerodynamic resistance (inverse conductance) at grid cell `i, j`.
 """
-@inline function aerodynamic_resistance(i, j, grid, fields, atmos::PrescribedAtmosphere)
+@inline function aerodynamic_resistance(i, j, grid, fields, atmos::PrescribedAtmosphere{NF}) where {NF}
     let C = drag_coefficient(i, j, grid, fields, atmos.aerodynamics),
-            Vₐ = max(windspeed(i, j, grid, fields, atmos), 1.0e-6)  # clip windspeed to small value
+            Vₐ = max(windspeed(i, j, grid, fields, atmos), NF(1.0e-6))  # clip windspeed to small value
         rₐ = 1 / (C * Vₐ)
         return rₐ
     end
@@ -145,11 +140,44 @@ Retrieve or compute the air pressure at the current time step.
 @propagate_inbounds air_pressure(i, j, grid, fields, ::PrescribedAtmosphere) = fields.air_pressure[i, j]
 
 """
-    windspeed(i, j, grid, fields, ::PrescribedAtmosphere)
+    ambient_co2(i, j, grid, fields, ::PrescribedAtmosphere)
+
+Return the current prescribed ambient CO2 concentration level.
+"""
+@propagate_inbounds ambient_co2(i, j, grid, fields, ::PrescribedAtmosphere) = fields.CO2[i, j, 1]
+
+"""
+    $TYPEDEF
+
+Represents a windspeed as direct input/forcing variable.
+"""
+struct Windspeed <: AbstractWind end
+
+variables(::Windspeed) = (
+    input(:windspeed, XY(), default = 0.1, units = u"m/s", desc = "Wind speed in m/s"),
+)
+
+"""
+    $TYPEDSIGNATURES
 
 Retrieve or compute the windspeed at the current time step.
 """
-@propagate_inbounds windspeed(i, j, grid, fields, atmos::PrescribedAtmosphere) = max(fields.windspeed[i, j], atmos.min_windspeed)
+@propagate_inbounds windspeed(i, j, grid, fields, atmos::AbstractAtmosphere{NF, PR, IR, HD, Windspeed}) where {NF, PR, IR, HD} = max(fields.windspeed[i, j], minimum_windspeed(atmos))
+
+"""
+    $TYPEDEF
+
+Represents a windspeed given as `u` (east-west) and `v` (south-north) velocity components.
+"""
+struct WindVelocity <: AbstractWind end
+
+variables(::WindVelocity) = (
+    input(:wind_u, XY(), default = 0.1, units = u"m/s", desc = "Wind velocity u-component in m/s"),
+    input(:wind_v, XY(), default = 0.1, units = u"m/s", desc = "Wind velocity v-component in m/s"),
+)
+
+@propagate_inbounds windspeed(i, j, grid, fields, atmos::AbstractAtmosphere{NF, PR, IR, HD, WindVelocity}) where {NF, PR, IR, HD} = max(sqrt(fields.wind_u[i, j]^2 + fields.wind_v[i, j]^2), minimum_windspeed(atmos))
+
 
 """
     $TYPEDEF
@@ -168,7 +196,7 @@ variables(::SpecificHumidity) = (
 
 Retrieve or compute the specific_humidity at the current time step.
 """
-@propagate_inbounds specific_humidity(i, j, grid, fields, ::AbstractAtmosphere{NF, PR, IR, <:SpecificHumidity}) where {NF, PR, IR} = fields.specific_humidity[i, j]
+@propagate_inbounds specific_humidity(i, j, grid, fields, ::AbstractAtmosphere{NF, PR, IR, SpecificHumidity}) where {NF, PR, IR} = fields.specific_humidity[i, j]
 
 """
     $TYPEDSIGNATURES
@@ -201,14 +229,14 @@ variables(::RainSnow) = (
 
 Retrieve or compute the liquid precipitation (rainfall) at the current time step.
 """
-@inline rainfall(i, j, grid, fields, ::AbstractAtmosphere{NF, <:RainSnow}) where {NF} = fields.rainfall[i, j]
+@inline rainfall(i, j, grid, fields, ::AbstractAtmosphere{NF, RainSnow}) where {NF} = fields.rainfall[i, j]
 
 """
     snowfall(i, j, grid, fields, ::AbstractAtmosphere{NF, <:RainSnow})
 
 Retrieve or compute the frozen precipitation (snowfall) at the current time step.
 """
-@inline snowfall(i, j, grid, fields, ::AbstractAtmosphere{NF, <:RainSnow}) where {NF} = fields.snowfall[i, j]
+@inline snowfall(i, j, grid, fields, ::AbstractAtmosphere{NF, RainSnow}) where {NF} = fields.snowfall[i, j]
 
 """
     $TYPEDEF

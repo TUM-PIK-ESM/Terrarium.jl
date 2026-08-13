@@ -31,9 +31,9 @@ end
         @test 0 < wp < 1
     end
 
-    # check that field capacity is equal to zero when there is no clay
+    # check that field capacity is equal to the minimum when there is no clay
     fc0 = field_capacity(hydraulic_props, SoilTexture(sand = 0.5, silt = 0.5, clay = 0.0))
-    @test iszero(fc0)
+    @test fc0 ≈ hydraulic_props.field_capacity_min
     for clay in 0.1:0.1:1.0
         sand = (1 - clay) * 0.7
         silt = (1 - clay) * 0.3

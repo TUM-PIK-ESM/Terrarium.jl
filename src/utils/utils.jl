@@ -71,6 +71,17 @@ end
     return expr
 end
 
+"""
+    $TYPEDSIGNATURES
+
+Pad the grid `indices` to the three indices required to *write* to a
+`Field`. A 2D (`XY`) solve passes `(i, j)`, but Oceananigans only defines
+`setindex!(::Field, val, i, j, k)` for exactly three indices.
+"""
+@inline field_indices(indices::NTuple{3, Integer}) = indices
+@inline field_indices(indices::NTuple{2, Integer}) = (indices[1], indices[2], 1)
+@inline field_indices(indices::NTuple{1, Integer}) = (indices[1], 1, 1)
+
 include("tuple_utils.jl")
 include("math.jl")
 include("kernel_utils.jl")

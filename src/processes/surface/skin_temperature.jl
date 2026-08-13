@@ -280,13 +280,14 @@ Same as [`compute_skin_temperature!`](@ref) but returns the residual instead of 
         out, i, j, grid, fields,
         skinT::ImplicitSkinTemperature,
         seb::AbstractSurfaceEnergyBalance,
-        snow,
-        constants,
-        seb_args...
+        constants::PhysicalConstants,
+        atmos::AbstractAtmosphere,
+        evtr::Optional{AbstractEvapotranspiration} = nothing,
+        snow::Optional{AbstractSnow} = nothing
     )
     # Compute all fluxes based on current skin temperature (this includes ground heat flux already);
     # `snow` (after evtr = nothing) partitions the latent flux by snow-covered fraction
-    compute_surface_energy_fluxes!(out, i, j, grid, fields, seb, constants, seb_args..., nothing, snow)
+    compute_surface_energy_fluxes!(out, i, j, grid, fields, seb, constants, atmos, evtr, snow)
     # Compute skin temperature using the (optionally snow-aware) conduction target
     Ts_implicit = compute_skin_temperature(i, j, grid, fields, skinT, constants, snow)
     Ts_prev = out.skin_temperature[i, j, 1]
@@ -302,12 +303,11 @@ Run a full nonlinear solve to determine the `skin_temperature` at grid cell `i, 
         out, i, j, grid, fields,
         skinT::ImplicitSkinTemperature,
         seb::AbstractSurfaceEnergyBalance,
-        snow,
-        seb_args...
+        args...
     )
     objective = ObjectiveFunction(compute_skin_temperature_residual!, :skin_temperature)
     # `snow` is forwarded (after `seb`) so the residual's conduction target can be snow-aware
-    return solve!(out, (i, j), grid, fields, objective, skinT.solver, skinT, seb, snow, seb_args...)
+    return solve!(out, (i, j), grid, fields, objective, skinT.solver, skinT, seb, args...)
 end
 
 # Kernels

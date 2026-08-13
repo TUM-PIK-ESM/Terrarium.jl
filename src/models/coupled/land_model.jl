@@ -23,13 +23,13 @@ $(TYPEDFIELDS)
     grid::GridType
 
     "Vegetation processes"
-    @component vegetation::Vegetation = VegetationCarbon(eltype(grid))
+    @component vegetation::Vegetation = VegetationCarbonCycle(eltype(grid))
 
     "Soil processes"
     @component soil::Soil = default_soil(grid, vegetation)
 
-    "Snow processes (default `nothing`: no snowpack)"
-    @component snow::Snow = nothing
+    "Snow processes"
+    @component snow::Snow = SingleLayerSnow(eltype(grid))
 
     "Surface energy balance"
     @component surface_energy_balance::SEB = default_surface_energy_balance(grid, vegetation, soil)
@@ -119,9 +119,9 @@ function compute_tendencies!(state, model::LandModel)
     grid = get_grid(model)
     compute_tendencies!(state, grid, model.surface_hydrology)
     compute_tendencies!(state, grid, model.soil, model.constants)
-    compute_tendencies!(state, grid, model.vegetation)
     # Snow tendencies after surface hydrology; no-op without snow (`nothing`)
     compute_tendencies!(state, grid, model.snow, model.constants, model.atmosphere)
+    compute_tendencies!(state, grid, model.vegetation, model.constants, model.atmosphere)
     return nothing
 end
 
@@ -138,6 +138,16 @@ function invclosure!(state, model::LandModel)
     invclosure!(state, grid, model.snow, model.constants)
     return nothing
 end
+
+# Time stepping
+
+function Terrarium.timestep!(state::StateVariables, model::LandModel, timestepper::Terrarium.AbstractTimeStepper, Δt)
+    if !isnothing(model.snow)
+        timestep!(state, model, model.snow, timestepper, Δt)
+    end
+    return nothing
+end
+
 
 # Default soil types
 default_soil(grid::AbstractLandGrid, ::Nothing) = SoilEnergyWaterCarbon(eltype(grid))

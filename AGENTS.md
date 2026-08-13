@@ -32,6 +32,10 @@ dynamics are allowed except in very special cases where they must be clearly doc
   ```
 - To run the full suite, use `julia --project=. -e 'using Pkg; Pkg.test()'` (Enzyme/AD tests run
   via `Pkg.test(; test_args=["enzyme"])`).
+- Julia errors and associated stack traces are often very long due to long type signatures. To
+  mitigate this, always write test output to temporary files and analyze this output using `grep`
+  and similar tools.
+- After running the full test suite, always run a draft doc build with ``julia --project=docs docs/make.jl --local --draft` and check for errors due to, e.g. stale docstring entires. Ignore errors from missing files due to the example scripts not being executed.
 
 ## Critical Rules
 
@@ -133,6 +137,7 @@ on the device (eager KernelAbstractions launches run on the Reactant backend; Oc
 - If a model or process is not fully implemented, an appropriate warning should be displayed on the doc page
 - Do not use brackets for expressing units as this conflicts with Markdown link syntax; use parentheses instead
 - All code examples should be given as `@example name` blocks, replacing `name` with an appropriate identifier for the page, which are executed by Documenter.jl.
+- A fast version of the doc build can be executed with `julia --project=docs docs/make.jl --local --draft`
 
 ### Model Constructors
 

@@ -57,20 +57,21 @@ end
 
 @testset "APAR" begin
     photo = LUEPhotosynthesis()
+    traits = PlantTraits()
     swdown = 50.0 # W/m²
     # Test APAR should be positive for a positive LAI
     LAI = 5.0
-    APAR = compute_APAR(photo, swdown, LAI)
+    APAR = compute_APAR(photo, traits, swdown, LAI)
     @test isfinite(APAR) && APAR > 0.0
 
     # Test LAI = 0 (APAR should be 0)
     LAI = 0.0
-    APAR = compute_APAR(photo, swdown, LAI)
+    APAR = compute_APAR(photo, traits, swdown, LAI)
     @test APAR == 0
 
     # Test LAI = Inf (APAR should be = α_a*PAR)
     LAI = Inf
-    APAR = compute_APAR(photo, swdown, LAI)
+    APAR = compute_APAR(photo, traits, swdown, LAI)
     @test APAR == photo.α_a * compute_PAR(photo, swdown)
 end
 
@@ -267,6 +268,7 @@ end
 
 @testset "Photosynthesis (GPP and Rd)" begin
     photo = LUEPhotosynthesis()
+    traits = PlantTraits()
     constants = MaterialConstants(Float64)
     swdown = 50.0 # W/m²
     pres = 1.0e5 # Pa
@@ -277,21 +279,21 @@ end
     # Test T_air < -3 (GPP and Rd should be 0)
     T_air = -5.0 # °C
     LAI = 5.0 # Mock value
-    GPP, Rd = compute_respiration_assimilation(photo, constants, T_air, swdown, pres, co2, LAI, λc, β)
+    GPP, Rd = compute_respiration_assimilation(photo, traits, constants, T_air, swdown, pres, co2, LAI, λc, β)
     @test GPP == 0.0
     @test Rd == 0.0
 
     # Test T_air > -3 and LAI=0 (GPP and Rd should be 0)
     T_air = 20.0 # °C
     LAI = 0.0
-    GPP, Rd = compute_respiration_assimilation(photo, constants, T_air, swdown, pres, co2, LAI, λc, β)
+    GPP, Rd = compute_respiration_assimilation(photo, traits, constants, T_air, swdown, pres, co2, LAI, λc, β)
     @test GPP == 0.0
     @test Rd == 0.0
 
     # Test T_air > -3 and LAI > 0 (GPP and Rd should be finite)
     T_air = 20.0 # °C
     LAI = 5.0 # Mock value
-    GPP, Rd = compute_respiration_assimilation(photo, constants, T_air, swdown, pres, co2, LAI, λc, β)
+    GPP, Rd = compute_respiration_assimilation(photo, traits, constants, T_air, swdown, pres, co2, LAI, λc, β)
     @test isfinite(GPP)
     @test isfinite(Rd)
 

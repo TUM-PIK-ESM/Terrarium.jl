@@ -22,7 +22,7 @@ BareGroundEvaporation(
 @propagate_inbounds surface_humidity_flux(i, j, grid, fields, evaporation::BareGroundEvaporation, args...) = fields.evaporation_ground[i, j]
 
 """ $TYPEDSIGNATURES """
-@inline ground_evaporation_conductance(ET::AbstractEvapotranspiration, β, rₐ) = β / rₐ
+@inline ground_evaporation_conductance(::BareGroundEvaporation, β, rₐ) = β / rₐ
 
 """
     $TYPEDSIGNATURES
@@ -33,8 +33,9 @@ evaporation conductance in `fields`.
 @propagate_inbounds function compute_surface_humidity_flux(
         i, j, grid, fields,
         ::BareGroundEvaporation,
-        atmos::AbstractAtmosphere,
         constants::PhysicalConstants,
+        atmos::AbstractAtmosphere,
+        args...
     )
     Ts = fields.skin_temperature[i, j]
     g = fields.ground_evaporation_conductance[i, j]

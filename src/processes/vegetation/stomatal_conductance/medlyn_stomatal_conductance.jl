@@ -27,7 +27,9 @@ MedlynStomatalConductance(::Type{NF}; kwargs...) where {NF} = MedlynStomatalCond
 
 variables(::MedlynStomatalConductance) = (
     auxiliary(:canopy_water_conductance, XY(), units = u"m/s"), # Canopy conducatance for water vapor
-    auxiliary(:leaf_to_air_co2_ratio, XY()), # Ratio of leaf-internal and air CO2 concentration [-]
+    input(:leaf_area_index, XY(), units = u"m^2/m^2"),
+    input(:net_assimilation, XY(), units = u"g/m^2/s"), # Net photosynthesis rate [gC/m²/s]
+    input(:soil_moisture_limiting_factor, XY()),
 )
 
 @inline @propagate_inbounds stomatal_conductance(i, j, grid, fields, ::MedlynStomatalConductance) = fields.canopy_water_conductance[i, j]
@@ -44,20 +46,13 @@ Includes minimum conductance and light extinction effects based on LAI, scaled b
 """
 @inline function compute_stomatal_conductance(
         stomcond::MedlynStomatalConductance{NF},
-        photo::LUEPhotosynthesis{NF},
+        traits::PlantTraits{NF},
         vpd, An, co2, LAI, β
     ) where {NF}
-    # Preconditions
-    @assert isfinite(vpd) && abs(vpd) > zero(NF) "vapor pressure deficit must be greater than zero"
-    @assert isfinite(An) "An must be finite"
-    @assert isfinite(co2) && co2 > zero(NF) "CO2 must be positive and finite"
-    @assert isfinite(LAI) "LAI must be finite"
-    @assert isfinite(β) && 0 <= β <= 1 "β must be finite and between 0 and 1"
     # Compute stomatal conductance g_stm
-    let g_min = stomcond.g_min / 1000, # convert mm/s to m/s
-            g₁ = stomcond.g₁,
-            k_ext = photo.k_ext
-
+    let g_min = stomcond.g_min / 1000 # convert mm/s to m/s
+        g₁ = stomcond.g₁
+        k_ext = traits.extinction_coefficient
         g₀ = g_min * (1 - exp(-k_ext * LAI)) * β
         g_stm = g₀ + NF(1.6) * (1 + g₁ / sqrt(vpd)) * An / co2 * NF(1.0e6)
         return g_stm
@@ -87,14 +82,14 @@ end
 function compute_auxiliary!(
         state, grid,
         stomcond::MedlynStomatalConductance,
-        photo::LUEPhotosynthesis,
+        traits::PlantTraits,
         constants::PhysicalConstants,
         atmos::AbstractAtmosphere,
         args...
     )
     out = auxiliary_fields(state, stomcond)
-    fields = get_fields(state, stomcond, photo, constants, atmos; except = out)
-    launch!(grid, XY, compute_auxiliary_kernel!, out, fields, stomcond, photo, constants, atmos)
+    fields = get_fields(state, stomcond, traits, constants, atmos; except = out)
+    launch!(grid, XY, compute_auxiliary_kernel!, out, fields, stomcond, traits, constants, atmos)
     return nothing
 end
 
@@ -106,7 +101,14 @@ end
 Compute stomatal conductance (g_stm) and leaf-to-air CO₂ ratio (λc) at a grid point.
 Returns tuple (g_stm, λc) for use in photosynthesis and transpiration calculations.
 """
-@propagate_inbounds function compute_stomatal_conductance(i, j, grid, fields, stomcond::MedlynStomatalConductance{NF}, photo::LUEPhotosynthesis{NF}, constants::PhysicalConstants, atmos::AbstractAtmosphere, args...) where {NF}
+@propagate_inbounds function compute_stomatal_conductance(
+        i, j, grid, fields,
+        stomcond::MedlynStomatalConductance{NF},
+        traits::PlantTraits{NF},
+        constants::PhysicalConstants,
+        atmos::AbstractAtmosphere,
+        args...
+    ) where {NF}
     # Get inputs
     An = fields.net_assimilation[i, j]
     CO2 = fields.CO2[i, j]
@@ -117,10 +119,9 @@ Returns tuple (g_stm, λc) for use in photosynthesis and transpiration calculati
     vpd = compute_vapor_pressure_deficit(i, j, grid, fields, atmos, constants)
 
     # Compute conductance g_stm and internal CO2 ratio λc
-    g_stm = compute_stomatal_conductance(stomcond, photo, vpd, An, CO2, LAI, β)
-    λc = compute_λc(stomcond, vpd)
+    g_stm = compute_stomatal_conductance(stomcond, traits, vpd, An, CO2, LAI, β)
 
-    return g_stm, λc
+    return g_stm
 end
 
 """
@@ -128,10 +129,16 @@ end
 
 Calls [`compute_stomatal_conductance`](@ref) and stores the result in `out`.
 """
-@propagate_inbounds function compute_stomatal_conductance!(out, i, j, grid, fields, stomcond::MedlynStomatalConductance{NF}, photo::LUEPhotosynthesis{NF}, constants::PhysicalConstants, atmos::AbstractAtmosphere, args...) where {NF}
-    g_stm, λc = compute_stomatal_conductance(i, j, grid, fields, stomcond, photo, constants, atmos, args...)
+@propagate_inbounds function compute_stomatal_conductance!(
+        out, i, j, grid, fields,
+        stomcond::MedlynStomatalConductance{NF},
+        traits::PlantTraits{NF},
+        constants::PhysicalConstants,
+        atmos::AbstractAtmosphere,
+        args...
+    ) where {NF}
+    g_stm = compute_stomatal_conductance(i, j, grid, fields, stomcond, traits, constants, atmos, args...)
     out.canopy_water_conductance[i, j, 1] = g_stm
-    out.leaf_to_air_co2_ratio[i, j, 1] = λc
     return out
 end
 

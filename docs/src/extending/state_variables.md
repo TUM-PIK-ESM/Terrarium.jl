@@ -79,7 +79,7 @@ Terrarium.variables(pythag::Pythagoras) = (
     Terrarium.input(:width, XY())
 )
 
-function hypotenuse(::Pythagoras, grid, clock, fields)
+function hypotenuse(grid, clock, fields, ::Pythagoras)
     hypotenuse = sqrt(fields.length^2 + fields.width^2)
     return hypotenuse
 end
@@ -103,7 +103,7 @@ state.hypotenuse[1,1,1]
 As another more concrete example, consider the [`soil_moisture_limiting_factor`](@ref) `Field` constructor for [`FieldCapacityLimitedPAW`](@ref):
 
 ```julia
-function soil_moisture_limiting_factor(::FieldCapacityLimitedPAW, grid, clock, fields)
+function soil_moisture_limiting_factor(grid, clock, fields, ::FieldCapacityLimitedPAW)
     Δz = zspacings(get_field_grid(grid), Center(), Center(), Center())
     β = Integral(fields.plant_available_water * fields.root_fraction / Δz, dims = 3)
     return Field(β)

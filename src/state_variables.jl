@@ -164,6 +164,8 @@ input sources to their target variables; see [`varpath`](@ref).
 function update_inputs!(state::StateVariables, grid::AbstractLandGrid, sources::InputSources, scope::Tuple{Vararg{Symbol}} = ())
     # update inputs in current namespace, passing the full state as read-only `fields`
     update_inputs!(state.inputs, grid, state.clock, state, sources, scope)
+    # debug: check all inputs are finite
+    debugsite!(state.inputs)
     # recursively update namespaces
     fastiterate(namespace_names(state)) do nsname
         update_inputs!(getproperty(getfield(state, :namespaces), nsname), grid, sources, (scope..., nsname))
@@ -483,7 +485,7 @@ function initialize(@nospecialize(var::AuxiliaryVariable), grid::AbstractLandGri
         return Field(grid, vardims(var), bcs)
     else
         # invoke field constructor if specified
-        return var.ctor(grid, clock, fields)
+        return var.ctor(var, grid, clock, fields)
     end
 end
 

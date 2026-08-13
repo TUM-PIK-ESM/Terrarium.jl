@@ -140,6 +140,9 @@ $TYPEDFIELDS
     "Exponent of field capacity adjustment due to clay content"
     @param field_capacity_exp::NF = 0.35 (bounds = Positive,)
 
+    "Minimum field capacity at 0% clay content"
+    @param field_capacity_min::NF = 0.01 (bounds = UnitInterval,)
+
     "Residual (minimum) saturation level"
     @param residual::NF = 0.01 (bounds = UnitInterval,)
 end
@@ -168,7 +171,8 @@ end
 @inline function field_capacity(hydraulics::SoilHydraulicsSURFEX, texture::SoilTexture)
     η = hydraulics.field_capacity_exp
     β_c = hydraulics.field_capacity_effect
-    fc = β_c * (texture.clay * 100)^η
+    fc₀ = hydraulics.field_capacity_min
+    fc = fc₀ + β_c * (texture.clay * 100)^η
     return fc
 end
 

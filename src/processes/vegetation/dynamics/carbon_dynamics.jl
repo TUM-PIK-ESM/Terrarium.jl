@@ -17,28 +17,13 @@ $TYPEDFIELDS
 * [kattgeTRYGlobalDatabase2011](@cite) Kattge et al., Global Change Biology (2011)
 """
 @parameterized @kwdef struct PALADYNCarbonDynamics{NF} <: AbstractVegetationCarbonDynamics{NF}
-    "Specific leaf area ([kattgeTRYGlobalDatabase2011](@cite)). PFT specific."
-    @param SLA::NF = 10.0 (units = u"m^2/kg", bounds = Positive) # Value for Needleleaf tree PFT
-
-    "Allometric coefficient, modified from [coxDescriptionTRIFFIDDynamic2001](@cite) to account for bwl=1. PFT specific."
-    @param awl::NF = 2.0 (units = u"kg/m^2", bounds = Positive) # Value for Needleleaf tree PFT
-
-    "Minimum Leaf Area Index modified from [clarkJointUKLand2011](@cite). PFT specific."
-    @param LAI_min::NF = 1.0 (bounds = Positive,) # Value for Needleleaf tree PFT
-
-    "Maximum Leaf Area Index modified from [clarkJointUKLand2011](@cite). PFT specific."
-    @param LAI_max::NF = 6.0 (bounds = Positive,) # Value for Needleleaf tree PFT
-
     "Leaf turnover rate ([kattgeTRYGlobalDatabase2011](@cite)). PFT specific."
-    # TODO this parameter is yearly, should be changed to daily for now
     @param γL::NF = 0.3 (units = u"yr^-1", bounds = Positive) # Value for Needleleaf tree PFT
 
     "Root turnover rate. PFT specific."
-    # TODO this parameter is yearly, should be changed to daily for now
     @param γR::NF = 0.3 (units = u"yr^-1", bounds = Positive) # Value for Needleleaf tree PFT
 
-    "Stem turnover rate modified from [clarkJointUKLand2011](@cite). PFT specific."
-    # TODO this parameter is yearly, should be changed to daily for now
+    "Stem src/processes/vegetation/hydraulicsturnover rate modified from [clarkJointUKLand2011](@cite). PFT specific."
     @param γS::NF = 0.05 (units = u"yr^-1", bounds = Positive) # Value for Needleleaf tree PFT
 end
 
@@ -61,15 +46,18 @@ vegetated area and spreading of the given PFT based on the balanced Leaf Area In
 
 * [willeitPALADYNV10Comprehensive2016](@cite) Willeit & Ganopolski, Geoscientific Model Development (2016)
 """
-@inline function compute_λ_NPP(vegcarbon_dynamics::PALADYNCarbonDynamics{NF}, LAI_b) where {NF}
-    if LAI_b < vegcarbon_dynamics.LAI_min
-        λ_NPP = zero(NF)
-    elseif LAI_b <= vegcarbon_dynamics.LAI_max
-        λ_NPP = (LAI_b - vegcarbon_dynamics.LAI_min) /
-            (vegcarbon_dynamics.LAI_max - vegcarbon_dynamics.LAI_min)
-    else
-        λ_NPP = NF(1.0)
-    end
+@inline function compute_λ_NPP(vegcarbon_dynamics::PALADYNCarbonDynamics{NF}, traits::PlantTraits{NF}, LAI_b) where {NF}
+    LAI_min = traits.minimum_leaf_area_index
+    LAI_max = traits.maximum_leaf_area_index
+    λ_NPP = ifelse(
+        LAI_b < LAI_min,
+        zero(NF),
+        ifelse(
+            LAI_b <= LAI_max,
+            (LAI_b - LAI_min) / (LAI_max - LAI_min),
+            one(NF)
+        )
+    )
     return λ_NPP
 end
 
@@ -83,8 +71,10 @@ Computes `LAI_b`, the balanced Leaf Area Index based on the vegetation carbon po
 
 * [willeitPALADYNV10Comprehensive2016](@cite) Willeit & Ganopolski, Geoscientific Model Development (2016)
 """
-@inline function compute_LAI_b(vegcarbon_dynamics::PALADYNCarbonDynamics{NF}, C_veg) where {NF}
-    LAI_b = C_veg / ((NF(2.0) / vegcarbon_dynamics.SLA) + vegcarbon_dynamics.awl)
+@inline function compute_balanced_leaf_area_index(vegcarbon_dynamics::PALADYNCarbonDynamics{NF}, traits::PlantTraits{NF}, C_veg) where {NF}
+    SLA = traits.specific_leaf_area
+    awl = traits.awl
+    LAI_b = C_veg / ((NF(2.0) / SLA) + awl)
     return LAI_b
 end
 
@@ -97,12 +87,16 @@ Computes the local litterfall rate `Λ_loc` based on the balanced Leaf Area Inde
 
 * [willeitPALADYNV10Comprehensive2016](@cite) Willeit & Ganopolski, Geoscientific Model Development (2016)
 """
-@inline function compute_Λ_loc(vegcarbon_dynamics::PALADYNCarbonDynamics{NF}, LAI_b) where {NF}
-    Λ_loc = (
-        vegcarbon_dynamics.γL / vegcarbon_dynamics.SLA +
-            vegcarbon_dynamics.γR / vegcarbon_dynamics.SLA +
-            vegcarbon_dynamics.γS * vegcarbon_dynamics.awl
-    ) * LAI_b
+@inline function compute_Λ_loc(vegcarbon_dynamics::PALADYNCarbonDynamics{NF}, traits::PlantTraits{NF}, LAI_b) where {NF}
+    # TODO: Change tendencies to units of per day and add automatic unit normalization
+    γL = vegcarbon_dynamics.γL / (365.25 * 24 * 3600) # convert to seconds
+    γR = vegcarbon_dynamics.γR / (365.25 * 24 * 3600)
+    γS = vegcarbon_dynamics.γS / (365.25 * 24 * 3600)
+    Λ_loc = LAI_b * (
+        γL / traits.specific_leaf_area +
+            γR / traits.specific_leaf_area +
+            γS * traits.awl
+    )
     return Λ_loc
 end
 
@@ -115,34 +109,28 @@ Computes the `C_veg` tendency based on `NPP` and the balanced Leaf Area Index `L
 
 * [willeitPALADYNV10Comprehensive2016](@cite) Willeit & Ganopolski, Geoscientific Model Development (2016) 
 """
-@inline function compute_C_veg_tend(vegcarbon_dynamics::PALADYNCarbonDynamics{NF}, LAI_b::NF, NPP::NF) where {NF}
-    # Compute λ_NPP
-    λ_NPP = compute_λ_NPP(vegcarbon_dynamics, LAI_b)
-
-    # Compute local litterfall rate
-    Λ_loc = compute_Λ_loc(vegcarbon_dynamics, LAI_b)
-
-    # Compute C_veg tendency
+@inline function compute_C_veg_tend(vegcarbon_dynamics::PALADYNCarbonDynamics{NF}, traits::PlantTraits{NF}, LAI_b::NF, NPP::NF) where {NF}
+    λ_NPP = compute_λ_NPP(vegcarbon_dynamics, traits, LAI_b)
+    Λ_loc = compute_Λ_loc(vegcarbon_dynamics, traits, LAI_b)
     C_veg_tendency = (NF(1.0) - λ_NPP) * NPP - Λ_loc
-
     return C_veg_tendency
 end
 
 # Top-level interface methods
 
 """ $TYPEDSIGNATURES """
-function compute_auxiliary!(state, grid, vegcarbon_dynamics::PALADYNCarbonDynamics, args...)
+function compute_auxiliary!(state, grid, vegcarbon_dynamics::PALADYNCarbonDynamics, traits::PlantTraits, args...)
     out = auxiliary_fields(state, vegcarbon_dynamics)
     fields = get_fields(state, vegcarbon_dynamics; except = out)
-    launch!(grid, XY, compute_auxiliary_kernel!, out, fields, vegcarbon_dynamics)
+    launch!(grid, XY, compute_auxiliary_kernel!, out, fields, vegcarbon_dynamics, traits)
     return nothing
 end
 
 """ $TYPEDSIGNATURES """
-function compute_tendencies!(state, grid, vegcarbon_dynamics::PALADYNCarbonDynamics, args...)
+function compute_tendencies!(state, grid, vegcarbon_dynamics::PALADYNCarbonDynamics, traits::PlantTraits, args...)
     out = tendency_fields(state, vegcarbon_dynamics)
     fields = get_fields(state, vegcarbon_dynamics)
-    launch!(grid, XY, compute_tendencies_kernel!, out, fields, vegcarbon_dynamics)
+    launch!(grid, XY, compute_tendencies_kernel!, out, fields, vegcarbon_dynamics, traits)
     return nothing
 end
 
@@ -153,24 +141,28 @@ end
 
 Compute the tendency for the carbon vegetation pool given fields `LAI_b` and `NPP`.
 """
-@propagate_inbounds function compute_veg_carbon_tendency(i, j, grid, fields, vegcarbon_dynamics::PALADYNCarbonDynamics)
+@propagate_inbounds function compute_veg_carbon_tendency(i, j, grid, fields, vegcarbon_dynamics::PALADYNCarbonDynamics, traits::PlantTraits)
     # Get inputs
     LAI_b = fields.balanced_leaf_area_index[i, j]
     NPP = fields.net_primary_production[i, j]
 
     # Compute the vegetation carbon pool tendency
-    C_veg_tendency = compute_C_veg_tend(vegcarbon_dynamics, LAI_b, NPP)
+    C_veg_tendency = compute_C_veg_tend(vegcarbon_dynamics, traits, LAI_b, NPP)
     return C_veg_tendency
 end
 
 """
     $TYPEDSIGNATURES
 
-Mutating wrapper for [`compute_LAI_b`](@ref) that stores the result in `out.balanced_leaf_area_index`.
+Mutating wrapper for [`compute_balanced_leaf_area_index`](@ref) that stores the result in `out.balanced_leaf_area_index`.
 """
-@propagate_inbounds function compute_veg_carbon_auxiliary!(out, i, j, grid, fields, vegcarbon_dynamics::PALADYNCarbonDynamics)
+@propagate_inbounds function compute_veg_carbon_auxiliary!(
+        out, i, j, grid, fields,
+        vegcarbon_dynamics::PALADYNCarbonDynamics,
+        traits::PlantTraits
+    )
     # Compute balanced Leaf Area Index
-    out.balanced_leaf_area_index[i, j, 1] = compute_LAI_b(vegcarbon_dynamics, fields.carbon_vegetation[i, j])
+    out.balanced_leaf_area_index[i, j, 1] = compute_balanced_leaf_area_index(vegcarbon_dynamics, traits, fields.carbon_vegetation[i, j])
     return nothing
 end
 
@@ -179,9 +171,13 @@ end
 
 Calls [`compute_veg_carbon_tendency`](@ref) and stores the result in `out`.
 """
-@propagate_inbounds function compute_veg_carbon_tendencies!(tend, i, j, grid, fields, vegcarbon_dynamics::PALADYNCarbonDynamics)
+@propagate_inbounds function compute_veg_carbon_tendencies!(
+        tend, i, j, grid, fields,
+        vegcarbon_dynamics::PALADYNCarbonDynamics,
+        traits::PlantTraits
+    )
     # Compute and store C_veg tendency
-    tend.carbon_vegetation[i, j, 1] = compute_veg_carbon_tendency(i, j, grid, fields, vegcarbon_dynamics)
+    tend.carbon_vegetation[i, j, 1] = compute_veg_carbon_tendency(i, j, grid, fields, vegcarbon_dynamics, traits)
     return nothing
 end
 

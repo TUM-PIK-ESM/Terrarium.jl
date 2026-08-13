@@ -36,6 +36,9 @@ using Oceananigans.BoundaryConditions: BoundaryConditions, BoundaryCondition, De
     AbstractBoundaryConditionClassification, Value, Flux, Gradient, # BC type classifications
     fill_halo_regions!, regularize_field_boundary_conditions, getbc, compute_z_bcs!
 
+# Progress meter
+using ProgressMeter: @showprogress
+
 # Freeze curves for soil energy balance
 using FreezeCurves: FreezeCurves, FreezeCurve, SFCC, SWRC, FreeWater, VanGenuchten, BrooksCorey
 
@@ -93,6 +96,16 @@ export @u_str, uconvert, ustrip
 # Re-export adapt
 export adapt
 
+const DEBUG = Ref(false)
+
+function __init__()
+    DEBUG[] = haskey(ENV, "TERRARIUM_DEBUG") && ENV["TERRARIUM_DEBUG"] == "true"
+    if debug_mode()
+        @warn "Debug mode enabled; debug hooks will be active and performance may be degraded."
+    end
+    return nothing
+end
+
 # internal utility types and methods
 include("utils/utils.jl")
 
@@ -109,8 +122,8 @@ include("grids/vertical_discretization.jl")
 export ColumnGrid, ColumnRingGrid, get_field_grid
 include("grids/grids.jl")
 
-export ERA5LandForcings, ERA5LandInvariants
-include("input_output/get_asset.jl")
+export ERA5LandForcings, ERA5LandInvariants, ERA5LandLeafAreaIndex
+include("input_output/assets.jl")
 
 export InputSource, InputSources, FieldInputSource, FieldTimeSeriesInputSource
 export update_inputs!, varpath, varpath, VarPath

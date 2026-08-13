@@ -2,7 +2,7 @@ using Terrarium
 using Test
 
 using Terrarium: compute_snow_depth, compute_snow_cover_fraction, compute_thermal_conductivity,
-    compute_volumetric_snow_energy, snow_density
+    compute_snow_volumetric_energy, snow_density
 
 @testset "Snow properties" begin
     NF = Float64
@@ -54,9 +54,14 @@ using Terrarium: compute_snow_depth, compute_snow_cover_fraction, compute_therma
     end
 
     @testset "volumetric energy" begin
-        # U_v = E/d_snow for d_snow > 0
-        @test compute_volumetric_snow_energy(NF(-1000), NF(0.5)) ≈ -2000 rtol = 1.0e-6
-        @test compute_volumetric_snow_energy(NF(0), NF(0.5)) == 0
+        d_min = NF(5.0e-3)
+        # U_v = Ē/d_snow for d_snow > d_min
+        @test compute_snow_volumetric_energy(NF(-1000), NF(0.5), d_min) ≈ -2000 rtol = 1.0e-6
+        @test compute_snow_volumetric_energy(NF(0), NF(0.5), d_min) == 0
+        # thin snow: depth is floored at d_min so the recovered volumetric energy (hence temperature)
+        # stays bounded instead of diverging as d_snow → 0
+        @test compute_snow_volumetric_energy(NF(-1000), NF(1.0e-9), d_min) ≈ NF(-1000) / d_min rtol = 1.0e-6
+        @test compute_snow_volumetric_energy(NF(0), NF(0), d_min) == 0
     end
 
     @testset "Float32 type stability" begin

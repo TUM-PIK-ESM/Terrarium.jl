@@ -26,8 +26,6 @@ PALADYNVegetationDynamics(::Type{NF}; kwargs...) where {NF} = PALADYNVegetationD
 
 variables(::PALADYNVegetationDynamics) = (
     prognostic(:vegetation_area_fraction, XY()), # PFT fractional area coverage [-]
-    input(:balanced_leaf_area_index, XY()),
-    input(:carbon_vegetation, XY(), units = u"kg/m^2"),
     input(:net_primary_production, XY(), units = u"kg/m^2/s"),
 )
 
@@ -46,7 +44,7 @@ Computes the disturbance rate`γv`,
 @inline function compute_γv(veg_dynamics::PALADYNVegetationDynamics)
     # TODO add PALADYN implemetation for the disturbance rate (depends on soil moisture)
     # Placeholder for now γv = min. disturbance rate
-    return veg_dynamics.γv_min
+    return veg_dynamics.γv_min / (365.25 * 24 * 3600) # convert to seconds
 end
 
 """
@@ -72,6 +70,7 @@ Computes the vegetation fraction tendency for a single PFT,
 @inline function compute_ν_tendency(
         veg_dynamics::PALADYNVegetationDynamics,
         vegcarbon_dynamics::PALADYNCarbonDynamics{NF},
+        traits::PlantTraits{NF},
         LAI_b::NF,
         C_veg::NF,
         NPP::NF,
@@ -79,7 +78,7 @@ Computes the vegetation fraction tendency for a single PFT,
     ) where {NF}
 
     # Compute λ_NPP
-    λ_NPP = compute_λ_NPP(vegcarbon_dynamics, LAI_b)
+    λ_NPP = compute_λ_NPP(vegcarbon_dynamics, traits, LAI_b)
 
     # Compute the disturbance rate
     γv = compute_γv(veg_dynamics)
@@ -105,11 +104,12 @@ function compute_tendencies!(
         state, grid,
         veg_dynamics::PALADYNVegetationDynamics,
         vegcarbon_dynamics::PALADYNCarbonDynamics,
+        traits::PlantTraits,
         args...
     )
     tend = tendency_fields(state, veg_dynamics)
     fields = get_fields(state, veg_dynamics, vegcarbon_dynamics)
-    launch!(grid, XY, compute_tendencies_kernel!, tend, fields, veg_dynamics, vegcarbon_dynamics)
+    launch!(grid, XY, compute_tendencies_kernel!, tend, fields, veg_dynamics, vegcarbon_dynamics, traits)
     return nothing
 end
 
@@ -123,18 +123,14 @@ Compute vegetation area fraction tendency at a single grid point from NPP-produc
 @propagate_inbounds function compute_ν_tendency(
         i, j, grid, fields,
         veg_dynamics::PALADYNVegetationDynamics,
-        vegcarbon_dynamics::PALADYNCarbonDynamics
+        vegcarbon_dynamics::PALADYNCarbonDynamics,
+        traits::PlantTraits
     )
-    # Get inputs
     LAI_b = fields.balanced_leaf_area_index[i, j]
     C_veg = fields.carbon_vegetation[i, j]
     NPP = fields.net_primary_production[i, j]
-
-    # Current state
     ν = fields.vegetation_area_fraction[i, j]
-
-    # Compute the vegetation fraction tendency
-    ν_tendency = compute_ν_tendency(veg_dynamics, vegcarbon_dynamics, LAI_b, C_veg, NPP, ν)
+    ν_tendency = compute_ν_tendency(veg_dynamics, vegcarbon_dynamics, traits, LAI_b, C_veg, NPP, ν)
     return ν_tendency
 end
 
@@ -147,9 +143,10 @@ Mutating wrapper for [`compute_ν_tendency`](@ref) that stores the result in `te
 @propagate_inbounds function compute_ν_tendencies!(
         tend, i, j, grid, fields,
         veg_dynamics::PALADYNVegetationDynamics,
-        vegcarbon_dynamics::PALADYNCarbonDynamics
+        vegcarbon_dynamics::PALADYNCarbonDynamics,
+        traits::PlantTraits
     )
-    tend.vegetation_area_fraction[i, j, 1] = compute_ν_tendency(i, j, grid, fields, veg_dynamics, vegcarbon_dynamics)
+    tend.vegetation_area_fraction[i, j, 1] = compute_ν_tendency(i, j, grid, fields, veg_dynamics, vegcarbon_dynamics, traits)
     return tend
 end
 
