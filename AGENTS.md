@@ -219,7 +219,9 @@ at doc-build time.
 The committed README numbers are the regression baseline: deviations of ±20% are normal, larger ones
 should be reported. Model configurations are defined in `benchmark/model_configurations.jl`; add one by
 adding a `build_model(::Val{:name}, arch, NF; nlat_half, nz, model_kwargs)` method, following the same
-registry pattern as `test/reactant/setup.jl`.
+registry pattern as `test/reactant/setup.jl`. 
+
+Only ever run these benchmarks when explicilty instructed to or after a major revisions of the model compute functions. 
 
 ## Git Workflow
 
