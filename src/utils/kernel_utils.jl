@@ -13,6 +13,7 @@ kernels aren't raised.
 Marker type used to dispatch [`uses_reactant`](@ref).
 """
 struct ReactantMarker end
+
 """
     @assert_kernel cond [text]
 
