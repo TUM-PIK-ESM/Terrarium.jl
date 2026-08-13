@@ -11,6 +11,8 @@ data-dependent loop bound. That matters in two places:
 - **Reactant**: a convergence-tested loop lowers to an `scf.while` with a dynamic trip count, which the
   StableHLO raise pass cannot lift. An unrolled loop raises cleanly.
 - **Reverse-mode AD**: a fixed trip count avoids a dynamically-sized tape.
+
+TODO: In the future, Reactant should just use the regular solvers. 
 """
 struct NewtonSolver{NF, iterations} end
 
