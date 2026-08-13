@@ -4,9 +4,7 @@
 Drop-in replacement for `Base.@assert` that is elided inside a Reactant compile context.
 """
 macro assert_kernel(cond, text...)
-    # Splice the `@assert` in with the caller's line number so failures point at the callsite
-    # rather than at this macro definition.
-    assertion = Expr(:macrocall, GlobalRef(Base, Symbol("@assert")), __source__, esc(cond), map(esc, text)...)
+    assertion = esc(Expr(:macrocall, GlobalRef(Base, Symbol("@assert")), __source__, cond, text...))
     return quote
         if !$(ReactantCore.within_compile)()
             $assertion
