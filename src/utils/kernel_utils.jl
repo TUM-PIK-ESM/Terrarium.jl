@@ -1,12 +1,27 @@
 """
+    $SIGNATURES
+
+Return `true` when Reactant is loaded, `false` otherwise.
+
+Note, that `ReactantCore.within_compile` is not used because it doesn't work properly when KA 
+kernels aren't raised.
+"""
+@inline uses_reactant(_) = false
+@inline uses_reactant() = uses_reactant(ReactantMarker())
+
+"""
+Marker type used to dispatch [`uses_reactant`](@ref).
+"""
+struct ReactantMarker end
+"""
     @assert_kernel cond [text]
 
-Drop-in replacement for `Base.@assert` that is elided inside a Reactant compile context.
+Drop-in replacement for `Base.@assert` that is disabled once Reactant is loaded.
 """
 macro assert_kernel(cond, text...)
     assertion = esc(Expr(:macrocall, GlobalRef(Base, Symbol("@assert")), __source__, cond, text...))
     return quote
-        if !$(ReactantCore.within_compile)()
+        if !$(uses_reactant)()
             $assertion
         end
         nothing
