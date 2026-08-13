@@ -82,15 +82,13 @@ function build_model(::Val{:snow_column}, arch, NF)
 end
 
 # --- :land_soil_snow — coupled LandModel: soil (Richards + heat) + snow, no vegetation ---
-# The first *coupled* configuration in this suite. Beyond the standalone soil/snow models it
-# exercises, in one traced step: the Richards saturation↔pressure closure (including the water-table
-# scan and the saturation-profile adjustment), the surface energy balance with its implicit
-# skin-temperature solve, bare-ground evaporation, surface runoff/infiltration, and the snow↔soil
-# coupling (blended soil-top heat flux, meltwater outflow, sublimation).
+# *Coupled* configuration 
 #
 # Cold winter conditions: a frozen, unsaturated soil column under a shallow snowpack. The pack is
 # kept below freezing (air temperature < 0) so the 100-step comparison does not hinge on the exact
 # step at which a melt threshold is crossed, which CPU and XLA need not agree on.
+#
+# TODO: Currently this only works with the `NewtonsMethod` solver.
 
 function build_model(::Val{:land_soil_snow}, arch, NF)
     grid = ColumnGrid(arch, NF, ExponentialSpacing(Δz_min = NF(0.05), Δz_max = NF(1), N = 10))

@@ -1,9 +1,10 @@
 # Reactant support for the coupled `LandModel` (soil + snow, no vegetation)
 
-> Status: **in progress**. All six Reactant blockers on the coupled soil+snow path are now addressed:
+> Status: **completed** for the soil+snow configuration. All six Reactant blockers are resolved —
 > blocker #5 was fixed upstream and is available in Oceananigans 0.110.15, so no Terrarium-side
-> workaround is needed. The compat bounds have been raised and the full CPU suite passes; the
-> `:land_soil_snow` Reactant comparison is being re-run against the released version.
+> workaround is needed. `:land_soil_snow` passes against the released version with all 62 fields
+> matching, and the full CPU and Reactant suites pass. Vegetation remains unsupported, and the
+> *default* `LandModel` still needs `NewtonSolver` to compile (see Known limitations).
 
 Date of initial draft: 2026-08-04
 
@@ -37,6 +38,9 @@ Base revision: e015a29db9d97090edfd112a5eea165640134404
   replacement that is disabled once Reactant is loaded, so kernels can keep correctness guards on the
   CPU/GPU backends without emitting an un-raisable `llvm.intr.trap`. See the note below on why the
   guard is load-time rather than trace-time.
+- 2026-08-13: `:land_soil_snow` **passes against released Oceananigans 0.110.15 with no workaround** —
+  all 62 fields match. The full Reactant suite is green (115/115 comparison, 6/6 autodiff), as is the
+  CPU suite. The soil+snow half of this plan is complete.
 
 ## Problem description
 
@@ -227,19 +231,53 @@ blocker #5 was reverted (see the revision log).
   and every prognostic and auxiliary field is compared.
 - The pack is held below freezing deliberately: the comparison should not hinge on the exact step at
   which a melt threshold is crossed, which CPU and XLA need not agree on.
-- **Result with the (reverted) blocker-#5 workaround in place: 59/59 fields match.** The worst deviations
-  after 100 steps were `max_rel = 1.7e-5` for `soil_heat_flux` and `snow_temperature`, well inside the
-  suite's `rtol = 1e-3`; most fields were bit-identical.
+- **Result against released Oceananigans 0.110.15, with no Terrarium-side workaround: all 62 fields
+  match** (31 initial + 31 stepped). The worst deviations after 100 steps are `max_rel = 9.1e-6`
+  (`temperature`), `8.5e-6` (`snow_temperature`) and `6.7e-6` (`soil_heat_flux`), all well inside the
+  suite's `rtol = 1e-3`; the initial state is bit-identical apart from `pressure_head` (`1.1e-7`).
+  `saturation_water_ice`, `skin_temperature`, `infiltration`, `surface_runoff` and the water-table
+  diagnostics are bit-identical even after stepping.
+- The whole Reactant suite passes: `Terrarium CPU vs Reactant` 115/115 (8m45s) and
+  `Reactant + Enzyme autodiff` 6/6. Note the coupled configuration is slow to compile — a full run
+  takes roughly ten minutes.
+- An earlier run *with* the (now unnecessary) blocker-#5 workaround gave 59/59 fields matching, with
+  worst deviations of `1.7e-5`; the upstream fix reproduces that agreement without the extra field.
 - Substituting `NewtonSolver` for the default `RootSolver` changes the CPU answer by at most `6e-7`
   relative (`skin_temperature`) and `8e-6` (`snow_temperature`) after 100 steps; soil temperature,
   saturation and the latent heat flux are bit-identical.
-- The full CPU suite passes unchanged (841 tests).
+- The full CPU suite passes (`Pkg.test()`, exit 0) after the `field_indices` repair described in the
+  revision log. Before that repair the suite had 20 errors, all from the two broken solver call sites.
+
+### Assertions in kernels: `@assert_kernel`
+
+Blocker #1 was resolved by *deleting* an in-kernel `@assert`, which is the correct fix there but leaves
+no way to keep a cheap correctness guard in kernel code that also has to compile under Reactant.
+`@assert_kernel` fills that gap: it expands to `Base.@assert` normally and to nothing once Reactant is
+loaded, so the guard is active on the CPU/GPU backends and its `llvm.intr.trap` never reaches the raise
+pass.
+
+The guard is deliberately **load-time** (`uses_reactant()`, overridden by `TerrariumReactantExt`) rather
+than trace-time. Two more obvious designs were tried and both fail *inside kernels*:
+
+- `ReactantCore.within_compile()` is constant-folded to `true` only by Reactant's `EnzymeInterpreter`,
+  which traces host code. KernelAbstractions kernel bodies are compiled by GPUCompiler, where it folds
+  to `false` and the assertion survives — reproduced as
+  `error: cannot raise op to stablehlo"llvm.intr.trap"()`.
+- Reactant's task-local `raising()` flag *is* set during kernel compilation, but it is a runtime lookup
+  and is unreachable from device code:
+  `InvalidIRError: unsupported call to an unknown function (call to julia.get_pgcstack)`.
+
+The tradeoff is granularity: loading Reactant disables these assertions process-wide, including in CPU
+code that is never traced.
+
+Implementation note: `uses_reactant` dispatches on a `ReactantMarker` singleton rather than being
+zero-argument, because an extension may not *overwrite* a method —
+`ERROR: Method overwriting is not permitted during Module precompilation`. Dispatching on a marker type
+makes the extension's definition a new method instead.
 
 ## Known limitations
 
-- **`:land_soil_snow` does not compile against stock Oceananigans** — blocker #5. It is registered in
-  `test/reactant/runtests.jl` and will pass once the upstream `getbc` fix lands.
-- **The default `LandModel` would still not compile even then.** `ImplicitSkinTemperature` defaults
+- **The default `LandModel` would still not compile.** `ImplicitSkinTemperature` defaults
   to `RootSolver`, whose convergence-tested loop is blocker #6. The Reactant configuration overrides it
   with `NewtonSolver`; users of the default configuration hit the raise failure. Making `NewtonSolver`
   the default is recommended (see Future work) but changes results for existing users and so is left for
@@ -258,8 +296,13 @@ blocker #5 was reverted (see the revision log).
 
 ## Future work
 
-- Fix `getbc` upstream in Oceananigans, then re-run `:land_soil_snow` against the released version.
+- ~~Fix `getbc` upstream in Oceananigans, then re-run `:land_soil_snow` against the released
+  version.~~ — done; released in 0.110.15 and reconfirmed (all 62 fields match, no workaround).
 - Make `NewtonSolver` the default skin-temperature solver, after checking the effect on the SEB
-  regression tests.
+  regression tests. `src/solvers/newton.jl` carries a TODO noting the longer-term goal of letting
+  Reactant use the regular solvers instead, which needs the upstream `_find_zero_newton` restructuring
+  described above.
+- Adopt `@assert_kernel` at kernel call sites that would benefit from a correctness guard, starting with
+  the `isfinite(ψm)` check dropped in blocker #1.
 - Add a `LandModel` configuration to `test/reactant/autodiff.jl` once the forward path is verified.
 - Select a snow-aware albedo in `default_surface_energy_balance` when a snow component is present.
