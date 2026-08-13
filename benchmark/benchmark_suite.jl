@@ -35,7 +35,7 @@ end
 
 """
 How long the suite should run. `timestep_multiplier` scales every timed run; `max_ncolumns` caps the
-resolution sweeps (configurations above it are skipped and reported as `—`, never silently dropped).
+resolution sweeps (configurations above it are skipped and reported as `—`).
 """
 struct BenchmarkMode
     name::String
@@ -107,11 +107,9 @@ end
 """
     device_synchronize(arch)
 
-Wait for all pending device work so that a wallclock measurement covers it. Reactant runs are
-already synchronous (the compiled program is built with `sync = true`).
+Wait for all pending device work so that a wallclock measurement covers it.
 """
 device_synchronize(arch) = KernelAbstractions.synchronize(device(arch))
-device_synchronize(::ReactantState) = Reactant.
 
 "Steps taken before the timed run, to move JIT compilation and first kernel launches out of it."
 const WARMUP_STEPS = 3
@@ -191,7 +189,7 @@ function benchmark_configuration(
     ) where {NF}
 
     cfg = build_model(config, arch, NF; nlat_half, nz, model_kwargs)
-    Δt = Float64(cfg.Δt)
+    Δt = NF(cfg.Δt)
     ncols = ncolumns(nlat_half)
     nsteps = n_timesteps(ncols * nz, multiplier)
 
@@ -224,8 +222,7 @@ function benchmark_configuration(
     device_synchronize(arch)
     elapsed = time() - t0
 
-    ## SYPD, defined exactly as in SpeedyWeather's benchmark suite so the tables are comparable:
-    ## simulated seconds per wallclock second, converted to years per day.
+    ## SYPD: simulated seconds per wallclock second, converted to years per day.
     sypd = Δt * nsteps / (elapsed * 365.25)
     ms_per_step = 1.0e3 * elapsed / nsteps
     throughput = ncols * nz * nsteps / elapsed / 1.0e6

@@ -233,12 +233,12 @@ function generate_benchmarks_page()
         write(io, "overview table, and a section to the bottom of this page.\n\n")
 
         write(io, "Every configuration runs for a fixed number of time steps without output. ")
-        write(io, "Initialization and — under Reactant — XLA compilation happen before the clock starts and are ")
+        write(io, "Initialization and - under Reactant - XLA compilation happen before the clock starts and are ")
         write(io, "reported separately; the timed section covers only the stepping loop. ")
         write(io, "A run is timed once and takes a few seconds, so treat the numbers as indicative: ")
         write(io, "±20% between repetitions is normal.\n\n")
 
-        write(io, "The benchmark grids are full Gaussian grids in which every point is an active land column, ")
+        write(io, "The benchmark grids are full Gaussian grids in which every point is an active land column (i.e. a. rock planet configuration), ")
         write(io, "so a real land–sea mask at the same resolution has roughly a third as many columns. ")
         write(io, "The model configurations themselves are defined in `benchmark/model_configurations.jl`.\n\n")
 

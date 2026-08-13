@@ -15,8 +15,8 @@ An optional second argument sets how long the suite runs:
     julia --project=. manual_benchmarking.jl gpu long       # 10x steps, full sweeps (publication-ready)
     julia --project=. manual_benchmarking.jl gpu 3.5        # explicit timestep multiplier, full sweeps
 
-`quick` is for checking that the harness and the model configurations still run; `long` is for
-numbers worth publishing. The mode is recorded alongside the results: SYPD is a rate and so is
+`quick` is for checking that the benchmarking and the model configurations still run; `long` is for
+numbers (hopefully) worth publishing. The mode is recorded alongside the results: SYPD is a rate and so is
 comparable across modes, but the noise level is not.
 
 Results are merged into `assets/benchmark_results.json`, keyed by architecture label. `README.md` is
