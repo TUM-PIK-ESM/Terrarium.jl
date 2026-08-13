@@ -1,9 +1,9 @@
 # Reactant support for the coupled `LandModel` (soil + snow, no vegetation)
 
-> Status: **in progress**. Five of the six Reactant blockers on the coupled soil+snow path are fixed;
-> with a local patch for the sixth the `:land_soil_snow` correctness test passes (59/59 fields after 100
-> steps). Blocker #5 is being fixed upstream in Oceananigans instead, so the coupled configuration does
-> not compile against stock Oceananigans yet.
+> Status: **in progress**. All six Reactant blockers on the coupled soil+snow path are now addressed:
+> blocker #5 was fixed upstream and is available in Oceananigans 0.110.15, so no Terrarium-side
+> workaround is needed. The compat bounds have been raised and the full CPU suite passes; the
+> `:land_soil_snow` Reactant comparison is being re-run against the released version.
 
 Date of initial draft: 2026-08-04
 
@@ -21,6 +21,22 @@ Base revision: e015a29db9d97090edfd112a5eea165640134404
   a `soil_water_flux` coupling field) was **reverted** on request — the underlying `getbc` limitation is
   to be fixed in Oceananigans instead. Written up separately, with a Terrarium-free MWE, in
   `2026-08-04-OCEANANIGANS_getbc_2d_indexing_issue.md`.
+- 2026-08-13: **blocker #5 is fixed upstream.** Oceananigans 0.110.15 indexes array-valued boundary
+  conditions in 3D (`condition[i, j, 1]`), so the lazy `UnaryOperation` water BC in `LandModel` works
+  without the reverted workaround. Compat bounds raised to `0.110.15` in the root and
+  `test/reactant` projects; the test environment resolves to Oceananigans 0.110.15 with Reactant
+  0.2.278. Note that this required letting Reactant move off its pinned 0.2.272 — that pin, not any
+  declared bound, was what previously held Oceananigans at ≤ 0.110.13.
+- 2026-08-13: repaired a half-finished `pad_indices` → `field_indices` rename that broke the solvers.
+  `NewtonSolver` still called the removed `pad_indices` and shadowed the new function with a local of
+  the same name (AGENTS.md pitfall #7), and `FixedPointSolver` splatted the *function* rather than
+  calling it. Both `RootSolver` and `FixedPointSolver` also read their target field with the raw 2D
+  index tuple; all reads and writes now go through `field_indices` (pitfall #10). The full CPU suite
+  passes again.
+- 2026-08-13: added an `@assert_kernel` macro (`src/utils/kernel_utils.jl`) — a `Base.@assert`
+  replacement that is disabled once Reactant is loaded, so kernels can keep correctness guards on the
+  CPU/GPU backends without emitting an un-raisable `llvm.intr.trap`. See the note below on why the
+  guard is load-time rather than trace-time.
 
 ## Problem description
 
@@ -123,15 +139,22 @@ Reason: unsupported call to an unknown function (call to jl_f_throw_methoderror)
  [7] getbc @ Oceananigans/src/BoundaryConditions/boundary_condition.jl:182
 ```
 
-**Status: not fixed in Terrarium — to be fixed upstream.** A Terrarium-side workaround was implemented
-and verified (materialize the negation into a `soil_water_flux` coupling field declared by
-`interface_variables(::LandModel)` alongside `soil_heat_flux`, refreshed at the end of each
-`compute_auxiliary!`), which made the water BC structurally identical to the heat BC and let the whole
-configuration compile and pass. It was then reverted: the real defect is `getbc`'s 2D indexing, and
-patching around it in Terrarium costs an extra field plus an explicit refresh step while leaving the
-same trap for every other operation-valued BC. See
-`2026-08-04-OCEANANIGANS_getbc_2d_indexing_issue.md` for the analysis, the Terrarium-free MWE and the
-suggested upstream fix.
+**Status: fixed upstream, released in Oceananigans 0.110.15.** `getbc` now indexes array-valued
+conditions in 3D:
+
+```julia
+@inline getbc(condition::AbstractArray, i::Integer, j::Integer, grid::AbstractGrid, args...) = @inbounds condition[i, j, 1]
+```
+
+which is exactly the fix suggested in `2026-08-04-OCEANANIGANS_getbc_2d_indexing_issue.md`. An
+`AbstractOperation` defines the 3-index `getindex`, so the lazy `InfiltrationFlux(-infiltration)`
+condition now evaluates inside the kernel without falling back to `axes(::AbstractField)`.
+
+No Terrarium change is required. A workaround had been implemented and verified (materialize the
+negation into a `soil_water_flux` coupling field declared by `interface_variables(::LandModel)`
+alongside `soil_heat_flux`, refreshed at the end of each `compute_auxiliary!`) but was reverted in
+favour of the upstream fix, which avoids an extra field plus refresh step and removes the same trap
+for every other operation-valued BC.
 
 ### 6. Data-dependent control flow in kernels
 
@@ -181,10 +204,14 @@ count. That is the same shape as `NewtonSolver`, which does it in ~15 lines with
 | `src/processes/soil/hydrology/soil_hydraulic_properties.jl` | Replace `complex` arithmetic in the van Genuchten conductivity with a clamped real form |
 | `src/processes/soil/hydrology/soil_hydrology_rre.jl` | `compute_hydraulics!`: branchless index selection, unconditional stores |
 | `src/processes/surface/skin_temperature.jl` | `initialize!`: copy interiors instead of `set!` across a location mismatch |
-| `src/utils/kernel_utils.jl` | New `pad_indices` helper |
-| `src/solvers/root_solvers.jl`, `src/solvers/fixed_point.jl` | Index the target field in 3D via `pad_indices` |
+| `src/utils/utils.jl` | `field_indices` helper (replaces the earlier `pad_indices`) |
+| `src/utils/kernel_utils.jl` | New `@assert_kernel` macro and its `uses_reactant` guard |
+| `src/solvers/root_solvers.jl`, `src/solvers/fixed_point.jl`, `src/solvers/newton.jl` | Index the target field in 3D via `field_indices`, for reads as well as writes |
 | `src/solvers/newton.jl` (new) | `NewtonSolver`: fixed, type-level iteration count |
 | `src/solvers/solvers.jl` | Include the new solver |
+| `src/Terrarium.jl` | Export `@assert_kernel` |
+| `ext/TerrariumReactantExt/TerrariumReactantExt.jl` | `uses_reactant(::ReactantMarker) = true` |
+| `Project.toml`, `test/reactant/Project.toml` | Raise the Oceananigans compat bound to `0.110.15` for the upstream `getbc` fix |
 | `test/reactant/setup.jl`, `test/reactant/runtests.jl` | New `:land_soil_snow` configuration |
 | `test/solvers/test_solvers.jl` | `NewtonSolver` tests |
 | `docs/dev/2026-08/2026-08-04-OCEANANIGANS_getbc_2d_indexing_issue.md` (+ MWE) | Write-up of blocker #5 for upstream |
