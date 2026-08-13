@@ -36,12 +36,11 @@ end
         func_kwargs...
     ) where {NF, N, M, S, target}
     target_field = getproperty(out, target)
-
     # Build the residual function, with derivatives if necessary
     residual! = build_residual(out, indices, grid, fields, step_func!, target_field, solver, func_args...; func_kwargs...)
 
     # Solve for the root using RootSolvers.jl
-    x₀ = target_field[field_indices...]
+    x₀ = target_field[indices...]
     method = M(x₀)
     tolerance = solver.tolerance
     result = RootSolvers.find_zero(residual!, method, solver.solution_type, tolerance, solver.max_iterations)
