@@ -19,6 +19,8 @@ An optional second argument sets how long the suite runs:
 numbers (hopefully) worth publishing. The mode is recorded alongside the results: SYPD is a rate and so is
 comparable across modes, but the noise level is not.
 
+Run `julia --project=. manual_benchmarking.jl --help` for the argument documentation.
+
 Results are merged into `assets/benchmark_results.json`, keyed by architecture label. `README.md` is
 then regenerated from the whole store, so a run on one machine never clobbers another's numbers. The
 documentation page `docs/src/benchmarks.md` is generated from the same JSON at doc-build time; see
@@ -29,8 +31,44 @@ import Pkg
 cd(@__DIR__)
 Pkg.activate(".")
 
-const ARCH_ARG = length(ARGS) >= 1 ? lowercase(ARGS[1]) : ""
-const MODE_ARG = length(ARGS) >= 2 ? ARGS[2] : ""
+using ArgParse
+
+# Argument parsing happens before any backend package is loaded, so that `--help` is cheap and so that
+# only the packages needed for the requested architecture are brought in.
+const ARCH_CHOICES = ["cpu", "gpu", "reactant-cpu", "reactant-gpu"]
+const MODE_CHOICES = ["quick", "default", "long"]
+
+# `parse_mode` (benchmark_suite.jl) does the real parsing, but it only runs after the backend packages
+# are loaded, so the mode is validated here to fail fast on a typo.
+function valid_mode(arg::AbstractString)
+    a = lowercase(strip(arg))
+    a in MODE_CHOICES && return true
+    multiplier = tryparse(Float64, a)
+    return !isnothing(multiplier) && multiplier > 0
+end
+
+settings = ArgParseSettings(;
+    prog = "manual_benchmarking.jl",
+    description = "Run the Terrarium benchmark suite on one architecture and merge the result into " *
+                  "`assets/benchmark_results.json` and `README.md`.",
+)
+@add_arg_table! settings begin
+    "arch"
+    help = "Architecture to benchmark, one of: " * join(ARCH_CHOICES, ", ")
+    arg_type = String
+    default = "cpu"
+    range_tester = arg -> lowercase(arg) in ARCH_CHOICES
+    "mode"
+    help = "Duration modifier: `quick` (0.25x steps, sweeps capped), `default`, `long` (10x steps), " *
+           "or a positive numeric timestep multiplier"
+    arg_type = String
+    default = "default"
+    range_tester = valid_mode
+end
+const PARSED_ARGS = parse_args(ARGS, settings)
+
+const ARCH_ARG = lowercase(PARSED_ARGS["arch"])
+const MODE_ARG = PARSED_ARGS["mode"]
 
 # Backend packages must be loaded BEFORE `using Terrarium` so its extensions register.
 if ARCH_ARG == "gpu" || ARCH_ARG == "reactant-cpu" || ARCH_ARG == "reactant-gpu"
@@ -52,12 +90,10 @@ function pick_architecture(arg::AbstractString)
         return (ReactantState(), "reactant-cpu")
     elseif arg == "reactant-gpu"
         return (ReactantState(), "reactant-gpu")
-    elseif arg == "cpu" || isempty(arg)
+    else
         arch_str = String(Sys.ARCH)
         label = (startswith(arch_str, "aarch") || arch_str == "arm64") ? "cpu-arm" : "cpu-x86"
         return (CPU(), label)
-    else
-        error("Unknown architecture argument `$arg`. Use one of: cpu, gpu, reactant-cpu, reactant-gpu.")
     end
 end
 
