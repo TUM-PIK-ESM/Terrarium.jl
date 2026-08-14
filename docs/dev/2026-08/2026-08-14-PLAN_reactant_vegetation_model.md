@@ -27,6 +27,12 @@ Base revision: 99c748b79711e295e99a5a6370d386853652cf06
   `AbstractOperation`s, and reproduced in
   `2026-08-14-reactant_abstract_operation_mwe.jl`. The `:vegetation_column` test configuration has been
   added to `test/reactant/setup.jl` (not yet registered in `runtests.jl`, since it does not pass).
+- 2026-08-14: blocker #2 narrowed to a pure Oceananigans reproducer and handed off for an upstream fix.
+  The initial characterisation here ("`compute!` on an operation-backed `Field` fails under Reactant")
+  was too broad: it only fails when the grid's **vertical coordinate is array-valued**, which Terrarium's
+  `ExponentialSpacing` column grids always are. See
+  `2026-08-14-OCEANANIGANS_computed_field_stretched_grid_issue.md` and
+  `2026-08-14-oceananigans_computed_field_mwe.jl`.
 
 ## Problem description
 
@@ -143,7 +149,7 @@ elementwise math *does* survive materialization, so the reduction machinery itse
 Case C shows `Integral` (a `Scan`) fails even without `Δz`, so `soil_moisture_limiting_factor` is
 blocked on two independent counts.
 
-#### 2. `compute!` on an operation-backed `Field` does not compile eagerly
+#### 2. `compute!` on an operation-backed `Field` does not compile on a stretched grid
 
 Cases E and F. `compute!` launches `gpu__compute!` on the Reactant KA backend and fails:
 
@@ -152,12 +158,25 @@ InvalidIRError: compiling MethodInstance for Oceananigans.AbstractOperations.gpu
 Reason: unsupported call to an unknown function (call to jl_f_throw_methoderror)
 ```
 
-Notably this fails for a *plain elementwise* `Field(a * b)`, with no reduction, no `Δz` and no
-`FunctionField` — so it is independent of blocker #1 and will not be fixed by fixing it.
+This fails for a *plain elementwise* `Field(a * b)` — no reduction, no `Δz`, no `FunctionField` — so it
+is independent of blocker #1 and will not be fixed by fixing it.
+
+Narrowed down in a pure Oceananigans MWE (`2026-08-14-oceananigans_computed_field_mwe.jl`): the trigger
+is an **array-valued (stretched) vertical coordinate**, not the operation itself. The same code works on
+the CPU, works on `ReactantState` with a uniform `z = (-1, 0)`, and works when the arithmetic is done by
+broadcasting instead of through an `AbstractOperation`. In the compiled kernel signature the grid's
+float parameter has become `CuTracedRNumber{Float32, 1}` and the operation's eltype
+`Reactant.TracedRNumber{Float32}`, while the destination array is plain `Float32` — hence the
+unresolvable store. Full write-up, including suggested starting points for a fix, in
+`2026-08-14-OCEANANIGANS_computed_field_stretched_grid_issue.md`.
 
 Terrarium calls `compute!` on an operation-backed field in exactly one place — `FieldCapacityLimitedPAW`
-(`plant_available_water.jl:61,67`, in both `compute_auxiliary!` and `initialize!`) — which is precisely
-why the soil and snow models never hit this and the vegetation model does immediately.
+(`plant_available_water.jl:61,67`, in both `compute_auxiliary!` and `initialize!`) — which is why the
+soil and snow models never hit this and the vegetation model does immediately. Terrarium's column grids
+use `ExponentialSpacing`, so they are always on the failing side of the trigger.
+
+**This one is being taken upstream** (2026-08-14). The local kernel-based workaround in "Proposed
+approach" below removes Terrarium's dependence on it either way.
 
 ### Not yet reachable: data-dependent `if`/`else` in the photosynthesis kernel
 
