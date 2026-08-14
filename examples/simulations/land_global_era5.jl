@@ -213,36 +213,12 @@ display(simulation) #hide
 Terrarium.initialize!(integrator)
 run!(simulation)
 
-failed_idx = findall(<(-100), on_architecture(CPU(), integrator.state.ground_temperature))
-idx = failed_idx[1][1]
-
-soilT_fts = FieldTimeSeries("outputs/land_model_era5_output.jld2", "soil_temperature")
-skinT_fts = FieldTimeSeries("outputs/land_model_era5_output.jld2", "skin_temperature")
-let fig = Figure()
-    ax = Axis(fig[1, 1])
-    lines!(ax, skinT_fts[idx, 1, 1, :])
-    lines!(ax, soilT_fts[idx, 1, 30, :])
-    fig
-end
-
-swe_fts = FieldTimeSeries("outputs/land_model_era5_output.jld2", "snow_water_equivalent")
-lines(swe_fts[idx, 1, 1, :])
-
-lhf_fts = FieldTimeSeries("outputs/land_model_era5_output.jld2", "latent_heat_flux")
-lines(lhf_fts[idx, 1, 1, :])
-
-snt_fts = FieldTimeSeries("outputs/land_model_era5_output.jld2", "snow_temperature")
-lines(snt_fts[idx, 1, 1, :])
-
-lond, latd = RingGrids.get_londlatds(grid.rings)
-lines(shortwave_down[X(Near(lond[land_mask_cpu][idx])), Y(Near(latd[land_mask_cpu][idx])), Ti(1:12)])
-lines(longwave_down[X(Near(lond[land_mask_cpu][idx])), Y(Near(latd[land_mask_cpu][idx])), Ti(1:12)])
-lines(air_temperature[X(Near(lond[land_mask_cpu][idx])), Y(Near(latd[land_mask_cpu][idx])), Ti(1:12)])
-lines(wind_u[X(Near(lond[land_mask_cpu][idx])), Y(Near(latd[land_mask_cpu][idx])), Ti(1:12)])
-
 # Let's look at the results:
 # First we'll inspect the topsoil temperature after one month of forcing.
 fig = plot_surface(integrator.state.temperature, title = "Surface soil temperature")
+DisplayAs.PNG(fig) #hide
+
+fig = plot_surface(integrator.state.skin_temperature, title = "Skin temperature")
 DisplayAs.PNG(fig) #hide
 
 # We can also see that snow has built up over the high latitudes and elevated terrain of the winter (northern) hemisphere.
