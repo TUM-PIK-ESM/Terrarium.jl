@@ -59,11 +59,14 @@ struct ERA5LandLeafAreaIndex{grid} <: AbstractLandAsset end
 ERA5LandLeafAreaIndex(resolution::AssetGrid = native) = ERA5LandLeafAreaIndex{resolution}()
 
 artifact_name(::ERA5LandLeafAreaIndex{native}) = "era5-land-leaf-area-index"
+native_grid(::ERA5LandLeafAreaIndex{native}) = RingGrids.FullClenshawGrid(900)
+
 artifact_name(::ERA5LandLeafAreaIndex{N72}) = "era5-land-leaf-area-index-N72"
+native_grid(::ERA5LandLeafAreaIndex{N72}) = RingGrids.FullGaussianGrid(72)
+
 varnames(::ERA5LandLeafAreaIndex) = ["lai_lv", "lai_hv"]
 format(::ERA5LandLeafAreaIndex) = NetCDF()
 indices(::ERA5LandLeafAreaIndex) = (:, :, :)
-native_grid(::ERA5LandLeafAreaIndex) = RingGrids.FullClenshawGrid(900)
 
 """
     $TYPEDEF
