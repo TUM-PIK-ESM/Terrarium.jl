@@ -82,9 +82,10 @@ Alias for Oceananigans `AbstractBoundaryConditionClassification`
 const BCType = AbstractBoundaryConditionClassification
 
 # Re-export selected types and methods from Oceananigans
-export Simulation, Field, FieldTimeSeries, CPU, GPU, ReactantState, Clock, Center, Face
+export Simulation, Clock, Field, FieldTimeSeries, KernelFunctionOperation, Center, Face
+export CPU, GPU, ReactantState, architecture, on_architecture
 export Value, Flux, Gradient, ValueBoundaryCondition, GradientBoundaryCondition, FluxBoundaryCondition, NoFluxBoundaryCondition
-export run!, time_step!, set!, reset!, compute!, interior, architecture, on_architecture, znodes, zspacings, location
+export run!, time_step!, set!, reset!, compute!, interior, znodes, zspacings, location
 export TimeStepWizard, conjure_time_step_wizard!, Callback, add_callback!, IterationInterval, TimeInterval
 
 # Re-export selected types from FreezeCurves
