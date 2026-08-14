@@ -118,8 +118,8 @@ variables(atmos::PrescribedAtmosphere{NF}) where {NF} = (
 Compute the aerodynamic resistance (inverse conductance) at grid cell `i, j`.
 """
 @inline function aerodynamic_resistance(i, j, grid, fields, atmos::PrescribedAtmosphere{NF}) where {NF}
-    let C = drag_coefficient(i, j, grid, fields, atmos.aerodynamics),
-            Vₐ = max(windspeed(i, j, grid, fields, atmos), NF(1.0e-6))  # clip windspeed to small value
+    let C = drag_coefficient(i, j, grid, fields, atmos.aerodynamics)
+        Vₐ = max(windspeed(i, j, grid, fields, atmos), NF(1.0e-6))  # clip windspeed to small value
         rₐ = 1 / (C * Vₐ)
         return rₐ
     end
