@@ -41,6 +41,17 @@ Base revision: e015a29db9d97090edfd112a5eea165640134404
 - 2026-08-13: `:land_soil_snow` **passes against released Oceananigans 0.110.15 with no workaround** —
   all 62 fields match. The full Reactant suite is green (115/115 comparison, 6/6 autodiff), as is the
   CPU suite. The soil+snow half of this plan is complete.
+- 2026-08-14: blocker #3's local workaround was reverted (`dcae39485`, "revert to set!"), on the
+  assumption that Oceananigans' upstream `set!` improvements (unrelated to blocker #5) had also fixed
+  this case. They had not: `set!(state.skin_temperature, state.ground_temperature)` still fails with
+  the same `pointer` error on `ConcretePJRTArray`. Root-caused to an upstream bug in
+  `OceananigansReactantExt.Fields.broadcastable_dimension`, which is asymmetric and misclassifies this
+  location-`Nothing`-vs-windowed-`Center` pair as non-broadcastable, sending `set!` into a
+  CPU-interpolation branch that itself hits a missing Reactant.jl `copyto!` overload
+  (`SubArray{Array} ← SubArray{ConcretePJRTArray}`, device → host). Reproduced in a Terrarium-free MWE;
+  see `2026-08-14-oceananigans_broadcastable_dimension_issue.md` and the accompanying MWE script. The
+  local workaround (`interior(u) .= interior(v)`) was re-applied in
+  `src/processes/surface/skin_temperature.jl` pending the upstream fix.
 
 ## Problem description
 
@@ -101,7 +112,10 @@ ERROR: conversion to pointer not defined for ConcretePJRTArray{Float32, 3, 1}
 ```
 
 **Fix**: copy the interiors directly. They are the same size, so a plain broadcast is both correct and
-traceable.
+traceable. Note: this was reverted on 2026-08-14 under the (incorrect) assumption that an unrelated
+upstream `set!` fix covered it, then re-applied once the actual root cause — an upstream
+`broadcastable_dimension` asymmetry, unrelated to blocker #5 — was identified; see
+`2026-08-14-oceananigans_broadcastable_dimension_issue.md`.
 
 ### 4. Solvers writing a `Field` with a 2D index
 
