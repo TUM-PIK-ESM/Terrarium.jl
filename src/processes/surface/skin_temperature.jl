@@ -80,7 +80,7 @@ Seed the prognostic `skin_temperature` with the current `ground_temperature` so 
 nonlinear solve starts from a physically sensible guess close to the root.
 """
 function initialize!(state, grid, ::ImplicitSkinTemperature, args...)
-    interior(state.skin_temperature) .= interior(state.ground_temperature)   # Now set! for better Reactant compat, set! might make a CPU detour
+    set!(state.skin_temperature, state.ground_temperature)
     return nothing
 end
 
