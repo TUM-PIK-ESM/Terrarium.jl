@@ -82,7 +82,7 @@ function build_model(::Val{:snow_column}, arch, NF)
 end
 
 # --- :land_soil_snow — coupled LandModel: soil (Richards + heat) + snow, no vegetation ---
-# *Coupled* configuration 
+# *Coupled* configuration
 #
 # Cold winter conditions: a frozen, unsaturated soil column under a shallow snowpack. The pack is
 # kept below freezing (air temperature < 0) so the 100-step comparison does not hinge on the exact
