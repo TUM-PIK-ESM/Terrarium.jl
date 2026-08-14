@@ -85,7 +85,7 @@ Oceananigans.Simulations.timestepper(integrator::ModelIntegrator) = get_timestep
 function Oceananigans.Simulations.conjure_time_step_wizard!(
         simulation::Simulation{<:ModelIntegrator},
         schedule = IterationInterval(1);
-        diffusive_cfl = 0.25,
+        diffusive_cfl = 0.5,
         min_change = 0.2,
         show_progress = true,
         kwargs...
