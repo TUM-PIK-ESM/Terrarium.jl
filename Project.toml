@@ -36,6 +36,9 @@ TerrariumCheckpointingExt = "Checkpointing"
 TerrariumRastersExt = "Rasters"
 TerrariumReactantExt = "Reactant"
 
+[sources]
+Oceananigans = { url = "https://github.com/CliMA/Oceananigans.jl.git", rev = "glw/copyable-fields-predicate" }
+
 [compat]
 Adapt = "4"
 Checkpointing = "0.11"
