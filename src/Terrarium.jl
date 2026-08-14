@@ -10,7 +10,7 @@ using ConstructionBase: ConstructionBase, getproperties, setproperties
 
 using DataStructures: OrderedDict
 
-using Dates: Dates, TimeType, Period, Year, Month, Day, Hour, Minute, Second
+using Dates: Dates, TimeType, Period, Year, Month, Day, Hour, Minute, Second, Millisecond
 
 using Flatten: flatten, flattenable, reconstruct
 

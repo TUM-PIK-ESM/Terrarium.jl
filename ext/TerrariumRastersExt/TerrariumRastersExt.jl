@@ -1,7 +1,7 @@
 module TerrariumRastersExt
 
 using Terrarium
-using Terrarium: XY, XYZ # variable dims
+using Terrarium: XY, XYZ, timedelta
 using Unitful: NoUnits
 
 using Dates
@@ -141,30 +141,30 @@ function Terrarium.update_inputs!(inputs, grid, clock, fields, source::RasterInp
     return nothing
 end
 
-function update_from_raster!(field, grid, clock, source::RasterInputSource)
+function update_from_raster!(field, grid, clock, source::RasterInputSource{NF}) where {NF}
     raster = source.raster
     idxmap = source.idxmap
     timedim = dims(raster, Ti)
     N = length(timedim)
-    t1 = timestamp(source.reftime, first(timedim.val))
-    tN = timestamp(source.reftime, last(timedim.val))
-    ti = timestamp(source.reftime, clock.time)
+    t1 = timedelta(NF, source.reftime, first(timedim.val))
+    tN = timedelta(NF, source.reftime, last(timedim.val))
+    ti = timedelta(NF, source.reftime, clock.time)
     Δt₀ = (tN - t1) / (N - 1)
     period = tN - t1 + Δt₀ # approximate for non-equidistant spacing
     # search for indices between which t lies, converting everything to relative time in seconds;
     # note that we use clock.time again here because searchsorted applies by to the second argument
-    indexes = searchsorted(timedim.val, clock.time, by = t -> t1 + mod(timestamp(source.reftime, t) - t1, period))
+    indexes = searchsorted(timedim.val, clock.time, by = t -> t1 + mod(timedelta(NF, source.reftime, t) - t1, period))
     lower, upper = last(indexes), first(indexes)
     @inbounds if t1 < ti < tN || source.extrapolation isa Cyclical
         lower = lower < 1 ? N : lower
         upper = upper > N ? 1 : upper
         x1 = interpolate_to_grid(grid, source.source_grid, raster[Ti(lower)])[idxmap]
         x2 = interpolate_to_grid(grid, source.source_grid, raster[Ti(upper)])[idxmap]
-        t1 = timestamp(source.reftime, timedim[lower])
-        t2 = timestamp(source.reftime, timedim[upper])
+        t1 = timedelta(NF, source.reftime, timedim[lower])
+        t2 = timedelta(NF, source.reftime, timedim[upper])
         # Linear interpolation between points
-        Δt = t2 > t1 ? Terrarium.convert_dt(t2 - t1) : Δt₀
-        ϵ = Terrarium.convert_dt(ti - t1)
+        Δt = t2 > t1 ? Terrarium.convert_dt(NF, t2 - t1) : Δt₀
+        ϵ = Terrarium.convert_dt(NF, ti - t1)
         x_interp = x1 + ϵ * (x2 - x1) / Δt
         return set!(field, x_interp)
     else
@@ -184,13 +184,6 @@ function interpolate_to_grid(grid::ColumnRingGrid, source_grid::RingGrids.Abstra
         return RingGrids.interpolate(grid.rings, field)
     end
 end
-
-# conversions of simulation time to standard time units (seconds since reftime)
-timestamp(reftime::DateTime, time::Real) = time # assume already in relative time
-timestamp(reftime::DateTime, time::DateTime) = Dates.value(convert(Millisecond, time - reftime)) / 1.0e3
-timestamp(reftime::Real, time::Real) = time - reftime # assume matching units of seconds
-timestamp(reftime::Period, time::Real) = time - to_seconds(reftime)
-timestamp(reftime::Period, time::Period) = to_seconds(time - reftime)
 
 to_seconds(time::Month) = to_seconds(Day(30) * Dates.value(time))
 to_seconds(time::Day) = to_seconds(Hour(24) * Dates.value(time))

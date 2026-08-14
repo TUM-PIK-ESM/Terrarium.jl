@@ -87,5 +87,6 @@ function Oceananigans.FieldTimeSeries(
         times = eltype(grid)[]
     )
     loc = location(dims)
-    return FieldTimeSeries(loc, get_field_grid(grid), times)
+    arch = architecture(grid)
+    return FieldTimeSeries(loc, get_field_grid(grid), on_architecture(arch, times))
 end
