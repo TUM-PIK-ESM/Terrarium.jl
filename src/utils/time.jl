@@ -33,3 +33,4 @@ timestamp(::Type{TT}, reftime::TimeType, Δt::Number) where {TT <: TimeType} = c
 timestamp(::Type{TT}, reftime::TimeType, Δt) where {TT <: Union{Period, Number}} = convert_dt(TT, Δt)
 timestamp(::Type{TT}, reftime::TimeType, Δt::TT) where {TT <: Union{Period, Number}} = Δt # if Δt type already matches, return as is
 timestamp(::Type{TT}, reftime::TT, Δt::TT) where {TT <: Union{Period, Number}} = reftime + Δt
+timestamp(::Type{TT}, reftime::TimeType, t::TimeType) where {TT <: Union{Period, Number}} = timedelta(TT, reftime, t)

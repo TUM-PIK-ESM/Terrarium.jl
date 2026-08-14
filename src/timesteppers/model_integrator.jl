@@ -104,14 +104,14 @@ end
 Run the simulation for `steps` or a given time `period` with timestep size `Δt` (in seconds or Dates.Period).
 """
 function Oceananigans.Simulations.run!(
-        integrator::ModelIntegrator;
+        integrator::ModelIntegrator{NF};
         steps::Union{Int, Nothing} = nothing,
         period::Union{Period, Nothing} = nothing,
         Δt = default_dt(timestepper(integrator)),
         checkpointing = false,
         show_progress = false
-    )
-    Δt = convert_dt(Δt)
+    ) where {NF}
+    Δt = convert_dt(NF, Δt)
     steps = get_steps(steps, period, Δt)
     # Run for the specified number of time steps
     run_timesteps!(integrator, Δt, steps, checkpointing; show_progress)
@@ -179,8 +179,8 @@ Advance the model forward by one timestep with optional timestep size `Δt`. If 
 variables.
 """
 timestep!(integrator::ModelIntegrator; finalize = true) = timestep!(integrator, default_dt(get_timestepper(integrator.model)); finalize)
-function timestep!(integrator::ModelIntegrator, Δt; finalize = true)
-    timestep!(integrator, get_timestepper(integrator.model), convert_dt(Δt))
+function timestep!(integrator::ModelIntegrator{NF}, Δt; finalize = true) where {NF}
+    timestep!(integrator, get_timestepper(integrator.model), convert_dt(NF, Δt))
     if finalize
         compute_auxiliary!(integrator.state, integrator.model)
     end

@@ -6,7 +6,7 @@
 # `timestep!` (`timestep!(integrator, timestepper, Δt)`), which is NOT overridden here — this is
 # what avoids recursively re-entering the compiling wrapper.
 
-const ReactantIntegrator = ModelIntegrator{<:Any, <:RARCH}
+const ReactantIntegrator{NF} = ModelIntegrator{NF, <:RARCH} where {NF}
 
 # Reactant specialization of `Terrarium.run_timesteps!` (generic host loop defined in src). Here
 # `Reactant.@trace` compiles the loop to a single `stablehlo.while` (rather than unrolling `Nt`
@@ -17,9 +17,9 @@ const ReactantIntegrator = ModelIntegrator{<:Any, <:RARCH}
 # stores every intermediate state; a scheme such as `Reactant.Periodic(n)`/`Reactant.Binomial(n)`
 # stores only `n` checkpoints and recomputes the rest. It has no effect on a pure forward run but
 # matters when this function is differentiated (see the autodiff example).
-function Terrarium.run_timesteps!(integrator::ReactantIntegrator, Δt, Nt, checkpointing = false)
+function Terrarium.run_timesteps!(integrator::ReactantIntegrator{NF}, Δt, Nt, checkpointing = false) where {NF}
     timestepper = get_timestepper(integrator.model)
-    Δt = Terrarium.convert_dt(Δt)
+    Δt = Terrarium.convert_dt(NF, Δt)
     Reactant.@trace checkpointing = checkpointing track_numbers = false for _ in 1:Nt
         Terrarium.timestep!(integrator, timestepper, Δt)
     end
@@ -42,14 +42,14 @@ subsequent runs with the same `Δt`, step count, and `checkpointing` to skip rec
 a forward run but bounds the memory of a reverse pass when the compiled function is differentiated.
 """
 function Oceananigans.Simulations.run!(
-        integrator::ReactantIntegrator;
+        integrator::ReactantIntegrator{NF};
         steps::Union{Int, Nothing} = nothing,
         period::Union{Terrarium.Period, Nothing} = nothing,
         Δt = Terrarium.default_dt(get_timestepper(integrator.model)),
         checkpointing = false,
         compiled_run! = nothing,
-    )
-    Δt = Terrarium.convert_dt(Δt)
+    ) where {NF}
+    Δt = Terrarium.convert_dt(NF, Δt)
     nsteps = Terrarium.get_steps(steps, period, Δt)
     if isnothing(compiled_run!)
         @info "Reactant: compiling run_timesteps! (Δt=$Δt, steps=$nsteps, checkpointing=$checkpointing)"
