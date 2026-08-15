@@ -217,7 +217,8 @@ conduction.
     )
     Tg, κ, Δz = ground_thermal_interface(i, j, grid, fields, skinT, snow, constants)
     G = fields.ground_heat_flux[i, j]
-    return compute_skin_temperature(skinT, Tg, G, Δz, κ)
+    Ts = compute_skin_temperature(skinT, Tg, G, Δz, κ)
+    return Ts
 end
 
 """
@@ -306,7 +307,6 @@ Run a full nonlinear solve to determine the `skin_temperature` at grid cell `i, 
         args...
     )
     objective = ObjectiveFunction(compute_skin_temperature_residual!, :skin_temperature)
-    # `snow` is forwarded (after `seb`) so the residual's conduction target can be snow-aware
     Ts = solve!(out, (i, j), grid, fields, objective, skinT.solver, skinT, seb, args...)
     return Ts
 end

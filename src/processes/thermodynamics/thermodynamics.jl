@@ -81,8 +81,8 @@ pressure `pres` [Pa] and specific humidity `q_air` [kg/kg].
 Assumes that air parcel is over water when `T > 0°C` and over ice when `T < 0°C`.
 Wrapper around [`vapor_pressure_deficit`](@extref Thermodynamics.vapor_pressure_deficit).
 """
-@inline function vapor_pressure_deficit(c::ThermodynamicConstants, T, pres, q_air)
-    T_K = celsius_to_kelvin(c, T)
+@inline function vapor_pressure_deficit(c::ThermodynamicConstants{NF}, T, pres, q_air) where {NF}
+    T_K = max(celsius_to_kelvin(c, T), eps(NF))
     vpd = Thermodynamics.vapor_pressure_deficit(c, T_K, pres, q_air)
     return vpd
 end
@@ -94,12 +94,8 @@ Saturation specific humidity at temperature `T` [°C] and density `ρ` [kg/m³].
 over ice for `T <= 0°C` and over liquid water otherwise. Wrapper around
 [`q_vap_saturation`](@extref Thermodynamics.q_vap_saturation).
 """
-@inline function saturation_specific_humidity_vapor(c::ThermodynamicConstants, T, ρ)
-    # Floor the absolute temperature at `eps` before entering Thermodynamics.jl, which internally
-    # evaluates the `log(T_K / T_triple)` Clausius–Clapeyron form and would throw a `DomainError`
-    # (a Reactant-incompatible trap) for `T_K ≤ 0`; see [`saturation_vapor_pressure`](@ref).
-    T_K = celsius_to_kelvin(c, T)
-    T_K = max(T_K, eps(typeof(T_K)))
+@inline function saturation_specific_humidity_vapor(c::ThermodynamicConstants{NF}, T, ρ) where {NF}
+    T_K = max(celsius_to_kelvin(c, T), eps(NF))
     return ifelse(
         T <= zero(T),
         Thermodynamics.q_vap_saturation(c, T_K, ρ, Thermodynamics.Ice()),

@@ -74,11 +74,13 @@ end
 Computes the difference in specific humidity between a saturated surface at temperature `T` [°C]
 and the atmosphere, defined by its specific humidity `q_air` [kg/kg] and pressure `p` [Pa].
 """
-function specific_humidity_difference(c::ThermodynamicConstants, p, q_air, T)
-    T_K = celsius_to_kelvin(c, T)
+function specific_humidity_difference(c::ThermodynamicConstants{NF}, p, q_air, T) where {NF}
+    # Bound T from below at absolute zero to prevent nonphysical thermodynamics
+    T_C = max(T, NF(-273))
+    T_K = celsius_to_kelvin(c, T_C)
     # TODO: should use surface air density for better accuracy
     ρₐ = Thermodynamics.air_density(c, T_K, p, q_air)
-    q_sat = saturation_specific_humidity_vapor(c, T, ρₐ)
+    q_sat = saturation_specific_humidity_vapor(c, T_C, ρₐ)
     Δq = q_sat - q_air
     return Δq
 end
