@@ -58,7 +58,7 @@ Includes minimum conductance and light extinction effects based on LAI, scaled b
         g₁ = stomcond.g₁
         D = stomcond.diffusivity_ratio_water_co2
         k_ext = traits.extinction_coefficient
-        vpd = max(vpd, NF(1.0e-4)) # clip VPD at 0.1 kPa (1e-4 Pa) to prevent division by zero
+        vpd = max(vpd, NF(10.0)) # clip VPD at 10 Pa (0.01 kPa) for numerical stability
         cₐ = ppm_to_mole_fraction(co2_ppm) # convert CO₂ concentration to mole fraction
         g₀ = g_min * (1 - exp(-k_ext * LAI)) * β # m/s
         M_C = constants.material.atomic_weight_carbon # atomic weight of carbon in gC/mol
