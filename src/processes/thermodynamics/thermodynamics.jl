@@ -90,17 +90,20 @@ end
 """
     saturation_specific_humidity_vapor(c::ThermodynamicConstants, T, ρ)
 
-Saturation specific humidity at temperature `T` [°C] and density `ρ` [kg/m³]. Dispatches
-over ice for `T <= 0°C` and over liquid water otherwise. Wrapper around
-[`q_vap_saturation`](@extref Thermodynamics.q_vap_saturation).
+Compute saturation specific humidity at temperature `T` (°C) and density `ρ` (kg/m³) via
+[`q_vap_saturation`](@extref Thermodynamics.q_vap_saturation). Uses ice-phase saturation
+for `T < -1°C`, liquid-water saturation for `T > 0°C`, and linearly interpolates between
+the two in the range [-1, 0]°C to avoid a discontinuity at the freezing point that can
+break Newton-type root solvers.
 """
 @inline function saturation_specific_humidity_vapor(c::ThermodynamicConstants{NF}, T, ρ) where {NF}
     T_K = max(celsius_to_kelvin(c, T), eps(NF))
-    return ifelse(
-        T <= zero(T),
-        Thermodynamics.q_vap_saturation(c, T_K, ρ, Thermodynamics.Ice()),
-        Thermodynamics.q_vap_saturation(c, T_K, ρ, Thermodynamics.Liquid())
-    )
+    q_vap_ice = Thermodynamics.q_vap_saturation(c, T_K, ρ, Thermodynamics.Ice())
+    q_vap_liq = Thermodynamics.q_vap_saturation(c, T_K, ρ, Thermodynamics.Liquid())
+    # interpolation coefficient: 0 < -1°C and 1 > 0°C
+    ϵ = max(min(-T, one(T)), zero(T))
+    # blend q_vap_ice and q_vap_liq to avoid discontinuity at 0°C
+    return ϵ * q_vap_ice + (1 - ϵ) * q_vap_liq
 end
 
 """
