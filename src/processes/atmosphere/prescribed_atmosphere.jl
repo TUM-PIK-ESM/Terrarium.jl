@@ -81,7 +81,7 @@ end
 function PrescribedAtmosphere(
         ::Type{NF};
         altitude::NF = NF(10), # Default to 10 m
-        min_windspeed::NF = NF(0.01), # Default to 0.01 m/s
+        min_windspeed::NF = NF(0.1), # Default to 0.1 m/s
         precip::AbstractPrecipitation = RainSnow(),
         radiation::AbstractIncomingRadiation = LongShortWaveRadiation(),
         humidity::AbstractHumidity = SpecificHumidity(),
@@ -119,7 +119,7 @@ Compute the aerodynamic resistance (inverse conductance) at grid cell `i, j`.
 """
 @inline function aerodynamic_resistance(i, j, grid, fields, atmos::PrescribedAtmosphere{NF}) where {NF}
     let C = drag_coefficient(i, j, grid, fields, atmos.aerodynamics)
-        Vₐ = max(windspeed(i, j, grid, fields, atmos), NF(1.0e-6))  # clip windspeed to small value
+        Vₐ = windspeed(i, j, grid, fields, atmos)
         rₐ = 1 / (C * Vₐ)
         return rₐ
     end
