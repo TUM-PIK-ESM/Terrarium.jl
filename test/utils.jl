@@ -6,7 +6,7 @@ using Unitful
 
 using Terrarium:
     tuplejoin, deduplicate, merge_recursive, safediv, fastmap, piecewise_linear,
-    timestamp, timedelta, convert_dt
+    timestamp, convert_dt
 
 @testset "Tuple utilities" begin
     # tuplejoin
@@ -77,14 +77,6 @@ end
     @test convert_dt(Second, 1.0) == Second(1)
     @test convert_dt(Hour, Second(Δt)) == Hour(24)
     @test_throws InexactError convert_dt(Second, 1.5) == Second(1.5)
-
-    # timedelta
-    @test timedelta(reftime, reftime + Second(Δt)) == Second(Δt)
-    @test timedelta(Float32, 3600.0f0, Float32(Δt)) == Float32(Δt - 3600)
-    @test timedelta(Hour, 3600.0f0, Float32(Δt)) == Hour(23)
-    @test timedelta(Float32, reftime, reftime + Day(1)) == convert_dt(Float32, Day(1))
-    @test timedelta(Second, reftime, reftime + Day(1)) == convert_dt(Second, Day(1))
-
 
     # timestamp
     @test timestamp(DateTime, reftime, Δt) == reftime + Second(Δt)

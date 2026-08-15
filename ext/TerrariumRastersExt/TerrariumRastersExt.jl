@@ -1,7 +1,7 @@
 module TerrariumRastersExt
 
 using Terrarium
-using Terrarium: XY, XYZ, timedelta
+using Terrarium: XY, XYZ, timestamp
 using Unitful: NoUnits
 
 using Dates
@@ -146,22 +146,22 @@ function update_from_raster!(field, grid, clock, source::RasterInputSource{NF}) 
     idxmap = source.idxmap
     timedim = dims(raster, Ti)
     N = length(timedim)
-    t1 = timedelta(NF, source.reftime, first(timedim.val))
-    tN = timedelta(NF, source.reftime, last(timedim.val))
-    ti = timedelta(NF, source.reftime, clock.time)
+    t1 = timestamp(NF, source.reftime, first(timedim.val))
+    tN = timestamp(NF, source.reftime, last(timedim.val))
+    ti = timestamp(NF, source.reftime, clock.time)
     Δt₀ = (tN - t1) / (N - 1)
     period = tN - t1 + Δt₀ # approximate for non-equidistant spacing
     # search for indices between which t lies, converting everything to relative time in seconds;
     # note that we use clock.time again here because searchsorted applies by to the second argument
-    indexes = searchsorted(timedim.val, clock.time, by = t -> t1 + mod(timedelta(NF, source.reftime, t) - t1, period))
+    indexes = searchsorted(timedim.val, clock.time, by = t -> t1 + mod(timestamp(NF, source.reftime, t) - t1, period))
     lower, upper = last(indexes), first(indexes)
     @inbounds if t1 < ti < tN || source.extrapolation isa Cyclical
         lower = lower < 1 ? N : lower
         upper = upper > N ? 1 : upper
         x1 = interpolate_to_grid(grid, source.source_grid, raster[Ti(lower)])[idxmap]
         x2 = interpolate_to_grid(grid, source.source_grid, raster[Ti(upper)])[idxmap]
-        t1 = timedelta(NF, source.reftime, timedim[lower])
-        t2 = timedelta(NF, source.reftime, timedim[upper])
+        t1 = timestamp(NF, source.reftime, timedim[lower])
+        t2 = timestamp(NF, source.reftime, timedim[upper])
         # Linear interpolation between points
         Δt = t2 > t1 ? Terrarium.convert_dt(NF, t2 - t1) : Δt₀
         ϵ = Terrarium.convert_dt(NF, ti - t1)
