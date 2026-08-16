@@ -304,9 +304,7 @@ function Variables(vars::Tuple{Vararg{Union{AbstractProcessVariable, Namespace}}
         elseif !haskey(vardict, varname(var))
             vardict[varname(var)] = var
         else
-            println("MERGING $(varname(var)): $var")
             vardict[varname(var)] = first(merge(vardict[varname(var)], var))
-            println(vardict[varname(var)])
         end
         return nothing
     end
