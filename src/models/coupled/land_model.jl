@@ -53,8 +53,8 @@ end
 function StateVariables(
         model::LandModel{NF};
         clock = Clock(time = zero(NF)),
-        boundary_conditions = (;),
         fields = (;),
+        boundary_conditions = (;),
         input_variables = ()
     ) where {NF}
     grid = get_grid(model)
@@ -62,13 +62,13 @@ function StateVariables(
     # Snow adds a blended `soil_heat_flux` coupling auxiliary to the state when present
     vars = Variables(variables(model)..., interface_vars..., input_variables...)
     # Initialize BC fields for coupling
-    ground_heat_flux = initialize(vars.auxiliary.ground_heat_flux, grid, clock, boundary_conditions, fields)
-    infiltration = initialize(vars.auxiliary.infiltration, grid, clock, boundary_conditions, fields)
+    ground_heat_flux = initialize(vars.ground_heat_flux, grid, clock, fields, boundary_conditions)
+    infiltration = initialize(vars.infiltration, grid, clock, fields, boundary_conditions)
     # Initialize soil heat flux
     soil_heat_flux = if isnothing(model.snow)
         ground_heat_flux
     else
-        initialize(vars.auxiliary.soil_heat_flux, grid, clock, boundary_conditions, fields)
+        initialize(vars.soil_heat_flux, grid, clock, fields, boundary_conditions)
     end
     soil_heat_flux_bc = SoilHeatFlux(soil_heat_flux)
     # Note that the hydrology module computes infiltration as positive so we need to negate it here

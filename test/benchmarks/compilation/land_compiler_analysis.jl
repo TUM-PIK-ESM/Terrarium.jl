@@ -25,14 +25,14 @@ function build_model(arch = CPU())
     soil = SoilEnergyWaterCarbon(eltype(grid); hydrology)
     vegetation = VegetationCarbonCycle(eltype(grid))
     # Construct coupled model
-    land = LandModel(grid; soil, vegetation, initializer)
+    land = LandModel(grid; soil, vegetation)
     return land
 end
 
-vegsoil = build_model()
+model = build_model()
 # Variably saturated with water table at roughly 5 m depth
 initializers = (saturation_water_ice = (x, z) -> min(1, 0.5 - 0.1 * z),)
-tinf = @snoop_inference initialize(vegsoil; initializers)
+tinf = @time @snoop_inference initialize(model; initializers)
 # print_tree(tinf, maxdepth=100)
 ProfileView.view(flamegraph(tinf))
 Δt = 60.0
