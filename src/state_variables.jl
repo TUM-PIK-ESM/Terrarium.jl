@@ -77,32 +77,12 @@ Update the `state` for the given `model` and `inputs`; this includes calling `up
 function Oceananigans.TimeSteppers.update_state!(state::StateVariables, model::AbstractModel, inputs::InputSources; compute_tendencies = true)
     reset_tendencies!(state)
     update_inputs!(state, get_grid(model), inputs)
-    fill_halo_regions!(state)
     compute_auxiliary!(state, model)
+    compute_boundary_conditions!(state, model)
     if compute_tendencies
         compute_tendencies!(state, model)
     end
     return nothing
-end
-
-"""
-Invoke `fill_halo_regions!` for all prognostic `Field`s in `state`.
-"""
-function Oceananigans.BoundaryConditions.fill_halo_regions!(state::StateVariables)
-    # fill_halo_regions! for all prognostic variables
-    fastiterate(prognostic_names(state)) do progname
-        fill_halo_regions!(getproperty(state.prognostic, progname), state.clock, state)
-    end
-
-    # fill_halo_regions! for all closure variables (stored in state.auxiliary)
-    fastiterate(closure_names(state)) do closurename
-        fill_halo_regions!(getproperty(state.auxiliary, closurename), state.clock, state)
-    end
-
-    # recurse over namespaces
-    return fastiterate(state.namespaces) do ns
-        fill_halo_regions!(ns)
-    end
 end
 
 """
