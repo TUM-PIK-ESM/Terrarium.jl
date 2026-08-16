@@ -446,13 +446,14 @@ function initialize(
     # Initialize or retrieve Fields for each variable in `var`, accumulating the newly created Fields in a named tuple;
     # Note that one major caveat to this approach is that the Fields visible to each constructor are dependent on the order
     # in which the variables were declared :/
-    new_fields = foldl(values(vars), init = ()) do acc, var
-        # note that we call initialize here with both the current accumualated collection Fields + the context given by 'fields'
-        context = merge(fields, OrderedDict{Symbol, AbstractField}(acc...))
-        field = initialize(var, grid, clock, context, boundary_conditions)
-        tuple(acc..., varname(var) => field)
+    new_fields = OrderedDict{Symbol, AbstractField}()
+    context_fields = OrderedDict{Symbol, AbstractField}(pairs(fields))
+    for (name, var) in vars
+        field = initialize(var, grid, clock, context_fields, boundary_conditions)
+        context_fields[name] = field
+        new_fields[name] = field
     end
-    return OrderedDict{Symbol, AbstractField}(new_fields)
+    return new_fields
 end
 
 # Convenience dispatch that accepts `fields` as a NamedTuple and converts to OrderedDict
