@@ -293,7 +293,7 @@ with_scope(path::VarPath, var::AbstractVariable) =
 Variables(obj) = Variables(variables(obj))
 Variables(vars::Variables) = vars
 Variables(vars::Union{AbstractProcessVariable, Namespace}...) = Variables(vars)
-function Variables(@nospecialize(vars::Tuple{Vararg{Union{AbstractProcessVariable, Namespace}}}))
+function Variables(vars::Tuple{Vararg{Union{AbstractProcessVariable, Namespace}}})
     # partition variables into prognostic, auxiliary, input, and namespace groups;
     # duplicates within each group are automatically merged
     varmeta(var::AbstractVariable) = (varname(var), vardims(var), varunits(var))
@@ -370,7 +370,7 @@ end
 """
 Check for variables/namespaces with duplicate names and raise an error if duplicates are detected. Not type stable.
 """
-function check_duplicates(@nospecialize(vars::Union{AbstractVariable, Namespace}...))
+function check_duplicates(vars::Union{AbstractVariable, Namespace}...)
     names = unique(map(varname, vars))
     groups = Dict(map(n -> n => filter(==(n) ∘ varname, vars), names)...)
     for key in keys(groups)

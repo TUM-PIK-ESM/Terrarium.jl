@@ -368,7 +368,7 @@ through to `initialize` for each variable. The `timestepper`'s cache is allocate
 `initialize(timestepper, state, progvars)`.
 """
 function StateVariables(
-        @nospecialize(vars::Variables),
+        vars::Variables,
         grid::AbstractLandGrid{NF};
         clock::Clock = Clock(time = 0.0),
         timestepper = default_timestepper(NF),
@@ -437,11 +437,11 @@ Any predefined `boundary_conditions` and `fields` will be passed through to `ini
 for each variable.
 """
 function initialize(
-        @nospecialize(vars::OrderedDict{Symbol, <:AbstractVariable}),
+        vars::OrderedDict{Symbol, <:AbstractVariable},
         grid::AbstractLandGrid,
         clock::Clock,
         fields::OrderedDict{Symbol, AbstractField},
-        @nospecialize(boundary_conditions::NamedTuple),
+        boundary_conditions::NamedTuple,
     )
     # Initialize or retrieve Fields for each variable in `var`, accumulating the newly created Fields in a named tuple;
     # Note that one major caveat to this approach is that the Fields visible to each constructor are dependent on the order
@@ -457,11 +457,11 @@ end
 
 # Convenience dispatch that accepts `fields` as a NamedTuple and converts to OrderedDict
 initialize(
-    @nospecialize(var::AbstractVariable),
+    var::AbstractVariable,
     grid::AbstractLandGrid,
     clock::Clock,
     fields::NamedTuple,
-    @nospecialize(boundary_conditions::NamedTuple),
+    boundary_conditions::NamedTuple,
 ) = initialize(var, grid, clock, OrderedDict{Symbol, AbstractField}(pairs(fields)), boundary_conditions)
 
 """
@@ -473,11 +473,11 @@ will be directly returned. Otherwise check the `accumulated` dict for fields fro
 Otherwise, the new `Field` is constructed using the given `boundary_conditions`.
 """
 function initialize(
-        @nospecialize(var::AbstractVariable),
+        var::AbstractVariable,
         grid::AbstractLandGrid,
         clock::Clock,
         fields::OrderedDict{Symbol, AbstractField},
-        @nospecialize(boundary_conditions::NamedTuple),
+        boundary_conditions::NamedTuple,
     )
     name = varname(var)
     if haskey(fields, name)
@@ -500,11 +500,11 @@ end
 Initialize a `Field` on `grid` for the given [`AuxiliaryVariable`](@ref).
 """
 function initialize(
-        @nospecialize(var::AuxiliaryVariable),
+        var::AuxiliaryVariable,
         grid::AbstractLandGrid,
         clock::Clock,
         fields::OrderedDict{Symbol, AbstractField},
-        @nospecialize(boundary_conditions::NamedTuple)
+        boundary_conditions::NamedTuple
     )
     name = varname(var)
     if haskey(fields, name)
