@@ -17,6 +17,16 @@ Recursively merge an arbitrary number of field/variable boundary conditions.
 merge_boundary_conditions(bcs::FieldBCs...) = merge_recursive(bcs...)
 
 """
+    fill_halo_regions!(field::AbstractField, state::StateVariables)
+
+Alias for `fill_halo_regions!(field, state.clock, state.inputs)`.
+"""
+@inline function BoundaryConditions.fill_halo_regions!(field::Field, state::StateVariables)
+    fill_halo_regions!(field, state.clock, state.inputs)
+    return nothing
+end
+
+"""
     getbc(::Variable{name}, i::Integer, j::Integer, grid::Oceananigans.Grids.AbstractGrid, clock, fields) where {name}
 
 Implementation of `Oceananigans.BoundaryConditions.getbc` for variable placeholders that retrieves the input `Field` from

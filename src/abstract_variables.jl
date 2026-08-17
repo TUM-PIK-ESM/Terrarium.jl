@@ -406,13 +406,13 @@ function Base.merge(varss::Variables...)
     return Variables(reduce(tuplejoin, allvars))
 end
 
-function Base.merge(varss::Tuple{Vararg{<:Union{AbstractVariable, Namespace}}}...)
+function Base.merge(varss::Tuple{Vararg{Union{AbstractVariable, Namespace}}}...)
     return tuplejoin(varss...)
 end
 
 function Base.merge(vars::AbstractVariable...)
-    @assert allequal(vars) "All variables must be functionally equivalent to merge"
-    return first(vars)
+    unique_vars = unique(vars)
+    return Tuple(unique_vars)
 end
 
 function Base.merge(namespaces::Namespace...)

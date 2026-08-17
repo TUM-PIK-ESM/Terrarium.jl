@@ -392,7 +392,7 @@ function StateVariables(
         clock,
     )
     # allocate the timestepper's cache
-    cache = initialize(timestepper, initial_state, vars.prognostic, model)
+    cache = initialize(timestepper, initial_state, NamedTuple(vars.prognostic), model)
     state = StateVariables(
         NF,
         closurenames,
