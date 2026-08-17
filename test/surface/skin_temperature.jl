@@ -59,7 +59,7 @@ function test_skin_temperature_solve!(
 
     @time compute_auxiliary!(state, model)
     @time compute_boundary_conditions!(state, model)
-    
+
     # Check that the skin temperature is finite and within plausible range
     @test all(isfinite.(state.skin_temperature)) && all(state.skin_temperature .> -100) && all(state.skin_temperature .< 100)
 
