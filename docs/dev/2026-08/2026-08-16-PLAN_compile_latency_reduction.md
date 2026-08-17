@@ -1,7 +1,8 @@
 # Reduce compile-time latency in model initialization via OrderedDicts
 
-> Status: **in progress**. OrderedDict-based initialization implemented on `bg/compile-latency`.
-> `initialize()` compile time reduced ~39% (158 s → 96 s); `timestep!()` unchanged (~110 s).
+> Status: **in progress**. OrderedDict-based initialization + explicit per-process boundary
+> condition calls implemented on `bg/compile-latency`. Combined changes reduced cold-start compile
+> time by ~70% for `initialize()` (158 s → 48 s) and ~32% for `timestep!()` (110 s → 75 s).
 > See [Results](#results) for full benchmark table.
 
 Date of initial draft: 2026-08-16
@@ -30,6 +31,12 @@ Base revision: dd85eaf3652ffbb76d06945424a3375a39af52fd
   - Auxiliary custom constructors receive `NamedTuple(fields)` — converted from the accumulated
     dict at call time (same as plan).
 - 2026-08-16: Benchmarks run on both `main` and `bg/compile-latency`; results recorded below.
+- 2026-08-17: Moved SEB solve from `compute_auxiliary!` to `compute_boundary_conditions!` in
+  `LandModel` and `SurfaceEnergyModel`. Made `fill_halo_regions!` and `compute_boundary_conditions!`
+  explicit per-process rather than blanket calls over all variables. Updated docs and tests.
+- 2026-08-17: Final timings — `initialize()` down to 47.7 s (from 96.2 s), `timestep!()` down to
+  74.7 s (from 115.2 s). Combined with OrderedDict changes, total cold-start compile time reduced
+  ~70% for initialize and ~32% for timestep.
 
 ## Problem description
 
@@ -111,14 +118,57 @@ struct Variables
 end
 ```
 
-- The `Variables(vars::Tuple{...})` constructor will populate OrderedDicts instead of NamedTuples
-- Add `Base.propertynames(::Variables)` and `Base.getproperty(::Variables, ::Symbol)` so existing
-  code that accesses `vars.prognostic`, `vars.auxiliary`, etc. continues to work (these return the
-  OrderedDicts, which downstream code can iterate over)
+- The `Variables(vars::Tuple{...})` constructor populates OrderedDicts instead of NamedTuples
+  using a `register!` pattern (user-implemented; slightly different from original plan)
+- `Base.propertynames(::Variables)` and `Base.getproperty(::Variables, ::Symbol)` provide
+  backward-compatible property access
 - The `check_duplicates` function already works with variable collections — no change needed
-- `merge_namespaces` returns a tuple of Namespace objects — convert to OrderedDict storage
 
 ### 2. `state_variables.jl` — initialize() uses OrderedDict accumulation
+
+**Current:**
+```julia
+function initialize(vars::NamedTuple{names, ...}, grid, clock, bcs, fields) where {names}
+    return foldl(vars, init = (;)) do nt, var
+        field = initialize(var, grid, clock, bcs, merge(nt, fields))
+        merge(nt, (; varname(var) => field))
+    end
+end
+```
+
+**After:**
+```julia
+function initialize(vars::OrderedDict{Symbol, AbstractVariable}, grid, clock, bcs, fields)
+    result = OrderedDict{Symbol, Field}()
+    for (name, var) in vars
+        field = initialize(var, grid, clock, bcs, fields)
+        result[name] = field
+    end
+    return result
+end
+```
+
+- Replace `foldl` + `merge` with a simple loop over OrderedDict entries
+- Final conversion to `NamedTuple` happens once per group in the `StateVariables` constructor
+
+### 3. `LandModel` and `SurfaceEnergyModel` — explicit per-process boundary condition calls
+
+Moved `fill_halo_regions!` and `compute_boundary_conditions!` from blanket calls over all variables
+to explicit per-process invocations:
+
+- **`fill_halo_regions!`**: Instead of iterating over all prognostic + closure + namespace fields,
+  each process now declares its own `fill_halo_regions!` with a small, stable set of fields.
+  This eliminates the mega-type specialization where the full variable set was compiled into a
+  single dispatch.
+
+- **`compute_boundary_conditions!`**: New method on `AbstractModel`/`AbstractProcess`. The SEB
+  solve (`solve_surface_energy_balance!`) moved from `compute_auxiliary!` to
+  `compute_boundary_conditions!` in both `LandModel` and `SurfaceEnergyModel`. Soil BCs are
+  computed explicitly after the SEB. This separates the auxiliary computation phase (diagnostics)
+  from the boundary condition phase (flux solves), reducing inference graph depth.
+
+- **`SurfaceEnergyModel`**: Added `compute_boundary_conditions!` that calls
+  `solve_surface_energy_balance!`. The `compute_auxiliary!` now only initializes albedo.
 
 **Current:**
 ```julia
@@ -180,7 +230,13 @@ For code that iterates over `vars.prognostic` (expecting a NamedTuple of variabl
 iteration returns `(name, var)` pairs — check if any code does `for var in vars.prognostic` and
 adjust to `for (_, var) in vars.prognostic` or `values(vars.prognostic)`.
 
-### 5. Individual variable initialize() dispatches
+### 5. Documentation and test updates
+
+- Updated `docs/src/processes/surface_energy/surface_energy_balance.md` to reflect new
+  `compute_auxiliary!` signature (no longer takes `constants`, `atmosphere`, `hydrology`)
+- Updated `SurfaceEnergyModel` and `LandModel` doc references
+- Test files that call per-process dispatches directly (radiative/turbulent flux tests) were
+  unaffected since those signatures are unchanged
 
 The per-variable `initialize(var::AbstractVariable, ...)` and `initialize(var::AuxiliaryVariable, ...)`
 dispatches receive a `fields::NamedTuple` context. This NamedTuple is the *user-provided* fields or
@@ -200,31 +256,39 @@ the accumulated fields from previous variables. Two options:
 Benchmarks run on the same machine using `test/benchmarks/compilation/land_compiler_analysis.jl` with
 a coupled `LandModel` (Richards hydrology + snow + vegetation carbon cycle, 30 vertical levels).
 
-| Function | `main` (baseline) | `bg/compile-latency` | Δ time | Δ allocs |
-| --- | --- | --- | --- | --- |
-| `initialize(::LandModel)` | 157.6 s (42.15 M, 2.84 GiB, 104.3% compile) | 96.2 s (41.29 M, 2.79 GiB, 107.4% compile) | **-39%** | -2% |
-| `timestep!(::ModelIntegrator)` | 109.7 s (15.00 M, 1.01 GiB, 101.1% compile) | 115.2 s (15.14 M, 1.02 GiB, 101.1% compile) | +5% | +1% |
+| Function | `main` (baseline) | OrderedDict only | Final (OrderedDict + refactoring) | Δ total | Δ allocs |
+| --- | --- | --- | --- | --- | --- |
+| `initialize(::LandModel)` | 157.6 s (42.15 M, 2.84 GiB, 104.3% compile) | 96.2 s (41.29 M, 2.79 GiB, 107.4% compile) | **47.7 s** (40.36 M, 2.73 GiB, 114.0% compile) | **-70%** | -4% |
+| `timestep!(::ModelIntegrator)` | 109.7 s (15.00 M, 1.01 GiB, 101.1% compile) | 115.2 s (15.14 M, 1.02 GiB, 101.1% compile) | **74.7 s** (15.28 M, 1024 MiB, 101.7% compile) | **-32%** | +2% |
 
 ### Interpretation
 
-- **`initialize()` improved ~39%** — the OrderedDict swap in both `Variables` and `StateVariables`
-  construction eliminated a significant portion of the NamedTuple type explosion. Allocations also
-  dropped slightly (42.15 M → 41.29 M) confirming fewer intermediate types were created.
-- **`timestep!()` unchanged** — compile latency for the first timestep is dominated by kernel
-  compilation (`@kernel` call graphs for tendency/auxiliary computations), not variable initialization.
-  The +5 s difference is within noise for cold-start measurements.
+- **`initialize()` improved ~70% total** (158 s → 48 s). The OrderedDict swap contributed ~39%
+  (158 s → 96 s). The remaining ~31% came from making `fill_halo_regions!` and
+  `compute_boundary_conditions!` explicit per-process (eliminating blanket calls over all variables)
+  and moving the SEB solve out of `compute_auxiliary!` into `compute_boundary_conditions!`, which
+  reduced the inference graph depth for the auxiliary phase.
+- **`timestep!()` improved ~32%** (110 s → 75 s). The OrderedDict change alone had no effect on
+  timestep compile cost. The improvement came from the same refactoring: explicit per-process
+  `fill_halo_regions!` and `compute_boundary_conditions!` calls eliminated large blanket dispatches
+  that compiled unique specializations for the full variable set.
 - **Compile time is still ~100% of wall time** for both functions, meaning virtually all measured
   time is JIT compilation, not execution.
 
 ### Inference tree analysis (`@snoop_inference`)
 
-The `@snoop_inference` tree for `initialize(::LandModel)` on the branch reveals:
+The `@snoop_inference` tree for `initialize(::LandModel)` on the OrderedDict-only branch (before
+the per-process refactoring) reveals:
 
 | Metric | Value | % of wall |
 | --- | --- | --- |
 | Total wall time | 96.96 s | 100% |
 | Codegen + execution (root self) | **86.43 s** | **89%** |
 | Actual type inference | **10.53 s** | **11%** |
+
+> **Note:** These numbers are from the intermediate OrderedDict-only benchmark (96.96 s), not the
+> final result (47.7 s). A fresh `@snoop_inference` run on the final branch would show further
+> reductions, but the qualitative finding remains: codegen dominates inference.
 
 **Key finding: the bottleneck is codegen, not inference.** The OrderedDict change reduced wall time
 by ~60s, but 86s of the remaining 96s is code generation and execution, not type inference. This
@@ -271,8 +335,8 @@ issue from the first-call compile cost addressed by this change.
 
 ### Performance benchmarks
 - See [Results](#results) above for the benchmark table
-- Target of ≥50% reduction was not met; actual improvement was ~39% for `initialize()`
-- The remaining compile cost is in kernel compilation, outside the scope of this change
+- Target of ≥50% reduction was exceeded: 70% for `initialize()`, 32% for `timestep!()`
+- The remaining compile cost is in kernel compilation, partially addressed by the per-process refactoring
 
 ### Regression checks
 1. ✅ `StateVariables` struct fields are still concrete-typed NamedTuples (runtime type stability preserved)
@@ -298,9 +362,9 @@ issue from the first-call compile cost addressed by this change.
 
 ## Future work
 
-1. **`timestep!()` compile cost is unchanged** (110 s on `main` vs 115 s on the branch) — the bulk
-   of Terrarium's compile latency lives in kernel compilation and timestepper dispatch, not in
-   variable initialization. Addressing this would require a separate investigation into:
+1. **`timestep!()` improved ~32%** (110 s → 75 s) but still has significant compile cost — the bulk
+   of remaining latency lives in kernel compilation and timestepper dispatch. Further improvements
+   would require investigation into:
    - Kernel function inference chains (the `@kernel` call graph for `compute_tendencies!`,
      `compute_auxiliary!`, etc.)
    - Timestepper cache type parameters and how they propagate through `ModelIntegrator`
