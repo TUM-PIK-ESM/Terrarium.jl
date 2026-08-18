@@ -73,7 +73,6 @@ function test_skin_temperature_solve!(
     end
     if hasproperty(state, :snow_water_equivalent)
         set!(state.snow_water_equivalent, NF(snow_water_equivalent))
-        set!(state.snow_temperature, NF(air_temperature))
     end
     if hasproperty(state, :leaf_area_index)
         set!(state.leaf_area_index, NF(leaf_area_index))
@@ -85,15 +84,18 @@ function test_skin_temperature_solve!(
     # Check that the skin temperature is finite and within plausible range
     @test all(isfinite.(state.skin_temperature)) && all(state.skin_temperature .> -100) && all(state.skin_temperature .< 100)
 
-    # Check if ground heat flux converged to gradient flux
-    field_grid = get_field_grid(grid)
-    Δz = Oceananigans.Δzᵃᵃᶜ(1, 1, field_grid.Nz, field_grid)
-    κₛ = model.surface_energy_balance.skin_temperature.κₛ
+    # Check if ground heat flux converged to gradient flux, using the same blended
+    # thermal interface (Tg, κ, Δz) that the implicit residual function employs.
+    skinT = model.surface_energy_balance.skin_temperature
+    if hasproperty(model, :snow)
+        Tg, κ, Δz = Terrarium.ground_thermal_interface(1, 1, grid, state, skinT, model.snow, model.constants)
+    else
+        Tg, κ, Δz = Terrarium.ground_thermal_interface(1, 1, grid, state, skinT)
+    end
     Ts = state.skin_temperature[1, 1]
-    Tg = state.ground_temperature[1, 1]
     G = state.ground_heat_flux[1, 1]
-    G_gradient = -κₛ * (Ts - Tg) / (Δz / 2)
-    Ts_implicit = Tg - G * Δz / (2 * κₛ)
+    G_gradient = -κ * (Ts - Tg) / (Δz / 2)
+    Ts_implicit = Tg - G * Δz / (2 * κ)
     Ts_residual = Ts - Ts_implicit
     G_residual = G - G_gradient
 
@@ -399,7 +401,7 @@ end
     end
 end
 
-## For interactive testing
+# # For interactive testing
 # grid = ColumnGrid(CPU(), Float64, UniformSpacing(Δz = 0.01))
 # NF = eltype(grid)
 # # Soil + snow + surface energy/hydrology + prescribed vegetation
@@ -427,6 +429,7 @@ end
 #     air_temperature = T_air,
 #     relative_humidity = humid,
 #     ground_temperature = nf * T_air,
-#     windspeed = wind
+#     windspeed = wind,
+#     snow_water_equivalent = NF(1.0)
 # )
 # @info "$(results.skin_temperature)"

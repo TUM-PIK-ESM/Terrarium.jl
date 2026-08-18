@@ -104,7 +104,7 @@ of the medium directly beneath the skin, its thermal conductivity, and the half-
 snow (`snow === nothing`) these are the uppermost ground layer's `ground_temperature`, the assumed
 surface conductivity `κₛ`, and the top ground cell thickness — i.e. the snow-free behavior is unchanged.
 """
-@propagate_inbounds function ground_thermal_interface(i, j, grid, fields, skinT::ImplicitSkinTemperature, snow::Nothing, constants = nothing)
+@propagate_inbounds function ground_thermal_interface(i, j, grid, fields, skinT::ImplicitSkinTemperature, args...)
     field_grid = get_field_grid(grid)
     Δz₁ = Δzᵃᵃᶜ(i, j, field_grid.Nz, field_grid)
     Tg = fields.ground_temperature[i, j]
@@ -122,7 +122,7 @@ conductivity, and half-cell thickness.
     field_grid = get_field_grid(grid)
     Δz_ground = Δzᵃᵃᶜ(i, j, field_grid.Nz, field_grid)
     f = snow_cover_fraction(i, j, grid, fields, snow)
-    # bulk snow thermal conductivity recovered lazily from the density scheme (not stored as a field)
+    # bulk snow thermal conductivity recovered lazily from the density scheme
     ρ_snow = compute_snow_density(i, j, grid, fields, snow.density)
     κ_snow = compute_thermal_conductivity(snow, constants.material, ρ_snow)
     Tg = (one(f) - f) * fields.ground_temperature[i, j] + f * snow_temperature(i, j, grid, fields, snow)
