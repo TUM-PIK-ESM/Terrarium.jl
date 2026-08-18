@@ -46,19 +46,21 @@ ground_evaporation_resistance_factor(i, j, grid, fields, ::SoilMoistureResistanc
     hydrology = get_hydrology(soil)
     bgc = get_biogeochemistry(soil)
     props = get_hydraulic_properties(hydrology)
-    soil = soil_volume(i, j, fgrid.Nz, grid, fields, strat, hydrology, bgc)
-    texture = mineral_texture(soil)
-    fracs = volumetric_fractions(soil)
+    comp = soil_volume(i, j, fgrid.Nz, grid, fields, strat, hydrology, bgc)
+    texture = mineral_texture(comp)
+    fracs = volumetric_fractions(comp)
     # Get field capacity, water content, and residual water content
     θfc = field_capacity(get_hydraulic_properties(hydrology), texture)
     θw = fracs.water
-    θres = props.residual * soil.saturation
+    por = porosity(comp)
+    θres = props.residual_saturation * por
     return ground_evaporation_resistance_factor(res, θw, θfc, θres)
 end
 
 @inline function ground_evaporation_resistance_factor(::SoilMoistureResistanceFactor{NF}, θw, θfc, θres) where {NF}
     if θw < θfc
-        β = (1 - cos(π * (θw - θres) / (θfc - θres)))^2 / 4
+        fc_sat = ifelse(θfc > θres, (θw - θres) / (θfc - θres), zero(NF)) # guard against corner case where θfc == θres
+        β = (1 - cos(π * fc_sat))^2 / 4
     else
         β = NF(1)
     end
