@@ -34,31 +34,53 @@ Named tuple with fields: `skin_temperature`, `residual`, `net_radiation`, `laten
 `sensible_heat_flux`, `ground_heat_flux`.
 """
 function test_skin_temperature_solve!(
-        state, grid, seb, model;
+        state,
+        grid::Terrarium.AbstractLandGrid{NF},
+        model::Terrarium.AbstractModel{NF};
         surface_shortwave_down,
         surface_longwave_down,
         air_pressure,
         air_temperature,
         relative_humidity,
         ground_temperature,
-        windspeed
-    )
-    set!(state.surface_shortwave_down, surface_shortwave_down)
-    set!(state.surface_longwave_down, surface_longwave_down)
-    set!(state.air_pressure, air_pressure)
-    set!(state.air_temperature, air_temperature)
+        windspeed,
+        snow_water_equivalent = zero(NF),
+        soil_moisture = one(NF),
+        leaf_area_index = zero(NF),
+        tolerance = NF(1.0e-5),
+        Ts_min = NF(-100),
+        Ts_max = NF(100)
+    ) where {NF}
+    set!(state.surface_shortwave_down, NF(surface_shortwave_down))
+    set!(state.surface_longwave_down, NF(surface_longwave_down))
+    set!(state.air_pressure, NF(air_pressure))
+    set!(state.air_temperature, NF(air_temperature))
     thermodynamics_constants = model.constants.thermodynamics
-    air_density = Thermodynamics.air_density(thermodynamics_constants, air_temperature + 273.15, air_pressure)
+    air_density = Thermodynamics.air_density(thermodynamics_constants, air_temperature + NF(273.15), air_pressure)
     specific_humidity_saturation = Terrarium.saturation_specific_humidity_vapor(thermodynamics_constants, air_temperature, air_density)
-    set!(state.specific_humidity, relative_humidity * specific_humidity_saturation)
-    set!(state.ground_temperature, ground_temperature)
-    set!(state.windspeed, windspeed)
+    set!(state.specific_humidity, NF(relative_humidity * specific_humidity_saturation))
+    set!(state.windspeed, NF(windspeed))
     # Seed the implicit solve with a physical initial guess (the ground temperature),
     # mirroring the SEB initializer used in the coupled model.
     set!(state.skin_temperature, ground_temperature)
+    set!(state.ground_temperature, NF(ground_temperature))
+    # Conditional settings
+    if hasproperty(state, :temperature)
+        set!(state.temperature, NF(ground_temperature)) # set full temperature profile to ground_temperature
+    end
+    if hasproperty(state, :saturation_water_ice)
+        set!(state.saturation_water_ice, NF(soil_moisture)) # same for soil moisture
+    end
+    if hasproperty(state, :snow_water_equivalent)
+        set!(state.snow_water_equivalent, NF(snow_water_equivalent))
+        set!(state.snow_temperature, NF(air_temperature))
+    end
+    if hasproperty(state, :leaf_area_index)
+        set!(state.leaf_area_index, NF(leaf_area_index))
+    end
 
-    @time compute_auxiliary!(state, model)
-    @time compute_boundary_conditions!(state, model)
+    # Update model state
+    Terrarium.update_state!(state, model, InputSources(eltype(grid)))
 
     # Check that the skin temperature is finite and within plausible range
     @test all(isfinite.(state.skin_temperature)) && all(state.skin_temperature .> -100) && all(state.skin_temperature .< 100)
@@ -72,21 +94,31 @@ function test_skin_temperature_solve!(
     G = state.ground_heat_flux[1, 1]
     G_gradient = -κₛ * (Ts - Tg) / (Δz / 2)
     Ts_implicit = Tg - G * Δz / (2 * κₛ)
-    residual = Ts - Ts_implicit
+    Ts_residual = Ts - Ts_implicit
+    G_residual = G - G_gradient
 
-    @test G_gradient ≈ G
-    @test abs(residual) < sqrt(eps())
-
-    @info "skin temperature: $Ts residual: $residual R: $(state.surface_net_radiation[1, 1]) Hₛ: $(state.sensible_heat_flux[1, 1]) Hₗ: $(state.latent_heat_flux[1, 1]) G: $G"
-
-    return (
-        skin_temperature = state.skin_temperature,
-        residual = residual,
-        surface_net_radiation = state.surface_net_radiation,
-        latent_heat_flux = state.latent_heat_flux,
-        sensible_heat_flux = state.sensible_heat_flux,
-        ground_heat_flux = state.ground_heat_flux,
+    results = (
+        skin_temperature = state.skin_temperature[1, 1],
+        residual = Ts_residual,
+        surface_net_radiation = state.surface_net_radiation[1, 1],
+        latent_heat_flux = state.latent_heat_flux[1, 1],
+        sensible_heat_flux = state.sensible_heat_flux[1, 1],
+        ground_heat_flux = state.ground_heat_flux[1, 1],
+        ground_heat_flux_residual = G_residual,
     )
+
+    G_check = abs(G - G_gradient) < tolerance
+    resid_check = abs(Ts_residual) < tolerance
+    Ts_check = Ts_min < results.skin_temperature < Ts_max
+
+    if !G_check || !resid_check
+        inputs = (; surface_shortwave_down, surface_longwave_down, air_temperature, ground_temperature, air_pressure, relative_humidity, windspeed)
+        @warn "SEB solve failed to converge for inputs $inputs; output: $results"
+    end
+
+    @test G_check && resid_check && Ts_check
+
+    return results
 end
 
 @testset "Prescribed skin temperature" begin
@@ -118,7 +150,8 @@ end
     soil = SoilEnergyWaterCarbon(NF; hydrology = SoilHydrology(NF, RichardsEq()))
     land = LandModel(grid; soil, surface_energy_balance = seb, vegetation = nothing)
     integrator = initialize(
-        land; initializers = (
+        land;
+        initializers = (
             temperature = (x, z) -> 5.0 - 0.02 * z,
             saturation_water_ice = (x, z) -> 0.5,
         )
@@ -146,7 +179,7 @@ end
     @test all(isfinite.(interior(state.ground_heat_flux)))
 end
 
-@testset "Implicit skin temperature" begin
+@testset "Implicit skin temperature: Smoke tests" begin
     grid = ColumnGrid(CPU(), Float64, ExponentialSpacing(N = 10))
     solver = Terrarium.default_skin_temperature_solver(eltype(grid))
     skin_temperature = ImplicitSkinTemperature(eltype(grid); κₛ = 0.5, solver)
@@ -155,71 +188,255 @@ end
     seb = SurfaceEnergyBalance(Float64; skin_temperature)
     model = SurfaceEnergyModel(grid, surface_energy_balance = seb, atmosphere = atmosphere)
 
-    # Sunny and dry in Bergen Norway (Figure 5.11, Shuttleworth 2012)
-    state = StateVariables(model)
-    results = test_skin_temperature_solve!(
-        state, grid, seb, model;
-        surface_shortwave_down = 600.0,
-        surface_longwave_down = 300.0,
-        air_pressure = 101_325,
-        air_temperature = 10.0,
-        relative_humidity = 0.75,
-        ground_temperature = 13.0,
-        windspeed = 5.0,
-    )
-    @test all(results.sensible_heat_flux .> 0)
-    @test all(results.latent_heat_flux .> 0)
-    @test all(results.ground_heat_flux .< 0)
-    @test all(results.surface_net_radiation .< 0)
+    @testset "Sunny and dry" begin
+        # Sunny and dry in Bergen Norway (Figure 5.11, Shuttleworth 2012)
+        state = StateVariables(model)
+        results = test_skin_temperature_solve!(
+            state, grid, model;
+            surface_shortwave_down = 600.0,
+            surface_longwave_down = 300.0,
+            air_pressure = 101_325,
+            air_temperature = 10.0,
+            relative_humidity = 0.75,
+            ground_temperature = 13.0,
+            windspeed = 5.0,
+        )
+        @test all(results.sensible_heat_flux .> 0)
+        @test all(results.latent_heat_flux .> 0)
+        @test all(results.ground_heat_flux .< 0)
+        @test all(results.surface_net_radiation .< 0)
+    end
 
-    # Sunny and humid
-    state = StateVariables(model)
-    results = test_skin_temperature_solve!(
-        state, grid, seb, model;
-        surface_shortwave_down = 600.0,
-        surface_longwave_down = 300.0,
-        air_pressure = 101_325,
-        air_temperature = 10.0,
-        relative_humidity = 0.97,
-        ground_temperature = 13.0,
-        windspeed = 5.0,
-    )
-    @test all(results.sensible_heat_flux .> 0)
-    @test all(results.latent_heat_flux .> 0)
-    @test all(results.ground_heat_flux .< 0)
-    @test all(results.surface_net_radiation .< 0)
+    @testset "Sunny and humid" begin
+        state = StateVariables(model)
+        results = test_skin_temperature_solve!(
+            state, grid, model;
+            surface_shortwave_down = 600.0,
+            surface_longwave_down = 300.0,
+            air_pressure = 101_325,
+            air_temperature = 10.0,
+            relative_humidity = 0.97,
+            ground_temperature = 13.0,
+            windspeed = 5.0,
+        )
+        @test all(results.sensible_heat_flux .> 0)
+        @test all(results.latent_heat_flux .> 0)
+        @test all(results.ground_heat_flux .< 0)
+        @test all(results.surface_net_radiation .< 0)
+    end
 
-    # Cloudy and dry
-    state = StateVariables(model)
-    results = test_skin_temperature_solve!(
-        state, grid, seb, model;
-        surface_shortwave_down = 150.0,
-        surface_longwave_down = 200.0,
-        air_pressure = 101_325,
-        air_temperature = 5.0,
-        relative_humidity = 0.6,
-        ground_temperature = 10.0,
-        windspeed = 10.0
-    )
-    @test all(results.sensible_heat_flux .< 0)
-    @test all(results.latent_heat_flux .> 0)
-    @test all(results.ground_heat_flux .> 0)
-    @test all(results.surface_net_radiation .> 0)
+    @testset "Cloudy and dry" begin
+        state = StateVariables(model)
+        results = test_skin_temperature_solve!(
+            state, grid, model;
+            surface_shortwave_down = 150.0,
+            surface_longwave_down = 200.0,
+            air_pressure = 101_325,
+            air_temperature = 5.0,
+            relative_humidity = 0.6,
+            ground_temperature = 10.0,
+            windspeed = 10.0
+        )
+        @test all(results.sensible_heat_flux .< 0)
+        @test all(results.latent_heat_flux .> 0)
+        @test all(results.ground_heat_flux .> 0)
+        @test all(results.surface_net_radiation .> 0)
+    end
 
-    # Cloudy and humid
-    state = StateVariables(model)
-    results = test_skin_temperature_solve!(
-        state, grid, seb, model;
-        surface_shortwave_down = 150.0,
-        surface_longwave_down = 200.0,
-        air_pressure = 101_325,
-        air_temperature = 5.0,
-        relative_humidity = 0.9,
-        ground_temperature = 10.0,
-        windspeed = 10.0
-    )
-    @test all(results.sensible_heat_flux .> 0)
-    @test all(results.latent_heat_flux .> 0)
-    @test all(results.ground_heat_flux .> 0)
-    @test all(results.surface_net_radiation .> 0)
+    @testset "Cloudy and humid" begin
+        state = StateVariables(model)
+        results = test_skin_temperature_solve!(
+            state, grid, model;
+            surface_shortwave_down = 150.0,
+            surface_longwave_down = 200.0,
+            air_pressure = 101_325,
+            air_temperature = 5.0,
+            relative_humidity = 0.9,
+            ground_temperature = 10.0,
+            windspeed = 10.0
+        )
+        @test all(results.sensible_heat_flux .> 0)
+        @test all(results.latent_heat_flux .> 0)
+        @test all(results.ground_heat_flux .> 0)
+        @test all(results.surface_net_radiation .> 0)
+    end
 end
+
+@testset "Implicit skin temperature: LandModel stress test" begin
+    grid = ColumnGrid(CPU(), Float64, UniformSpacing(Δz = 0.01))
+    NF = eltype(grid)
+    # Soil + snow + surface energy/hydrology + prescribed vegetation
+    seb = SurfaceEnergyBalance(NF)
+    soil = SoilEnergyWaterCarbon(NF; hydrology = SoilHydrology(NF, RichardsEq()))
+    snow = SingleLayerSnow(NF)
+    vegetation = PrescribedVegetation(NF)
+    model = LandModel(grid; soil, snow, vegetation, surface_energy_balance = seb)
+    integrator = initialize(model)
+    state = integrator.state
+
+    @testset "Snow free, bare saturated soil" begin
+        # Define a large range of conditions
+        SW_range = NF.([50.0, 300, 1000.0])
+        LW_range = NF.([100.0, 400.0])
+        T_air_range = NF.([-40.0, 0.0, 10.0, 40.0])
+        pres_range = NF.([90_000, 101_325, 105_000])
+        humid_range = NF.([0.0, 0.5, 1.0])
+        wind_range = NF.([0.1, 1.0, 10.0, 50.0])
+        for config in Iterators.product(SW_range, LW_range, T_air_range, pres_range, humid_range, wind_range)
+            @info "Testing config $config"
+            SW, LW, T_air, pres, humid, wind = config
+            test_state = deepcopy(state)
+            results = test_skin_temperature_solve!(
+                test_state, grid, model;
+                surface_shortwave_down = SW,
+                surface_longwave_down = LW,
+                air_pressure = pres,
+                air_temperature = T_air,
+                relative_humidity = humid,
+                ground_temperature = NF(0.95) * T_air - NF(1),
+                windspeed = wind
+            )
+            @info "Results: $(results)"
+        end
+    end
+
+    @testset "Snow free, bare dry soil" begin
+        # Define a large range of conditions
+        SW_range = NF.([50.0, 300, 1000.0])
+        LW_range = NF.([100.0, 400.0])
+        T_air_range = NF.([-40.0, 0.0, 10.0, 40.0])
+        pres_range = NF.([90_000, 101_325, 105_000])
+        humid_range = NF.([0.0, 0.5, 1.0])
+        wind_range = NF.([0.1, 1.0, 10.0, 50.0])
+        for config in Iterators.product(SW_range, LW_range, T_air_range, pres_range, humid_range, wind_range)
+            @info "Testing config $config"
+            SW, LW, T_air, pres, humid, wind = config
+            test_state = deepcopy(state)
+            results = test_skin_temperature_solve!(
+                test_state, grid, model;
+                surface_shortwave_down = SW,
+                surface_longwave_down = LW,
+                air_pressure = pres,
+                air_temperature = T_air,
+                relative_humidity = humid,
+                ground_temperature = NF(0.95) * T_air - NF(1),
+                windspeed = wind,
+                soil_moisture = NF(0)
+            )
+            @info "Results: $(results)"
+        end
+    end
+
+    @testset "Snow free, vegetated saturated soil" begin
+        # Define a large range of conditions
+        SW_range = NF.([50.0, 300, 1000.0])
+        LW_range = NF.([100.0, 400.0])
+        T_air_range = NF.([-40.0, 0.0, 10.0, 40.0])
+        pres_range = NF.([90_000, 101_325, 105_000])
+        humid_range = NF.([0.0, 0.5, 1.0])
+        wind_range = NF.([0.1, 1.0, 10.0, 50.0])
+        for config in Iterators.product(SW_range, LW_range, T_air_range, pres_range, humid_range, wind_range)
+            @info "Testing config $config"
+            SW, LW, T_air, pres, humid, wind = config
+            test_state = deepcopy(state)
+            results = test_skin_temperature_solve!(
+                test_state, grid, model;
+                surface_shortwave_down = SW,
+                surface_longwave_down = LW,
+                air_pressure = pres,
+                air_temperature = T_air,
+                relative_humidity = humid,
+                ground_temperature = NF(0.8) * T_air - NF(1),
+                windspeed = wind,
+                leaf_area_index = NF(2)
+            )
+            @info "Results: $(results)"
+        end
+    end
+
+    @testset "Snow cover (partial)" begin
+        # Define a large range of conditions
+        SW_range = NF.([50.0, 300, 1000.0])
+        LW_range = NF.([100.0, 400.0])
+        T_air_range = NF.([-40.0, -10.0, 0.0])
+        pres_range = NF.([90_000, 101_325, 105_000])
+        humid_range = NF.([0.0, 0.5, 1.0])
+        wind_range = NF.([0.1, 1.0, 10.0, 50.0])
+        for config in Iterators.product(SW_range, LW_range, T_air_range, pres_range, humid_range, wind_range)
+            @info "Testing config $config"
+            SW, LW, T_air, pres, humid, wind = config
+            test_state = deepcopy(state)
+            results = test_skin_temperature_solve!(
+                test_state, grid, model;
+                surface_shortwave_down = SW,
+                surface_longwave_down = LW,
+                air_pressure = pres,
+                air_temperature = T_air,
+                relative_humidity = humid,
+                ground_temperature = NF(0.9) * T_air - NF(1),
+                windspeed = wind,
+                snow_water_equivalent = NF(0.001)
+            )
+            @info "Results: $(results)"
+        end
+    end
+
+    @testset "Snow cover (full)" begin
+        # Define a large range of conditions
+        SW_range = NF.([50.0, 300, 1000.0])
+        LW_range = NF.([100.0, 400.0])
+        T_air_range = NF.([-40.0, -10.0, 0.0])
+        pres_range = NF.([90_000, 101_325, 105_000])
+        humid_range = NF.([0.0, 0.5, 1.0])
+        wind_range = NF.([0.1, 1.0, 10.0, 50.0])
+        for config in Iterators.product(SW_range, LW_range, T_air_range, pres_range, humid_range, wind_range)
+            @info "Testing config $config"
+            SW, LW, T_air, pres, humid, wind = config
+            test_state = deepcopy(state)
+            results = test_skin_temperature_solve!(
+                test_state, grid, model;
+                surface_shortwave_down = SW,
+                surface_longwave_down = LW,
+                air_pressure = pres,
+                air_temperature = T_air,
+                relative_humidity = humid,
+                ground_temperature = NF(0.5) * T_air - NF(1),
+                windspeed = wind,
+                snow_water_equivalent = NF(0.1),
+            )
+            @info "Results: $(results)"
+        end
+    end
+end
+
+## For interactive testing
+# grid = ColumnGrid(CPU(), Float64, UniformSpacing(Δz = 0.01))
+# NF = eltype(grid)
+# # Soil + snow + surface energy/hydrology + prescribed vegetation
+# skinT = ImplicitSkinTemperature(NF, solver = Terrarium.RootSolver(NF; max_iterations = 100))
+# seb = SurfaceEnergyBalance(NF, skin_temperature = skinT)
+# soil = SoilEnergyWaterCarbon(NF; hydrology = SoilHydrology(NF, RichardsEq()))
+# snow = SingleLayerSnow(NF)
+# vegetation = PrescribedVegetation(NF)
+# model = LandModel(grid; soil, snow, vegetation, surface_energy_balance = seb)
+# integrator = initialize(model)
+# state = integrator.state
+# SW = NF(300)
+# LW = NF(400)
+# pres = NF(101_325)
+# T_air = NF(0.0)
+# humid = NF(0.5)
+# wind = NF(10.0)
+# nf = NF(0.0)
+# test_state = deepcopy(state)
+# results = test_skin_temperature_solve!(
+#     test_state, grid, model;
+#     surface_shortwave_down = SW,
+#     surface_longwave_down = LW,
+#     air_pressure = pres,
+#     air_temperature = T_air,
+#     relative_humidity = humid,
+#     ground_temperature = nf * T_air,
+#     windspeed = wind
+# )
+# @info "$(results.skin_temperature)"
