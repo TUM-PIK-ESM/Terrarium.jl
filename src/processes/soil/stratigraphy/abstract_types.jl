@@ -88,9 +88,9 @@ Return the solid matrix of the soil at index `i, j, k` for the given stratigraph
 function soil_matrix end
 
 """
-    soil_volume(i, j, k, grid, fields, ::AbstractStratigraphy, args...)
+    soil_composition(i, j, k, grid, fields, ::AbstractStratigraphy, args...)
 
 Return a [`SoilComposition`](@ref) describing the full material composition of the soil volume at index
 `i, j, k` for the given stratigraphy parameterization.
 """
-function soil_volume end
+function soil_composition end

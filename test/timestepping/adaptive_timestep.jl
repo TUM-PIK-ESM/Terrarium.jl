@@ -19,7 +19,7 @@ function reference_thermal_timescale(integrator)
     Nx, Ny, Nz = size(fgrid)
     τmin = Inf
     for k in 1:Nz, j in 1:Ny, i in 1:Nx
-        soilvol = Terrarium.soil_volume(i, j, k, fgrid, fields, strat, hydrology, bgc)
+        soilvol = Terrarium.soil_composition(i, j, k, fgrid, fields, strat, hydrology, bgc)
         κ = Terrarium.compute_thermal_conductivity(energy.thermal_properties, soilvol)
         C = Terrarium.compute_heat_capacity(energy.thermal_properties, soilvol)
         Δz = Terrarium.Δzᵃᵃᶜ(i, j, k, fgrid)

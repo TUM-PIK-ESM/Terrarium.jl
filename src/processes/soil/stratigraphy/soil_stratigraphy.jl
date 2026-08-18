@@ -193,7 +193,7 @@ end
 Construct a `SoilComposition` object summarizing the material composition of the soil volume
 at the given indices `i, j, k` on `grid`.
 """
-@propagate_inbounds function soil_volume(
+@propagate_inbounds function soil_composition(
         i, j, k, grid, fields,
         strat::AbstractStratigraphy,
         hydrology::AbstractSoilHydrology,

@@ -47,7 +47,7 @@ bulk thermal conductivity `κ` and heat capacity `C` computed from the local soi
         strat::AbstractStratigraphy,
         bgc::AbstractSoilBiogeochemistry
     )
-    soil = soil_volume(i, j, k, grid, fields, strat, hydrology, bgc)
+    soil = soil_composition(i, j, k, grid, fields, strat, hydrology, bgc)
     κ = compute_thermal_conductivity(energy.thermal_properties, soil)
     C = compute_heat_capacity(energy.thermal_properties, soil)
     Δz = Δzᵃᵃᶜ(i, j, k, grid)
@@ -118,7 +118,7 @@ conductivity (fully dry or frozen) impose no restriction and return `Inf`.
         strat::AbstractStratigraphy,
         bgc::AbstractSoilBiogeochemistry
     ) where {NF}
-    soil = soil_volume(i, j, k, grid, fields, strat, hydrology, bgc)
+    soil = soil_composition(i, j, k, grid, fields, strat, hydrology, bgc)
     # hydraulic conductivity at the cell centre
     K = hydraulic_conductivity(get_hydraulic_properties(hydrology), soil)
     # reconstruct the matric potential ψₘ = ψ - ψ_hydrostatic - ψ_elevation from the total head

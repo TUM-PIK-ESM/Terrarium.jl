@@ -114,7 +114,7 @@ end
         strat::AbstractStratigraphy,
         bgc::AbstractSoilBiogeochemistry
     )
-    soil = soil_volume(i, j, k, grid, fields, strat, hydrology, bgc)
+    soil = soil_composition(i, j, k, grid, fields, strat, hydrology, bgc)
     return compute_thermal_conductivity(energy.thermal_properties, soil)
 end
 

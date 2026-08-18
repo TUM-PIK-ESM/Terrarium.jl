@@ -148,7 +148,7 @@ Compute the hydraulic conductivity at the center of the grid cell `i, j, k`.
         strat::AbstractStratigraphy,
         bgc::AbstractSoilBiogeochemistry
     )
-    soil = soil_volume(i, j, k, grid, fields, strat, hydrology, bgc)
+    soil = soil_composition(i, j, k, grid, fields, strat, hydrology, bgc)
     return hydraulic_conductivity(hydrology.hydraulic_properties, soil)
 end
 

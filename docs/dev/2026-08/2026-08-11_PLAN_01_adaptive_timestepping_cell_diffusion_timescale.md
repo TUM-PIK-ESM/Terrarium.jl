@@ -133,7 +133,7 @@ Per-process methods + kernel functions:
   builds a KFO around `compute_hydraulic_diffusion_timescale(i,j,k,grid,fields,hydrology,strat,bgc)`
   and returns its `minimum`. Non-`RichardsEq`/`NoFlow` hydrology falls back to `Inf`.
 
-The kernel functions reuse the existing pointwise machinery (`soil_volume`,
+The kernel functions reuse the existing pointwise machinery (`soil_composition`,
 `compute_thermal_conductivity`, `compute_heat_capacity`, `hydraulic_conductivity`, `porosity`,
 `get_swrc`, `Δzᵃᵃᶜ`). The SWRC derivative value is converted to `NF` to keep the reduction type
 stable.

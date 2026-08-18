@@ -121,7 +121,7 @@ soil_matrix
 ```
 
 ```@docs; canonical = false
-soil_volume
+soil_composition
 ```
 
 ```@docs; canonical = false

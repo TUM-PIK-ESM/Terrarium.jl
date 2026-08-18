@@ -68,7 +68,7 @@ Verified against the current source:
   - the field-level closure kernels `energy_to_temperature!` / `temperature_to_energy!`, which build a
     `SoilVolume` from porosity and saturation
     ([`soil_energy_closures.jl:64-130`](../../src/processes/soil/energy/soil_energy_closures.jl#L64-L130));
-  - `compute_thermal_conductivity(i, j, k, …)`, which constructs `soil_volume(…)`
+  - `compute_thermal_conductivity(i, j, k, …)`, which constructs `soil_composition(…)`
     ([`soil_energy.jl:128-137`](../../src/processes/soil/energy/soil_energy.jl#L128-L137));
   - all of stratigraphy, Richards hydrology and hydraulic closures, soil thermal *constituent*
     properties, and soil biogeochemistry.
@@ -204,7 +204,7 @@ src/processes/ground/
 ├── energy/
 │   ├── abstract_types.jl          # AbstractSoilEnergyBalance{NF} <: AbstractInternalEnergyBalance{NF};
 │   │                              #   get_thermal_properties; AbstractBulkWeighting (soil-specific)
-│   ├── soil_energy.jl             # SoilEnergyBalance: soil conductivity (soil_volume) + soil hooks
+│   ├── soil_energy.jl             # SoilEnergyBalance: soil conductivity (soil_composition) + soil hooks
 │   ├── soil_energy_closures.jl    # SoilEnergyTemperatureClosure field-level closure kernels (SoilVolume)
 │   └── soil_thermal_properties.jl
 ├── hydrology/        (unchanged; soil-specific, names kept)

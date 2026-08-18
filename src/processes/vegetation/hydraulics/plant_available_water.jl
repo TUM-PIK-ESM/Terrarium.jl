@@ -84,7 +84,7 @@ state in `fields`.
         bgc::AbstractSoilBiogeochemistry
     ) where {NF}
     # Compute soil composition and hydraulic properties
-    vol = soil_volume(i, j, k, grid, fields, strat, hydrology, bgc)
+    vol = soil_composition(i, j, k, grid, fields, strat, hydrology, bgc)
     θfc = field_capacity(hydrology.hydraulic_properties, vol.solid.texture)
     θwp = wilting_point(hydrology.hydraulic_properties, vol.solid.texture)
     # Compute liquid water content
