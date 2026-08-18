@@ -87,7 +87,7 @@ $TYPEDFIELDS
     @param wilting_point::NF = 0.05 (bounds = UnitInterval,)
 
     "Residual (minimum) saturation level"
-    @param residual::NF = 0.01 (bounds = UnitInterval,)
+    @param residual_saturation::NF = 0.01 (bounds = UnitInterval,)
 end
 
 function ConstantSoilHydraulics(
@@ -106,7 +106,7 @@ end
 
 @inline field_capacity(hydraulics::ConstantSoilHydraulics, args...) = hydraulics.field_capacity
 
-@inline residual_saturation(hydraulics::ConstantSoilHydraulics, args...) = hydraulics.residual
+@inline residual_saturation(hydraulics::ConstantSoilHydraulics, args...) = hydraulics.residual_saturation
 
 """
     $TYPEDEF
@@ -144,7 +144,7 @@ $TYPEDFIELDS
     @param field_capacity_min::NF = 0.01 (bounds = UnitInterval,)
 
     "Residual (minimum) saturation level"
-    @param residual::NF = 0.01 (bounds = UnitInterval,)
+    @param residual_saturation::NF = 0.01 (bounds = UnitInterval,)
 end
 
 function SoilHydraulicsSURFEX(
@@ -160,7 +160,7 @@ end
 # TODO: this is not quite correct, SURFEX uses a hydraulic conductivity function that decreases exponentially with depth
 @inline saturated_hydraulic_conductivity(hydraulics::SoilHydraulicsSURFEX, args...) = hydraulics.saturated_conductivity
 
-@inline residual_saturation(hydraulics::SoilHydraulicsSURFEX, args...) = hydraulics.residual
+@inline residual_saturation(hydraulics::SoilHydraulicsSURFEX, args...) = hydraulics.residual_saturation
 
 @inline function wilting_point(hydraulics::SoilHydraulicsSURFEX, texture::SoilTexture)
     β_w = hydraulics.wilting_point_effect
