@@ -283,7 +283,6 @@ end
         humid_range = NF.([0.0, 0.5, 1.0])
         wind_range = NF.([0.1, 1.0, 10.0, 50.0])
         for config in Iterators.product(SW_range, LW_range, T_air_range, pres_range, humid_range, wind_range)
-            @info "Testing config $config"
             SW, LW, T_air, pres, humid, wind = config
             test_state = deepcopy(state)
             results = test_skin_temperature_solve!(
@@ -296,7 +295,6 @@ end
                 ground_temperature = NF(0.95) * T_air - NF(1),
                 windspeed = wind
             )
-            @info "Results: $(results)"
         end
     end
 
@@ -309,7 +307,6 @@ end
         humid_range = NF.([0.0, 0.5, 1.0])
         wind_range = NF.([0.1, 1.0, 10.0, 50.0])
         for config in Iterators.product(SW_range, LW_range, T_air_range, pres_range, humid_range, wind_range)
-            @info "Testing config $config"
             SW, LW, T_air, pres, humid, wind = config
             test_state = deepcopy(state)
             results = test_skin_temperature_solve!(
@@ -323,7 +320,6 @@ end
                 windspeed = wind,
                 soil_moisture = NF(0)
             )
-            @info "Results: $(results)"
         end
     end
 
@@ -336,7 +332,6 @@ end
         humid_range = NF.([0.0, 0.5, 1.0])
         wind_range = NF.([0.1, 1.0, 10.0, 50.0])
         for config in Iterators.product(SW_range, LW_range, T_air_range, pres_range, humid_range, wind_range)
-            @info "Testing config $config"
             SW, LW, T_air, pres, humid, wind = config
             test_state = deepcopy(state)
             results = test_skin_temperature_solve!(
@@ -350,7 +345,6 @@ end
                 windspeed = wind,
                 leaf_area_index = NF(2)
             )
-            @info "Results: $(results)"
         end
     end
 
@@ -363,7 +357,6 @@ end
         humid_range = NF.([0.0, 0.5, 1.0])
         wind_range = NF.([0.1, 1.0, 10.0, 50.0])
         for config in Iterators.product(SW_range, LW_range, T_air_range, pres_range, humid_range, wind_range)
-            @info "Testing config $config"
             SW, LW, T_air, pres, humid, wind = config
             test_state = deepcopy(state)
             results = test_skin_temperature_solve!(
@@ -377,7 +370,6 @@ end
                 windspeed = wind,
                 snow_water_equivalent = NF(0.001)
             )
-            @info "Results: $(results)"
         end
     end
 
@@ -390,7 +382,6 @@ end
         humid_range = NF.([0.0, 0.5, 1.0])
         wind_range = NF.([0.1, 1.0, 10.0, 50.0])
         for config in Iterators.product(SW_range, LW_range, T_air_range, pres_range, humid_range, wind_range)
-            @info "Testing config $config"
             SW, LW, T_air, pres, humid, wind = config
             test_state = deepcopy(state)
             results = test_skin_temperature_solve!(
@@ -404,7 +395,6 @@ end
                 windspeed = wind,
                 snow_water_equivalent = NF(0.1),
             )
-            @info "Results: $(results)"
         end
     end
 end
