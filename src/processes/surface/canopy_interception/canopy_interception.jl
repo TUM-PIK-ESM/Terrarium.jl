@@ -74,7 +74,7 @@ end
 PALADYNCanopyInterception(::Type{NF}; kwargs...) where {NF} = PALADYNCanopyInterception{NF}(; kwargs...)
 
 variables(::PALADYNCanopyInterception) = (
-    prognostic(:canopy_water, XY(); desc = "Canopy liquid water", units = u"m"),
+    prognostic(:canopy_water, XY(); desc = "Canopy liquid water", units = u"m", bounds = Nonnegative),
     auxiliary(:canopy_water_interception, XY(); desc = "Canopy rain interception rate", units = u"m/s"),
     auxiliary(:canopy_water_removal, XY(); desc = "Canopy water removal rate", units = u"m/s"),
     auxiliary(:saturation_canopy_water, XY(); desc = "Fraction of the canopy saturated with water"),
@@ -108,6 +108,7 @@ Compute the canopy saturation fraction as `W_can / W_can_max`.
 @inline function compute_canopy_saturation_fraction(canopy_interception::PALADYNCanopyInterception{NF}, W_can, LAI, SAI) where {NF}
     # Compute the wet canopy fraction
     W_can_max = canopy_interception.W_can_max * (LAI + SAI)
+    W_can = max(W_can, zero(NF))
     f_can = ifelse(W_can_max > zero(NF), safediv(W_can, W_can_max), zero(NF))
     return f_can
 end
@@ -117,10 +118,7 @@ end
 
 Compute the canopy water removal rate as `W_can / τw`.
 """
-@inline function compute_canopy_water_removal(
-        canopy_interception::PALADYNCanopyInterception{NF},
-        W_can
-    ) where {NF}
+@inline function compute_canopy_water_removal(canopy_interception::PALADYNCanopyInterception{NF}, W_can) where {NF}
     R_can = max(W_can, zero(NF)) / canopy_interception.τ_w
     return R_can
 end
@@ -184,7 +182,7 @@ function compute_tendencies!(
         args...
     )
     out = tendency_fields(state, canopy_interception)
-    fields = get_fields(state, canopy_interception, evapotranspiration; except = out)
+    fields = get_fields(state, canopy_interception, evapotranspiration)
     launch!(grid, XY, compute_tendencies_kernel!, out, fields, canopy_interception, evapotranspiration)
     return nothing
 end
