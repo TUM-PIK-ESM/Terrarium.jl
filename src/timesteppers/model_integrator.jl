@@ -211,7 +211,7 @@ Trait-dispatched single-timestepper step: forward the prognostic variable names 
 function timestep!(integrator::ModelIntegrator, timestepper::AbstractTimeStepper, ::Timestepping, Δt)
     # a single time stepper integrates all prognostic variables
     names = prognostic_names(integrator.state)
-    isempty(names) || timestep!(integrator, timestepper, Δt, names)
+    timestep!(integrator, timestepper, Δt, names)
     # advance the clock once for the entire step
     tick!(integrator.state.clock, Δt)
     return nothing

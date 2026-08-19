@@ -28,5 +28,5 @@ timestamp(::Type{TT}, reftime::Period, Δt::Number) where {TT <: Number} = Δt +
 # Fallback: if the target type is a delta but the user provided a timestamp, convert to a delta
 timestamp(::Type{TT}, reftime::TimeType, time::TimeType) where {TT <: Union{Period, Number}} = convert_dt(TT, time - reftime)
 # Handle the case where reftime is a Period or Number (seconds)
-timestamp(::Type{TT}, reftime::Period, time::Period) where {TT <: Union{Period, Number}} = convert_dt(TT, time - reftime)
+timestamp(::Type{TT}, reftime::Period, time::Period) where {TT <: Number} = convert_dt(TT, time - reftime)
 timestamp(::Type{TT}, reftime::Period, time::TT) where {TT <: Union{Period, Number}} = time - convert_dt(TT, reftime)
