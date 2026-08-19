@@ -112,6 +112,10 @@ function Oceananigans.Simulations.run!(
         show_progress = false
     ) where {NF}
     Δt = convert_dt(NF, Δt)
+    if !isnothing(period) && convert_dt(NF, period) < Δt
+        @warn "Reducing Δt from $Δt to match length of given period: $period"
+        Δt = min(Δt, convert_dt(NF, period))
+    end
     steps = get_steps(steps, period, Δt)
     # Run for the specified number of time steps
     run_timesteps!(integrator, Δt, steps, checkpointing; show_progress)
