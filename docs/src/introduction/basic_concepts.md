@@ -14,6 +14,7 @@ All models must be defined as `struct`s that subtype [`AbstractModel`](@ref) and
 - A `grid` that defines both a vertical and lateral discretization of the spatial domain,
 - One or more [Processes](@ref basic_concepts_processes) that define the state variables, parameters, and dynamics of the model,
 - An `initializer` that defines a sequence of initialization routines (as well as any associated parameters) for the state variables declared by all of its components.
+- A `timestepper` that defines the scheme for advancing in time all prognostic variables defined by the model's processes.
 
 To see this in action, let's look again at a simple example of setting up a soil model for a single vertical column:
 

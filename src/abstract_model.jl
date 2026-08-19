@@ -186,6 +186,13 @@ Return the `PhysicalConstants` associated with the given `model`.
 @inline get_constants(model::AbstractModel) = model.constants
 
 """
+    get_timestepper(model::AbstractModel)::PhysicalConstants
+
+Return the [`AbstractTimestepper`](@ref) associated with the given `model`.
+"""
+@inline get_timestepper(model::AbstractModel) = model.timestepper
+
+"""
     closure!(state, model::AbstractModel)
 
 Apply all closure relations defined for the given `model`.
