@@ -114,10 +114,6 @@ end
 export @assert_kernel
 include("utils/utils.jl")
 
-# debugging utilities
-include("diagnostics/debugging.jl")
-include("diagnostics/progress.jl")
-
 export XY, XYZ
 include("abstract_variables.jl")
 
@@ -188,5 +184,10 @@ include("timesteppers/heun.jl")
 
 export IMEX, AbstractIMEX
 include("timesteppers/imex.jl")
+
+# debugging utilities
+include("diagnostics/debugging.jl")
+include("diagnostics/progress.jl")
+include("diagnostics/surface_fluxes.jl")
 
 end # module Terrarium
