@@ -87,8 +87,8 @@ land_grid = ColumnRingGrid(arch, Float32, ExponentialSpacing(; N = Nz), land_sea
 porosity = SoilPorositySURFEX(eltype(land_grid))
 strat = SoilGridsStratigraphy(eltype(land_grid); porosity)
 soil = SoilEnergyWaterCarbon(eltype(land_grid); strat)
-vegetation = nothing #PrescribedVegetation(eltype(land_grid))
-surface_energy_balance = SurfaceEnergyBalance(eltype(land_grid), albedo = DiagnosticAlbedo(eltype(land_grid)))
+vegetation = PrescribedVegetation(eltype(land_grid))
+surface_energy_balance = SurfaceEnergyBalance(eltype(land_grid); albedo = DiagnosticAlbedo(eltype(land_grid)))
 terrarium_model = Terrarium.LandModel(land_grid; vegetation, soil, surface_energy_balance)
 
 # Prepare the input sources: first the SoilGrids data, then the LAI data for prescribed vegetation.
@@ -154,95 +154,9 @@ plot_land_field(land_state.horizon1.sand_fraction)
 plot_land_field(land_state.leaf_area_index)
 
 # Looks good! Let's run it!
-period = Year(1)
+period = Month(3)
 @info "Running simulation for $period"
-# @time Speedy.run!(sim_coupled; period, output = true)
-Speedy.initialize!(sim_coupled; period, output = true)
-clock = sim_coupled.variables.prognostic.clock
-iter = 1
-
-# Diagnostic tracking: log min/max of critical variables at each step
-# to identify which variable goes extreme first in the feedback loop
-const DIAG_LOG_INTERVAL = 10  # log every N steps
-diverged = false
-
-while clock.time < clock.time + clock.period
-    Speedy.time_step!(sim_coupled)
-
-    # Also check auxiliary fields (fluxes) — these are NOT covered by the above checks
-    try
-        Terrarium.checkfinite!(land_state.inputs)
-        Terrarium.checkfinite!(land_state.auxiliary)
-        Terrarium.checkfinite!(land_state.prognostic)
-    catch e
-        @warn "Auxiliary field check failed: $(e)"
-    end
-
-    # Get min/max of critical coupling variables
-    Ts_min = minimum(land_state.skin_temperature)
-    Ts_max = maximum(land_state.skin_temperature)
-
-    Tg_min = minimum(land_state.ground_temperature)
-    Tg_max = maximum(land_state.ground_temperature)
-
-    G_min = minimum(land_state.ground_heat_flux)
-    G_max = maximum(land_state.ground_heat_flux)
-
-    Hs_min = minimum(land_state.sensible_heat_flux)
-    Hs_max = maximum(land_state.sensible_heat_flux)
-
-    Hl_min = minimum(land_state.latent_heat_flux)
-    Hl_max = maximum(land_state.latent_heat_flux)
-
-    Rnet_min = minimum(land_state.surface_net_radiation)
-    Rnet_max = maximum(land_state.surface_net_radiation)
-
-    # Atmospheric forcings (from inputs)
-    Tair_min = minimum(land_state.inputs.air_temperature)
-    Tair_max = maximum(land_state.inputs.air_temperature)
-    q_min = minimum(land_state.inputs.specific_humidity)
-    q_max = maximum(land_state.inputs.specific_humidity)
-    wind_min = minimum(land_state.inputs.windspeed)
-    wind_max = maximum(land_state.inputs.windspeed)
-    Rsd_min = minimum(land_state.inputs.surface_shortwave_down)
-    Rsd_max = maximum(land_state.inputs.surface_shortwave_down)
-    Rld_min = minimum(land_state.inputs.surface_longwave_down)
-    Rld_max = maximum(land_state.inputs.surface_longwave_down)
-
-    # Log diagnostics at intervals or when divergence detected
-    if iter % DIAG_LOG_INTERVAL == 0 || Ts_min < -80 || Ts_max > 60 || abs(G_max) > 1000
-        @info "Step $(iter) | Ts=[$(round(Ts_min; digits = 1)), $(round(Ts_max; digits = 1))]°C | Tg=[$(round(Tg_min; digits = 1)), $(round(Tg_max; digits = 1))]°C | G=[$(round(G_min; digits = 1)), $(round(G_max; digits = 1))] W/m² | Hs=[$(round(Hs_min; digits = 1)), $(round(Hs_max; digits = 1))] W/m² | Hl=[$(round(Hl_min; digits = 1)), $(round(Hl_max; digits = 1))] W/m² | Rnet=[$(round(Rnet_min; digits = 1)), $(round(Rnet_max; digits = 1))] W/m² | Tair=[$(round(Tair_min; digits = 1)), $(round(Tair_max; digits = 1))]°C | q=[$(round(q_min; digits = 4)), $(round(q_max; digits = 4))] | wind=[$(round(wind_min; digits = 2)), $(round(wind_max; digits = 2))] m/s"
-    end
-
-    # Divergence detection: check multiple thresholds
-    if Ts_min < -80 || Ts_max > 60
-        @error "Skin temperature outside plausible range at step $(iter): Ts=[$(Ts_min), $(Ts_max)]°C"
-        @error "Context at divergence: Tg=[$(Tg_min), $(Tg_max)]°C, G=[$(G_min), $(G_max)] W/m², Hs=[$(Hs_min), $(Hs_max)] W/m², Hl=[$(Hl_min), $(Hl_max)] W/m²"
-        @error "Atmospheric forcing: Tair=[$(Tair_min), $(Tair_max)]°C, q=[$(q_min), $(q_max)], wind=[$(wind_min), $(wind_max)] m/s, Rsd=[$(Rsd_min), $(Rsd_max)] W/m², Rld=[$(Rld_min), $(Rld_max)] W/m²"
-        diverged = true
-        break
-    end
-
-    if abs(G_max) > 1.0e5 || !isfinite(G_max)
-        @error "Ground heat flux exploded at step $(iter): G=[$(G_min), $(G_max)] W/m²"
-        diverged = true
-        break
-    end
-
-    iter += 1
-end
-
-if !diverged
-    @info "Simulation completed $(iter) steps without divergence"
-end
-
-vpd = Terrarium.kernel_operation2D(
-    Terrarium.compute_vapor_pressure_deficit,
-    land_state,
-    land_grid,
-    terrarium_model.atmosphere,
-    terrarium_model.constants
-) |> Field
+@time Speedy.run!(sim_coupled; period, output = true)
 
 # Land variables (use the SpeedyWeather-owned Terrarium state)
 Tsoil_fig = plot_land_field(land_state.temperature, Nz - 1, title = "Soil temperature (10 cm depth)", size = (800, 400))
@@ -251,6 +165,10 @@ sat_fig = plot_land_field(land_state.saturation_water_ice, title = "Soil saturat
 Hs_fig = plot_land_field(land_state.sensible_heat_flux, title = "Sensible heat flux", size = (800, 400))
 Hl_fig = plot_land_field(land_state.latent_heat_flux, title = "Latent heat flux", size = (800, 400))
 E_fig = plot_land_field(land_state.evaporation_ground, title = "Evaporation (bare ground)", size = (800, 400))
+E_can_fig = plot_land_field(land_state.evaporation_canopy, title = "Evaporation (bare ground)", size = (800, 400))
+Tr_fig = plot_land_field(land_state.transpiration, title = "Transpiration", size = (800, 400))
+An_fig = plot_land_field(land_state.net_assimilation, title = "Net assimilation", size = (800, 400))
+g_stm_fig = plot_land_field(land_state.canopy_water_conductance, title = "Canopy water conductance", size = (800, 400))
 swe_fig = plot_land_field(land_state.snow_water_equivalent, title = "Snow water equivalent", colorrange = (0, 0.2), size = (800, 400))
 scf_fig = plot_land_field(land_state.snow_cover_fraction, title = "Snow cover fraction", size = (800, 400))
 snowT_fig = plot_land_field(land_state.snow_temperature, title = "Snow temperature", size = (800, 400))
@@ -258,6 +176,7 @@ snowT_fig = plot_land_field(land_state.snow_temperature, title = "Snow temperatu
 # Atmosphere variables
 Tair_fig = plot_speedy_field(sim_coupled.variables.parameterizations.surface_air_temperature .- 273.15, title = "Air temperature", size = (800, 400))
 prcp_fig = plot_speedy_field(sim_coupled.variables.parameterizations.rain_rate, title = "Rainfall", size = (800, 400))
+humid_fig = plot_speedy_field(sim_coupled.variables.grid.humidity, title = "Humidity", size = (800, 400))
 snow_fig = plot_speedy_field(sim_coupled.variables.parameterizations.snow_rate, title = "Snowfall", size = (800, 400))
 snow_ls_fig = plot_speedy_field(sim_coupled.variables.parameterizations.snow_large_scale, title = "Snowfall", size = (800, 400))
 pres_fig = plot_speedy_field(exp.(sim_coupled.variables.grid.pressure), title = "Surface pressure", size = (800, 400))
@@ -274,10 +193,10 @@ Makie.scatterlines(sat, zs)
 Makie.scatterlines(f, zs)
 
 # Make some animations!
-sim_copuled_cpu = on_architecture(CPU(), sim_coupled)
-Speedy.animate(sim_copuled_cpu, output_file = "plots/speedy_terrarium_sd_animation.mp4", variable = "sd", framerate = 20, colorrange = (0, 0.05), transient_timesteps = 1)
-Speedy.animate(sim_copuled_cpu, output_file = "plots/speedy_terrarium_tsoil_animation.mp4", variable = "st", framerate = 20, layer = 1, transient_timesteps = 1)
-Speedy.animate(sim_copuled_cpu, output_file = "plots/speedy_terrarium_tair_animation.mp4", variable = "temp", framerate = 20, layer = spectral_grid.nlayers, transient_timesteps = 1)
-Speedy.animate(sim_copuled_cpu, output_file = "plots/speedy_terrarium_shf_animation.mp4", variable = "shf", framerate = 20, transient_timesteps = 1)
-Speedy.animate(sim_copuled_cpu, output_file = "plots/speedy_terrarium_shuf_animation.mp4", variable = "shuf", framerate = 20, transient_timesteps = 1)
-Speedy.animate(sim_copuled_cpu, output_file = "plots/speedy_terrarium_snow_cond_animation.mp4", variable = "snow_cond", framerate = 20, transient_timesteps = 1)
+sim_coupled_cpu = on_architecture(CPU(), sim_coupled)
+Speedy.animate(sim_coupled_cpu, output_file = "plots/speedy_terrarium_sd_animation.mp4", variable = "sd", framerate = 20, colorrange = (0, 0.05), transient_timesteps = 1)
+Speedy.animate(sim_coupled_cpu, output_file = "plots/speedy_terrarium_tsoil_animation.mp4", variable = "st", framerate = 20, layer = 1, transient_timesteps = 1)
+Speedy.animate(sim_coupled_cpu, output_file = "plots/speedy_terrarium_tair_animation.mp4", variable = "temp", framerate = 20, layer = spectral_grid.nlayers, transient_timesteps = 1)
+Speedy.animate(sim_coupled_cpu, output_file = "plots/speedy_terrarium_shf_animation.mp4", variable = "shf", framerate = 20, transient_timesteps = 1)
+Speedy.animate(sim_coupled_cpu, output_file = "plots/speedy_terrarium_shuf_animation.mp4", variable = "shuf", framerate = 20, transient_timesteps = 1)
+Speedy.animate(sim_coupled_cpu, output_file = "plots/speedy_terrarium_snow_cond_animation.mp4", variable = "snow_cond", framerate = 20, transient_timesteps = 1)
