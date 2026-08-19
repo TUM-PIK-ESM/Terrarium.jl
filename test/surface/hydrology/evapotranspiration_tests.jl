@@ -77,14 +77,14 @@ end
     # g_trp = 1 / (rₐ + rₐ_can) where rₐ_can = 1/g_stm
     g_stm = 0.1
     rₐ = 100.0
-    rₐ_can = 1 / g_stm
+    rₛ = 1 / g_stm
     g_trp = transpiration_conductance(canopy_ET, rₐ, g_stm)
-    @test g_trp ≈ 1 / (rₐ + rₐ_can)
+    @test g_trp ≈ 1 / (rₐ + rₛ)
 
-    # Zero stomatal conductance gives a small but finite value
+    # Zero stomatal conductance results in zero transpiration conductance
     g_trp_zero = transpiration_conductance(canopy_ET, rₐ, 0.0)
-    @test g_trp_zero > 0
     @test isfinite(g_trp_zero)
+    @test iszero(g_trp_zero)
 
     # Very large stomatal conductance approaches 1/rₐ
     @test transpiration_conductance(canopy_ET, rₐ, 1.0e6) ≈ 1 / rₐ
@@ -247,7 +247,7 @@ end
 
     # Zero stomatal conductance → effectively zero transpiration
     g_trp_no_veg = transpiration_conductance(canopy_ET, 100.0, 0.0)
-    @test g_trp_no_veg > 0  # small but non-zero for numerical stability
+    @test iszero(g_trp_no_veg)
     @test compute_evaporation_flux(canopy_ET, Δq, g_trp_no_veg) ≈ 0 atol = 1.0e-6
 
     # Zero canopy saturation → zero canopy evaporation

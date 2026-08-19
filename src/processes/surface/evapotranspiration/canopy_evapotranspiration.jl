@@ -47,8 +47,11 @@ Compute the transpiration vapor conductance [m/s] from aerodynamic resistance `r
 conductance `g_stm`. The transpiration flux is this conductance times the humidity gradient.
 """
 @inline function transpiration_conductance(::PALADYNCanopyEvapotranspiration{NF}, rₐ, g_stm) where {NF}
-    rₐ_can = 1 / max(g_stm, sqrt(eps(NF))) # clip stomatal conductance
-    return 1 / (rₐ + rₐ_can)
+    # From the general formula for conductances in series:
+    # g_total = g_1 * g_2 / (g_1 + g_2)
+    # substituting g_1 = 1 / r_1
+    g_trp = g_stm / (1 + g_stm * rₐ)
+    return g_trp
 end
 
 """
@@ -145,9 +148,7 @@ of the skin temperature.
     f_can = saturation_canopy_water(i, j, grid, fields, canopy_interception)
     β = ground_evaporation_resistance_factor(i, j, grid, fields, evapotranspiration.ground_resistance, soil)
 
-    # Compute skin-driven vapor conductances (independent of skin temperature). These are the
-    # source of truth from which the SEB derives the latent heat flux lazily during the skin
-    # temperature solve (see the lazy `surface_humidity_flux` method above).
+    # Compute skin-driven vapor conductances (independent of skin temperature)
     g_gnd = ground_evaporation_conductance(evapotranspiration, β, rₐ, rₐ_can)
     g_can = canopy_evaporation_conductance(evapotranspiration, f_can, rₐ)
     g_trp = transpiration_conductance(evapotranspiration, rₐ, g_stm)
