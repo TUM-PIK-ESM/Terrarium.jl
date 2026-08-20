@@ -5,8 +5,7 @@ using Dates
 using Unitful
 
 using Terrarium:
-    tuplejoin, deduplicate, merge_recursive, safediv, fastmap, piecewise_linear,
-    timestamp, convert_dt
+    tuplejoin, merge_recursive, safediv, fastmap, piecewise_linear, timestamp, convert_dt
 
 @testset "Tuple utilities" begin
     # tuplejoin
