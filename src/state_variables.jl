@@ -77,32 +77,12 @@ Update the `state` for the given `model` and `inputs`; this includes calling `up
 function Oceananigans.TimeSteppers.update_state!(state::StateVariables, model::AbstractModel, inputs::InputSources; compute_tendencies = true)
     reset_tendencies!(state)
     update_inputs!(state, get_grid(model), inputs)
-    fill_halo_regions!(state)
     compute_auxiliary!(state, model)
+    compute_boundary_conditions!(state, model)
     if compute_tendencies
         compute_tendencies!(state, model)
     end
     return nothing
-end
-
-"""
-Invoke `fill_halo_regions!` for all prognostic `Field`s in `state`.
-"""
-function Oceananigans.BoundaryConditions.fill_halo_regions!(state::StateVariables)
-    # fill_halo_regions! for all prognostic variables
-    fastiterate(prognostic_names(state)) do progname
-        fill_halo_regions!(getproperty(state.prognostic, progname), state.clock, state)
-    end
-
-    # fill_halo_regions! for all closure variables (stored in state.auxiliary)
-    fastiterate(closure_names(state)) do closurename
-        fill_halo_regions!(getproperty(state.auxiliary, closurename), state.clock, state)
-    end
-
-    # recurse over namespaces
-    return fastiterate(state.namespaces) do ns
-        fill_halo_regions!(ns)
-    end
 end
 
 """
@@ -368,7 +348,7 @@ through to `initialize` for each variable. The `timestepper`'s cache is allocate
 `initialize(timestepper, state, progvars)`.
 """
 function StateVariables(
-        @nospecialize(vars::Variables),
+        vars::Variables,
         grid::AbstractLandGrid{NF};
         clock::Clock = Clock(time = 0.0),
         timestepper = default_timestepper(NF),
@@ -377,19 +357,27 @@ function StateVariables(
         initializers = (;),
         fields = (;)
     ) where {NF}
-    # Initialize Fields for each variable group, if they are not already given in the user defined `fields`
-    input_fields = initialize(vars.inputs, grid, clock, boundary_conditions, fields)
-    tendency_fields = initialize(vars.tendencies, grid, clock, boundary_conditions, fields)
-    prognostic_fields = initialize(vars.prognostic, grid, clock, boundary_conditions, merge(fields, input_fields))
-    auxiliary_fields = initialize(vars.auxiliary, grid, clock, boundary_conditions, merge(fields, input_fields, prognostic_fields))
+    # Initialize Fields for each variable group, if they are not already given in the user defined `fields`.
+    fields_dict = OrderedDict{Symbol, AbstractField}(pairs(fields))
+    input_fields_dict = initialize(vars.inputs, grid, clock, fields_dict, boundary_conditions)
+    tendency_fields_dict = initialize(vars.tendencies, grid, clock, fields_dict, boundary_conditions)
+    prognostic_fields_dict = initialize(vars.prognostic, grid, clock, merge(fields_dict, input_fields_dict), boundary_conditions)
+    auxiliary_fields_dict = initialize(vars.auxiliary, grid, clock, merge(fields_dict, input_fields_dict, prognostic_fields_dict), boundary_conditions)
     # recursively initialize state variables for each namespace
-    namespaces = map(vars.namespaces) do ns
+    namespaces = map(values(vars.namespaces)) do ns
         ns_bcs = get(boundary_conditions, varname(ns), (;))
         ns_fields = get(fields, varname(ns), (;))
-        StateVariables(ns.vars, grid; clock, boundary_conditions = ns_bcs, fields = ns_fields)
+        varname(ns) => StateVariables(variables(ns), grid; clock, boundary_conditions = ns_bcs, fields = ns_fields)
     end
     # get closure variable names
     closurenames = map(varname, closure_variables(values(vars.prognostic)))
+    # Convert OrderedDicts to NamedTuples for the final StateVariables construction.
+    # This single conversion per group is negligible compared to the per-iteration merge() cost.
+    prognostic_fields = NamedTuple{Tuple(keys(prognostic_fields_dict))}(values(prognostic_fields_dict))
+    tendency_fields = NamedTuple{Tuple(keys(tendency_fields_dict))}(values(tendency_fields_dict))
+    auxiliary_fields = NamedTuple{Tuple(keys(auxiliary_fields_dict))}(values(auxiliary_fields_dict))
+    input_fields = NamedTuple{Tuple(keys(input_fields_dict))}(values(input_fields_dict))
+    namespaces_nt = NamedTuple(namespaces)
     # construct StateVariables with an empty cache; the timestepper-specific cache
     # is allocated below now that all other state variables have been initialized
     initial_state = StateVariables(
@@ -399,12 +387,12 @@ function StateVariables(
         tendency_fields,
         auxiliary_fields,
         input_fields,
-        namespaces,
+        namespaces_nt,
         EmptyCache{NF}(),
         clock,
     )
     # allocate the timestepper's cache
-    cache = initialize(timestepper, initial_state, vars.prognostic, model)
+    cache = initialize(timestepper, initial_state, NamedTuple(vars.prognostic), model)
     state = StateVariables(
         NF,
         closurenames,
@@ -412,7 +400,7 @@ function StateVariables(
         tendency_fields,
         auxiliary_fields,
         input_fields,
-        namespaces,
+        namespaces_nt,
         cache,
         clock,
     )
@@ -421,46 +409,62 @@ function StateVariables(
     return state
 end
 
-# Base case: empty named tuples
-initialize(::NamedTuple{(), Tuple{}}, ::AbstractLandGrid, ::Clock, ::NamedTuple, ::NamedTuple) = (;)
-
 """
     $TYPEDSIGNATURES
 
-Initialize `Field`s on `grid` for each of the variables in the given named tuple `vars`.
+Initialize `Field`s on `grid` for each of the variables in the given OrderedDict `vars`.
 Any predefined `boundary_conditions` and `fields` will be passed through to `initialize`
 for each variable.
 """
 function initialize(
-        @nospecialize(vars::NamedTuple{names, <:Tuple{Vararg{AbstractVariable}}}),
+        vars::OrderedDict{Symbol, <:AbstractVariable},
         grid::AbstractLandGrid,
         clock::Clock,
+        fields::OrderedDict{Symbol, AbstractField},
         boundary_conditions::NamedTuple,
-        fields::NamedTuple
-    ) where {names}
+    )
     # Initialize or retrieve Fields for each variable in `var`, accumulating the newly created Fields in a named tuple;
     # Note that one major caveat to this approach is that the Fields visible to each constructor are dependent on the order
     # in which the variables were declared :/
-    return foldl(vars, init = (;)) do nt, var
-        # note that we call initialize here with both the current accumualated named tuple of Fields + the context given by 'fields'
-        field = initialize(var, grid, clock, boundary_conditions, merge(nt, fields))
-        merge(nt, (; varname(var) => field))
+    new_fields = OrderedDict{Symbol, AbstractField}()
+    context_fields = OrderedDict{Symbol, AbstractField}(pairs(fields))
+    for (name, var) in vars
+        field = initialize(var, grid, clock, context_fields, boundary_conditions)
+        context_fields[name] = field
+        new_fields[name] = field
     end
+    return new_fields
 end
+
+# Convenience dispatch that accepts `fields` as a NamedTuple and converts to OrderedDict
+initialize(
+    var::AbstractVariable,
+    grid::AbstractLandGrid,
+    clock::Clock,
+    fields::NamedTuple,
+    boundary_conditions::NamedTuple,
+) = initialize(var, grid, clock, OrderedDict{Symbol, AbstractField}(pairs(fields)), boundary_conditions)
 
 """
     $TYPEDSIGNATURES    
 
 Initialize a `Field` on `grid` based on the given `var` metadata. The named tuple of `boundary_conditions` should follow the standard convention of
-`(var1 = (; top, bottom, ...), var2 = (; top, bottom, ...))`. If `fields` contains a `Field` matching the name of `var`, this field
-will be directly returned. Otherwise, the new `Field` is constructed using the given `boundary_conditions` with the other `fields` being
-made available to the constructor for auxiliary variables.
+`(var1 = (; top, bottom, ...), var2 = (; top, bottom, ...))`. If `user_fields` contains a `Field` matching the name of `var`, this field
+will be directly returned. Otherwise check the `accumulated` dict for fields from previous groups.
+Otherwise, the new `Field` is constructed using the given `boundary_conditions`.
 """
-function initialize(@nospecialize(var::AbstractVariable), grid::AbstractLandGrid, clock::Clock, boundary_conditions::NamedTuple, fields::NamedTuple)
-    if hasproperty(fields, varname(var))
-        return getproperty(fields, varname(var))
+function initialize(
+        var::AbstractVariable,
+        grid::AbstractLandGrid,
+        clock::Clock,
+        fields::OrderedDict{Symbol, AbstractField},
+        boundary_conditions::NamedTuple,
+    )
+    name = varname(var)
+    if haskey(fields, name)
+        return fields[name]
     else
-        bcs = get(boundary_conditions, varname(var), nothing)
+        bcs = get(boundary_conditions, name, nothing)
         field = Field(grid, vardims(var), bcs)
         # if field is an input variable and has a default value/initializer, call set! on it
         if isa(var, InputVariable) && !isnothing(var.default)
@@ -476,16 +480,23 @@ end
 
 Initialize a `Field` on `grid` for the given [`AuxiliaryVariable`](@ref).
 """
-function initialize(@nospecialize(var::AuxiliaryVariable), grid::AbstractLandGrid, clock::Clock, boundary_conditions::NamedTuple, fields::NamedTuple)
-    if hasproperty(fields, varname(var))
-        return getproperty(fields, varname(var))
+function initialize(
+        var::AuxiliaryVariable,
+        grid::AbstractLandGrid,
+        clock::Clock,
+        fields::OrderedDict{Symbol, AbstractField},
+        boundary_conditions::NamedTuple
+    )
+    name = varname(var)
+    if haskey(fields, name)
+        return fields[name]
     elseif isnothing(var.ctor)
         # retrieve boundary condition (if any) and create Field
-        bcs = get(boundary_conditions, varname(var), nothing)
+        bcs = get(boundary_conditions, name, nothing)
         return Field(grid, vardims(var), bcs)
     else
         # invoke field constructor if specified
-        return var.ctor(var, grid, clock, fields)
+        return var.ctor(var, grid, clock, NamedTuple(fields))
     end
 end
 

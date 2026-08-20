@@ -62,6 +62,13 @@ function compute_auxiliary!(
 end
 
 """ $TYPEDSIGNATURES """
+function compute_boundary_conditions!(state, grid, ::SoilHydrology{NF, RichardsEq}) where {NF}
+    fill_halo_regions!(state.pressure_head, state)
+    compute_z_bcs!(state.tendencies.saturation_water_ice, state.saturation_water_ice, grid, state)
+    return nothing
+end
+
+""" $TYPEDSIGNATURES """
 function compute_tendencies!(
         state, grid,
         hydrology::SoilHydrology{NF, RichardsEq},

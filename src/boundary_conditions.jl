@@ -17,6 +17,16 @@ Recursively merge an arbitrary number of field/variable boundary conditions.
 merge_boundary_conditions(bcs::FieldBCs...) = merge_recursive(bcs...)
 
 """
+    fill_halo_regions!(field::AbstractField, state::StateVariables)
+
+Alias for `fill_halo_regions!(field, state.clock, state.inputs)`.
+"""
+@inline function BoundaryConditions.fill_halo_regions!(field::Field, state::StateVariables)
+    fill_halo_regions!(field, state.clock, state.inputs)
+    return nothing
+end
+
+"""
     getbc(::Variable{name}, i::Integer, j::Integer, grid::Oceananigans.Grids.AbstractGrid, clock, fields) where {name}
 
 Implementation of `Oceananigans.BoundaryConditions.getbc` for variable placeholders that retrieves the input `Field` from
@@ -28,11 +38,12 @@ Implementation of `Oceananigans.BoundaryConditions.getbc` for variable placehold
 end
 
 """
-    compute_z_bcs!(tendency, progvar, grid::AbstractLandGrid, state)
+    compute_z_bcs!(tendency, progvar, grid::AbstractLandGrid, clock, fields)
 
 Convenience alias for `Oceananigans.BoundaryConditions.compute_z_bcs!` that adds flux BCs for `progvar`
 to its corresponding `tendency`.
 """
-@inline function BoundaryConditions.compute_z_bcs!(tendency, progvar, grid::AbstractLandGrid, state)
-    return compute_z_bcs!(tendency, progvar, architecture(grid), state.clock, state)
+@inline function BoundaryConditions.compute_z_bcs!(tendency, progvar, grid::AbstractLandGrid, clock, fields)
+    return compute_z_bcs!(tendency, progvar, architecture(grid), clock, fields)
 end
+@inline BoundaryConditions.compute_z_bcs!(tendency, progvar, grid::AbstractLandGrid, state) = compute_z_bcs!(tendency, progvar, grid, state.clock, state.inputs)

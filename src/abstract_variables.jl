@@ -221,22 +221,6 @@ end
 
 hasclosure(var::PrognosticVariable) = !isnothing(var.closure)
 
-# Variable container
-
-"""
-    $TYPEDEF
-
-Container for abstract state variable definitions. Automatically collates and merges all variables
-and namespaces passed into the constructor.
-"""
-struct Variables{ProgVars, TendVars, AuxVars, InputVars, Namespaces}
-    prognostic::ProgVars
-    tendencies::TendVars
-    auxiliary::AuxVars
-    inputs::InputVars
-    namespaces::Namespaces
-end
-
 """
     $TYPEDEF
 
@@ -250,6 +234,29 @@ end
 
 @inline varname(ns::Namespace{name}) where {name} = varname(typeof(ns))
 @inline varname(::Type{<:Namespace{name}}) where {name} = name
+
+variables(ns::Namespace) = getfield(ns, :vars)
+
+Base.propertynames(ns::Namespace) = (:vars, propertynames(getfield(ns, :vars))...)
+Base.getproperty(ns::Namespace, name::Symbol) = name == :vars ? getfield(ns, :vars) : getproperty(getfield(ns, :vars), name)
+
+# Variable container
+
+"""
+    $TYPEDEF
+
+Container for abstract state variable definitions. Automatically collates and merges all variables
+and namespaces passed into the constructor. Uses OrderedDicts internally to avoid NamedTuple type
+explosion during initialization (each merge in a foldl creates a new distinct type), converting to
+NamedTuples only at the final StateVariables construction step.
+"""
+struct Variables
+    prognostic::OrderedDict{Symbol, AbstractVariable}
+    tendencies::OrderedDict{Symbol, AuxiliaryVariable}
+    auxiliary::OrderedDict{Symbol, AbstractVariable}
+    inputs::OrderedDict{Symbol, AbstractVariable}
+    namespaces::OrderedDict{Symbol, Namespace}
+end
 
 """
     VarPath
@@ -284,58 +291,82 @@ with_scope(path::VarPath, var::AbstractVariable) =
     isempty(path) ? var : namespace(first(path), (with_scope(Base.tail(path), var),))
 
 Variables(obj) = Variables(variables(obj))
+Variables(vars::Variables) = vars
 Variables(vars::Union{AbstractProcessVariable, Namespace}...) = Variables(vars)
-function Variables(@nospecialize(vars::Tuple{Vararg{Union{AbstractProcessVariable, Namespace}}}))
+function Variables(vars::Tuple{Vararg{Union{AbstractProcessVariable, Namespace}}})
     # partition variables into prognostic, auxiliary, input, and namespace groups;
     # duplicates within each group are automatically merged
-    varinfo(var::AbstractVariable) = (varname(var), vardims(var), varunits(var))
-    varinfo(ns::Namespace) = varname(ns)
-    # Note that we intentionally use `deduplicate` here instead of `deduplicate_vars` to
-    # avoid unnecessary compilation overhead; this is performance non-critical code anyway.
-    prognostic_vars = deduplicate(varinfo, filter(var -> isa(var, PrognosticVariable), vars))
-    auxiliary_vars = deduplicate(varinfo, filter(var -> isa(var, AuxiliaryVariable), vars))
-    input_vars = deduplicate(varinfo, filter(var -> isa(var, InputVariable), vars))
-    namespaces = merge_namespaces(filter(var -> isa(var, Namespace), vars))
-    # get tendencies from prognostic variables
-    tendency_vars = map(var -> var.tendency, prognostic_vars)
-    # create closure variables and prepend to tuple of auxiliary variables;
-    # note that the order matters here since Field constructors will be called in the order
-    # that they appear in the var tuples.
-    closure_vars = mapreduce(var -> variables(var.closure), tuplejoin, filter(hasclosure, prognostic_vars), init = ())
-    auxiliary_vars = deduplicate(varinfo, tuplejoin(closure_vars, auxiliary_vars))
-    # drop inputs with matching prognostic or auxiliary variables
-    input_vars = filter(var -> var ∉ prognostic_vars && var ∉ auxiliary_vars, input_vars)
-    # check for duplicates
-    check_duplicates(prognostic_vars..., auxiliary_vars..., input_vars..., namespaces...)
-    # create named tuples for each variable type
-    prognostic_nt = (; map(var -> varname(var) => var, prognostic_vars)...)
-    tendency_nt = (; map(var -> varname(var) => var, tendency_vars)...)
-    auxiliary_nt = (; map(var -> varname(var) => var, auxiliary_vars)...)
-    input_nt = (; map(var -> varname(var) => var, input_vars)...)
-    namespace_nt = (; map(ns -> varname(ns) => Namespace(varname(ns), Variables(ns.vars)), namespaces)...)
+    varmeta(var::AbstractVariable) = (varname(var), vardims(var), varunits(var))
+    varmeta(ns::Namespace) = varname(ns)
+    function register!(vardict::AbstractDict, var)
+        if haskey(vardict, varname(var)) && varmeta(vardict[varname(var)]) != varmeta(var)
+            error("Found incompatible duplicates of variable $(varname(var)): $(var) $(vars[varname(var)])")
+        elseif !haskey(vardict, varname(var))
+            vardict[varname(var)] = var
+        else
+            vardict[varname(var)] = first(merge(vardict[varname(var)], var))
+        end
+        return nothing
+    end
+    # create OrderedDicts for each variable type
+    prognostic_vars = OrderedDict{Symbol, AbstractVariable}()
+    tendency_vars = OrderedDict{Symbol, AuxiliaryVariable}()
+    auxiliary_vars = OrderedDict{Symbol, AbstractVariable}()
+    input_vars = OrderedDict{Symbol, InputVariable}()
+    namespaces = OrderedDict{Symbol, Namespace}()
+    # register prognostic variables variables
+    for var in filter(var -> isa(var, PrognosticVariable), vars)
+        register!(prognostic_vars, var)
+    end
+    # recursively collect all closure variables; this needs to come
+    # before auxiliary variable registration so that closure variable
+    # Fields are available to auxiliary variable Field constructors
+    for var in filter(var -> isa(var, PrognosticVariable) && hasclosure(var), vars)
+        closure_vars = Variables(variables(var.closure))
+        @assert isempty(closure_vars.prognostic) "Closures are not allowed to declare prognostic variables"
+        @assert isempty(closure_vars.namespaces) "Closures are not allowed to declare namespaces"
+        merge!(auxiliary_vars, closure_vars.auxiliary)
+        merge!(input_vars, closure_vars.inputs)
+    end
+    # register auxiliary variables
+    for var in filter(var -> isa(var, AuxiliaryVariable), vars)
+        register!(auxiliary_vars, var)
+    end
+    # register input variables
+    for var in filter(var -> isa(var, InputVariable), vars)
+        name = varname(var)
+        # only register input variables if they are not already declared as prognostic or auxiliary
+        haskey(prognostic_vars, name) || haskey(auxiliary_vars, name) || register!(input_vars, var)
+    end
+    # register namespaces recursively
+    for ns in filter(var -> isa(var, Namespace), vars)
+        name = varname(ns)
+        ns_vars = variables(ns)
+        inner = Namespace(name, Variables(ns_vars))
+        register!(namespaces, inner)
+    end
+    # register tendencies for prognostic variables
+    for var in values(prognostic_vars)
+        tendency_vars[varname(var)] = var.tendency
+    end
+    # check for illegal duplicates across variable groups
+    check_duplicates(
+        values(prognostic_vars)...,
+        values(auxiliary_vars)...,
+        values(input_vars)...,
+        values(namespaces)...
+    )
     return Variables(
-        prognostic_nt,
-        tendency_nt,
-        auxiliary_nt,
-        input_nt,
-        namespace_nt,
+        prognostic_vars,
+        tendency_vars,
+        auxiliary_vars,
+        input_vars,
+        namespaces,
     )
 end
 
 """
-    deduplicate_vars(vars::Tuple{Vararg{Union{AbstractVariable, Namespace}}})
-
-Type-stable equivalent of [`deduplicate`](@ref) for tuples of `AbstractVariable`s and `Namespace`s.
-"""
-@generated function deduplicate_vars(vars::Tuple{Vararg{Union{AbstractVariable, Namespace}}})
-    names = map(varname, vars.parameters)
-    unique_idx = unique(i -> names[i], eachindex(vars.parameters))
-    accessors = map(i -> :(vars[$i]), unique_idx)
-    return :(tuple($(accessors...)))
-end
-
-"""
-Check for variables/namespaces with duplicate names and raise an error if duplicates are detected.
+Check for variables/namespaces with duplicate names and raise an error if duplicates are detected. Not type stable.
 """
 function check_duplicates(vars::Union{AbstractVariable, Namespace}...)
     names = unique(map(varname, vars))
@@ -349,18 +380,15 @@ function check_duplicates(vars::Union{AbstractVariable, Namespace}...)
 end
 
 """
-    $SIGNATURES
+    deduplicate_vars(vars::Tuple{Vararg{Union{AbstractVariable, Namespace}}})
 
-Merge all `Namespace`s with matching names into a single `Namespace` containing the union
-of their variables.
+Type-stable equivalent of [`deduplicate`](@ref) for tuples of `AbstractVariable`s and `Namespace`s.
 """
-function merge_namespaces(namespaces::Tuple{Vararg{Namespace}})
-    names = unique(map(varname, namespaces))
-    merged = map(names) do name
-        group = filter(ns -> varname(ns) == name, namespaces)
-        length(group) == 1 ? group[1] : Namespace(name, tuplejoin(map(ns -> ns.vars, group)...))
-    end
-    return Tuple(merged)
+@generated function deduplicate_vars(vars::Tuple{Vararg{Union{AbstractVariable, Namespace}}})
+    names = map(varname, vars.parameters)
+    unique_idx = unique(i -> names[i], eachindex(vars.parameters))
+    accessors = map(i -> :(vars[$i]), unique_idx)
+    return :(tuple($(accessors...)))
 end
 
 """
@@ -378,6 +406,48 @@ function Base.merge(varss::Variables...)
     return Variables(reduce(tuplejoin, allvars))
 end
 
+function Base.merge(varss::Tuple{Vararg{Union{AbstractVariable, Namespace}}}...)
+    return tuplejoin(varss...)
+end
+
+function Base.merge(vars::AbstractVariable...)
+    unique_vars = unique(vars)
+    return Tuple(unique_vars)
+end
+
+function Base.merge(namespaces::Namespace...)
+    names = unique(map(varname, namespaces))
+    merged = map(names) do name
+        group = filter(ns -> varname(ns) == name, namespaces)
+        length(group) == 1 ? group[1] : Namespace(name, merge(map(ns -> Variables(variables(ns)), group)...))
+    end
+    return Tuple(merged)
+end
+
+function Base.propertynames(vars::Variables)
+    fieldnames = (:prognostic, :tendencies, :auxiliary, :inputs, :namespaces)
+    prognames = keys(getfield(vars, :prognostic))
+    auxnames = keys(getfield(vars, :auxiliary))
+    inputnames = keys(getfield(vars, :inputs))
+    nsnames = keys(getfield(vars, :namespaces))
+    return tuplejoin(fieldnames, prognames, auxnames, inputnames, nsnames)
+end
+
+function Base.getproperty(vars::Variables, name::Symbol)
+    # forward getproperty calls to variable groups
+    if name ∈ keys(getfield(vars, :prognostic))
+        return getfield(vars, :prognostic)[name]
+    elseif name ∈ keys(getfield(vars, :auxiliary))
+        return getfield(vars, :auxiliary)[name]
+    elseif name ∈ keys(getfield(vars, :inputs))
+        return getfield(vars, :inputs)[name]
+    elseif name ∈ keys(getfield(vars, :namespaces))
+        return getfield(vars, :namespaces)[name]
+    else
+        return getfield(vars, name)
+    end
+end
+
 function Base.summary(vars::Variables)
     str = "Variables(prognostic = $(keys(vars.prognostic)), auxiliary = $(keys(vars.auxiliary)), inputs = $(keys(vars.inputs)), namespaces = $(keys(vars.namespaces)))"
     return str
@@ -386,19 +456,19 @@ end
 function Base.show(io::IO, vars::Variables)
     println(io, "Variables")
     println(io, "├─ Prognostic: ")
-    for var in vars.prognostic
+    for var in values(vars.prognostic)
         println(io, "├── $(summary(var))")
     end
     println(io, "├─ Auxiliary: ")
-    for var in vars.auxiliary
+    for var in values(vars.auxiliary)
         println(io, "├── $(summary(var))")
     end
     println(io, "├─ Inputs: ")
-    for var in vars.inputs
+    for var in values(vars.inputs)
         println(io, "├── $(summary(var))")
     end
     println(io, "├─ Namespaces:")
-    for ns in vars.namespaces
+    for ns in values(vars.namespaces)
         println(io, "├── $(summary(ns))")
     end
     return nothing

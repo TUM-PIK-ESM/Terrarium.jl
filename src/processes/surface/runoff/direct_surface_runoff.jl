@@ -103,15 +103,15 @@ end
     k_unsat = hydraulic_conductivity(i, j, fgrid.Nz, grid, fields, soil_hydrology)
     sat_top = saturation_water_ice(i, j, fgrid.Nz, grid, fields, soil_hydrology)
 
-    # Case 1: Excess water present at the surface -> precipitation adds to excess water
-    # and we set the infiltration rate to the min of hydraulic conductivity and surface_excess_water
     if excess_water > zero(NF)
+        # Case 1: Excess water present at the surface -> precipitation adds to excess water
+        # and we set the infiltration rate to the min of hydraulic conductivity and surface_excess_water
         # Compute rate of excess water removal (surface drainage)
         surface_drainage = compute_surface_drainage(runoff, excess_water)
         # Calculate infiltration
         infil = out.infiltration[i, j, 1] = compute_infiltration(runoff, surface_drainage, sat_top, k_unsat)
-        # Case 2: No excess water -> rainfall is routed directly to infiltration
     else
+        # Case 2: No excess water -> rainfall is routed directly to infiltration
         surface_drainage = zero(NF)
         infil = out.infiltration[i, j, 1] = compute_infiltration(runoff, influx, sat_top, k_unsat)
     end
