@@ -36,7 +36,12 @@ end
 
 function compute_auxiliary!(state, model::SurfaceEnergyModel)
     compute_auxiliary!(state, model.grid, model.atmosphere)
-    compute_auxiliary!(state, model.grid, model.surface_energy_balance, model.constants, model.atmosphere)
+    compute_auxiliary!(state, model.grid, model.surface_energy_balance)
+    return nothing
+end
+
+function compute_boundary_conditions!(state, model::SurfaceEnergyModel)
+    solve_surface_energy_balance!(state, model.grid, model.surface_energy_balance, model.constants, model.atmosphere)
     return nothing
 end
 

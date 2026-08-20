@@ -82,6 +82,19 @@ Compute all auxiliary state variables for the given `process` on `grid`. Impleme
 function compute_auxiliary! end
 
 """
+    compute_boundary_conditions!(state, model::AbstractModel)
+
+Compute all internal and external boundary conditions for spatially explicit prognostic and auxiliary variables
+defined on the model. This should typically be invoked *after* `compute_auxiliary!` but *before* `compute_tendencies!`.
+
+    compute_boundary_conditions!(state, grid, process::AbstractProcess, args...)
+
+Compute boundary conditions for all spatially explicit prognostic and auxiliary variables defined by
+the given process on `grid`.
+"""
+function compute_boundary_conditions! end
+
+"""
     compute_tendencies!(state, model::AbstractModel)
 
 Compute tendencies for all prognostic state variables for `model` stored in the given `state`.
@@ -108,8 +121,13 @@ as properties/fields on the given `obj`.
 """
 variables(obj::Union{AbstractCoupledProcesses, AbstractModel}) = tuplejoin(fastmap(variables, processes(obj))...)
 
+# Fallback dispatches to make implementing compute_boundary_conditions! optional
+compute_boundary_conditions!(state, ::AbstractModel) = nothing
+compute_boundary_conditions!(state, grid, ::AbstractProcess, args...) = nothing
+
 # Allow dispatch on nothing for process types
 @inline compute_auxiliary!(state, grid, ::Nothing, args...) = nothing
+@inline compute_boundary_conditions!(state, grid, ::Nothing, args...) = nothing
 @inline compute_tendencies!(state, grid, ::Nothing, args...) = nothing
 
 """

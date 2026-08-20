@@ -71,6 +71,13 @@ end
 compute_auxiliary!(state, grid, energy::SoilThermodynamics, soil::AbstractSoil, args...) = nothing
 
 """ $TYPEDSIGNATURES """
+function compute_boundary_conditions!(state, grid, ::SoilThermodynamics)
+    fill_halo_regions!(state.temperature, state)
+    compute_z_bcs!(state.tendencies.internal_energy, state.internal_energy, grid, state)
+    return nothing
+end
+
+""" $TYPEDSIGNATURES """
 function compute_tendencies!(
         state, grid,
         energy::SoilThermodynamics,

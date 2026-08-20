@@ -93,7 +93,7 @@ end
     # Prescribed (input) horizon
     horizon = PrescribedSoilHorizon(Float64, :ph; porosity)
     vars = Terrarium.Variables(horizon)
-    @test values(map(Terrarium.varname, vars.inputs)) == (:sand_fraction, :silt_fraction, :clay_fraction, :thickness)
+    @test Tuple(map(Terrarium.varname, values(vars.inputs))) == (:sand_fraction, :silt_fraction, :clay_fraction, :thickness)
     fields = StateVariables(vars, grid)
     set!(fields.sand_fraction, texture.sand)
     set!(fields.silt_fraction, texture.silt)

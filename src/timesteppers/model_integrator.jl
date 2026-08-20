@@ -140,8 +140,6 @@ function initialize!(integrator::ModelIntegrator)
     reset!(integrator.clock)
     # set inputs based on updated clock/state
     initialize!(integrator.state, get_grid(integrator.model), integrator.inputs)
-    # fill halo regions
-    fill_halo_regions!(integrator.state)
     # evaluate user-specified field initializers
     initialize!(integrator.state, integrator.initializers)
     # evaluate model initializer
