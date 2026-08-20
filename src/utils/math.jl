@@ -1,14 +1,6 @@
 """
     $SIGNATURES
 
-Convert `Δt`s of type `Period` to a numeric value in seconds. Return `Δt` if already a number.
-"""
-convert_dt(Δt::Number) = Δt
-convert_dt(Δt::Period) = Second(Δt).value
-
-"""
-    $SIGNATURES
-
 Evaluates `x / (y + eps(NF))` if and only if `y != zero(y)`; returns `Inf` otherwise.
 """
 safediv(x::NF, y::NF) where {NF} = ifelse(iszero(y), NF(Inf), x / (y + eps(NF)))

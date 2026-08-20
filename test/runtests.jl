@@ -39,6 +39,7 @@ if MAIN_TESTS
         include("timestepping/run_simulation.jl")
         include("timestepping/heun.jl")
         include("timestepping/imex.jl")
+        include("timestepping/adaptive_timestep.jl")
     end
 
     @testset "Thermodynamics" begin
@@ -70,5 +71,9 @@ if MAIN_TESTS
 
     @testset "Coupled models" begin
         include("coupled_models/land_model_tests.jl")
+    end
+
+    @testset "Utilities" begin
+        include("utils.jl")
     end
 end

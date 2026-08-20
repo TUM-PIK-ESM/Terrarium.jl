@@ -169,11 +169,12 @@ timestepping schemes as needed.
 function explicit_step!(
         field::AbstractField{LX, LY, LZ},
         tendency::AbstractField{LX, LY, LZ},
-        grid::AbstractLandGrid,
+        grid::AbstractLandGrid{NF},
         timestepper::AbstractTimeStepper,
         Δt,
         args...
-    ) where {LX, LY, LZ}
+    ) where {LX, LY, LZ, NF}
+    Δt = convert_dt(NF, Δt)
     launch!(
         grid, XYZ, explicit_step_xyz_kernel!,
         field, tendency, timestepper, Δt, args...

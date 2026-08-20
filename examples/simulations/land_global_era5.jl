@@ -25,6 +25,7 @@ using Terrarium
 
 using CUDA
 using Dates
+using Oceananigans.OutputWriters: JLD2Writer
 using Rasters, NCDatasets
 using Rasters: Ti
 
@@ -52,7 +53,10 @@ land_sea_frac_native = RingGrids.Field(arch, ERA5LandInvariants(), "lsm"; NF)
 land_sea_frac = RingGrids.interpolate(model_rings, land_sea_frac_native)
 land_mask = land_sea_frac .> 0.5
 Nz = 30 # number of soil layers
-grid = ColumnRingGrid(arch, NF, ExponentialSpacing(N = Nz, Δz_min = 0.1), land_mask)
+grid = ColumnRingGrid(arch, NF, ExponentialSpacing(N = Nz, Δz_min = 0.05), land_mask)
+grid_lon, grid_lat = RingGrids.get_lonlats(grid.rings) # in radians
+land_mask_cpu = on_architecture(CPU(), land_mask)
+lat_masked = grid_lat[land_mask_cpu]
 
 # ## Meteorological forcings from ERA5-Land
 # The [`ERA5LandForcings`](@ref) asset holds one year of hourly ERA5-Land fields already regridded to
@@ -156,7 +160,20 @@ inputs = InputSources(
 # loads the forcings at `t = 0`), read the resulting per-column air temperature from the state, and
 # re-initialize with a soil temperature profile built from it plus a mild geothermal gradient. Reading
 # the air temperature back from the state guarantees it is ordered consistently with the land columns.
+mean_annual_temperature(lat) = 20 - abs(40 * sin(lat)) # maximum at equator
+
+# The initial temperature profiles will be linear temperature profiles similar to what we would get from
+# [`QuasiThermalSteadyState`](@ref) but with a hardcoded geothermal gradient of 0.05 K/m. We don't use
+# the `QuasiThermalSteadyState` initializer here because it does not (yet) support spatially variable parameters.
+function initial_soil_temperature(x, z)
+    latᵢ = lat_masked[round(Int, x)]
+    T₀ = mean_annual_temperature(latᵢ)
+    T = T₀ - NF(0.05) * z
+    return T
+end
+
 initializers = (
+    temperature = initial_soil_temperature,
     saturation_water_ice = (x, z) -> min(one(NF), NF(0.6) - NF(0.05) * z),
 )
 integrator = initialize(land; inputs, initializers)
@@ -172,15 +189,36 @@ fig = plot_surface(integrator.state.leaf_area_index, title = "Leaf area index (J
 DisplayAs.PNG(fig) #hide
 
 # ## Running the simulation
+# Set up a `Simulation` and configure a time stepping wizard (necessary for stability):
+simulation = Simulation(integrator, Δt = 300.0, stop_time = 24 * 3600.0)
+conjure_time_step_wizard!(simulation, show_progress = true)
+simulation.output_writers[:snapshots] = JLD2Writer(
+    integrator,
+    (
+        soil_temperature = integrator.state.temperature,
+        skin_temperature = integrator.state.skin_temperature,
+        snow_water_equivalent = integrator.state.snow_water_equivalent,
+        snow_temperature = integrator.state.snow_temperature,
+        latent_heat_flux = integrator.state.latent_heat_flux,
+        canopy_water_conductance = integrator.state.canopy_water_conductance,
+    );
+    filename = "outputs/land_model_era5_output.jld2",
+    overwrite_existing = true,
+    schedule = TimeInterval(900)
+)
+display(simulation) #hide
+
 # We will advance the coupled model for just six hours to minimize computational cost.
 # Note that, due to  both timestepping restrictions and I/O overhead, the simulation is currently very slow. This will improve in the near future!
 Terrarium.initialize!(integrator)
-@time timestep!(integrator)
-run!(integrator, period = Hour(6), Δt = Minute(2), show_progress = true)
+run!(simulation)
 
 # Let's look at the results:
 # First we'll inspect the topsoil temperature after one month of forcing.
 fig = plot_surface(integrator.state.temperature, title = "Surface soil temperature")
+DisplayAs.PNG(fig) #hide
+
+fig = plot_surface(integrator.state.skin_temperature, title = "Skin temperature")
 DisplayAs.PNG(fig) #hide
 
 # We can also see that snow has built up over the high latitudes and elevated terrain of the winter (northern) hemisphere.

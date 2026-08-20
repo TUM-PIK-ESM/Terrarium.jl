@@ -172,21 +172,24 @@ const AnyFieldTimeSeries{NF} = FieldTimeSeries{LX, LY, LZ, TI, K, I, D, G, NF} w
 
 Input source that reads input fields from pre-specified Oceananigans `FieldTimeSeries`.
 """
-struct FieldTimeSeriesInputSource{NF, name, VD <: VarDims, FTS <: AnyFieldTimeSeries{NF}, UT} <: InputSource{NF, name}
+struct FieldTimeSeriesInputSource{NF, name, VD <: VarDims, FTS <: AnyFieldTimeSeries{NF}, TT, UT} <: InputSource{NF, name}
     "Variable dimensions"
     dims::VD
 
     "Physical units"
     units::UT
 
+    "Reference time"
+    reftime::TT
+
     "Field time series data"
     fts::FTS
 end
 
-function InputSource(fts::AnyFieldTimeSeries{NF}; name, units = NoUnits) where {NF}
+function InputSource(fts::AnyFieldTimeSeries{NF}; name, reftime = first(fts.times), units = NoUnits) where {NF}
     dims = vardims(fts)
     path = varpath(name)
-    return FieldTimeSeriesInputSource{NF, path, typeof(dims), typeof(fts), typeof(units)}(dims, units, fts)
+    return FieldTimeSeriesInputSource{NF, path, typeof(dims), typeof(fts), typeof(reftime), typeof(units)}(dims, units, reftime, fts)
 end
 
 variables(source::FieldTimeSeriesInputSource) = tuple(with_scope(Base.front(varpath(source)), input(varname(source), source.dims; units = source.units)))
@@ -198,9 +201,10 @@ end
 
 function update_inputs!(inputs, grid, clock, fields, source::FieldTimeSeriesInputSource)
     name = varname(source)
+    t = timestamp(eltype(source.fts.times), source.reftime, clock.time)
     if hasproperty(inputs, name)
         field_t = getproperty(inputs, name)
-        set!(field_t, source.fts[Time(clock.time)])
+        set!(field_t, source.fts[Time(t)])
     end
     return nothing
 end

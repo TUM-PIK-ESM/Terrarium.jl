@@ -68,6 +68,8 @@ function Base.getproperty(integrator::ModelIntegrator, name::Symbol)
     end
 end
 
+Oceananigans.initialize!(integrator::ModelIntegrator) = initialize!(integrator)
+
 Oceananigans.Solvers.iteration(integrator::ModelIntegrator) = integrator.clock.iteration
 
 Oceananigans.Architectures.architecture(integrator::ModelIntegrator) = architecture(get_grid(integrator.model))
@@ -80,20 +82,36 @@ Oceananigans.TimeSteppers.time_step!(integrator::ModelIntegrator, Δt; kwargs...
 
 Oceananigans.Simulations.timestepper(integrator::ModelIntegrator) = get_timestepper(integrator.model)
 
+function Oceananigans.Simulations.conjure_time_step_wizard!(
+        simulation::Simulation{<:ModelIntegrator},
+        schedule = IterationInterval(1);
+        diffusive_cfl = 0.5,
+        min_change = 0.2,
+        show_progress = true,
+        kwargs...
+    )
+    wizard = TimeStepWizard(; diffusive_cfl, min_change, kwargs...)
+    simulation.callbacks[:time_step_wizard] = Callback(wizard, schedule)
+    if show_progress
+        simulation.callbacks[:progress] = ProgressCallback(simulation)
+    end
+    return nothing
+end
+
 """
     $SIGNATURES
 
 Run the simulation for `steps` or a given time `period` with timestep size `Δt` (in seconds or Dates.Period).
 """
 function Oceananigans.Simulations.run!(
-        integrator::ModelIntegrator;
+        integrator::ModelIntegrator{NF};
         steps::Union{Int, Nothing} = nothing,
         period::Union{Period, Nothing} = nothing,
         Δt = default_dt(timestepper(integrator)),
         checkpointing = false,
         show_progress = false
-    )
-    Δt = convert_dt(Δt)
+    ) where {NF}
+    Δt = convert_dt(NF, Δt)
     steps = get_steps(steps, period, Δt)
     # Run for the specified number of time steps
     run_timesteps!(integrator, Δt, steps, checkpointing; show_progress)
@@ -159,8 +177,8 @@ Advance the model forward by one timestep with optional timestep size `Δt`. If 
 variables.
 """
 timestep!(integrator::ModelIntegrator; finalize = true) = timestep!(integrator, default_dt(get_timestepper(integrator.model)); finalize)
-function timestep!(integrator::ModelIntegrator, Δt; finalize = true)
-    timestep!(integrator, get_timestepper(integrator.model), convert_dt(Δt))
+function timestep!(integrator::ModelIntegrator{NF}, Δt; finalize = true) where {NF}
+    timestep!(integrator, get_timestepper(integrator.model), convert_dt(NF, Δt))
     if finalize
         compute_auxiliary!(integrator.state, integrator.model)
     end

@@ -94,12 +94,12 @@ Recover the snow temperature and liquid water fraction from the depth-integrated
 """
 @propagate_inbounds function energy_to_temperature!(
         out, i, j, grid, fields,
-        ::SnowEnergyTemperatureClosure,
+        ::SnowEnergyTemperatureClosure{NF},
         snow::SingleLayerSnow,
         constants::PhysicalConstants
-    )
-    Ū_snow = fields.snow_energy[i, j] # assumed given (prognostic)
+    ) where {NF}
     W_snow = fields.snow_water_equivalent[i, j] # assumed given (prognostic)
+    Ū_snow = ifelse(W_snow > 0, fields.snow_energy[i, j], zero(NF)) # assumed given (prognostic)
     L_sl = constants.thermodynamics.latent_heat_fusion
     ρ_w = constants.material.density_water
     ρ_snow = compute_snow_density(i, j, grid, fields, snow.density)

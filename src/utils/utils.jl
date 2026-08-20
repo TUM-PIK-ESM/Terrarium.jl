@@ -84,5 +84,6 @@ Pad the grid `indices` to the three indices required to *write* to a
 
 include("tuple_utils.jl")
 include("math.jl")
+include("time.jl")
 include("kernel_utils.jl")
 include("adaptors.jl")

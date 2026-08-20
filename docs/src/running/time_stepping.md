@@ -95,6 +95,104 @@ using Oceananigans.Units: days
 sim = Simulation(integrator; stop_time = 1days, Δt = 300.0)
 ```
 
+### Callbacks
+
+Terrarium simulations inherit the full Oceananigans [`Callback`](@extref Oceananigans.Simulations.Callback) machinery.
+A callback is a function that is called by [`Simulation`](@extref Oceananigans.Simulations.Simulation) at a given schedule during `run!`:
+
+```@example simulation
+using Oceananigans: Callback, IterationInterval
+
+function print_progress(sim)
+    t = sim.model.clock.time
+    iter = sim.model.clock.iteration
+    @info "Iteration $iter, time $t s"
+end
+
+sim.callbacks[:progress] = Callback(print_progress, IterationInterval(100))
+```
+
+The callback function receives the `Simulation` object, giving it access to the full
+`integrator` via `sim.model`, and to the current `state` via `sim.model.state`.
+
+## Adaptive time stepping
+
+Some land components, such as the nonlinear advection-diffusion equations for soil energy, water, and carbon
+transport, are subject to stability constraints when using explicit time-stepping schemes like [`ForwardEuler`](@ref)
+or [`Heun`](@ref). A suitable constraint is the diffusive Courant–Friedrichs–Lewy (CFL) condition. The standard formulation
+of the CFL for advective transport places a limit on the wave propagation speed based on the grid cell length $\Delta x$,
+```math
+\frac{ \lvert v \rvert \Delta t}{\Delta x} \leq C\,.
+```
+While diffusive systems do not have an independent velocity $v$, they do have a characteristic length scale based on the diffusion coefficient $D$,
+```math
+\ell \sim \sqrt{D \Delta t}
+```
+which we can understand as the distance over which information gets dispersed in a single time step $\Delta t$. Plugging that in as the numerator in CFL yields,
+```math
+\frac{\sqrt{D \Delta t}}{\Delta x} \leq C
+```
+and solving for $\Delta t$ we get,
+```math
+\Delta t \leq \frac{C^2 \Delta x^2}{D}\,.
+```
+Since $C$ is a constant, we can simply redefine $C_{\text{diff}} = C^2$. The choice of $C$ can be determined by [von Neumann stability analysis](https://en.wikipedia.org/wiki/Von_Neumann_stability_analysis) for any given time stepping scheme; in the case of [`ForwardEuler`](@ref), this leads to $C = \frac{1}{2}$.
+
+Terrarium defines the diffusive CFL via the Oceananigans diagnostic [`cell_diffusion_timescale`](@ref) which is computed as the minimum
+over all grid cells of the diffusive timescale ``\tau = \Delta z^2 / D``. For the soil model it is the minimum
+of the thermal timescale ``\Delta z^2 C / \kappa`` (heat conduction, with thermal conductivity ``\kappa`` and volumetric heat capacity ``C``)
+and, for a Richards-equation hydrology, the hydraulic timescale ``\Delta z^2 (\partial\theta/\partial\psi) / K`` (with hydraulic conductivity
+``K`` and specific moisture capacity ``\partial\theta/\partial\psi``).
+
+Because a [`ModelIntegrator`](@ref) implements the Oceananigans model interface, this diagnostic can
+be consumed directly by the Oceananigans [`TimeStepWizard`](@extref Oceananigans.Simulations.TimeStepWizard)
+callback, which rescales `simulation.Δt` each time it is invoked to target a chosen diffusive CFL
+number. Attach it to a [`Simulation`](@extref Oceananigans.Simulations.Simulation) like any other
+callback,
+
+```@example simulation
+integrator = initialize(SoilModel(grid))
+sim = Simulation(integrator; stop_iteration = 50, Δt = 60.0)
+
+wizard = TimeStepWizard(diffusive_cfl = 0.5, max_change = 1.1)
+sim.callbacks[:wizard] = Callback(wizard, IterationInterval(5))
+
+run!(sim)
+sim.Δt   # adapted time step (s)
+```
+
+or more succinctly via [`conjure_time_step_wizard!`](@extraref Oceananigans.Simulations.conjure_time_step_wizard!):
+
+```@example simulation
+integrator = initialize(SoilModel(grid))
+sim = Simulation(integrator; stop_iteration = 50, Δt = 60.0)
+conjure_time_step_wizard!(sim, show_progress = false)
+run!(sim)
+sim.Δt   # adapted time step (s)
+```
+
+Oceananigans also defines a companion advective diagnostic [`cell_advection_timescale`](@ref) which is relevant for
+processes involving advection.
+
+!!! warning "Richards equation is stiff near saturation"
+    As the soil saturates, ``\partial\theta/\partial\psi \to 0`` and the hydraulic timescale tends to
+    zero. Explicit integration of the Richardson–Richards equation is therefore extremely stiff in
+    the saturated limit, which is the regime that motivates implicit time stepping (planned). The
+    `TimeStepWizard`'s `min_change` bound prevents `Δt` from collapsing to zero in a single
+    adjustment, but a saturated explicit run may still require very small steps.
+
+!!! note "Reactant"
+    Adaptive stepping applies to host-driven `Simulation`s only. Under a `ReactantState` grid the
+    time step is compiled into the traced `run!` loop, so a host-side wizard callback does not take
+    effect there.
+
+```@docs; canonical = false
+cell_diffusion_timescale(integrator::ModelIntegrator)
+cell_advection_timescale(integrator::ModelIntegrator)
+compute_thermal_diffusion_timescale
+compute_hydraulic_diffusion_timescale
+```
+
 ### Output writers
 
 We can make use of [`Oceananigans.OutputWriters`](https://clima.github.io/OceananigansDocumentation/stable/simulations/output_writers) to flexibly save output to disk in a variety of formats.
@@ -108,6 +206,7 @@ using Oceananigans.Units: hours
 output_file = "$(tempname()).jld2"
 println("Writing output to $(output_file)")
 
+sim = Simulation(integrator; stop_time = 24*3600.0, Δt = 300.0)
 sim.output_writers[:soil] = JLD2Writer(
     integrator,
     (temperature = integrator.state.temperature,
@@ -153,23 +252,3 @@ variables at different frequencies:
 sim.output_writers[:fast]   = JLD2Writer(integrator, (temperature = ...,); schedule = TimeInterval(1hours),  ...)
 sim.output_writers[:daily]  = JLD2Writer(integrator, (pressure_head = ...,); schedule = AveragedTimeInterval(1days), ...)
 ```
-
-### Callbacks
-
-Terrarium simulations inherit the full Oceananigans [`Callback`](@extref Oceananigans.Simulations.Callback) machinery.
-A callback is a function that is called by [`Simulation`](@extref Oceananigans.Simulations.Simulation) at a given schedule during `run!`:
-
-```@example simulation
-using Oceananigans: Callback, IterationInterval
-
-function print_progress(sim)
-    t = sim.model.clock.time
-    iter = sim.model.clock.iteration
-    @info "Iteration $iter, time $t s"
-end
-
-sim.callbacks[:progress] = Callback(print_progress, IterationInterval(100))
-```
-
-The callback function receives the `Simulation` object, giving it access to the full
-`integrator` via `sim.model`, and to the current `state` via `sim.model.state`.
