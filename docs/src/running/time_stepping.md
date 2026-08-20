@@ -166,7 +166,7 @@ or more succinctly via [`conjure_time_step_wizard!`](@extraref Oceananigans.Simu
 ```@example simulation
 integrator = initialize(SoilModel(grid))
 sim = Simulation(integrator; stop_iteration = 50, Δt = 60.0)
-conjure_time_step_wizard!(sim)
+conjure_time_step_wizard!(sim, show_progress = false)
 run!(sim)
 sim.Δt   # adapted time step (s)
 ```
@@ -206,6 +206,7 @@ using Oceananigans.Units: hours
 output_file = "$(tempname()).jld2"
 println("Writing output to $(output_file)")
 
+sim = Simulation(integrator; stop_time = 24*3600.0, Δt = 300.0)
 sim.output_writers[:soil] = JLD2Writer(
     integrator,
     (temperature = integrator.state.temperature,
