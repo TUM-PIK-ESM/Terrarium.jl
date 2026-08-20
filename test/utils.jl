@@ -77,5 +77,6 @@ end
     @test timestamp(Second, reftime, Δt) == Second(Δt)
     @test timestamp(Float32, reftime, Δt) == Float32(Δt)
     @test timestamp(Second, Second(1), Second(Δt)) == Second(Δt + 1)
+    @test timestamp(Float32, Second(1), Float32(Δt)) == Δt + 1
     @test timestamp(Float32, 1.0f0, Float32(Δt)) == Float32(Δt + 1)
 end
