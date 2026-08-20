@@ -95,65 +95,6 @@ using Oceananigans.Units: days
 sim = Simulation(integrator; stop_time = 1days, Δt = 300.0)
 ```
 
-### Output writers
-
-We can make use of [`Oceananigans.OutputWriters`](https://clima.github.io/OceananigansDocumentation/stable/simulations/output_writers) to flexibly save output to disk in a variety of formats.
-
-The simplest choice output writer is [`JLD2Writer`](@extref Oceananigans.OutputWriters.JLD2Writer) which saves selected [`Field`s](@extref Oceananigans.Fields.Field) to a `.jld2` file at a specified schedule:
-
-```@example simulation
-using Oceananigans: JLD2Writer, TimeInterval
-using Oceananigans.Units: hours
-
-output_file = "$(tempname()).jld2"
-println("Writing output to $(output_file)")
-
-sim.output_writers[:soil] = JLD2Writer(
-    integrator,
-    (temperature = integrator.state.temperature,
-     saturation  = integrator.state.saturation_water_ice);
-    filename = output_file,
-    overwrite_existing = true,
-    including = [:grid], # save the grid with the output
-    schedule = TimeInterval(2hours),
-)
-
-# Re-initialize integrator
-Terrarium.initialize!(integrator)
-
-# Run the simulation again
-run!(sim)
-```
-
-!!! note
-    Always call `Terrarium.initialize!(integrator)` **before** calling `run!(sim)` when re-running a simulation; otherwise, the simulation will not run due to the stopping condition already being satisfied.
-
-
-The saved file can be read back as a [`FieldTimeSeries`](@extref Oceananigans.OutputReaders.FieldTimeSeries-Tuple{JLD2.JLDFile, String}) for post-processing:
-
-```@example simulation
-using Oceananigans: FieldTimeSeries
-
-temperature_series = FieldTimeSeries(output_file, "temperature")
-temperature_series[end]  # Extract temperature Field at the last saved time
-```
-
-Output writers can also accept subtypes `AbstractSchedule` via the `schedule` keyword. Schedules determine the frequency and aggregation of the output `Field`s:
-
-| Schedule type | Description |
-|---------------|-------------|
-| [`TimeInterval(Δt)`](@extref Oceananigans.Utils.TimeInterval) | Write every `Δt` seconds of simulation time |
-| [`IterationInterval(n)`](@extref Oceananigans.Utils.IterationInterval) | Write every `n` timesteps |
-| [`AveragedTimeInterval(Δt)`](@extref Oceananigans.OutputWriters.AveragedTimeInterval) | Write time-averaged outputs over windows of `Δt` seconds |
-
-Multiple output writers can be added to the same simulation, e.g. to save different
-variables at different frequencies:
-
-```julia
-sim.output_writers[:fast]   = JLD2Writer(integrator, (temperature = ...,); schedule = TimeInterval(1hours),  ...)
-sim.output_writers[:daily]  = JLD2Writer(integrator, (pressure_head = ...,); schedule = AveragedTimeInterval(1days), ...)
-```
-
 ### Callbacks
 
 Terrarium simulations inherit the full Oceananigans [`Callback`](@extref Oceananigans.Simulations.Callback) machinery.
@@ -248,11 +189,65 @@ processes involving advection.
 ```@docs; canonical = false
 cell_diffusion_timescale(integrator::ModelIntegrator)
 cell_advection_timescale(integrator::ModelIntegrator)
-```
-
-### Kernel functions
-
-```@docs; canonical = false
 compute_thermal_diffusion_timescale
 compute_hydraulic_diffusion_timescale
+```
+
+### Output writers
+
+We can make use of [`Oceananigans.OutputWriters`](https://clima.github.io/OceananigansDocumentation/stable/simulations/output_writers) to flexibly save output to disk in a variety of formats.
+
+The simplest choice output writer is [`JLD2Writer`](@extref Oceananigans.OutputWriters.JLD2Writer) which saves selected [`Field`s](@extref Oceananigans.Fields.Field) to a `.jld2` file at a specified schedule:
+
+```@example simulation
+using Oceananigans: JLD2Writer, TimeInterval
+using Oceananigans.Units: hours
+
+output_file = "$(tempname()).jld2"
+println("Writing output to $(output_file)")
+
+sim.output_writers[:soil] = JLD2Writer(
+    integrator,
+    (temperature = integrator.state.temperature,
+     saturation  = integrator.state.saturation_water_ice);
+    filename = output_file,
+    overwrite_existing = true,
+    including = [:grid], # save the grid with the output
+    schedule = TimeInterval(2hours),
+)
+
+# Re-initialize integrator
+Terrarium.initialize!(integrator)
+
+# Run the simulation again
+run!(sim)
+```
+
+!!! note
+    Always call `Terrarium.initialize!(integrator)` **before** calling `run!(sim)` when re-running a simulation; otherwise, the simulation will not run due to the stopping condition already being satisfied.
+
+
+The saved file can be read back as a [`FieldTimeSeries`](@extref Oceananigans.OutputReaders.FieldTimeSeries-Tuple{JLD2.JLDFile, String}) for post-processing:
+
+```@example simulation
+using Oceananigans: FieldTimeSeries
+
+temperature_series = FieldTimeSeries(output_file, "temperature")
+temperature_series[end]  # Extract temperature Field at the last saved time
+```
+
+Output writers can also accept subtypes `AbstractSchedule` via the `schedule` keyword. Schedules determine the frequency and aggregation of the output `Field`s:
+
+| Schedule type | Description |
+|---------------|-------------|
+| [`TimeInterval(Δt)`](@extref Oceananigans.Utils.TimeInterval) | Write every `Δt` seconds of simulation time |
+| [`IterationInterval(n)`](@extref Oceananigans.Utils.IterationInterval) | Write every `n` timesteps |
+| [`AveragedTimeInterval(Δt)`](@extref Oceananigans.OutputWriters.AveragedTimeInterval) | Write time-averaged outputs over windows of `Δt` seconds |
+
+Multiple output writers can be added to the same simulation, e.g. to save different
+variables at different frequencies:
+
+```julia
+sim.output_writers[:fast]   = JLD2Writer(integrator, (temperature = ...,); schedule = TimeInterval(1hours),  ...)
+sim.output_writers[:daily]  = JLD2Writer(integrator, (pressure_head = ...,); schedule = AveragedTimeInterval(1days), ...)
 ```
