@@ -22,5 +22,8 @@ timestamp(::Type{TT}, reftime::TimeType, Δt::Number) where {TT <: TimeType} = c
 timestamp(::Type{TT}, reftime::TimeType, Δt) where {TT <: Union{Period, Number}} = convert_dt(TT, Δt)
 timestamp(::Type{TT}, reftime::TimeType, Δt::TT) where {TT <: Union{Period, Number}} = Δt # if Δt type already matches, return as is
 timestamp(::Type{TT}, reftime::Number, Δt::Number) where {TT <: Union{Period, Number}} = convert_dt(TT, reftime + Δt)
-# Fallback: convert the given timestamp to a delta
+# Handle the case where reftime is a Period or Number (seconds)
+timestamp(::Type{TT}, reftime::Period, Δt::Period) where {TT <: Union{Period, Number}} = convert_dt(TT, Δt - reftime)
+timestamp(::Type{TT}, reftime::Period, Δt::TT) where {TT <: Union{Period, Number}} = Δt - convert_dt(TT, reftime)
+# Fallback: if the target type is a delta but the user provided a timestamp, convert to a delta
 timestamp(::Type{TT}, reftime::TimeType, time::TimeType) where {TT <: Union{Period, Number}} = convert_dt(TT, time - reftime)
