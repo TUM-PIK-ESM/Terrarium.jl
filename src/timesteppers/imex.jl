@@ -121,12 +121,12 @@ get_cache(cache::IMEXCache, ::Implicit) = cache.implicit
 """
     $SIGNATURES
 
-Resolve the timestepping class of each prognostic variable in `progvars` (a `NamedTuple` of
-[`PrognosticVariable`](@ref)s) for the IMEX timestepper `imex` and owning `model`, returned as a tuple of
+Resolve the timestepping class of each prognostic variable in `progvars` (an OrderedDict or
+`NamedTuple` of [`PrognosticVariable`](@ref)s) for the IMEX timestepper `imex` and owning `model`, returned as a tuple of
 [`Explicit`](@ref)/[`Implicit`](@ref) instances in the same order as `progvars`. Each variable's class is
 given by [`timestepping`](@ref)`(var, model, imex)`.
 """
-function resolve_timestepping(imex::AbstractIMEX, progvars::NamedTuple, model)
+function resolve_timestepping(imex::AbstractIMEX, progvars, model)
     return map(var -> timestepping(var, model, imex), values(progvars))
 end
 

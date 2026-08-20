@@ -58,7 +58,10 @@ function test_skin_temperature_solve!(
     set!(state.skin_temperature, ground_temperature)
 
     @time compute_auxiliary!(state, model)
-    @test all(isfinite.(state.skin_temperature))
+    @time compute_boundary_conditions!(state, model)
+
+    # Check that the skin temperature is finite and within plausible range
+    @test all(isfinite.(state.skin_temperature)) && all(state.skin_temperature .> -100) && all(state.skin_temperature .< 100)
 
     # Check if ground heat flux converged to gradient flux
     field_grid = get_field_grid(grid)
@@ -128,6 +131,7 @@ end
     set!(state.latent_heat_flux, 30.0)
     Terrarium.closure!(state, land)
     compute_auxiliary!(state, land)
+    compute_boundary_conditions!(state, land)
 
     R_net = Array(interior(state.surface_net_radiation))
     G = Array(interior(state.ground_heat_flux))

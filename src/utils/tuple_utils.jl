@@ -9,14 +9,6 @@ tuplejoin(x, y) = (x..., y...)
 tuplejoin(x, y, z...) = (x..., tuplejoin(y, z...)...)
 
 """
-    $SIGNATURES
-
-Filter out duplicates from the given tuple. Note that this method is not type stable or allocation-free!
-"""
-deduplicate(values::Tuple) = Tuple(unique(values))
-deduplicate(f, values::Tuple) = Tuple(unique(f, values))
-
-"""
     $TYPEDSIGNATURES
 
 Filters out all entries from `nt` that exist in `other`; like `setdiff` but for `NamedTuple`.

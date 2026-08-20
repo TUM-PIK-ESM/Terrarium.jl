@@ -31,6 +31,7 @@ As discussed in [Basic concepts](@ref), Terrarium revolves around two key abstra
 variables
 initialize!
 compute_auxiliary!
+compute_boundary_conditions!
 compute_tendencies!
 ```
 Remember from [Initialization](@ref) that `state` is a [StateVariables](@ref) structure formed during initialization of a model or process. 
@@ -91,6 +92,7 @@ By convention, concrete subtypes of `AbstractModel` are expected to store at lea
 | `grid` | [`get_grid`](@ref) | The spatial grid defining the model domain |
 | `initializer` | [`get_initializer`](@ref) | An `AbstractInitializer` defining the initial state |
 | `constants` | [`get_constants`](@ref) | A [`PhysicalConstants`](@ref) struct |
+| `timestepper` | [`get_timestepper`](@ref) | An [`AbstractTimestepper`](@ref) struct |
 
 These accessors are used internally by timesteppers and simulation set-up code. If a model deviates from this convention, the relevant accessor methods outlined above must be overridden for that specific model type.
 
@@ -98,6 +100,7 @@ These accessors are used internally by timesteppers and simulation set-up code. 
 get_grid
 get_initializer
 get_constants
+get_timestepper
 ```
 
 Note that subtypes of `AbstractModel` and `AbstractCoupledProcesses` also automatically inherit a default implementation of the `processes` method:
@@ -133,6 +136,8 @@ Additionally, models with [closure relations](@ref "Closure relations") should i
 | `invclosure!(state, model)` | Apply all inverse closure relations |
 
 The typical pattern is to forward each of these model-level calls to the corresponding process-level call, passing the `grid` and `constants` explicitly.
+
+Both models and processes may optionally implement [`compute_boundary_conditions!`](@ref), which is responsible for computing any necessary `BoundaryCondition`s for prognostic/auxiliary `Field`s defined therein. These boundary conditions may be either internal (e.g. soil/snow fluxes in a [`LandModel`](@ref)) or external (like [`SurfaceEnergyBalance`](@ref)) to the model domain. The default implementation provided for all `AbstractModel` types is a no-op.
 
 ### The `AbstractInitializer` interface
 

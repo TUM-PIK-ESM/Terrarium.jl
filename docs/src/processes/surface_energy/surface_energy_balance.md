@@ -44,7 +44,7 @@ variables(SurfaceEnergyBalance(Float32))
 ## Process interface
 
 ```@docs; canonical = false
-compute_auxiliary!(state, grid, seb::SurfaceEnergyBalance, constants::PhysicalConstants, atmos::AbstractAtmosphere, hydrology::Optional{AbstractSurfaceHydrology}, vegetation::Optional{AbstractVegetation}, snow::Optional{AbstractSnow}, args...)
+compute_auxiliary!(state, grid, seb::SurfaceEnergyBalance, vegetation::Optional{AbstractVegetation}, snow::Optional{AbstractSnow}, args...)
 ```
 
 ## Methods
@@ -52,11 +52,11 @@ compute_auxiliary!(state, grid, seb::SurfaceEnergyBalance, constants::PhysicalCo
 The `SurfaceEnergyBalance` process provides two primary method interfaces:
 
 ```@docs; canonical = false
-compute_surface_energy_fluxes!(state, grid, seb::SurfaceEnergyBalance, constants::PhysicalConstants, atmos::AbstractAtmosphere, hydrology::Optional{AbstractSurfaceHydrology}, args...)
+solve_surface_energy_balance!(state, grid, seb::SurfaceEnergyBalance{NF}, constants::PhysicalConstants, atmos::AbstractAtmosphere, hydrology::Optional{AbstractSurfaceHydrology}, snow::Optional{AbstractSnow}, args...) where {NF}
 ```
 
 ```@docs; canonical = false
-solve_surface_energy_balance!(state, grid, seb::SurfaceEnergyBalance{NF}, constants::PhysicalConstants, atmos::AbstractAtmosphere, hydrology::Optional{AbstractSurfaceHydrology}, snow::Optional{AbstractSnow}, args...) where {NF}
+compute_surface_energy_fluxes!(state, grid, seb::SurfaceEnergyBalance, constants::PhysicalConstants, atmos::AbstractAtmosphere, hydrology::Optional{AbstractSurfaceHydrology}, args...)
 ```
 
 The fused kernel evaluates each flux group through a per-process *mutating* variant, so a diagnosed process computes and stores its fluxes while a prescribed one (whose fluxes are supplied as input fields) is a no-op: [`compute_radiative_fluxes!`](@ref), [`compute_turbulent_fluxes!`](@ref), and [`compute_ground_heat_flux!`](@ref). The ground heat flux is always closed last as the residual $G = R_\text{net} + H_s + H_l$.

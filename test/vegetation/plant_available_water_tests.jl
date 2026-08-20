@@ -6,9 +6,9 @@ using Test
     # Check variables
     paw = FieldCapacityLimitedPAW()
     vars = Variables(paw)
-    @test hasproperty(vars.auxiliary, :plant_available_water)
-    @test hasproperty(vars.auxiliary, :soil_moisture_limiting_factor)
-    @test hasproperty(vars.inputs, :root_fraction)
+    @test haskey(vars.auxiliary, :plant_available_water)
+    @test haskey(vars.auxiliary, :soil_moisture_limiting_factor)
+    @test haskey(vars.inputs, :root_fraction)
 
     # Initialize state variables
     grid = ColumnGrid(UniformSpacing(Δz = 0.2, N = 10))

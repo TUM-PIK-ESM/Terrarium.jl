@@ -44,6 +44,11 @@ function compute_auxiliary!(state, model::SoilModel)
     return nothing
 end
 
+function compute_boundary_conditions!(state, model::SoilModel)
+    compute_boundary_conditions!(state, model.grid, model.soil)
+    return nothing
+end
+
 function compute_tendencies!(state, model::SoilModel)
     compute_tendencies!(state, model.grid, model.soil, model.constants)
     return nothing

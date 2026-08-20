@@ -16,12 +16,6 @@ using Terrarium:
     @test tuplejoin((1,), (1,)) == (1, 1)
     @test tuplejoin((1, 2), (3, 4, 5), (6, 7)) == (1, 2, 3, 4, 5, 6, 7)
 
-    # deduplicate
-    @test deduplicate(()) == ()
-    @test deduplicate((1,)) == (1,)
-    @test deduplicate((1, 1)) == (1,)
-    @test deduplicate((1, 2, 2, 3, 4)) == (1, 2, 3, 4)
-
     # merge recursive
     @test merge_recursive((;), (;)) == merge((;), (;)) == (;)
     @test merge_recursive((;), (a = 1,)) == merge((;), (a = 1,)) == (a = 1,)

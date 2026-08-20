@@ -121,7 +121,7 @@ end
     ns = namespace(:soil, vars)
 
     @test Terrarium.varname(ns) == :soil
-    @test isa(ns.vars.prognostic.temp, Terrarium.PrognosticVariable)
+    @test isa(ns.vars.prognostic[:temp], Terrarium.PrognosticVariable)
 
     # Test namespace from tuple of variables
     ns_from_tuple = namespace(
@@ -163,8 +163,8 @@ end
 
     @test length(vars_merged.namespaces) == 1
     ns = first(values(vars_merged.namespaces))
-    @test hasproperty(ns.vars.prognostic, :temp)
-    @test hasproperty(ns.vars.auxiliary, :pressure)
+    @test haskey(ns.vars.prognostic, :temp)
+    @test haskey(ns.vars.auxiliary, :pressure)
 end
 
 @testset "Variables duplicate detection" begin
@@ -180,7 +180,7 @@ end
         namespace(:soil, (auxiliary(:pressure, XY(); units = u"Pa"),))
     )
     @test length(vars.namespaces) == 1
-    @test hasproperty(vars.namespaces, :soil)
+    @test haskey(vars.namespaces, :soil)
 end
 
 @testset "Variable helper functions" begin
@@ -254,8 +254,8 @@ end
 
     @test length(merged.prognostic) == 1
     @test length(merged.auxiliary) == 1
-    @test hasproperty(merged.prognostic, :temp)
-    @test hasproperty(merged.auxiliary, :pressure)
+    @test haskey(merged.prognostic, :temp)
+    @test haskey(merged.auxiliary, :pressure)
 end
 
 @testset "Namespace merging in Variables" begin
@@ -264,16 +264,16 @@ end
         Terrarium.namespace(:ns, (Terrarium.input(:a, XY()),)),
         Terrarium.namespace(:ns, (Terrarium.input(:b, XY()),)),
     )
-    @test keys(vars.namespaces) == (:ns,)
-    @test keys(vars.namespaces.ns.vars.inputs) == (:a, :b)
+    @test Tuple(keys(vars.namespaces)) == (:ns,)
+    @test Tuple(keys(vars.namespaces[:ns].vars.inputs)) == (:a, :b)
 
     # nested namespaces merge recursively
     nested = Variables(
         Terrarium.namespace(:outer, (Terrarium.namespace(:inner, (Terrarium.input(:a, XY()),)),)),
         Terrarium.namespace(:outer, (Terrarium.namespace(:inner, (Terrarium.input(:b, XY()),)),)),
     )
-    @test keys(nested.namespaces) == (:outer,)
-    @test keys(nested.namespaces.outer.vars.namespaces.inner.vars.inputs) == (:a, :b)
+    @test Tuple(keys(nested.namespaces)) == (:outer,)
+    @test Tuple(keys(nested.namespaces[:outer].namespaces[:inner].inputs)) == (:a, :b)
 end
 
 @testset "with_scope" begin
