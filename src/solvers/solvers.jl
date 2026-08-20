@@ -63,11 +63,12 @@ Solve the nonlinear problem defined by `objective_func!` for its `target` field 
 `indices`, mutating `out` in place. The objective returns the residual `F(x)` whose root is
 sought; on return, the target field holds the converged estimate and the method returns the
 root (and, for some solvers, the number of iterations performed). Dispatches on the concrete
-`solver` type, e.g. [`RootSolver`](@ref) or [`FixedPointSolver`](@ref).
+`solver` type, e.g. [`RootSolver`](@ref), [`NewtonSolver`](@ref) or [`FixedPointSolver`](@ref).
 """
 function solve! end
 
 # Solvers
 
 include("fixed_point.jl")
+include("newton.jl")
 include("root_solvers.jl")

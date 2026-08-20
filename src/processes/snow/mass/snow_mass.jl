@@ -57,8 +57,8 @@ where `S` is snowfall, `R_snow = f_snow · rainfall` the rain intercepted by the
     R_snow = f_snow * R
     E_subl = fields.sublimation[i, j]
     W = fields.snow_water_equivalent[i, j]
-    # @assert W > zero(NF) || E_subl ≈ zero(NF)
-    # @assert W > zero(NF) || M ≈ zero(NF)
+    @assert_kernel W > zero(NF) || E_subl ≈ zero(NF)
+    @assert_kernel W > zero(NF) || M ≈ zero(NF)
     dWdt = S + R_snow - M - E_subl
     return dWdt
 end

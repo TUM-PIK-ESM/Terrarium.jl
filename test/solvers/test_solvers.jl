@@ -1,7 +1,7 @@
 using Terrarium
 using Test
 
-using Terrarium: FixedPointSolver, RootSolver, RootSolvers, ObjectiveFunction, RelaxationFactor, solve!
+using Terrarium: FixedPointSolver, NewtonSolver, RootSolver, RootSolvers, ObjectiveFunction, RelaxationFactor, solve!
 
 # Build an objective function from a scalar map g(x). The solvers now expect the
 # objective to *return* the fixed-point residual F(x) = x - g(x) evaluated at the
@@ -119,6 +119,42 @@ for NF in (Float32, Float64)
             @test isapprox(x, NF(2.0); atol = tol)
             @test iters isa Integer
             @test 0 < iters <= verbose_solver.max_iterations
+        end
+    end
+
+    @testset "NewtonSolver ($NF)" begin
+        # NewtonSolver has no convergence test: it always runs exactly `iterations` steps, which is
+        # what makes it unrollable (and therefore raisable under Reactant / cheap to differentiate).
+        solver = NewtonSolver(NF; iterations = 20)
+
+        @testset "Linear map" begin
+            x, iters = run_solver(solver, x -> x / 2 + 1, NF(0.0))
+            @test isapprox(x, NF(2.0); atol = tol)
+            @test iters == Terrarium.iterations(solver)
+        end
+
+        @testset "Dottie number (cos)" begin
+            x, _ = run_solver(solver, cos, NF(1.0))
+            @test isapprox(x, NF(0.7390851332151607); atol = tol)
+        end
+
+        @testset "Square root via x^2 - 2 = 0" begin
+            # Same residual form as the RootSolver case: F(x) = x - g(x) = 2 - x^2
+            x, _ = run_solver(solver, x -> x^2 + x - 2, NF(1.0))
+            @test isapprox(x, sqrt(NF(2.0)); atol = tol)
+        end
+
+        @testset "Fixed iteration count" begin
+            # The iteration count is fixed by the type and does not depend on convergence,
+            # so a non-contractive map exhausts exactly the same budget as a contractive one.
+            few = NewtonSolver(NF; iterations = 3)
+            _, iters = run_solver(few, x -> 2 * x, NF(1.0))
+            @test iters == 3
+        end
+
+        @testset "Type stability" begin
+            result = @inferred run_solver(solver, x -> x / 2 + 1, NF(0.0))
+            @test result isa Tuple{NF, Int}
         end
     end
 end

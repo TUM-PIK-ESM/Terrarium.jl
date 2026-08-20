@@ -80,3 +80,34 @@ function build_model(::Val{:snow_column}, arch, NF)
     )
     return (; model, boundary_conditions = (;), initializers = inits, Δt = NF(600))
 end
+
+# --- :land_soil_snow — coupled LandModel: soil (Richards + heat) + snow, no vegetation ---
+# *Coupled* configuration
+#
+# Cold winter conditions: a frozen, unsaturated soil column under a shallow snowpack. The pack is
+# kept below freezing (air temperature < 0) so the 100-step comparison does not hinge on the exact
+# step at which a melt threshold is crossed, which CPU and XLA need not agree on.
+#
+# TODO: Currently this only works with the `NewtonsMethod` solver.
+
+function build_model(::Val{:land_soil_snow}, arch, NF)
+    grid = ColumnGrid(arch, NF, ExponentialSpacing(Δz_min = NF(0.05), Δz_max = NF(1), N = 10))
+    swrc = VanGenuchten(α = NF(2), n = NF(2))
+    hydraulic_properties = ConstantSoilHydraulics(NF; swrc, unsat_hydraulic_cond = UnsatKVanGenuchten(NF))
+    hydrology = SoilHydrology(NF, RichardsEq(); hydraulic_properties)
+    soil = SoilEnergyWaterCarbon(NF; hydrology)
+    # Use a `NewtonSolver` with fixed iterations for Reactant
+    skin_temperature = Terrarium.ImplicitSkinTemperature(NF; solver = Terrarium.NewtonSolver(NF; iterations = 5))
+    seb = SurfaceEnergyBalance(NF; skin_temperature)
+    model = LandModel(grid; soil, snow = SingleLayerSnow(NF), vegetation = nothing, surface_energy_balance = seb)
+    # Soil BCs are set up by `LandModel` itself (ground/soil heat flux and infiltration coupling),
+    # so only the initial state and the prescribed atmospheric inputs are specified here.
+    inits = (
+        temperature = (x, z) -> NF(-1) - NF(0.02) * z,
+        saturation_water_ice = (x, z) -> min(NF(1), NF(0.8) - NF(0.05) * z),
+        snow_water_equivalent = NF(0.2),
+        snow_temperature = NF(-5),
+        air_temperature = NF(-2),
+    )
+    return (; model, boundary_conditions = (;), initializers = inits, Δt = NF(600))
+end

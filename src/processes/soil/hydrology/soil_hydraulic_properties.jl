@@ -233,8 +233,11 @@ function hydraulic_conductivity(
         Ω = hydraulics.unsat_hydraulic_cond.impedance # scaling parameter for ice impedance
         I_ice = 10^(-Ω * (1 - f)) # ice impedance factor
         K_sat = saturated_hydraulic_conductivity(hydraulics, soil.solid.texture)
-        # We use `complex` types here to permit illegal state values which may occur when using adaptive time steppers.
-        K = abs(K_sat * I_ice * sqrt(complex(θw / θsat)) * (1 - complex(1 - complex(θw / θsat)^(n / (n + 1)))^((n - 1) / n))^2)
+        # Effective saturation, clamped to the unit interval so that every fractional power below is
+        # evaluated at a non-negative base. Illegal state values (θw > θsat or θw < 0), which may occur
+        # when using adaptive time steppers.
+        S = clamp(θw / θsat, zero(θw), one(θw))
+        K = K_sat * I_ice * sqrt(S) * (one(S) - (one(S) - S^(n / (n + 1)))^((n - 1) / n))^2
         return K
     end
 end

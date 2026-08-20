@@ -110,6 +110,7 @@ function __init__()
 end
 
 # internal utility types and methods
+export @assert_kernel
 include("utils/utils.jl")
 
 # debugging utilities

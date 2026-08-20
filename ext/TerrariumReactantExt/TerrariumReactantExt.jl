@@ -19,6 +19,8 @@ using Terrarium: Terrarium, AbstractLandGrid, ColumnGrid, ColumnRingGrid, Abstra
 
 const RARCH = ReactantState
 
+@inline Terrarium.uses_reactant(::Terrarium.ReactantMarker) = true
+
 # Land grids that live on the device.
 const ReactantLandGrid{NF} = AbstractLandGrid{NF, <:RARCH}
 const ReactantModel{NF} = AbstractModel{NF, <:ReactantLandGrid{NF}}
