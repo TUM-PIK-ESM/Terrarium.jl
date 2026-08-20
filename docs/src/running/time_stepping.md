@@ -178,15 +178,26 @@ The callback function receives the `Simulation` object, giving it access to the 
 
 Some land components, such as the nonlinear advection-diffusion equations for soil energy, water, and carbon
 transport, are subject to stability constraints when using explicit time-stepping schemes like [`ForwardEuler`](@ref)
-or [`Heun`](@ref). A suitable constraint is the diffusive Courant–Friedrichs–Lewy (CFL) condition,
-
+or [`Heun`](@ref). A suitable constraint is the diffusive Courant–Friedrichs–Lewy (CFL) condition. The standard formulation
+of the CFL for advective transport places a limit on the wave propagation speed based on the grid cell length $\Delta x$,
 ```math
-\Delta t \lesssim C \frac{\Delta z^2}{D},
+\frac{ \lvert v \rvert \Delta t}{\Delta x} \leq C\,.
 ```
+While diffusive systems do not have an independent velocity $v$, they do have a characteristic length scale based on the diffusion coefficient $D$,
+```math
+\ell \sim \sqrt{D \Delta t}
+```
+which we can understand as the distance over which information gets dispersed in a single time step $\Delta t$. Plugging that in as the numerator in CFL yields,
+```math
+\frac{\sqrt{D \Delta t}}{\Delta x} \leq C
+```
+and solving for $\Delta t$ we get,
+```math
+\Delta t \leq \frac{C^2 \Delta x^2}{D}\,.
+```
+Since $C$ is a constant, we can simply redefine $C_{\text{diff}} = C^2$. The choice of $C$ can be determined by [von Neumann stability analysis](https://en.wikipedia.org/wiki/Von_Neumann_stability_analysis) for any given time stepping scheme; in the case of [`ForwardEuler`](@ref), this leads to $C = \frac{1}{2}$.
 
-where ``D`` is the largest effective diffusivity in the column (m² s⁻¹) and `C` is the Courant number which depends
-on the time stepping scheme. In the case of [`ForwardEuler`](@ref), [von Neumann stability analysis](https://en.wikipedia.org/wiki/Von_Neumann_stability_analysis)
-leads to $C = \frac{1}{2}$. Terrarium defines this limit via the Oceananigans diagnostic [`cell_diffusion_timescale`](@ref) which is computed as the minimum
+Terrarium defines the diffusive CFL via the Oceananigans diagnostic [`cell_diffusion_timescale`](@ref) which is computed as the minimum
 over all grid cells of the diffusive timescale ``\tau = \Delta z^2 / D``. For the soil model it is the minimum
 of the thermal timescale ``\Delta z^2 C / \kappa`` (heat conduction, with thermal conductivity ``\kappa`` and volumetric heat capacity ``C``)
 and, for a Richards-equation hydrology, the hydraulic timescale ``\Delta z^2 (\partial\theta/\partial\psi) / K`` (with hydraulic conductivity
