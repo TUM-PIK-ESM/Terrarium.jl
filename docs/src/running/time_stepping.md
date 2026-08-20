@@ -176,41 +176,51 @@ The callback function receives the `Simulation` object, giving it access to the 
 
 ## Adaptive time stepping
 
-The explicit time steppers integrate the (stiff) diffusive soil operators, so their stability is
-constrained by the diffusive Courant–Friedrichs–Lewy (CFL) condition
+Some land components, such as the nonlinear advection-diffusion equations for soil energy, water, and carbon
+transport, are subject to stability constraints when using explicit time-stepping schemes like [`ForwardEuler`](@ref)
+or [`Heun`](@ref). A suitable constraint is the diffusive Courant–Friedrichs–Lewy (CFL) condition,
 
 ```math
-\Delta t \lesssim \frac{\Delta z^2}{2 D},
+\Delta t \lesssim C \frac{\Delta z^2}{D},
 ```
 
-where ``D`` is the largest effective diffusivity in the column (m² s⁻¹). Terrarium exposes this
-stability limit as the diagnostic [`cell_diffusion_timescale`](@ref), defined as the minimum over all
-grid cells of the diffusive timescale ``\tau = \Delta z^2 / D``. For the soil model it is the minimum
-of the thermal timescale ``\Delta z^2 C / \kappa`` (heat conduction, with thermal conductivity
-``\kappa`` and volumetric heat capacity ``C``) and, for a Richards-equation hydrology, the hydraulic
-timescale ``\Delta z^2 (\partial\theta/\partial\psi) / K`` (with hydraulic conductivity ``K`` and
-specific moisture capacity ``\partial\theta/\partial\psi``).
+where ``D`` is the largest effective diffusivity in the column (m² s⁻¹) and `C` is the Courant number which depends
+on the time stepping scheme. In the case of [`ForwardEuler`](@ref), [von Neumann stability analysis](https://en.wikipedia.org/wiki/Von_Neumann_stability_analysis)
+leads to $C = \frac{1}{2}$. Terrarium defines this limit via the Oceananigans diagnostic [`cell_diffusion_timescale`](@ref) which is computed as the minimum
+over all grid cells of the diffusive timescale ``\tau = \Delta z^2 / D``. For the soil model it is the minimum
+of the thermal timescale ``\Delta z^2 C / \kappa`` (heat conduction, with thermal conductivity ``\kappa`` and volumetric heat capacity ``C``)
+and, for a Richards-equation hydrology, the hydraulic timescale ``\Delta z^2 (\partial\theta/\partial\psi) / K`` (with hydraulic conductivity
+``K`` and specific moisture capacity ``\partial\theta/\partial\psi``).
 
 Because a [`ModelIntegrator`](@ref) implements the Oceananigans model interface, this diagnostic can
 be consumed directly by the Oceananigans [`TimeStepWizard`](@extref Oceananigans.Simulations.TimeStepWizard)
 callback, which rescales `simulation.Δt` each time it is invoked to target a chosen diffusive CFL
 number. Attach it to a [`Simulation`](@extref Oceananigans.Simulations.Simulation) like any other
-callback:
+callback,
 
 ```@example simulation
-adaptive_integrator = initialize(SoilModel(grid))
-adaptive_sim = Simulation(adaptive_integrator; stop_iteration = 50, Δt = 60.0)
+integrator = initialize(SoilModel(grid))
+sim = Simulation(integrator; stop_iteration = 50, Δt = 60.0)
 
 wizard = TimeStepWizard(diffusive_cfl = 0.5, max_change = 1.1)
-adaptive_sim.callbacks[:wizard] = Callback(wizard, IterationInterval(5))
+sim.callbacks[:wizard] = Callback(wizard, IterationInterval(5))
 
-run!(adaptive_sim)
-adaptive_sim.Δt   # adapted time step (s)
+run!(sim)
+sim.Δt   # adapted time step (s)
 ```
 
-Land models transport no quantity advectively, so the companion advective diagnostic
-[`cell_advection_timescale`](@ref) always returns `Inf` (no advective restriction); this lets a plain
-`TimeStepWizard` be applied without supplying a custom advective timescale.
+or more succinctly via [`conjure_time_step_wizard!`](@extraref Oceananigans.Simulations.conjure_time_step_wizard!):
+
+```@example simulation
+integrator = initialize(SoilModel(grid))
+sim = Simulation(integrator; stop_iteration = 50, Δt = 60.0)
+conjure_time_step_wizard!(sim)
+run!(sim)
+sim.Δt   # adapted time step (s)
+```
+
+Oceananigans also defines a companion advective diagnostic [`cell_advection_timescale`](@ref) which is relevant for
+processes involving advection.
 
 !!! warning "Richards equation is stiff near saturation"
     As the soil saturates, ``\partial\theta/\partial\psi \to 0`` and the hydraulic timescale tends to
