@@ -22,7 +22,7 @@ ProgressReporter(n::Int = 100; kwargs...) = ProgressReporter(ProgressMeter.Progr
 function ProgressReporter(simulation::Simulation; kwargs...)
     desc = "Running simulation (Δt = $(simulation.Δt))"
     if isfinite(simulation.stop_iteration)
-        return ProgressReporter(simulation.stop_iteration; desc, kwargs...)
+        return ProgressReporter(Int(simulation.stop_iteration); desc, kwargs...)
     else
         return ProgressReporter(; kwargs...)
     end
