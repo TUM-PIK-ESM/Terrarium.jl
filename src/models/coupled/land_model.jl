@@ -86,6 +86,7 @@ end
 
 interface_variables(::LandModel) = (
     auxiliary(:soil_heat_flux, XY(); units = u"W/m^2", desc = "Blended heat flux into the soil top (snow base + bare ground)"),
+    auxiliary(:evaporation_soil_water, XY(), units = u"m/s", desc = "Evapotranspiration contribution to soil moisture flux"),
 )
 
 function initialize!(state, model::LandModel)

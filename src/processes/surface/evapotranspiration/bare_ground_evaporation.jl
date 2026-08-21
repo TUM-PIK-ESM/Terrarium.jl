@@ -110,20 +110,29 @@ end
 
 @propagate_inbounds function compute_evapotranspiration_fluxes!(
         out, i, j, grid, fields,
-        evaporation::BareGroundEvaporation,
+        evaporation::BareGroundEvaporation{NF},
         constants::PhysicalConstants,
         atmos::AbstractAtmosphere,
+        soil::Optional{AbstractSoil} = nothing,
         snow::Optional{AbstractSnow} = nothing,
-    )
+    ) where {NF}
     Ts = fields.skin_temperature[i, j]
     g_gnd = fields.ground_evaporation_conductance[i, j]
-    # Evaporation flux at the current skin temperature. Re-running this kernel after the SEB solve
-    # (see `LandModel`) refreshes it so it is consistent with the converged skin temperature.
+    # Evaporation flux at the current skin temperature
     Δq = compute_specific_humidity_difference(i, j, grid, fields, atmos, constants, Ts)
     # Ground evaporation occurs only over the snow-free fraction (1 − f_snow); the snow-covered fraction
     # sublimates instead (see `compute_snow_sublimation_flux`). No scaling without snow (f_snow = 0).
     f_snow = snow_cover_fraction(i, j, grid, fields, snow)
-    out.evaporation_ground[i, j, 1] = (one(f_snow) - f_snow) * compute_evaporation_flux(evaporation, Δq, g_gnd)
+    E_gnd = (NF(1) - f_snow) * compute_evaporation_flux(evaporation, Δq, g_gnd)
+    # Store relative contributions
+    out.evaporation_ground[i, j, 1] = E_gnd
+    if !isnothing(soil)
+        # Get air/water densities
+        ρ_a = air_density(i, j, grid, fields, atmos, constants)
+        ρ_w = constants.material.density_water
+        # Compute evaporation soil water
+        out.evaporation_soil_water[i, j, 1] = E_gnd * ρ_a / ρ_w
+    end
     return out
 end
 
@@ -145,5 +154,5 @@ end
     conductances = (ground_evaporation_conductance = out.ground_evaporation_conductance,)
     fields = merge(fields, conductances)
     # Compute ET fluxes from stored conductances; `snow` scales ground evaporation by the snow-free fraction
-    compute_evapotranspiration_fluxes!(out, i, j, grid, fields, evapotranspiration, constants, atmos, snow)
+    compute_evapotranspiration_fluxes!(out, i, j, grid, fields, evapotranspiration, constants, atmos, soil, snow)
 end

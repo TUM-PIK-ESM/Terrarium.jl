@@ -32,10 +32,11 @@ differing only in which conductance and humidity difference are supplied.
 Compute and return the evapotranspiration forcing for soil moisture at the given indices `i, j, k`.
 The ET forcing is just the `surface_humidity_flux` rescaled by the thickness of layer `k`.
 """
-@inline function forcing(i, j, k, grid, clock, fields, evapotranspiration::AbstractEvapotranspiration, ::AbstractSoilHydrology)
+@inline function forcing(i, j, k, grid, clock, fields, ::AbstractEvapotranspiration, ::AbstractSoilHydrology)
     let Δz = Δzᵃᵃᶜ(i, j, k, grid)
-        Qh = surface_humidity_flux(i, j, grid, fields, evapotranspiration)
-        ∂θ∂t = -Qh / Δz # rescale by layer thickness to get water content flux
+        Q_E = fields.evaporation_soil_water[i, j]
+        # Rescale by layer thickness and ratio of air to water density to get water content flux
+        ∂θ∂t = -Q_E / Δz
         return ∂θ∂t * (k == grid.Nz)
     end
 end

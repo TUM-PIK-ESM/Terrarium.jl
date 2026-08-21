@@ -22,6 +22,7 @@ variables(hydrology::SoilHydrology{NF, RichardsEq}) where {NF} = (
     prognostic(:surface_excess_water, XY(), units = u"m", desc = "Excess water at the soil surface in m³/m²"),
     auxiliary(:hydraulic_conductivity, XYZ(z = Face()), units = u"m/s", desc = "Hydraulic conductivity of soil volumes in m/s"),
     auxiliary(:water_table, XY(), units = u"m", desc = "Elevation of the water table in meters"),
+    input(:evaporation_soil_water, XY(), units = u"m/s", desc = "Evapotranspiration contribution to soil moisture flux"),
     input(:liquid_water_fraction, XYZ(), default = NF(1), bounds = UnitInterval, desc = "Fraction of unfrozen water in the pore space"),
 )
 
@@ -109,11 +110,11 @@ is thus not the same as the saturation tendency.
     field_grid = get_field_grid(grid)
 
     # Compute divergence of water fluxes
-    # ∂θ∂t = ∇⋅K(θ)∇Ψ + forcing, where Ψ = ψₘ + ψₕ + ψz, and "forcing" represents sources and sinks such as ET losses
+    # ∂θ∂t = ∇⋅K(θ)∇Ψ + S, where Ψ = ψₘ + ψₕ + ψz, and S represents all sources and sinks such as ET losses
     ∂θ∂t = (
-        - ∂zᵃᵃᶜ(i, j, k, field_grid, darcy_flux, fields.pressure_head, fields.hydraulic_conductivity)
-            + forcing(i, j, k, grid, clock, fields, evapotranspiration, hydrology, constants) # ET forcing
-            + forcing(i, j, k, grid, clock, fields, hydrology.vwc_forcing, hydrology) # generic user-defined forcing
+        - ∂zᵃᵃᶜ(i, j, k, field_grid, darcy_flux, fields.pressure_head, fields.hydraulic_conductivity)  # Darcy flux
+            + forcing(i, j, k, grid, fields, evapotranspiration, hydrology, constants)                 # ET source/sink
+            + forcing(i, j, k, grid, clock, fields, hydrology.vwc_forcing, hydrology)                  # generic user-defined forcing
     )
     return ∂θ∂t
 end
