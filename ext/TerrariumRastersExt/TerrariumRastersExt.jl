@@ -57,9 +57,9 @@ end
 """
     InputSource(grid::ColumnRingGrid, raster::AbstractRaster; name = raster.name, units, reftime, cycle)
 
-Create an `InputSource` for the given `Raster` data and `grid`. A time-invariant raster (no `Ti` dimension)
-is regridded once and returned as a plain `Terrarium.FieldInputSource`; a time-varying raster is returned as
-a `RasterInputSource` that linearly interpolates in time, optionally cycling the time axis (`cycle = true`).
+Create an `InputSource` for the given `Raster` data and `grid`. A time-invariant raster is regridded once
+and returned as a plain `Terrarium.FieldInputSource`; a time-varying raster is returned as a 
+`RasterInputSource` that linearly interpolates in time, optionally cycling the time axis (`cycle = true`).
 The `name` can either be a plain `Symbol` or a namespaced path; see [`Terrarium.varpath`](@ref).
 """
 function Terrarium.InputSource(
@@ -68,11 +68,16 @@ function Terrarium.InputSource(
         source_grid = grid.rings,
         name = raster.name,
         units = NoUnits,
+        timedim = Ti,
         reftime = nothing,
         cycle = false
     ) where {NF}
     raster = reconcile_latitudes(raster, grid.rings)
     extrapolation = cycle ? Cyclical() : Clamp()
+    if timedim != Ti
+        td = dims(raster, timedim)
+        raster = set(raster, td => Ti(td.val))
+    end
     return RasterInputSource(grid, source_grid, raster, dims(raster, Ti), name, units, reftime, extrapolation)
 end
 
