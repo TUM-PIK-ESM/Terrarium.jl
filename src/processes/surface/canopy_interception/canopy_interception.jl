@@ -109,7 +109,7 @@ Compute the canopy saturation fraction as `W_can / W_can_max`.
     # Compute the wet canopy fraction
     W_can_max = canopy_interception.W_can_max * (LAI + SAI)
     W_can = max(W_can, zero(NF))
-    f_can = ifelse(W_can_max > zero(NF), safediv(W_can, W_can_max), zero(NF))
+    f_can = ifelse(W_can_max > zero(NF), min(W_can / W_can_max, one(NF)), zero(NF))
     return f_can
 end
 
