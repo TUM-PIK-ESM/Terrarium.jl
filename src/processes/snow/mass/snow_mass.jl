@@ -22,14 +22,11 @@ snow (`snow === nothing`).
     Tₛ = skin_temperature(i, j, grid, fields, skinT)
     rₐ = aerodynamic_resistance(i, j, grid, fields, atmos)
     Δq = compute_specific_humidity_difference(i, j, grid, fields, atmos, constants, Tₛ) # over ice for Tₛ ≤ 0
-    Tₐ = air_temperature(i, j, grid, fields, atmos)
-    pres = air_pressure(i, j, grid, fields, atmos)
-    q_air = specific_humidity(i, j, grid, fields, atmos)
-    ρₐ = Thermodynamics.air_density(constants.thermodynamics, celsius_to_kelvin(constants.thermodynamics, Tₐ), pres, q_air)
+    ρ_a = air_density(i, j, grid, fields, atmos, constants)
     ρ_w = constants.material.density_water
     # saturated vapor mass flux converted to a snow-water-equivalent rate, area-weighted by the snow-covered
     # fraction `f` to give the grid-cell-mean sublimation (W_snow and Ū_snow are grid-cell means)
-    return f * ρₐ * (Δq / rₐ) / ρ_w
+    return f * ρ_a * (Δq / rₐ) / ρ_w
 end
 
 # Kernel functions

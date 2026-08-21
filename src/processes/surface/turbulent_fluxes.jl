@@ -150,11 +150,11 @@ Compute the sensible heat flux at `i, j` based on the current skin temperature a
     rₐ = aerodynamic_resistance(i, j, grid, fields, atmos) # aerodynamic resistance
     Tₛ = skin_temperature(i, j, grid, fields, skinT) # skin temperature
     Tₐ = air_temperature(i, j, grid, fields, atmos) # air temperature
-    pres = air_pressure(i, j, grid, fields, atmos)
-    q_air = specific_humidity(i, j, grid, fields, atmos)
-    cₐ = specific_heat_capacity_moist_air(constants.thermodynamics, q_air) # specific heat capacity of moist air
+    pₐ = air_pressure(i, j, grid, fields, atmos)
+    qₐ = specific_humidity(i, j, grid, fields, atmos)
+    cₐ = specific_heat_capacity_moist_air(constants.thermodynamics, qₐ) # specific heat capacity of moist air
     # TODO: density should be evaluated at surface temperature for better accuracy
-    ρₐ = Thermodynamics.air_density(constants.thermodynamics, celsius_to_kelvin(constants.thermodynamics, Tₐ), pres, q_air)
+    ρₐ = Thermodynamics.air_density(constants.thermodynamics, celsius_to_kelvin(constants.thermodynamics, Tₐ), pₐ, qₐ)
     Q_T = (Tₛ - Tₐ) / rₐ  # bulk aerodynamic temperature-gradient
     # Calculate sensible heat flux (positive upwards)
     Hₛ = compute_sensible_heat_flux(tur, Q_T, ρₐ, cₐ)
@@ -193,11 +193,8 @@ snow-covered fraction sublimates from the snowpack (latent heat of sublimation, 
     end
 
     # Get atmospheric variables and constants
-    Tₐ = air_temperature(i, j, grid, fields, atmos)
-    pres = air_pressure(i, j, grid, fields, atmos)
-    q_air = specific_humidity(i, j, grid, fields, atmos)
     # TODO: density should be evaluated at surface temperature for better accuracy
-    ρₐ = Thermodynamics.air_density(constants.thermodynamics, celsius_to_kelvin(constants.thermodynamics, Tₐ), pres, q_air)
+    ρₐ = air_density(i, j, grid, fields, atmos, constants)
     L_lv = constants.thermodynamics.latent_heat_vaporization
     L_sg = constants.thermodynamics.latent_heat_sublimation
     ρ_w = constants.material.density_water
