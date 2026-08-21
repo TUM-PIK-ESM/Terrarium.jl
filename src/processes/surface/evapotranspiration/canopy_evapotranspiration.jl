@@ -70,6 +70,7 @@ variables(::PALADYNCanopyEvapotranspiration{NF}) where {NF} = (
     # Partitioned humidity fluxes (skin-driven terms refreshed from the converged skin temperature by the finalize pass)
     auxiliary(:evaporation_canopy, XY(); desc = "Canopy evaporation contribution to surface humidity flux", units = u"m/s"),
     auxiliary(:evaporation_ground, XY(), units = u"m/s", desc = "Ground evaporation contribution to surface humidity flux"),
+    auxiliary(:evaporation_soil_water, XY(), units = u"m/s", desc = "Evaporation contribution to soil moisture flux"),
     auxiliary(:transpiration, XY(), units = u"m/s", desc = "Transpiration contribution to surface humidity flux"),
     input(:skin_temperature, XY(); units = u"°C", desc = "Skin temperature"),
     input(:ground_temperature, XY(); default = NF(1), units = u"°C", desc = "Ground surface temperature"),
@@ -183,15 +184,14 @@ end
 """
     $TYPEDEF
 
-Compute `transpiration`, `evaporation_ground`, and `evaporation_canopy` fluxes on `grid`
+Compute unscaled `transpiration`, `evaporation_ground`, and `evaporation_canopy` fluxes on `grid`
 for the given scheme `evapotranspiration` and process dependencies.
 """
 @propagate_inbounds function compute_evapotranspiration_fluxes(
         i, j, grid, fields,
         evapotranspiration::PALADYNCanopyEvapotranspiration,
         constants::PhysicalConstants,
-        atmos::AbstractAtmosphere,
-        args...
+        atmos::AbstractAtmosphere
     )
     # Get inputs
     Ts = fields.skin_temperature[i, j] # skin temperature (top of canopy)
@@ -222,18 +222,28 @@ for the given scheme `evapotranspiration` and process dependencies.
 """
 @propagate_inbounds function compute_evapotranspiration_fluxes!(
         out, i, j, grid, fields,
-        evapotranspiration::PALADYNCanopyEvapotranspiration,
+        evapotranspiration::PALADYNCanopyEvapotranspiration{NF},
         constants::PhysicalConstants,
         atmos::AbstractAtmosphere,
+        soil::AbstractSoil,
+        snow::Optional{AbstractSnow} = nothing,
         args...
-    )
+    ) where {NF}
     # Compute ET fluxes
-    E_gnd, E_trp, E_can = compute_evapotranspiration_fluxes(i, j, grid, fields, evapotranspiration, constants, atmos, args...)
+    E_gnd, E_trp, E_can = compute_evapotranspiration_fluxes(i, j, grid, fields, evapotranspiration, constants, atmos)
 
-    # Store fluxes in corresponding output Fields
-    out.evaporation_ground[i, j, 1] = E_gnd
-    out.transpiration[i, j, 1] = E_trp
-    out.evaporation_canopy[i, j, 1] = E_can
+    # Rescale by snow-covered fraction (if applicable) and store fluxes
+    f_snow = snow_cover_fraction(i, j, grid, fields, snow)
+    out.evaporation_ground[i, j, 1] = (NF(1) - f_snow) * E_gnd
+    out.transpiration[i, j, 1] = (NF(1) - f_snow) * E_trp
+    out.evaporation_canopy[i, j, 1] = (NF(1) - f_snow) * E_can
+
+    # Get air/water densities
+    ρ_a = air_density(i, j, grid, fields, atmos, constants)
+    ρ_w = constants.material.density_water
+
+    # Compute evaporation soil water
+    out.evaporation_soil_water[i, j, 1] = E_gnd * ρ_a / ρ_w
     return out
 end
 
@@ -268,6 +278,7 @@ end
         atmos::AbstractAtmosphere,
         soil::AbstractSoil,
         vegetation::AbstractVegetation,
+        snow::Optional{AbstractSnow} = nothing,
         args...
     )
     i, j = @index(Global, NTuple)
@@ -281,5 +292,5 @@ end
     )
     fields = merge(fields, conductances)
     # Compute ET fluxes from stored conductances
-    compute_evapotranspiration_fluxes!(out, i, j, grid, fields, evapotranspiration, constants, atmos)
+    compute_evapotranspiration_fluxes!(out, i, j, grid, fields, evapotranspiration, constants, atmos, soil, snow)
 end

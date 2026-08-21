@@ -143,8 +143,8 @@ end
         evapotranspiration::BareGroundEvaporation,
         constants::PhysicalConstants,
         atmos::AbstractAtmosphere,
-        soil::AbstractSoil,
-        snow = nothing,
+        soil::Optional{AbstractSoil} = nothing,
+        snow::Optional{AbstractSnow} = nothing,
     )
     i, j = @index(Global, NTuple)
 

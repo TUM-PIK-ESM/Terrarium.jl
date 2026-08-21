@@ -26,7 +26,8 @@ snow (`snow === nothing`).
     ρ_w = constants.material.density_water
     # saturated vapor mass flux converted to a snow-water-equivalent rate, area-weighted by the snow-covered
     # fraction `f` to give the grid-cell-mean sublimation (W_snow and Ū_snow are grid-cell means)
-    return f * ρ_a * (Δq / rₐ) / ρ_w
+    E_subl = f * ρ_a * (Δq / rₐ) / ρ_w
+    return E_subl
 end
 
 # Kernel functions
