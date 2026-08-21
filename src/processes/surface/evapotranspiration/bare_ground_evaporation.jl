@@ -33,6 +33,7 @@ evaporation conductance in `fields`.
 @propagate_inbounds function compute_surface_humidity_flux(
         i, j, grid, fields,
         ::BareGroundEvaporation,
+        ::NoCanopyInterception,
         constants::PhysicalConstants,
         atmos::AbstractAtmosphere,
         args...
@@ -126,8 +127,8 @@ end
     out.evaporation_ground[i, j, 1] = (one(f_snow) - f_snow) * compute_evaporation_flux(evaporation, Δq, g_gnd)
     return out
 end
-
 # Kernels
+
 
 @kernel inbounds = true function compute_auxiliary_kernel!(
         out, grid, fields,

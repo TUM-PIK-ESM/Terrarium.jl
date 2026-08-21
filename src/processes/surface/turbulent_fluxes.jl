@@ -103,11 +103,8 @@ function compute_auxiliary!(
     )
     skinT = seb.skin_temperature
     out = auxiliary_fields(state, tur)
-    fields = get_fields(state, tur, skinT, atmos; except = out)
-    launch!(
-        grid, XY, compute_auxiliary_kernel!, out, fields,
-        tur, skinT, constants, atmos
-    )
+    fields = get_fields(state, tur, skinT, atmos, args...; except = out)
+    launch!(grid, XY, compute_auxiliary_kernel!, out, fields, tur, skinT, constants, atmos, args...)
     return nothing
 end
 
@@ -180,10 +177,10 @@ snow-covered fraction sublimates from the snowpack (latent heat of sublimation, 
         skinT::AbstractSkinTemperature,
         constants::PhysicalConstants,
         atmos::AbstractAtmosphere,
-        evtr::Optional{AbstractEvapotranspiration} = nothing,
+        surface_hydrology::Optional{AbstractSurfaceHydrology} = nothing,
         snow::Optional{AbstractSnow} = nothing,
     )
-    Q_h = if isnothing(evtr)
+    Q_h = if isnothing(surface_hydrology)
         # Direct calculation of evaporative flux without ET coupling
         Tₛ = skin_temperature(i, j, grid, fields, skinT)
         rₐ = aerodynamic_resistance(i, j, grid, fields, atmos) # aerodynamic resistance
@@ -191,7 +188,9 @@ snow-covered fraction sublimates from the snowpack (latent heat of sublimation, 
         Δq / rₐ  # simplified humidity flux w/o separate ET
     else
         # Compute humidity flux using the given ET scheme
-        compute_surface_humidity_flux(i, j, grid, fields, evtr, constants, atmos)
+        evtr = get_evapotranspiration(surface_hydrology)
+        interception = get_canopy_interception(surface_hydrology)
+        compute_surface_humidity_flux(i, j, grid, fields, evtr, interception, constants, atmos)
     end
 
     # Get atmospheric variables and constants
@@ -232,9 +231,9 @@ end
 Compute the turbulent (sensible and latent) heat fluxes from the current skin temperature and store
 them into the auxiliary output fields `out`.
 """
-@propagate_inbounds function compute_turbulent_fluxes!(out, i, j, grid, fields, tur::DiagnosedTurbulentFluxes, skinT, constants, atmos, evtr, snow)
+@propagate_inbounds function compute_turbulent_fluxes!(out, i, j, grid, fields, tur::DiagnosedTurbulentFluxes, skinT, constants, atmos, hydrology, snow)
     out.sensible_heat_flux[i, j, 1] = compute_sensible_heat_flux(i, j, grid, fields, tur, skinT, constants, atmos)
-    out.latent_heat_flux[i, j, 1] = compute_latent_heat_flux(i, j, grid, fields, tur, skinT, constants, atmos, evtr, snow)
+    out.latent_heat_flux[i, j, 1] = compute_latent_heat_flux(i, j, grid, fields, tur, skinT, constants, atmos, hydrology, snow)
     return nothing
 end
 

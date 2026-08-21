@@ -18,11 +18,13 @@ end
     $TYPEDSIGNATURES
 
 Compute an evapotranspiration flux (m/s, positive upwards) as the product of a vapor
-conductance `g` (m/s) and a specific humidity difference `Δq` (kg/kg). All evapotranspiration components
-— soil/canopy evaporation and transpiration — share the functional form ``E = Δq · g``,
-differing only in which conductance and humidity difference are supplied.
+conductance `g` (m/s) and a specific humidity difference `Δq` (kg/kg). The resulting
+flux is optionally limited by the given `E_max` which otherwise defaults to `Inf`.
 """
-@inline compute_evaporation_flux(::AbstractEvapotranspiration, Δq, g) = Δq * g
+@inline function compute_evaporation_flux(::AbstractEvapotranspiration, Δq, g, E_max = oftype(Δq, Inf))
+    E = Δq * g
+    return min(E, E_max)
+end
 
 # Forcing interface for soil hydrology
 
