@@ -243,7 +243,7 @@ for the given scheme `evapotranspiration` and process dependencies.
     ρ_w = constants.material.density_water
 
     # Compute evaporation soil water
-    out.evaporation_soil_water[i, j, 1] = E_gnd * ρ_a / ρ_w
+    out.evaporation_soil_water[i, j, 1] = (E_gnd + E_trp) * ρ_a / ρ_w
     return out
 end
 
