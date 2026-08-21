@@ -6,7 +6,7 @@ assumed to be in seconds.
 """
 convert_dt(Δt::NF) where {NF <: Number} = convert_dt(NF, Δt)
 convert_dt(::Type{NF}, Δt::Number) where {NF <: Number} = convert(NF, Δt) # assume already in seconds
-convert_dt(::Type{NF}, Δt::Period) where {NF <: Number} = Second(Δt).value
+convert_dt(::Type{NF}, Δt::Period) where {NF <: Number} = convert(NF, convert_dt(Second, Δt).value)
 convert_dt(::Type{P}, Δt::NF) where {P <: Period, NF <: Number} = convert(P, Millisecond(round(Int, Δt * NF(1.0e3))))
 convert_dt(::Type{P}, Δt::Period) where {P <: Period} = convert(P, Δt)
 convert_dt(::Type{P}, Δt::Month) where {P <: Period} = convert_dt(P, Second(Dates.value(Δt) * 24 * 3600 * 30))
