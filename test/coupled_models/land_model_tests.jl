@@ -156,12 +156,12 @@ end
     Ts = Array(interior(integrator.state.skin_temperature))
     p = Array(interior(integrator.state.air_pressure))
     q_air = Array(interior(integrator.state.specific_humidity))
-    ρ_air = Terrarium.air_density(1, 1, grid, integrator.state, land.atmosphere)
+    ρ_air = Terrarium.air_density(1, 1, grid, integrator.state, land.atmosphere, constants)
     ρ_w = constants.material.density_water
     # unscaled bulk-aerodynamic ground evaporation g·Δq(T_skin); the stored flux is this scaled by (1 − f)
     Δq = Terrarium.specific_humidity_difference.(Ref(constants.thermodynamics), p, q_air, Ts)
     # ratio of air to water density
-    r = ρₐ / ρ_w
+    r = ρ_air / ρ_w
     @test all(f .> 0.8)                                                # 0.5 m SWE -> f = 0.5/(0.5 + 0.1) ≈ 0.83 (W_ref = 0.1 m)
     @test all(isapprox.(E, (1 .- f) .* g .* Δq .* r; rtol = 1.0e-6))   # ground evaporation scaled by (1 − f_snow)
     @test all(isfinite.(interior(integrator.state.sublimation)))
