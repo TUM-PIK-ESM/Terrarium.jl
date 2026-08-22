@@ -4,11 +4,12 @@ Base type for evapotranspiration processes.
 abstract type AbstractEvapotranspiration{NF} <: AbstractProcess{NF} end
 
 """
-    surface_evaporation_flux(i, j, grid, fields, ::AbstractEvapotranspiration)
+    ground_evapotranspiration_flux(i, j, grid, fields, ::AbstractEvapotranspiration)
 
-Compute the surface evaporation flux [m/s] at cell `i, j` based on the current state.
+Return the total ground evapotranspiration flux [m/s], i.e. ground evaporation + plant transpiration,
+at cell `i, j` based on the current state.
 """
-function surface_evaporation_flux end
+function ground_evapotranspiration_flux end
 
 # Parameterizations
 
@@ -24,4 +25,3 @@ Compute the resistance factor against ground evaporation [-] based on the curren
 process dependencies in `args`.
 """
 function ground_evaporation_resistance_factor end
-\

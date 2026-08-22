@@ -127,7 +127,7 @@ to obtain a total surface humidity flux $\text{ET}$ (m/s) that can be converted 
 All evapotranspiration pathways share a unified functional form:
 ```math
 \begin{equation}
-Q_h = \Delta q \cdot g\,,
+Q = \Delta q \cdot g\,,
 \end{equation}
 ```
 where $g$ is the vapor conductance (m/s) specific to each pathway. The unified function `humidity_flux` handles all three pathways:
@@ -186,12 +186,10 @@ compute_auxiliary!(state, grid, ::PALADYNCanopyEvapotranspiration, ::AbstractCan
 
 ## Coupling to soil hydrology
 
-Subtypes of `AbstractEvapotranpsiration` automatically inherit an implementation of the [`forcing`](@ref) interface for [`SoilHydrology`](@ref),
-which computes the contribution of ET to the soil moisture tendency in each soil layer. The default implementation draws the rescaled surface humidity
-flux only from the uppermost soil layer.
+Subtypes of `AbstractEvapotranpsiration` automatically inherit a default implementation of the [`forcing`](@ref) interface for [`SoilHydrology`](@ref), which computes the contribution of ET to the soil moisture tendency of the uppermost soil layer using [`ground_evapotranspiration_flux`](@ref).
 
 ```@docs; canonical = false
-forcing(i, j, k, grid, clock, fields, evapotranspiration::AbstractEvapotranspiration, ::AbstractSoilHydrology)
+forcing(i, j, k, grid, clock, fields, evapotranspiration::AbstractEvapotranspiration, ::AbstractSoilHydrology, args...)
 ```
 
 ## Kernel functions

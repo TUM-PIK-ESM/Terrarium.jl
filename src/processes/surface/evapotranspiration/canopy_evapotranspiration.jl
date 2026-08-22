@@ -75,12 +75,11 @@ variables(::PALADYNCanopyEvapotranspiration{NF}) where {NF} = (
     input(:ground_temperature, XY(); default = NF(1), units = u"°C", desc = "Ground surface temperature"),
 )
 
-@propagate_inbounds function surface_evaporation_flux(i, j, grid, fields, ::PALADYNCanopyEvapotranspiration)
+@propagate_inbounds function ground_evapotranspiration_flux(i, j, grid, fields, ::PALADYNCanopyEvapotranspiration)
     E_gnd = fields.evaporation_ground[i, j]
-    E_can = fields.evaporation_canopy[i, j]
     E_trp = fields.transpiration[i, j]
-    E = E_gnd + E_can + E_trp
-    return E
+    ET = E_gnd + E_trp
+    return ET
 end
 
 """
@@ -258,24 +257,6 @@ Compute the aerodynamic resistance between the ground and canopy as a function o
         C = evapotranspiration.C_can  # drag coefficient for the canopy
         rₐ_can = (1 - exp(-LAI - SAI)) / (C * Vₐ)
         return rₐ_can
-    end
-end
-
-# Forcing interface for soil hydrology
-
-"""
-    $TYPEDSIGNATURES
-
-Compute and return the evapotranspiration forcing for soil moisture at the given indices `i, j, k`.
-The ET forcing is the sum of the bare ground evaporation + transpiration flux rescaled by the thickness of layer `k`.
-Canopy evaporation is excluded since this draws water from the canopy rather than the ground.
-"""
-@inline function forcing(i, j, k, grid, clock, fields, ::PALADYNCanopyEvapotranspiration, ::AbstractSoilHydrology, args...)
-    let Δz = Δzᵃᵃᶜ(i, j, k, grid)
-        E = fields.evaporation_ground[i, j] + fields.transpiration[i, j] # liquid water flux [m³m⁻²s⁻¹]
-        # Rescale by layer thickness and ratio of air to water density to get water content flux
-        ∂θ∂t = -E / Δz
-        return ∂θ∂t * (k == grid.Nz)
     end
 end
 

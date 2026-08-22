@@ -19,7 +19,7 @@ BareGroundEvaporation(
     ground_resistance::GR = SoilMoistureResistanceFactor(NF)
 ) where {NF, GR} = BareGroundEvaporation{NF, GR}(ground_resistance)
 
-@propagate_inbounds surface_evaporation_flux(i, j, grid, fields, evaporation::BareGroundEvaporation, args...) = fields.evaporation_ground[i, j]
+@propagate_inbounds ground_evapotranspiration_flux(i, j, grid, fields, evaporation::BareGroundEvaporation, args...) = fields.evaporation_ground[i, j]
 
 """ $TYPEDSIGNATURES """
 @inline ground_evaporation_conductance(::BareGroundEvaporation, β, rₐ) = β / rₐ
@@ -138,23 +138,6 @@ end
     E_gnd = (NF(1) - f_snow) * Qh_gnd * ρ_a / ρ_w
     out.evaporation_ground[i, j, 1] = E_gnd
     return out
-end
-
-# Forcing interface for soil hydrology
-
-"""
-    $TYPEDSIGNATURES
-
-Compute and return the evapotranspiration forcing for soil moisture at the given indices `i, j, k`.
-The ET forcing is just the `surface_evaporation_flux` rescaled by the thickness of layer `k`.
-"""
-@inline function forcing(i, j, k, grid, clock, fields, evaporation::BareGroundEvaporation, ::AbstractSoilHydrology, args...)
-    let Δz = Δzᵃᵃᶜ(i, j, k, grid)
-        E = surface_evaporation_flux(i, j, grid, fields, evaporation) # liquid water flux [m³m⁻²s⁻¹]
-        # Rescale by layer thickness and ratio of air to water density to get water content flux
-        ∂θ∂t = -E / Δz
-        return ∂θ∂t * (k == grid.Nz)
-    end
 end
 
 # Kernels
