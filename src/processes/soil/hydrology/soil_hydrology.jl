@@ -138,12 +138,6 @@ end
 
 @propagate_inbounds surface_excess_water(i, j, grid, fields, ::SoilHydrology{NF}) where {NF} = zero(NF)
 
-@propagate_inbounds function surface_evaporation_tendency(i, j, k, grid, fields, ::SoilHydrology, ::AbstractEvapotranspiration)
-    Δz = Δzᵃᵃᶜ(i, j, k, grid)
-    Q_E = fields.evaporation_soil_water[i, j]
-    return Q_E / Δz * (k == field_grid.Nz)
-end
-
 """
     $TYPEDSIGNATURES
 
