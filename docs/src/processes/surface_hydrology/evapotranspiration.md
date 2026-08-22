@@ -195,7 +195,7 @@ forcing(i, j, k, grid, clock, fields, evapotranspiration::AbstractEvapotranspira
 ## Kernel functions
 
 ```@docs; canonical = false
-surface_evaporation_flux
+ground_evapotranspiration_flux
 ```
 
 ```@docs; canonical = false
