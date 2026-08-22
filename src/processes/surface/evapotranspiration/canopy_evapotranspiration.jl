@@ -68,26 +68,25 @@ variables(::PALADYNCanopyEvapotranspiration{NF}) where {NF} = (
     auxiliary(:canopy_evaporation_conductance, XY(); units = u"m/s", desc = "Canopy evaporation vapor conductance"),
     auxiliary(:transpiration_conductance, XY(); units = u"m/s", desc = "Transpiration vapor conductance"),
     # Partitioned humidity fluxes (skin-driven terms refreshed from the converged skin temperature by the finalize pass)
-    auxiliary(:evaporation_canopy, XY(); desc = "Canopy evaporation contribution to surface humidity flux", units = u"m/s"),
-    auxiliary(:evaporation_ground, XY(), units = u"m/s", desc = "Ground evaporation contribution to surface humidity flux"),
-    auxiliary(:evaporation_soil_water, XY(), units = u"m/s", desc = "Evaporation contribution to soil moisture flux"),
-    auxiliary(:transpiration, XY(), units = u"m/s", desc = "Transpiration contribution to surface humidity flux"),
+    auxiliary(:evaporation_canopy, XY(); desc = "Canopy evaporation flux in meters liquid water height", units = u"m/s"),
+    auxiliary(:evaporation_ground, XY(), units = u"m/s", desc = "Ground evaporation flux in meters liquid water height"),
+    auxiliary(:transpiration, XY(), units = u"m/s", desc = "Transpiration evaporation flux in meters liquid water height"),
     input(:skin_temperature, XY(); units = u"°C", desc = "Skin temperature"),
     input(:ground_temperature, XY(); default = NF(1), units = u"°C", desc = "Ground surface temperature"),
 )
 
-@propagate_inbounds function surface_humidity_flux(i, j, grid, fields, ::PALADYNCanopyEvapotranspiration)
+@propagate_inbounds function surface_evaporation_flux(i, j, grid, fields, ::PALADYNCanopyEvapotranspiration)
     E_gnd = fields.evaporation_ground[i, j]
     E_can = fields.evaporation_canopy[i, j]
-    T_can = fields.transpiration[i, j]
-    return E_gnd + E_can + T_can
+    E_trp = fields.transpiration[i, j]
+    E = E_gnd + E_can + E_trp
+    return E
 end
 
 """
     $TYPEDSIGNATURES
 
-Compute the surface humidity flux [m/s] from the current skin temperature and
-conductances in `fields`.
+Compute the kinematic surface humidity flux [m/s] from the current skin temperature and conductances in `fields`.
 """
 @propagate_inbounds function compute_surface_humidity_flux(
         i, j, grid, fields,
@@ -96,8 +95,9 @@ conductances in `fields`.
         atmos::AbstractAtmosphere,
         args...
     )
-    E_gnd, E_trp, E_can = compute_evapotranspiration_fluxes(i, j, grid, fields, evtr, constants, atmos, args...)
-    return E_gnd + E_trp + E_can
+    Qh_gnd, Qh_trp, Qh_can = compute_surface_humidity_fluxes(i, j, grid, fields, evtr, constants, atmos, args...)
+    Qh = Qh_gnd + Qh_trp + Qh_can
+    return Qh
 end
 
 """ $TYPEDSIGNATURES """
@@ -146,9 +146,7 @@ of the skin temperature.
     f_can = saturation_canopy_water(i, j, grid, fields, canopy_interception)
     β = ground_evaporation_resistance_factor(i, j, grid, fields, evapotranspiration.ground_resistance, soil)
 
-    # Compute skin-driven vapor conductances (independent of skin temperature). These are the
-    # source of truth from which the SEB derives the latent heat flux lazily during the skin
-    # temperature solve (see the lazy `surface_humidity_flux` method above).
+    # Compute skin-driven vapor conductances (independent of skin temperature)
     g_gnd = ground_evaporation_conductance(evapotranspiration, β, rₐ, rₐ_can)
     g_can = canopy_evaporation_conductance(evapotranspiration, f_can, rₐ)
     g_trp = transpiration_conductance(evapotranspiration, rₐ, g_stm)
@@ -187,7 +185,7 @@ end
 Compute unscaled `transpiration`, `evaporation_ground`, and `evaporation_canopy` fluxes on `grid`
 for the given scheme `evapotranspiration` and process dependencies.
 """
-@propagate_inbounds function compute_evapotranspiration_fluxes(
+@propagate_inbounds function compute_surface_humidity_fluxes(
         i, j, grid, fields,
         evapotranspiration::PALADYNCanopyEvapotranspiration,
         constants::PhysicalConstants,
@@ -204,14 +202,11 @@ for the given scheme `evapotranspiration` and process dependencies.
     Δqs = compute_specific_humidity_difference(i, j, grid, fields, atmos, constants, Ts) # humidity difference between canopy and atmosphere
     Δqg = compute_specific_humidity_difference(i, j, grid, fields, atmos, constants, Tg) # humidity difference between ground and canopy
 
-    # Compute and store the partitioned ET fluxes from the current skin temperature. The ground
-    # evaporation is driven by the ground temperature; the canopy evaporation and transpiration are
-    # skin-driven. Re-running this kernel after the SEB solve (see `LandModel`) refreshes the
-    # skin-driven fluxes so they are consistent with the converged skin temperature.
-    E_gnd = compute_evaporation_flux(evapotranspiration, Δqg, g_gnd)
-    E_trp = compute_evaporation_flux(evapotranspiration, Δqs, g_trp)
-    E_can = compute_evaporation_flux(evapotranspiration, Δqs, g_can)
-    return E_gnd, E_trp, E_can
+    # Compute the
+    Qh_gnd = humidity_flux(evapotranspiration, Δqg, g_gnd)
+    Qh_trp = humidity_flux(evapotranspiration, Δqs, g_trp)
+    Qh_can = humidity_flux(evapotranspiration, Δqs, g_can)
+    return Qh_gnd, Qh_trp, Qh_can
 end
 
 """
@@ -225,25 +220,23 @@ for the given scheme `evapotranspiration` and process dependencies.
         evapotranspiration::PALADYNCanopyEvapotranspiration{NF},
         constants::PhysicalConstants,
         atmos::AbstractAtmosphere,
-        soil::AbstractSoil,
         snow::Optional{AbstractSnow} = nothing,
         args...
     ) where {NF}
-    # Compute ET fluxes
-    E_gnd, E_trp, E_can = compute_evapotranspiration_fluxes(i, j, grid, fields, evapotranspiration, constants, atmos)
-
-    # Rescale by snow-covered fraction (if applicable) and store fluxes
-    f_snow = snow_cover_fraction(i, j, grid, fields, snow)
-    out.evaporation_ground[i, j, 1] = (NF(1) - f_snow) * E_gnd
-    out.transpiration[i, j, 1] = (NF(1) - f_snow) * E_trp
-    out.evaporation_canopy[i, j, 1] = (NF(1) - f_snow) * E_can
+    # Compute humidity fluxes
+    Qh_gnd, Qh_trp, Qh_can = compute_surface_humidity_fluxes(i, j, grid, fields, evapotranspiration, constants, atmos)
 
     # Get air/water densities
     ρ_a = air_density(i, j, grid, fields, atmos, constants)
     ρ_w = constants.material.density_water
+    r = ρ_a / ρ_w # ratio of air to water density [-]
 
-    # Compute evaporation soil water
-    out.evaporation_soil_water[i, j, 1] = (E_gnd + E_trp) * ρ_a / ρ_w
+    # Rescale by snow-covered fraction (if applicable) and convert to liquid water flux
+    f_snow = snow_cover_fraction(i, j, grid, fields, snow)
+    f_bare = NF(1) - f_snow
+    out.evaporation_ground[i, j, 1] = f_bare * Qh_gnd * r
+    out.transpiration[i, j, 1] = f_bare * Qh_trp * r
+    out.evaporation_canopy[i, j, 1] = f_bare * Qh_can * r
     return out
 end
 
@@ -265,6 +258,24 @@ Compute the aerodynamic resistance between the ground and canopy as a function o
         C = evapotranspiration.C_can  # drag coefficient for the canopy
         rₐ_can = (1 - exp(-LAI - SAI)) / (C * Vₐ)
         return rₐ_can
+    end
+end
+
+# Forcing interface for soil hydrology
+
+"""
+    $TYPEDSIGNATURES
+
+Compute and return the evapotranspiration forcing for soil moisture at the given indices `i, j, k`.
+The ET forcing is the sum of the bare ground evaporation + transpiration flux rescaled by the thickness of layer `k`.
+Canopy evaporation is excluded since this draws water from the canopy rather than the ground.
+"""
+@inline function forcing(i, j, k, grid, clock, fields, ::PALADYNCanopyEvapotranspiration, ::AbstractSoilHydrology, args...)
+    let Δz = Δzᵃᵃᶜ(i, j, k, grid)
+        E = fields.evaporation_ground[i, j] + fields.transpiration[i, j] # liquid water flux [m³m⁻²s⁻¹]
+        # Rescale by layer thickness and ratio of air to water density to get water content flux
+        ∂θ∂t = -E / Δz
+        return ∂θ∂t * (k == grid.Nz)
     end
 end
 
@@ -292,5 +303,5 @@ end
     )
     fields = merge(fields, conductances)
     # Compute ET fluxes from stored conductances
-    compute_evapotranspiration_fluxes!(out, i, j, grid, fields, evapotranspiration, constants, atmos, soil, snow)
+    compute_evapotranspiration_fluxes!(out, i, j, grid, fields, evapotranspiration, constants, atmos, snow)
 end

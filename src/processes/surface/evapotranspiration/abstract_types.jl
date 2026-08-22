@@ -4,11 +4,11 @@ Base type for evapotranspiration processes.
 abstract type AbstractEvapotranspiration{NF} <: AbstractProcess{NF} end
 
 """
-    surface_humidity_flux(i, j, grid, fields, ::AbstractEvapotranspiration)
+    surface_evaporation_flux(i, j, grid, fields, ::AbstractEvapotranspiration)
 
-Compute the surface humidity flux [m/s] at cell `i, j` based on the current state.
+Compute the surface evaporation flux [m/s] at cell `i, j` based on the current state.
 """
-function surface_humidity_flux end
+function surface_evaporation_flux end
 
 # Parameterizations
 

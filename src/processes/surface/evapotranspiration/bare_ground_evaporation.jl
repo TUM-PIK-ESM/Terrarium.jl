@@ -19,7 +19,7 @@ BareGroundEvaporation(
     ground_resistance::GR = SoilMoistureResistanceFactor(NF)
 ) where {NF, GR} = BareGroundEvaporation{NF, GR}(ground_resistance)
 
-@propagate_inbounds surface_humidity_flux(i, j, grid, fields, evaporation::BareGroundEvaporation, args...) = fields.evaporation_ground[i, j]
+@propagate_inbounds surface_evaporation_flux(i, j, grid, fields, evaporation::BareGroundEvaporation, args...) = fields.evaporation_ground[i, j]
 
 """ $TYPEDSIGNATURES """
 @inline ground_evaporation_conductance(::BareGroundEvaporation, β, rₐ) = β / rₐ
@@ -27,20 +27,18 @@ BareGroundEvaporation(
 """
     $TYPEDSIGNATURES
 
-Evaluate the bare-ground surface humidity flux [m/s] from the current skin temperature and
+Evaluate the bare-ground, kinematic surface humidity flux [m/s] from the current skin temperature and
 evaporation conductance in `fields`.
 """
 @propagate_inbounds function compute_surface_humidity_flux(
         i, j, grid, fields,
-        ::BareGroundEvaporation,
+        evaporation::BareGroundEvaporation,
         constants::PhysicalConstants,
         atmos::AbstractAtmosphere,
         args...
     )
-    Ts = fields.skin_temperature[i, j]
-    g = fields.ground_evaporation_conductance[i, j]
-    Δq = compute_specific_humidity_difference(i, j, grid, fields, atmos, constants, Ts)
-    return g * Δq
+    Qh_gnd = compute_surface_humidity_fluxes(i, j, grid, fields, evaporation, constants, atmos)
+    return Qh_gnd
 end
 
 # Top-level interface methods
@@ -48,7 +46,7 @@ end
 variables(::BareGroundEvaporation) = (
     # Skin-driven vapor conductance β/rₐ (independent of skin temperature; held fixed during the SEB solve)
     auxiliary(:ground_evaporation_conductance, XY(), units = u"m/s", desc = "Ground evaporation vapor conductance"),
-    auxiliary(:evaporation_ground, XY(), units = u"m/s", desc = "Ground evaporation contribution to surface humidity flux"),
+    auxiliary(:evaporation_ground, XY(), units = u"m/s", desc = "Ground evaporation flux in meters liquid water height"),
     input(:skin_temperature, XY(), units = u"°C", desc = "Skin temperature of the surface"),
 )
 
@@ -108,32 +106,55 @@ bare-ground `evaporation` scheme.
     return out
 end
 
+@propagate_inbounds function compute_surface_humidity_fluxes(
+        i, j, grid, fields,
+        evaporation::BareGroundEvaporation,
+        constants::PhysicalConstants,
+        atmos::AbstractAtmosphere
+    )
+    Ts = fields.skin_temperature[i, j]
+    g = fields.ground_evaporation_conductance[i, j]
+    Δq = compute_specific_humidity_difference(i, j, grid, fields, atmos, constants, Ts)
+    Qh_gnd = humidity_flux(evaporation, Δq, g)
+    return Qh_gnd
+end
+
 @propagate_inbounds function compute_evapotranspiration_fluxes!(
         out, i, j, grid, fields,
         evaporation::BareGroundEvaporation{NF},
         constants::PhysicalConstants,
         atmos::AbstractAtmosphere,
-        soil::Optional{AbstractSoil} = nothing,
         snow::Optional{AbstractSnow} = nothing,
     ) where {NF}
-    Ts = fields.skin_temperature[i, j]
-    g_gnd = fields.ground_evaporation_conductance[i, j]
-    # Evaporation flux at the current skin temperature
-    Δq = compute_specific_humidity_difference(i, j, grid, fields, atmos, constants, Ts)
+    # Compute raw evaporation flux
+    Qh_gnd = compute_surface_humidity_fluxes(i, j, grid, fields, evaporation, constants, atmos)
     # Ground evaporation occurs only over the snow-free fraction (1 − f_snow); the snow-covered fraction
     # sublimates instead (see `compute_snow_sublimation_flux`). No scaling without snow (f_snow = 0).
     f_snow = snow_cover_fraction(i, j, grid, fields, snow)
-    E_gnd = (NF(1) - f_snow) * compute_evaporation_flux(evaporation, Δq, g_gnd)
-    # Store relative contributions
+    # Get air/water densities
+    ρ_a = air_density(i, j, grid, fields, atmos, constants)
+    ρ_w = constants.material.density_water
+    # Scale Qh_gnd by snow-free fraction and and scale by air-water density ratio to get evaporative flux E_gnd
+    E_gnd = (NF(1) - f_snow) * Qh_gnd * ρ_a / ρ_w
     out.evaporation_ground[i, j, 1] = E_gnd
-    if !isnothing(soil)
-        # Get air/water densities
-        ρ_a = air_density(i, j, grid, fields, atmos, constants)
-        ρ_w = constants.material.density_water
-        # Compute evaporation soil water
-        out.evaporation_soil_water[i, j, 1] = E_gnd * ρ_a / ρ_w
-    end
     return out
+end
+
+# Forcing interface for soil hydrology
+
+"""
+    $TYPEDSIGNATURES
+
+Compute and return the evapotranspiration forcing for soil moisture at the given indices `i, j, k`.
+The ET forcing is just the `surface_evaporation_flux` rescaled by the thickness of layer `k`.
+"""
+@inline function forcing(i, j, k, grid, clock, fields, evaporation::BareGroundEvaporation, ::AbstractSoilHydrology, args...)
+    let Δz = Δzᵃᵃᶜ(i, j, k, grid)
+        E = surface_evaporation_flux(i, j, grid, fields, evaporation) # liquid water flux [m³m⁻²s⁻¹]
+        # Rescale by layer thickness and ratio of air to water density to get water content flux
+        ∂θ∂t = -E / Δz
+        return ∂θ∂t * (k == grid.Nz)
+    end
 end
 
 # Kernels
@@ -154,5 +175,5 @@ end
     conductances = (ground_evaporation_conductance = out.ground_evaporation_conductance,)
     fields = merge(fields, conductances)
     # Compute ET fluxes from stored conductances; `snow` scales ground evaporation by the snow-free fraction
-    compute_evapotranspiration_fluxes!(out, i, j, grid, fields, evapotranspiration, constants, atmos, soil, snow)
+    compute_evapotranspiration_fluxes!(out, i, j, grid, fields, evapotranspiration, constants, atmos, snow)
 end

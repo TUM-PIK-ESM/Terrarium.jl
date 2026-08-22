@@ -127,13 +127,13 @@ to obtain a total surface humidity flux $\text{ET}$ (m/s) that can be converted 
 All evapotranspiration pathways share a unified functional form:
 ```math
 \begin{equation}
-E = \Delta q \cdot g\,,
+Q_h = \Delta q \cdot g\,,
 \end{equation}
 ```
-where $g$ is the vapor conductance (m/s) specific to each pathway. The unified function `compute_evaporation_flux` handles all three pathways:
+where $g$ is the vapor conductance (m/s) specific to each pathway. The unified function `humidity_flux` handles all three pathways:
 
 ```@docs; canonical = false
-compute_evaporation_flux
+humidity_flux
 ```
 
 ## Conductance functions
@@ -196,10 +196,16 @@ forcing(i, j, k, grid, clock, fields, evapotranspiration::AbstractEvapotranspira
 
 ## Kernel functions
 
-The following kernel functions are used internally during the `compute_auxiliary!` pass:
+```@docs; canonical = false
+surface_evaporation_flux
+```
 
 ```@docs; canonical = false
-surface_humidity_flux
+compute_surface_humidity_flux
+```
+
+```@docs; canonical = false
+compute_surface_humidity_fluxes
 ```
 
 ```@docs; canonical = false

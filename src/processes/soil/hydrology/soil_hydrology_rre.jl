@@ -22,7 +22,6 @@ variables(hydrology::SoilHydrology{NF, RichardsEq}) where {NF} = (
     prognostic(:surface_excess_water, XY(), units = u"m", desc = "Excess water at the soil surface in m³/m²"),
     auxiliary(:hydraulic_conductivity, XYZ(z = Face()), units = u"m/s", desc = "Hydraulic conductivity of soil volumes in m/s"),
     auxiliary(:water_table, XY(), units = u"m", desc = "Elevation of the water table in meters"),
-    input(:evaporation_soil_water, XY(), units = u"m/s", desc = "Evapotranspiration contribution to soil moisture flux"),
     input(:liquid_water_fraction, XYZ(), default = NF(1), bounds = UnitInterval, desc = "Fraction of unfrozen water in the pore space"),
 )
 

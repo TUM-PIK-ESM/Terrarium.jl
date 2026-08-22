@@ -3,12 +3,11 @@
 """
     $TYPEDSIGNATURES
 
-Snow-surface sublimation rate [m/s SWE] at grid cell `i, j`, area-weighted by the snow-covered fraction
-`f_snow`. The snow surface is treated as saturated: a bulk-aerodynamic vapor flux `Δq/rₐ` evaluated at
-the skin temperature, with `Δq` taken over ice for a sub-freezing surface (the saturation humidity
-already dispatches over ice for `T ≤ 0` — see [`saturation_specific_humidity_vapor`](@ref)). The
-water-vapor mass flux `ρₐ·Δq/rₐ` is converted to a snow-water-equivalent rate via `ρ_w`. Zero without
-snow (`snow === nothing`).
+Snow-surface sublimation rate [m/s SWE] at grid cell `i, j`. The snow surface is treated as saturated:
+a bulk-aerodynamic vapor flux `Δq/rₐ` evaluated at the skin temperature, with `Δq` taken over ice for
+a sub-freezing surface (the saturation humidity already dispatches over ice for `T ≤ 0` — see [`saturation_specific_humidity_vapor`](@ref)).
+The water-vapor mass flux `ρₐ·Δq/rₐ` is converted to a snow-water-equivalent rate via `ρ_w`. Zero without
+snow (i.e. when `snow === nothing`).
 """
 @propagate_inbounds compute_snow_sublimation_flux(i, j, grid, fields, ::Nothing, atmos, constants, skinT) = zero(eltype(grid))
 @propagate_inbounds function compute_snow_sublimation_flux(
@@ -18,7 +17,6 @@ snow (`snow === nothing`).
         constants::PhysicalConstants,
         skinT::AbstractSkinTemperature
     )
-    f = snow_cover_fraction(i, j, grid, fields, snow)
     Tₛ = skin_temperature(i, j, grid, fields, skinT)
     rₐ = aerodynamic_resistance(i, j, grid, fields, atmos)
     Δq = compute_specific_humidity_difference(i, j, grid, fields, atmos, constants, Tₛ) # over ice for Tₛ ≤ 0
@@ -26,7 +24,7 @@ snow (`snow === nothing`).
     ρ_w = constants.material.density_water
     # saturated vapor mass flux converted to a snow-water-equivalent rate, area-weighted by the snow-covered
     # fraction `f` to give the grid-cell-mean sublimation (W_snow and Ū_snow are grid-cell means)
-    E_subl = f * ρ_a * (Δq / rₐ) / ρ_w
+    E_subl = ρ_a * (Δq / rₐ) / ρ_w
     return E_subl
 end
 
