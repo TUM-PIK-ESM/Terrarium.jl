@@ -264,12 +264,12 @@ end
     g_trp = transpiration_conductance(canopy_ET, 100.0, 0.1)
     g_can = canopy_evaporation_conductance(canopy_ET, 0.5, 50.0)
 
-    E_trp_night = humidity_flux(canopy_ET, Δq_night, g_trp)
-    E_can_night = humidity_flux(canopy_ET, Δq_night, g_can)
-    @test E_trp_night < 0
-    @test E_can_night < 0
+    Qh_trp_night = humidity_flux(canopy_ET, Δq_night, g_trp)
+    Qh_can_night = humidity_flux(canopy_ET, Δq_night, g_can)
+    @test Qh_trp_night < 0
+    @test Qh_can_night < 0
 
     # Magnitude matches the corresponding daytime flux
-    @test E_trp_night ≈ -humidity_flux(canopy_ET, -Δq_night, g_trp)
-    @test E_can_night ≈ -humidity_flux(canopy_ET, -Δq_night, g_can)
+    @test Qh_trp_night ≈ -humidity_flux(canopy_ET, -Δq_night, g_trp)
+    @test Qh_can_night ≈ -humidity_flux(canopy_ET, -Δq_night, g_can)
 end
