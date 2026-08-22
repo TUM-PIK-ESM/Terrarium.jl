@@ -146,22 +146,26 @@ end
         snow_water_equivalent = 0.5, snow_temperature = -2.0,
     )
     land = LandModel(grid; soil, snow = SingleLayerSnow(eltype(grid)), vegetation = nothing)
-    it = initialize(land; initializers = inits)
-    Terrarium.closure!(it.state, land)
-    compute_auxiliary!(it.state, land)
-    thermo = land.constants.thermodynamics
-    f = Array(interior(it.state.snow_cover_fraction))
-    E = Array(interior(it.state.evaporation_ground))
-    g = Array(interior(it.state.ground_evaporation_conductance))
-    Ts = Array(interior(it.state.skin_temperature))
-    p = Array(interior(it.state.air_pressure))
-    q_air = Array(interior(it.state.specific_humidity))
+    integrator = initialize(land; initializers = inits)
+    Terrarium.closure!(integrator.state, land)
+    compute_auxiliary!(integrator.state, land)
+    constants = land.constants
+    f = Array(interior(integrator.state.snow_cover_fraction))
+    E = Array(interior(integrator.state.evaporation_ground))
+    g = Array(interior(integrator.state.ground_evaporation_conductance))
+    Ts = Array(interior(integrator.state.skin_temperature))
+    p = Array(interior(integrator.state.air_pressure))
+    q_air = Array(interior(integrator.state.specific_humidity))
+    ρ_air = Terrarium.air_density(1, 1, grid, integrator.state, land.atmosphere)
+    ρ_w = constants.material.density_water
     # unscaled bulk-aerodynamic ground evaporation g·Δq(T_skin); the stored flux is this scaled by (1 − f)
-    Δq = Terrarium.specific_humidity_difference.(Ref(thermo), p, q_air, Ts)
-    @test all(f .> 0.8)                                      # 0.5 m SWE -> f = 0.5/(0.5 + 0.1) ≈ 0.83 (W_ref = 0.1 m)
-    @test all(isapprox.(E, (1 .- f) .* g .* Δq; rtol = 1.0e-6))   # ground evaporation scaled by (1 − f_snow)
-    @test all(isfinite.(interior(it.state.sublimation)))
-    @test all(isfinite.(interior(it.state.latent_heat_flux)))
+    Δq = Terrarium.specific_humidity_difference.(Ref(constants.thermodynamics), p, q_air, Ts)
+    # ratio of air to water density
+    r = ρₐ / ρ_w
+    @test all(f .> 0.8)                                                # 0.5 m SWE -> f = 0.5/(0.5 + 0.1) ≈ 0.83 (W_ref = 0.1 m)
+    @test all(isapprox.(E, (1 .- f) .* g .* Δq .* r; rtol = 1.0e-6))   # ground evaporation scaled by (1 − f_snow)
+    @test all(isfinite.(interior(integrator.state.sublimation)))
+    @test all(isfinite.(interior(integrator.state.latent_heat_flux)))
 end
 
 @testset "LandModel: thin snow over frozen soil stays stable" begin
