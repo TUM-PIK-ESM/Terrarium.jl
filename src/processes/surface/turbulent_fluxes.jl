@@ -189,8 +189,7 @@ snow-covered fraction sublimates from the snowpack (latent heat of sublimation, 
     else
         # Compute humidity flux using the given ET scheme
         evtr = get_evapotranspiration(surface_hydrology)
-        interception = get_canopy_interception(surface_hydrology)
-        compute_surface_humidity_flux(i, j, grid, fields, evtr, interception, constants, atmos)
+        compute_surface_humidity_flux(i, j, grid, fields, evtr, constants, atmos)
     end
 
     # Get atmospheric variables and snow cover fraction

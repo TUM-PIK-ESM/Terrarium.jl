@@ -102,7 +102,6 @@ Compute the kinematic surface humidity flux [m/s] from the current skin temperat
 @propagate_inbounds function compute_surface_humidity_flux(
         i, j, grid, fields,
         evtr::PALADYNCanopyEvapotranspiration,
-        interception::AbstractCanopyInterception,
         constants::PhysicalConstants,
         atmos::AbstractAtmosphere,
         args...
@@ -194,16 +193,15 @@ end
 """
     $TYPEDEF
 
-Compute unscaled `transpiration`, `evaporation_ground`, and `evaporation_canopy` fluxes on `grid`
-for the given scheme `evapotranspiration` and process dependencies.
+Compute unscaled `transpiration`, `evaporation_ground`, and `evaporation_canopy` fluxes on `grid`.
+Following the implementation of PALADYN, `Qh_can` is clamped to be strictly positive (no canopy dew formation).
 """
 @propagate_inbounds function compute_surface_humidity_fluxes(
         i, j, grid, fields,
-        evapotranspiration::PALADYNCanopyEvapotranspiration,
-        interception::AbstractCanopyInterception,
+        evapotranspiration::PALADYNCanopyEvapotranspiration{NF},
         constants::PhysicalConstants,
         atmos::AbstractAtmosphere
-    )
+    ) where {NF}
     # Get inputs
     Ts = fields.skin_temperature[i, j] # skin temperature (top of canopy)
     Tg = fields.ground_temperature[i, j] # ground temperature (top snow/soil layer)
@@ -215,13 +213,10 @@ for the given scheme `evapotranspiration` and process dependencies.
     Δqs = compute_specific_humidity_difference(i, j, grid, fields, atmos, constants, Ts) # humidity difference between canopy and atmosphere
     Δqg = compute_specific_humidity_difference(i, j, grid, fields, atmos, constants, Tg) # humidity difference between ground and canopy
 
-    # Retrieve current canopy water storage
-    W_can = canopy_water(i, j, grid, fields, interception)
-
-    # Compute the
+    # Compute the humidity fluxes for each component
     Qh_gnd = humidity_flux(evapotranspiration, Δqg, g_gnd)
-    Qh_trp = humidity_flux(evapotranspiration, Δqs, g_trp)
-    Qh_can = humidity_flux(evapotranspiration, Δqs, g_can)
+    Qh_trp = max(humidity_flux(evapotranspiration, Δqs, g_trp), zero(NF))
+    Qh_can = max(humidity_flux(evapotranspiration, Δqs, g_can), zero(NF))
     return Qh_gnd, Qh_trp, Qh_can
 end
 

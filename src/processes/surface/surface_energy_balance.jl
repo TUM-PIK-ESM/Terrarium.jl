@@ -148,9 +148,8 @@ end
     if !isnothing(hydrology)
         # Recompute evapotranspiration component fluxes from final skin temperature
         evtr = get_evapotranspiration(hydrology)
-        interception = get_canopy_interception(hydrology)
         out_evtr = auxiliary_fields(fields, evtr)
-        compute_evapotranspiration_fluxes!(out_evtr, i, j, grid, fields, evtr, interception, constants, atmos, snow)
+        compute_evapotranspiration_fluxes!(out_evtr, i, j, grid, fields, evtr, constants, atmos, snow)
     end
     # Recompute fluxes from final skin temperature; `snow` partitions the latent flux (evaporation vs. sublimation)
     compute_surface_energy_fluxes!(out, i, j, grid, fields, seb, constants, atmos, hydrology, snow, args...)
