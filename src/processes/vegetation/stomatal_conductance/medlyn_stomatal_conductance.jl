@@ -58,20 +58,26 @@ Includes minimum conductance and light extinction effects based on LAI, scaled b
         g₁ = stomcond.g₁
         D = stomcond.diffusivity_ratio_water_co2
         k_ext = traits.extinction_coefficient
-        vpd = max(vpd, NF(10.0)) # clip VPD at 10 Pa (0.01 kPa) for numerical stability
+        # We clamp VPD from below at 10 Pa (0.01 kPa) for numerical stability (division by zero risk)
+        vpd = max(vpd, NF(10.0))
+        # We similarly clamp net assimilation from below at zero;
+        # this assumes that the stomata are closed during respiration (An < 0) and ensures that
+        # stomatal conductance remains nonnegative
+        An = max(An, NF(0))
         cₐ = ppm_to_mole_fraction(co2_ppm) # convert CO₂ concentration to mole fraction
-        g₀ = g_min * (1 - exp(-k_ext * LAI)) * β # m/s
+        # Compute minimum conductance g₀ from g_min and LAI
+        g₀ = g_min * (1 - exp(-k_ext * LAI)) * β * (An > NF(0)) # m/s
+        # Collect constants for An conversion factor
         M_C = constants.material.atomic_weight_carbon # atomic weight of carbon in gC/mol
-        # Convert An from gC/m²/s → mol C/m²/s, then to m/s via ideal gas law (PALADYN conversion factor)
-        T_K = celsius_to_kelvin(constants.thermodynamics, T_air)
-        # Compute universal gas constant in J/(mol·K) from that of dry air
         M_air = constants.material.molecular_weight_dry_air / NF(1.0e3)
-        R = constants.thermodynamics.gas_constant_dry_air * M_air
+        R = constants.thermodynamics.gas_constant_dry_air * M_air # Universal gas constant in J/(mol·K)
+        T_K = celsius_to_kelvin(constants.thermodynamics, T_air)
         # Compute ideal gas conversion factor in m³/mol
         F = R * T_K / pres
-        # Dimensionless scaling coefficient
+        # Dimensionless scaling coefficient (from Medlyn model)
         b = D * (1 + g₁ / sqrt(vpd))
         # Stomatal conductance [m/s] as g₀ [m/s] + b * An / cₐ [gC/m²/s] / M_C [gC/mol] × F [m³/mol]
+        # An is converted from gC/m²/s → mol C/m²/s, then to m/s via ideal gas law
         g_stm = g₀ + b * An / cₐ / M_C * F
         return g_stm
     end
