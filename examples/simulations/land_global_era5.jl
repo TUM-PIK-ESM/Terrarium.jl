@@ -16,10 +16,7 @@
 # !!! warning "Illustrative configuration"
 #     This is a demonstration of the coupled-model setup, not a validated land-surface product. The
 #     ERA5-Land accumulated fluxes (radiation and precipitation) are de-accumulated to hourly rates
-#     as described below; the only approximation is that the small amount of flux falling exactly on
-#     the nightly accumulation reset is discarded. The script is intended to be run directly and is
-#     *not* executed during the documentation build, as it downloads several gigabytes of forcing
-#     data and integrates the full global grid.
+#     as described below.
 
 using Terrarium
 
@@ -204,7 +201,8 @@ fig = plot_surface(integrator.state.leaf_area_index, title = "Leaf area index (J
 DisplayAs.PNG(fig) #hide
 
 # ## Running the simulation
-# Set up a `Simulation` and configure a time stepping wizard (necessary for stability):
+# Now we are ready to set up a `Simulation`. Since this simulation relies on lazily loading forcing data,
+# it will be quite slow (for now, stay tuned!), so we'll keep it short at just 24 hours.
 simulation = Simulation(integrator, Δt = 300.0, stop_time = 24 * 3600.0)
 conjure_time_step_wizard!(simulation, show_progress = true)
 simulation.output_writers[:snapshots] = JLD2Writer(
@@ -215,7 +213,12 @@ simulation.output_writers[:snapshots] = JLD2Writer(
         snow_water_equivalent = integrator.state.snow_water_equivalent,
         snow_temperature = integrator.state.snow_temperature,
         latent_heat_flux = integrator.state.latent_heat_flux,
+        canopy_water = integrator.state.canopy_water,
         canopy_water_conductance = integrator.state.canopy_water_conductance,
+        saturation_canopy_water = integrator.state.saturation_canopy_water,
+        evaporation_ground = integrator.state.evaporation_ground,
+        evaporation_canopy = integrator.state.evaporation_canopy,
+        transpiration = integrator.state.transpiration,
     );
     filename = "outputs/land_model_era5_output.jld2",
     overwrite_existing = true,
