@@ -66,7 +66,7 @@ Includes minimum conductance and light extinction effects based on LAI, scaled b
         An = max(An, NF(0))
         cₐ = ppm_to_mole_fraction(co2_ppm) # convert CO₂ concentration to mole fraction
         # Compute minimum conductance g₀ from g_min and LAI
-        g₀ = g_min * (1 - exp(-k_ext * LAI)) * β * (An > NF(0)) # m/s
+        g₀ = g_min * (1 - exp(-k_ext * LAI)) * β # m/s
         # Collect constants for An conversion factor
         M_C = constants.material.atomic_weight_carbon # atomic weight of carbon in gC/mol
         M_air = constants.material.molecular_weight_dry_air / NF(1.0e3)

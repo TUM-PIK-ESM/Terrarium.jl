@@ -160,6 +160,7 @@ end
     pres = 101325.0  # Pa
     co2 = 415.0      # ppm
     LAI = 3.0        # m²/m²
+    An = 0.0         # net assimilation
     β = 1.0
     # g_min = 0.5 mm/s → 0.5e-3 m/s; with LAI = 3 the extinction term is (1 - exp(-k*LAI))
     g_zero_A = compute_stomatal_conductance(stomcond, traits, constants, vpd, T_air, pres, co2, 0.0, LAI, β)
@@ -167,7 +168,7 @@ end
     @test isfinite(g_zero_A) && g_zero_A > 0
     # It should scale with g_min
     stomcond_high_gmin = MedlynStomatalConductance(g_min = 2.0)
-    g_high_gmin = compute_stomatal_conductance(stomcond_high_gmin, traits, constants, vpd, T_air, pres, co2, 0.0, LAI, β)
+    g_high_gmin = compute_stomatal_conductance(stomcond_high_gmin, traits, constants, vpd, T_air, pres, co2, An, LAI, β)
     @test g_high_gmin > g_zero_A
 end
 
