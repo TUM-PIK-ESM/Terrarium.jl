@@ -146,8 +146,7 @@ end
     # Solve for skin temperature; `snow` (after `seb`) makes the conduction target and latent flux snow-aware
     solve_skin_temperature!(out, i, j, grid, fields, seb.skin_temperature, seb, constants, atmos, hydrology, snow, args...)
     if !isnothing(hydrology)
-        # Recompute evapotranspiration component fluxes from final skin temperature; `snow` scales the
-        # ground evaporation by the snow-free fraction (1 − f_snow)
+        # Recompute evapotranspiration component fluxes from final skin temperature
         evtr = get_evapotranspiration(hydrology)
         interception = get_canopy_interception(hydrology)
         out_evtr = auxiliary_fields(fields, evtr)

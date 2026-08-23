@@ -149,11 +149,11 @@ Compute the sensible heat flux at `i, j` based on the current skin temperature a
     rₐ = aerodynamic_resistance(i, j, grid, fields, atmos) # aerodynamic resistance
     Tₛ = skin_temperature(i, j, grid, fields, skinT) # skin temperature
     Tₐ = air_temperature(i, j, grid, fields, atmos) # air temperature
-    pres = air_pressure(i, j, grid, fields, atmos)
-    q_air = specific_humidity(i, j, grid, fields, atmos)
-    cₐ = specific_heat_capacity_moist_air(constants.thermodynamics, q_air) # specific heat capacity of moist air
+    pₐ = air_pressure(i, j, grid, fields, atmos)
+    qₐ = specific_humidity(i, j, grid, fields, atmos)
+    cₐ = specific_heat_capacity_moist_air(constants.thermodynamics, qₐ) # specific heat capacity of moist air
     # TODO: density should be evaluated at surface temperature for better accuracy
-    ρₐ = Thermodynamics.air_density(constants.thermodynamics, celsius_to_kelvin(constants.thermodynamics, Tₐ), pres, q_air)
+    ρₐ = Thermodynamics.air_density(constants.thermodynamics, celsius_to_kelvin(constants.thermodynamics, Tₐ), pₐ, qₐ)
     Q_T = (Tₛ - Tₐ) / rₐ  # bulk aerodynamic temperature-gradient
     # Calculate sensible heat flux (positive upwards)
     Hₛ = compute_sensible_heat_flux(tur, Q_T, ρₐ, cₐ)
@@ -173,13 +173,13 @@ snow-covered fraction sublimates from the snowpack (latent heat of sublimation, 
 """
 @inline function compute_latent_heat_flux(
         i, j, grid, fields,
-        tur::DiagnosedTurbulentFluxes,
+        tur::DiagnosedTurbulentFluxes{NF},
         skinT::AbstractSkinTemperature,
         constants::PhysicalConstants,
         atmos::AbstractAtmosphere,
         surface_hydrology::Optional{AbstractSurfaceHydrology} = nothing,
         snow::Optional{AbstractSnow} = nothing,
-    )
+    ) where {NF}
     Q_h = if isnothing(surface_hydrology)
         # Direct calculation of evaporative flux without ET coupling
         Tₛ = skin_temperature(i, j, grid, fields, skinT)
@@ -193,24 +193,21 @@ snow-covered fraction sublimates from the snowpack (latent heat of sublimation, 
         compute_surface_humidity_flux(i, j, grid, fields, evtr, interception, constants, atmos)
     end
 
-    # Get atmospheric variables and constants
-    Tₐ = air_temperature(i, j, grid, fields, atmos)
-    pres = air_pressure(i, j, grid, fields, atmos)
-    q_air = specific_humidity(i, j, grid, fields, atmos)
+    # Get atmospheric variables and snow cover fraction
     # TODO: density should be evaluated at surface temperature for better accuracy
-    ρₐ = Thermodynamics.air_density(constants.thermodynamics, celsius_to_kelvin(constants.thermodynamics, Tₐ), pres, q_air)
+    ρₐ = air_density(i, j, grid, fields, atmos, constants)
+    f = snow_cover_fraction(i, j, grid, fields, snow)
+    # Retrieve constants
     L_lv = constants.thermodynamics.latent_heat_vaporization
     L_sg = constants.thermodynamics.latent_heat_sublimation
     ρ_w = constants.material.density_water
-
-    # Partition by snow-covered fraction: ground/canopy evaporation over (1 − f_snow), snow sublimation over
-    # f_snow. `E_subl` is already area-weighted by f_snow (see `compute_snow_sublimation_flux`), so the snow
-    # term is not scaled again here.
-    f = snow_cover_fraction(i, j, grid, fields, snow)  # zero without snow
-    E_subl = compute_snow_sublimation_flux(i, j, grid, fields, snow, atmos, constants, skinT)
+    # Compute latent heat flux for bare ground and snow sublimation flux
     Hₗ_ground = compute_latent_heat_flux(tur, Q_h, ρₐ, L_lv)
+    E_subl = compute_snow_sublimation_flux(i, j, grid, fields, snow, atmos, constants, skinT)
     Hₗ_snow = ρ_w * L_sg * E_subl
-    return (one(f) - f) * Hₗ_ground + Hₗ_snow
+    # Compute area-weighted total latent heat flux (bare ground + snow sublimation)
+    Hₗ = (NF(1) - f) * Hₗ_ground + f * Hₗ_snow
+    return Hₗ
 end
 
 # Kernels

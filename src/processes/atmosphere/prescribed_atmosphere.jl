@@ -147,6 +147,19 @@ Return the current prescribed ambient CO2 concentration level.
 @propagate_inbounds ambient_co2(i, j, grid, fields, ::PrescribedAtmosphere) = fields.CO2[i, j, 1]
 
 """
+    air_density(i, j, grid, fields, atmos::AbstractAtmosphere, constants::PhysicalConstants)
+
+Compute density (kg m⁻³) of a parcel of air under current atmospheric conditions.
+"""
+@propagate_inbounds function air_density(i, j, grid, fields, atmos::AbstractAtmosphere, constants::PhysicalConstants)
+    Tₐ = air_temperature(i, j, grid, fields, atmos)
+    pₐ = air_pressure(i, j, grid, fields, atmos)
+    qₐ = specific_humidity(i, j, grid, fields, atmos)
+    ρₐ = Thermodynamics.air_density(constants.thermodynamics, celsius_to_kelvin(constants.thermodynamics, Tₐ), pₐ, qₐ)
+    return ρₐ
+end
+
+"""
     $TYPEDEF
 
 Represents a windspeed as direct input/forcing variable.

@@ -18,26 +18,26 @@ end
     $TYPEDSIGNATURES
 
 Compute an evapotranspiration flux (m/s, positive upwards) as the product of a vapor
-conductance `g` (m/s) and a specific humidity difference `Δq` (kg/kg). The resulting
-flux is optionally limited by the given `E_max` which otherwise defaults to `Inf`.
+conductance `g` (m/s) and a specific humidity difference `Δq` (kg/kg).
 """
-@inline function compute_evaporation_flux(::AbstractEvapotranspiration, Δq, g, E_max = oftype(Δq, Inf))
-    E = Δq * g
-    return min(E, E_max)
-end
+@inline humidity_flux(::AbstractEvapotranspiration, Δq, g) = Δq * g
 
 # Forcing interface for soil hydrology
 
 """
-    forcing(i, j, k, grid, clock, fields, evapotranspiration::AbstractEvapotranspiration, ::AbstractSoilHydrology)
+    $TYPEDSIGNATURES
 
 Compute and return the evapotranspiration forcing for soil moisture at the given indices `i, j, k`.
-The ET forcing is just the `surface_humidity_flux` rescaled by the thickness of layer `k`.
+The ET forcing is just the `ground_evapotranspiration_flux` rescaled by the thickness of layer `k`.
 """
-@inline function forcing(i, j, k, grid, clock, fields, evapotranspiration::AbstractEvapotranspiration, ::AbstractSoilHydrology)
+@inline function forcing(i, j, k, grid, clock, fields, evapotranspiration::AbstractEvapotranspiration, ::AbstractSoilHydrology, args...)
     let Δz = Δzᵃᵃᶜ(i, j, k, grid)
-        Qh = surface_humidity_flux(i, j, grid, fields, evapotranspiration)
-        ∂θ∂t = -Qh / Δz # rescale by layer thickness to get water content flux
+        E = ground_evapotranspiration_flux(i, j, grid, fields, evapotranspiration) # liquid water flux [m³m⁻²s⁻¹]
+        # Rescale by layer thickness and ratio of air to water density to get water content flux
+        ∂θ∂t = -E / Δz
         return ∂θ∂t * (k == grid.Nz)
     end
 end
+
+# Fallback soil hydrology forcing for ET = nothing
+forcing(i, j, k, grid, clock, fields, ::Nothing, ::AbstractSoilHydrology, args...) = zero(eltype(grid))

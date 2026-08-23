@@ -109,11 +109,11 @@ is thus not the same as the saturation tendency.
     field_grid = get_field_grid(grid)
 
     # Compute divergence of water fluxes
-    # ∂θ∂t = ∇⋅K(θ)∇Ψ + forcing, where Ψ = ψₘ + ψₕ + ψz, and "forcing" represents sources and sinks such as ET losses
+    # ∂θ∂t = ∇⋅K(θ)∇Ψ + S, where Ψ = ψₘ + ψₕ + ψz, and S represents all sources and sinks such as ET losses
     ∂θ∂t = (
-        - ∂zᵃᵃᶜ(i, j, k, field_grid, darcy_flux, fields.pressure_head, fields.hydraulic_conductivity)
-            + forcing(i, j, k, grid, clock, fields, evapotranspiration, hydrology, constants) # ET forcing
-            + forcing(i, j, k, grid, clock, fields, hydrology.vwc_forcing, hydrology) # generic user-defined forcing
+        - ∂zᵃᵃᶜ(i, j, k, field_grid, darcy_flux, fields.pressure_head, fields.hydraulic_conductivity)  # Darcy flux
+            + forcing(i, j, k, grid, clock, fields, evapotranspiration, hydrology, constants)          # ET source/sink
+            + forcing(i, j, k, grid, clock, fields, hydrology.vwc_forcing, hydrology)                  # generic user-defined forcing
     )
     return ∂θ∂t
 end

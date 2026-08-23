@@ -79,6 +79,7 @@ variables(hydrology::SoilHydrology{NF}) where {NF} = (
     auxiliary(:saturation_water_ice, XYZ(), bounds = UnitInterval, desc = "Saturation level of water and ice in the pore space"),
     auxiliary(:water_table, XY(), units = u"m", desc = "Elevation of the water table in meters"),
     auxiliary(:hydraulic_conductivity, XYZ(z = Face()), units = u"m/s", desc = "Hydraulic conductivity of soil volumes in m/s"),
+    input(:evaporation_soil_water, XY(), units = u"m/s", desc = "Evapotranspiration contribution to soil moisture flux"),
     input(:liquid_water_fraction, XYZ(), default = 1, bounds = UnitInterval, desc = "Fraction of unfrozen water in the pore space"),
 )
 
