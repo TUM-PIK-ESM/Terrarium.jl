@@ -213,10 +213,11 @@ Following the implementation of PALADYN, `Qh_can` is clamped to be strictly posi
     Δqs = compute_specific_humidity_difference(i, j, grid, fields, atmos, constants, Ts) # humidity difference between canopy and atmosphere
     Δqg = compute_specific_humidity_difference(i, j, grid, fields, atmos, constants, Tg) # humidity difference between ground and canopy
 
-    # Compute the humidity fluxes for each component
+    # Compute the humidity fluxes for each component; negative values result in deposition
     Qh_gnd = humidity_flux(evapotranspiration, Δqg, g_gnd)
+    Qh_can = humidity_flux(evapotranspiration, Δqs, g_can)
+    # We clamp transpiration to be nonnegative since presently foliar/stomatal uptake is not represented
     Qh_trp = max(humidity_flux(evapotranspiration, Δqs, g_trp), zero(NF))
-    Qh_can = max(humidity_flux(evapotranspiration, Δqs, g_can), zero(NF))
     return Qh_gnd, Qh_trp, Qh_can
 end
 
