@@ -284,7 +284,7 @@ function initialize(
     return integrator
 end
 
-get_steps(steps::Nothing, period::Period, Δt::Real) = div(Second(period).value, Δt)
+get_steps(steps::Nothing, period::Period, Δt::Real) = div(convert_dt(Second, period).value, Δt)
 get_steps(steps::Int, period::Nothing, Δt::Real) = steps
 get_steps(steps::Nothing, period::Nothing, Δt::Real) = throw(ArgumentError("either `steps` or `period` must be specified"))
 get_steps(steps::Int, period::Period, Δt::Real) = throw(ArgumentError("both `steps` and `period` cannot be specified"))
