@@ -201,7 +201,7 @@ for the given scheme `evapotranspiration` and process dependencies.
     Δqs = compute_specific_humidity_difference(i, j, grid, fields, atmos, constants, Ts) # humidity difference between canopy and atmosphere
     Δqg = compute_specific_humidity_difference(i, j, grid, fields, atmos, constants, Tg) # humidity difference between ground and canopy
 
-    # Compute the
+    # Compute the surface kinematic humidity fluxes
     Qh_gnd = humidity_flux(evapotranspiration, Δqg, g_gnd)
     Qh_trp = humidity_flux(evapotranspiration, Δqs, g_trp)
     Qh_can = humidity_flux(evapotranspiration, Δqs, g_can)
