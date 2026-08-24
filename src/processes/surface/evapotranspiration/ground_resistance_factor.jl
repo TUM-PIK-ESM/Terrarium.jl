@@ -59,7 +59,7 @@ end
 
 @inline function ground_evaporation_resistance_factor(::SoilMoistureResistanceFactor{NF}, θw, θfc, θres) where {NF}
     if θw < θfc
-        fc_sat = ifelse(θfc > θres, (θw - θres) / (θfc - θres), zero(NF)) # guard against corner case where θfc == θres
+        fc_sat = ifelse(θfc > θres, (θw - θres) / (θfc - θres), zero(NF)) # guard against edge case where θfc == θres
         β = (1 - cos(π * fc_sat))^2 / 4
     else
         β = NF(1)

@@ -81,7 +81,7 @@ end
 function PrescribedAtmosphere(
         ::Type{NF};
         altitude::NF = NF(10), # Default to 10 m
-        min_windspeed::NF = NF(0.01), # Default to 0.1 m/s
+        min_windspeed::NF = NF(0.01), # Default to 0.01 m/s
         precip::AbstractPrecipitation = RainSnow(),
         radiation::AbstractIncomingRadiation = LongShortWaveRadiation(),
         humidity::AbstractHumidity = SpecificHumidity(),
