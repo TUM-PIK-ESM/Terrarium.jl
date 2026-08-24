@@ -5,22 +5,19 @@ using Test
 
 
 @testset "Equivalence test with Clima" begin
-    FT = Float64
+    NF = Float64
     air_temperature = 10.0 # 10 °C
     air_density = 1.225 # kg/m³
     air_pressure = 101_325 # Pa
     air_temperature_K = air_temperature + 273.15 # Convert to Kelvin
     # Clima
-    params_clima = Thermodynamics.Parameters.ThermodynamicsParameters(FT)
-    e_sat_clima = Thermodynamics.saturation_vapor_pressure(params_clima, air_temperature_K)
-    q_sat_clima = Thermodynamics.q_vap_saturation(params_clima, air_temperature_K, air_density)
+    params_clima = Thermodynamics.Parameters.ThermodynamicsParameters(NF)
     # Terrarium
-    thermodyn_constants = Terrarium.ThermodynamicConstants(FT)
-    e_sat_terrarium = Terrarium.saturation_vapor_pressure(thermodyn_constants, air_temperature)
-    q_sat_terrarium = Terrarium.saturation_specific_humidity_vapor(thermodyn_constants, air_temperature, air_density)
+    thermodyn_constants = Terrarium.ThermodynamicConstants(NF)
     # Test all constants are identical
-    @test Thermodynamics.Parameters.R_d(params_clima) ≈ Thermodynamics.Parameters.R_d(thermodyn_constants)
-    @test Thermodynamics.Parameters.R_v(params_clima) ≈ Thermodynamics.Parameters.R_v(thermodyn_constants)
+    # Note that for R_d and R_v we use constants with slightly higher precision than ClimaParams
+    @test Thermodynamics.Parameters.R_d(params_clima) ≈ round(Thermodynamics.Parameters.R_d(thermodyn_constants), digits = 0)
+    @test Thermodynamics.Parameters.R_v(params_clima) ≈ round(Thermodynamics.Parameters.R_v(thermodyn_constants), digits = 1)
     @test Thermodynamics.Parameters.cp_d(params_clima) ≈ Thermodynamics.Parameters.cp_d(thermodyn_constants)
     @test Thermodynamics.Parameters.cp_i(params_clima) ≈ Thermodynamics.Parameters.cp_i(thermodyn_constants)
     @test Thermodynamics.Parameters.cp_l(params_clima) ≈ Thermodynamics.Parameters.cp_l(thermodyn_constants)
@@ -35,7 +32,13 @@ using Test
     @test Thermodynamics.Parameters.LH_s0(thermodyn_constants) ≈ Thermodynamics.Parameters.LH_f0(thermodyn_constants) + Thermodynamics.Parameters.LH_v0(thermodyn_constants)
     # Check that the difference with Clima params is negligible (<1 kJ)
     @test abs(Thermodynamics.Parameters.LH_s0(params_clima) - Thermodynamics.Parameters.LH_s0(thermodyn_constants)) < 1.0e3
-    # Compare
+    # Test saturation vapor pressure functions
+    # For these, we explicitly set the Terrarium value for R_v to the same numeric precision as Clima to check that the resulting values match
+    R_v = round(thermodyn_constants.gas_constant_water_vapor, digits = 1)
+    e_sat_terrarium = Terrarium.saturation_vapor_pressure(Terrarium.ThermodynamicConstants(NF, gas_constant_water_vapor = R_v), air_temperature)
+    q_sat_terrarium = Terrarium.saturation_specific_humidity_vapor(Terrarium.ThermodynamicConstants(NF, gas_constant_water_vapor = R_v), air_temperature, air_density)
+    e_sat_clima = Thermodynamics.saturation_vapor_pressure(params_clima, air_temperature_K)
+    q_sat_clima = Thermodynamics.q_vap_saturation(params_clima, air_temperature_K, air_density)
     @test e_sat_clima ≈ e_sat_terrarium
     @test q_sat_clima ≈ q_sat_terrarium
 end

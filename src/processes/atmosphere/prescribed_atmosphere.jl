@@ -118,8 +118,8 @@ variables(atmos::PrescribedAtmosphere{NF}) where {NF} = (
 Compute the aerodynamic resistance (inverse conductance) at grid cell `i, j`.
 """
 @inline function aerodynamic_resistance(i, j, grid, fields, atmos::PrescribedAtmosphere{NF}) where {NF}
-    let C = drag_coefficient(i, j, grid, fields, atmos.aerodynamics),
-            Vₐ = max(windspeed(i, j, grid, fields, atmos), NF(1.0e-6))  # clip windspeed to small value
+    let C = drag_coefficient(i, j, grid, fields, atmos.aerodynamics)
+        Vₐ = windspeed(i, j, grid, fields, atmos)
         rₐ = 1 / (C * Vₐ)
         return rₐ
     end
@@ -145,6 +145,19 @@ Retrieve or compute the air pressure at the current time step.
 Return the current prescribed ambient CO2 concentration level.
 """
 @propagate_inbounds ambient_co2(i, j, grid, fields, ::PrescribedAtmosphere) = fields.CO2[i, j, 1]
+
+"""
+    air_density(i, j, grid, fields, atmos::AbstractAtmosphere, constants::PhysicalConstants)
+
+Compute density (kg m⁻³) of a parcel of air under current atmospheric conditions.
+"""
+@propagate_inbounds function air_density(i, j, grid, fields, atmos::AbstractAtmosphere, constants::PhysicalConstants)
+    Tₐ = air_temperature(i, j, grid, fields, atmos)
+    pₐ = air_pressure(i, j, grid, fields, atmos)
+    qₐ = specific_humidity(i, j, grid, fields, atmos)
+    ρₐ = Thermodynamics.air_density(constants.thermodynamics, celsius_to_kelvin(constants.thermodynamics, Tₐ), pₐ, qₐ)
+    return ρₐ
+end
 
 """
     $TYPEDEF

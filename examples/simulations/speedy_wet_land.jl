@@ -5,10 +5,12 @@ using Dates
 using NumericalEarth
 using NumericalEarth.DataWrangling
 using NumericalEarth.DataWrangling.SoilGrids
+using Oceananigans.Units: day
 using Rasters, NCDatasets
 using Statistics
 
 using CairoMakie, GeoMakie
+using ProgressMeter
 
 import RingGrids
 import SpeedyWeather as Speedy
@@ -65,26 +67,49 @@ function Terrarium.InputSources(dataset::SoilGrids2, grid::ColumnRingGrid, horiz
     return InputSources(name, soilgrids_inputs...)
 end
 
+lai_asset = ERA5LandLeafAreaIndex(Terrarium.N72)
+lai_highveg = Terrarium.load_asset(lai_asset, "lai_hv"; NF = Float32, fill_value = 0.0f0)
+lai_highveg_fields = []
+@showprogress for t in dims(lai_highveg, :dayofyear)
+    LAI_t = lai_highveg[dayofyear = At(t)]
+    data = reshape(Array(LAI_t), :, 1)
+    src_field = RingGrids.Field(data, Terrarium.native_grid(lai_asset))
+    dst_field = RingGrids.interpolate(ring_grid, on_architecture(arch, src_field))
+    push!(lai_highveg_fields, dst_field)
+end
+
 # Build the Terrarium land model on the matching ring grid with appropriate land-sea mask
 Nz = 30
-Δz_min = 0.05
 land_sea_mask = Speedy.EarthLandSeaMask(spectral_grid)
 Speedy.load_mask!(land_sea_mask)
 Makie.heatmap(on_architecture(CPU(), land_sea_mask.land_fraction))
-land_grid = ColumnRingGrid(arch, Float32, ExponentialSpacing(; N = Nz, Δz_min), land_sea_mask.land_fraction .> 0)
+land_grid = ColumnRingGrid(arch, Float32, ExponentialSpacing(; N = Nz), land_sea_mask.land_fraction .> 0)
 porosity = SoilPorositySURFEX(eltype(land_grid))
 strat = SoilGridsStratigraphy(eltype(land_grid); porosity)
 soil = SoilEnergyWaterCarbon(eltype(land_grid); strat)
-surface_energy_balance = SurfaceEnergyBalance(eltype(land_grid), albedo = DiagnosticAlbedo(eltype(land_grid)))
-terrarium_model = Terrarium.LandModel(land_grid; vegetation = nothing, soil, surface_energy_balance)
+vegetation = PrescribedVegetation(eltype(land_grid))
+surface_energy_balance = SurfaceEnergyBalance(eltype(land_grid); albedo = DiagnosticAlbedo(eltype(land_grid)))
+terrarium_model = Terrarium.LandModel(land_grid; vegetation, soil, surface_energy_balance)
+
+# Prepare the input sources: first the SoilGrids data, then the LAI data for prescribed vegetation.
+initial_date = DateTime(2024)
+soilgrids_inputs = InputSources(SoilGrids2(), land_grid)
+lai_highveg_fts = FieldTimeSeries(cat(lai_highveg_fields..., dims = 2), land_grid, 0.0:1day:365day)
+lai_inputs = InputSource(lai_highveg_fts, name = :leaf_area_index, reftime = Speedy.DEFAULT_DATE)
+inputs = InputSources(lai_inputs, soilgrids_inputs.sources...) # combine input sources
+
+# Here we set our initial conditions for the soil
+initializers = (
+    temperature = initial_soil_temperature(land_grid),
+    saturation_water_ice = 1.0, # fully saturated soil everywhere
+)
 
 # Wrap the Terrarium model as a SpeedyWeather land component
-soilgrids_inputs = InputSources(SoilGrids2(), land_grid)
 land = Speedy.LandModel(
     spectral_grid,
     terrarium_model;
-    inputs = soilgrids_inputs,
-    initializers = (temperature = initial_soil_temperature(land_grid),),
+    inputs,
+    initializers,
     Δt = Minute(5)
 )
 
@@ -113,29 +138,39 @@ Speedy.add!(primitive_wet_coupled.output, Speedy.AlbedoOutput())
 
 # Initialize the coupled simulation
 @info "Initializing coupled simulation"
-sim_coupled = @time Speedy.initialize!(primitive_wet_coupled)
+sim_coupled = @time Speedy.initialize!(primitive_wet_coupled; time = initial_date)
 
 # The Terrarium state lives inside SpeedyWeather's Variables tree.
-# Let's quickly check that the soil variables were correctly initialized.
 land_state = sim_coupled.variables.prognostic.land.terrarium
+Terrarium.checkfinite!(land_state.prognostic)
+
+# Let's quickly check that the soil temperature was correctly initialized.
 plot_land_field(land_state.temperature, Nz - 1)
 
 # Now the sand fraction in the topmost horizon:
 plot_land_field(land_state.horizon1.sand_fraction)
 
+# and the Leaf Area Index:
+plot_land_field(land_state.leaf_area_index)
+
 # Looks good! Let's run it!
-period = Year(1)
+period = Month(3)
 @info "Running simulation for $period"
-@time Speedy.run!(sim_coupled, period = period, output = true)
-Terrarium.checkfinite!(land_state.prognostic) # make sure we didn't run into any instabilities
+@time Speedy.run!(sim_coupled; period, output = true)
 
 # Land variables (use the SpeedyWeather-owned Terrarium state)
 Tsoil_fig = plot_land_field(land_state.temperature, Nz - 1, title = "Soil temperature (10 cm depth)", size = (800, 400))
+liq_fig = plot_land_field(land_state.liquid_water_fraction, Nz, title = "Soil surface liquid water fraction")
 Tsurf_fig = plot_land_field(land_state.skin_temperature, title = "Skin temperature", size = (800, 400))
 sat_fig = plot_land_field(land_state.saturation_water_ice, title = "Soil saturation water + ice", size = (800, 400))
 Hs_fig = plot_land_field(land_state.sensible_heat_flux, title = "Sensible heat flux", size = (800, 400))
 Hl_fig = plot_land_field(land_state.latent_heat_flux, title = "Latent heat flux", size = (800, 400))
 E_fig = plot_land_field(land_state.evaporation_ground, title = "Evaporation (bare ground)", size = (800, 400))
+E_sub = plot_land_field(land_state.sublimation, title = "Sublimation (bare ground)", size = (800, 400))
+E_can_fig = plot_land_field(land_state.evaporation_canopy, title = "Evaporation (bare ground)", size = (800, 400))
+Tr_fig = plot_land_field(land_state.transpiration, title = "Transpiration", size = (800, 400))
+An_fig = plot_land_field(land_state.net_assimilation, title = "Net assimilation", size = (800, 400))
+g_stm_fig = plot_land_field(land_state.canopy_water_conductance, title = "Canopy water conductance", size = (800, 400))
 swe_fig = plot_land_field(land_state.snow_water_equivalent, title = "Snow water equivalent", colorrange = (0, 0.2), size = (800, 400))
 scf_fig = plot_land_field(land_state.snow_cover_fraction, title = "Snow cover fraction", size = (800, 400))
 snowT_fig = plot_land_field(land_state.snow_temperature, title = "Snow temperature", size = (800, 400))
@@ -143,6 +178,7 @@ snowT_fig = plot_land_field(land_state.snow_temperature, title = "Snow temperatu
 # Atmosphere variables
 Tair_fig = plot_speedy_field(sim_coupled.variables.parameterizations.surface_air_temperature .- 273.15, title = "Air temperature", size = (800, 400))
 prcp_fig = plot_speedy_field(sim_coupled.variables.parameterizations.rain_rate, title = "Rainfall", size = (800, 400))
+humid_fig = plot_speedy_field(sim_coupled.variables.grid.humidity, title = "Humidity", size = (800, 400))
 snow_fig = plot_speedy_field(sim_coupled.variables.parameterizations.snow_rate, title = "Snowfall", size = (800, 400))
 snow_ls_fig = plot_speedy_field(sim_coupled.variables.parameterizations.snow_large_scale, title = "Snowfall", size = (800, 400))
 pres_fig = plot_speedy_field(exp.(sim_coupled.variables.grid.pressure), title = "Surface pressure", size = (800, 400))
@@ -159,10 +195,10 @@ Makie.scatterlines(sat, zs)
 Makie.scatterlines(f, zs)
 
 # Make some animations!
-sim_copuled_cpu = on_architecture(CPU(), sim_coupled)
-Speedy.animate(sim_copuled_cpu, output_file = "plots/speedy_terrarium_sd_animation.mp4", variable = "sd", framerate = 20, colorrange = (0, 0.05), transient_timesteps = 1)
-Speedy.animate(sim_copuled_cpu, output_file = "plots/speedy_terrarium_tsoil_animation.mp4", variable = "st", framerate = 20, layer = 1, transient_timesteps = 1)
-Speedy.animate(sim_copuled_cpu, output_file = "plots/speedy_terrarium_tair_animation.mp4", variable = "temp", framerate = 20, layer = spectral_grid.nlayers, transient_timesteps = 1)
-Speedy.animate(sim_copuled_cpu, output_file = "plots/speedy_terrarium_shf_animation.mp4", variable = "shf", framerate = 20, transient_timesteps = 1)
-Speedy.animate(sim_copuled_cpu, output_file = "plots/speedy_terrarium_shuf_animation.mp4", variable = "shuf", framerate = 20, transient_timesteps = 1)
-Speedy.animate(sim_copuled_cpu, output_file = "plots/speedy_terrarium_snow_cond_animation.mp4", variable = "snow_cond", framerate = 20, transient_timesteps = 1)
+sim_coupled_cpu = on_architecture(CPU(), sim_coupled)
+Speedy.animate(sim_coupled_cpu, output_file = "plots/speedy_terrarium_sd_animation.mp4", variable = "sd", framerate = 20, transient_timesteps = 1)
+Speedy.animate(sim_coupled_cpu, output_file = "plots/speedy_terrarium_tsoil_animation.mp4", variable = "st", framerate = 20, layer = 1, transient_timesteps = 1)
+Speedy.animate(sim_coupled_cpu, output_file = "plots/speedy_terrarium_tair_animation.mp4", variable = "temp", framerate = 20, layer = spectral_grid.nlayers, transient_timesteps = 1)
+Speedy.animate(sim_coupled_cpu, output_file = "plots/speedy_terrarium_shf_animation.mp4", variable = "shf", framerate = 20, transient_timesteps = 1)
+Speedy.animate(sim_coupled_cpu, output_file = "plots/speedy_terrarium_shuf_animation.mp4", variable = "shuf", framerate = 20, transient_timesteps = 1)
+Speedy.animate(sim_coupled_cpu, output_file = "plots/speedy_terrarium_snow_cond_animation.mp4", variable = "snow_cond", framerate = 20, transient_timesteps = 1)

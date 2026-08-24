@@ -127,12 +127,12 @@ function Oceananigans.Field(ring_field::RingGrids.AbstractField, grid::ColumnRin
         # 2D field (horizontal only): treat the data as a single-column matrix so one masked gather
         # (`data[mask, :]`) serves both the 1D and 2D cases. There's a related Reactant bug that makes this necessary: https://github.com/EnzymeAD/Reactant.jl/issues/3087
         dims = XY()
-        data = reshape(ring_field.data, :, 1)
+        data = reshape(on_architecture(architecture(grid), ring_field.data), :, 1)
     elseif ndims(ring_field) == 2
         # 3D field (horizontal + vertical or other dimensions)
         @assert size(grid.grid, 3) == size(ring_field, 2) "Vertical dimension mismatch: grid has $(size(grid.grid, 3)) layers, but field has $(size(ring_field, 2)) layers"
         dims = XYZ()
-        data = ring_field.data
+        data = on_architecture(architecture(grid), ring_field.data)
     else
         error("Unsupported number of dimensions for RingGrids.Field: $(ndims(ring_field))")
     end
@@ -141,24 +141,24 @@ function Oceananigans.Field(ring_field::RingGrids.AbstractField, grid::ColumnRin
     gathered = data[mask, :]
     values = reshape(gathered, size(gathered, 1), 1, size(gathered, 2))
     oceananigans_field = Field(grid, dims)
-    fill!(oceananigans_field, default_value)
     set!(oceananigans_field, values)
     return oceananigans_field
 end
 
 function Oceananigans.FieldTimeSeries(ring_field::RingGrids.AbstractField, grid::ColumnRingGrid, times::AbstractVector; default_value = zero(eltype(ring_field)))
-    @assert length(last(size(ring_field))) == length(times) "Last dimension of RingGrids Field must match the length of `times`"
+    @assert last(size(ring_field)) == length(times) "Last dimension of RingGrids Field must match the length of `times`"
+    arch = architecture(grid)
 
     if ndims(ring_field) == 2
         # 2D field (horizontal only): treat the data as a single-column matrix so one masked gather
         # (`data[mask, :]`) serves both the 1D and 2D cases. There's a related Reactant bug that makes this necessary: https://github.com/EnzymeAD/Reactant.jl/issues/3087
         dims = XY()
-        data = reshape(ring_field.data, :, 1)
+        data = reshape(on_architecture(arch, ring_field.data), :, 1)
     elseif ndims(ring_field) == 3
         # 3D field (horizontal + vertical or other dimensions)
         @assert size(grid.grid, 3) == size(ring_field, 2) "Vertical dimension mismatch: grid has $(size(grid.grid, 3)) layers, but field has $(size(ring_field, 2)) layers"
         dims = XYZ()
-        data = ring_field.data
+        data = on_architecture(arch, ring_field.data)
     else
         error("Unsupported number of dimensions for RingGrids.Field: $(ndims(ring_field))")
     end
@@ -166,9 +166,8 @@ function Oceananigans.FieldTimeSeries(ring_field::RingGrids.AbstractField, grid:
     mask = grid.mask.data   # host boolean mask (see note above)
     gathered = data[mask, :, :]
     values = reshape(gathered, size(gathered, 1), 1, size(gathered)[2:end]...)
-    oceananigans_fts = FieldTimeSeries(grid.grid, dims, times)
-    fill!(oceananigans_fts, default_value)
-    set!(oceananigans_fts, values)
+    oceananigans_fts = FieldTimeSeries(grid, dims, times)
+    copyto!(interior(oceananigans_fts), values)
     return oceananigans_fts
 end
 

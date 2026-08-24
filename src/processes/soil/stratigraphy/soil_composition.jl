@@ -67,9 +67,9 @@ and returns them as a named tuple of the form `(; water, ice, air, solids...)`, 
 """
 @inline function volumetric_fractions(soil::SoilComposition)
     # unpack relevant quantities
-    let por = soil.porosity,
-            sat = soil.saturation,
-            liq = soil.liquid
+    let por = soil.porosity
+        sat = soil.saturation
+        liq = soil.liquid
         # calculate volumetric fractions
         water_ice = sat * por
         water = water_ice * liq

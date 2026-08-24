@@ -433,8 +433,8 @@ AGENTS.md rule "No error messages … inside kernels":
 
 | Suspect | Where | Reached from |
 |---|---|---|
-| 3× `@assert` in `SoilVolume` inner constructor | `src/processes/soil/stratigraphy/soil_volume.jl:26-28` | `SoilVolume(por, sat, liq, solid)` built **per grid point** in `energy_to_temperature!`, `temperature_to_energy!`, and via `soil_volume(...)` in the thermal-conductivity chain of the tendency kernel — matches **exactly** the two failing kernels |
-| 1× `@assert` in `MineralOrganic` inner constructor | `soil_volume.jl:87` | `soil_matrix(i,j,k,…)` constructs the solid-phase struct per point in the same kernels |
+| 3× `@assert` in `SoilVolume` inner constructor | `src/processes/soil/stratigraphy/soil_composition.jl:26-28` | `SoilVolume(por, sat, liq, solid)` built **per grid point** in `energy_to_temperature!`, `temperature_to_energy!`, and via `soil_composition(...)` in the thermal-conductivity chain of the tendency kernel — matches **exactly** the two failing kernels |
+| 1× `@assert` in `MineralOrganic` inner constructor | `soil_composition.jl:87` | `soil_matrix(i,j,k,…)` constructs the solid-phase struct per point in the same kernels |
 | 4× `@assert` in `SoilTexture` constructor | `soil_texture.jl:18-21` | likely host-only (model setup) — verify whether `soil_matrix` reconstructs textures per point |
 
 **Action A1 (decisive, ~1 h):** locally neutralize the `SoilVolume` + `MineralOrganic` asserts and

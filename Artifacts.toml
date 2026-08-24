@@ -21,3 +21,11 @@ lazy = true
     [[era5-land-leaf-area-index.download]]
     sha256 = "1b7d34ceac6805baf3d40ba2ca36b4421f268af64b42b21a50008a9a4aff6fdc"
     url = "https://syncandshare.lrz.de/dl/fiG3BzbEkoY7VF31dx6wrg/era5_land_leaf_area_index_daily_climatology_1980-2010.nc.tar.gz"
+
+[era5-land-leaf-area-index-N72]
+git-tree-sha1 = "20066410e2051cdd277ce31419ef3ef2a08de148"
+lazy = true
+
+    [[era5-land-leaf-area-index-N72.download]]
+    sha256 = "e927199b7c158d35f9a881b8032cf796eb694224ff5cb4f49932ed7fb5ef78a1"
+    url = "https://syncandshare.lrz.de/dl/fiJM3bipLqZFDwbNSorMVM/era5_land_leaf_area_index_daily_climatology_1980-2010_N72.nc.tar.gz"

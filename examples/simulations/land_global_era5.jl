@@ -16,10 +16,7 @@
 # !!! warning "Illustrative configuration"
 #     This is a demonstration of the coupled-model setup, not a validated land-surface product. The
 #     ERA5-Land accumulated fluxes (radiation and precipitation) are de-accumulated to hourly rates
-#     as described below; the only approximation is that the small amount of flux falling exactly on
-#     the nightly accumulation reset is discarded. The script is intended to be run directly and is
-#     *not* executed during the documentation build, as it downloads several gigabytes of forcing
-#     data and integrates the full global grid.
+#     as described below.
 
 using Terrarium
 
@@ -28,6 +25,7 @@ using Dates
 using Oceananigans.OutputWriters: JLD2Writer
 using Rasters, NCDatasets
 using Rasters: Ti
+using Statistics
 
 using CairoMakie, GeoMakie
 
@@ -49,7 +47,8 @@ NF = Float32
 # thickness is set to a relatively coarse 10 cm for now to maintain numerical stability. Future Development
 # of improved timestepping methods will relax this constraint.
 model_rings = on_architecture(arch, RingGrids.FullGaussianGrid(72))
-land_sea_frac_native = RingGrids.Field(arch, ERA5LandInvariants(), "lsm"; NF)
+invariants_asset = ERA5LandInvariants()
+land_sea_frac_native = RingGrids.Field(arch, invariants_asset, "lsm"; NF)
 land_sea_frac = RingGrids.interpolate(model_rings, land_sea_frac_native)
 land_mask = land_sea_frac .> 0.5
 Nz = 30 # number of soil layers
@@ -91,18 +90,26 @@ air_temperature = Terrarium.kelvin_to_celsius.(constants, t2m)   # K -> °C
 d2m_C = Terrarium.kelvin_to_celsius.(constants, d2m)
 specific_humidity = Terrarium.dewpoint_specific_humidity.(constants, d2m_C, sp)
 
-# The *accumulated* fields (radiation and precipitation) are cumulative since 00 UTC and reset each
-# day, so dividing the raw values by the output interval would badly overestimate the flux. We
-# instead recover the instantaneous hourly rate as the positive time difference between consecutive
-# records divided by the accumulation window; `max(·, 0)` discards the daily reset, which falls at
-# night where the radiative and (typically) precipitation fluxes are negligible. `deaccumulate`
-# returns a lazy raster spanning the records from the second hour onward.
+# The *accumulated* fields (radiation and precipitation) follow the ERA5-Land accumulation
+# convention: at 00 UTC the value is the 24h total from the **previous** day, while at subsequent
+# hours it accumulates forward from 00:00 of the current day (e.g., at 12 UTC the value covers
+# 00:00–12:00). To recover hourly rates we differencing consecutive records within a day;
+# at the daily boundary (00 UTC → 01 UTC) the difference is negative because the 00 UTC record
+# is the previous day's total. In that case the correct rate for hour 00→01 is simply
+# `accum[01 UTC] / 3600` since step=1 is already a 1h accumulation.
+# `deaccumulate` returns a lazy raster with one fewer time record than the input (the first
+# 00-UTC record is discarded).
 function deaccumulate(accumulated, accumulation_window = NF(3600))
     n = size(accumulated, Ti)
     ## the forcing rasters are dimensioned (X, Y, Ti), so the time axis is the third dimension
     current = @view accumulated[Ti(2:n)]
     previous = @view accumulated[Ti(1:(n - 1))]
-    rate = max.(parent(current) .- parent(previous), zero(NF)) ./ accumulation_window
+    diff = parent(current) .- parent(previous)
+    # Within a day: accumulations increase monotonically, so diff >= 0 and rate = diff / window.
+    # At the daily boundary (00 UTC → 01 UTC): previous is the prev-day total >> current (1h),
+    # so diff < 0. The correct rate for that hour is current / window since step=1 is already
+    # a 1h accumulation from 00:00 to 01:00.
+    rate = ifelse.(diff .>= zero(NF), diff, parent(current)) ./ accumulation_window
     return rebuild(previous; data = rate)
 end
 
@@ -113,10 +120,10 @@ snowfall = deaccumulate(sf)                                                   # 
 rainfall = max.(total_precipitation .- snowfall, zero(NF))                    # liquid = total - snow
 
 # ## Prescribed LAI climatology
-# The `ERA5LandLeafAreaIndex` asset holds a daily LAI climatology (1980–2010) at the native 0.1°
+# The `ERA5LandLeafAreaIndex` asset holds a daily LAI climatology (1980–2010) at the target ~1° (N72)
 # resolution; `cycle = true` repeats it every year over the whole simulation. We use the
 # high-vegetation LAI (`lai_hv`).
-lai_asset = ERA5LandLeafAreaIndex()
+lai_asset = ERA5LandLeafAreaIndex(Terrarium.N72)
 lai_highveg = Terrarium.load_asset(lai_asset, "lai_hv"; NF, fill_value = zero(NF))
 
 # ## Coupled land model
@@ -150,24 +157,30 @@ inputs = InputSources(
     InputSource(grid, snowfall; name = :snowfall, units = u"m/s", reftime),
     InputSource(grid, shortwave_down; name = :surface_shortwave_down, units = u"W/m^2", reftime),
     InputSource(grid, longwave_down; name = :surface_longwave_down, units = u"W/m^2", reftime),
-    InputSource(grid, lai_highveg; source_grid = Terrarium.native_grid(lai_asset), name = :leaf_area_index, cycle = true),
+    InputSource(
+        grid, lai_highveg;
+        name = :leaf_area_index,
+        source_grid = Terrarium.native_grid(lai_asset),
+        timedim = :dayofyear,
+        cycle = true
+    ),
 )
 
 # ## Initial conditions
 # The soil moisture starts from a variably-saturated profile that approaches saturation with depth,
 # and the surface starts snow-free so the winter forcing builds up the snowpack. The soil temperature
-# is anchored to the local ERA5 near-surface air temperature: we initialize the model once (which
-# loads the forcings at `t = 0`), read the resulting per-column air temperature from the state, and
-# re-initialize with a soil temperature profile built from it plus a mild geothermal gradient. Reading
-# the air temperature back from the state guarantees it is ordered consistently with the land columns.
-mean_annual_temperature(lat) = 20 - abs(40 * sin(lat)) # maximum at equator
+# is initialized from the mean annual air temperature computed directly from the ERA5-Land `t2m`
+# forcing data: we average over all time records, convert to °C, and regridded onto the model's land
+# columns. A mild geothermal gradient (0.05 K/m) is added with depth. Computing the mean from the
+# actual forcing data (rather than a latitude-based climatology) ensures the initialization is
+# consistent with the prescribed atmospheric state.
+t2m_mean = mean(t2m; dims = Ti)  # average over time axis
+t2m_mean_C = Terrarium.kelvin_to_celsius.(constants, t2m_mean)
+t2m_mean_field = RingGrids.Field(Array(reshape(t2m_mean_C, :)), Terrarium.native_grid(ERA5LandForcings()))
+t2m_mean_on_grid = RingGrids.interpolate(on_architecture(CPU(), grid.rings), t2m_mean_field)[land_mask_cpu]
 
-# The initial temperature profiles will be linear temperature profiles similar to what we would get from
-# [`QuasiThermalSteadyState`](@ref) but with a hardcoded geothermal gradient of 0.05 K/m. We don't use
-# the `QuasiThermalSteadyState` initializer here because it does not (yet) support spatially variable parameters.
 function initial_soil_temperature(x, z)
-    latᵢ = lat_masked[round(Int, x)]
-    T₀ = mean_annual_temperature(latᵢ)
+    T₀ = t2m_mean_on_grid[round(Int, x)]
     T = T₀ - NF(0.05) * z
     return T
 end
@@ -184,12 +197,12 @@ plot_surface(field; kwargs...) = heatmap(RingGrids.Field(field, grid)[:, end]; k
 # The initial surface soil temperature and prescribed (mid-January) leaf area index:
 fig = plot_surface(integrator.state.temperature, title = "Initial surface soil temperature (°C)")
 DisplayAs.PNG(fig) #hide
-
 fig = plot_surface(integrator.state.leaf_area_index, title = "Leaf area index (Jan)", colorrange = (0, 6))
 DisplayAs.PNG(fig) #hide
 
 # ## Running the simulation
-# Set up a `Simulation` and configure a time stepping wizard (necessary for stability):
+# Now we are ready to set up a `Simulation`. Since this simulation relies on lazily loading forcing data,
+# it will be quite slow (for now, stay tuned!), so we'll keep it short at just 24 hours.
 simulation = Simulation(integrator, Δt = 300.0, stop_time = 24 * 3600.0)
 conjure_time_step_wizard!(simulation, show_progress = true)
 simulation.output_writers[:snapshots] = JLD2Writer(
@@ -200,7 +213,12 @@ simulation.output_writers[:snapshots] = JLD2Writer(
         snow_water_equivalent = integrator.state.snow_water_equivalent,
         snow_temperature = integrator.state.snow_temperature,
         latent_heat_flux = integrator.state.latent_heat_flux,
+        canopy_water = integrator.state.canopy_water,
         canopy_water_conductance = integrator.state.canopy_water_conductance,
+        saturation_canopy_water = integrator.state.saturation_canopy_water,
+        evaporation_ground = integrator.state.evaporation_ground,
+        evaporation_canopy = integrator.state.evaporation_canopy,
+        transpiration = integrator.state.transpiration,
     );
     filename = "outputs/land_model_era5_output.jld2",
     overwrite_existing = true,
@@ -210,7 +228,6 @@ display(simulation) #hide
 
 # We will advance the coupled model for just six hours to minimize computational cost.
 # Note that, due to  both timestepping restrictions and I/O overhead, the simulation is currently very slow. This will improve in the near future!
-Terrarium.initialize!(integrator)
 run!(simulation)
 
 # Let's look at the results:
@@ -228,4 +245,5 @@ DisplayAs.PNG(fig) #hide
 # The surface latent heat flux reflects the coupled control of soil moisture, vegetation, and the
 # atmospheric state on evapotranspiration.
 fig = plot_surface(integrator.state.latent_heat_flux, title = "Latent heat flux (W/m²)")
+fig = plot_surface(integrator.state.leaf_area_index)
 DisplayAs.PNG(fig) #hide

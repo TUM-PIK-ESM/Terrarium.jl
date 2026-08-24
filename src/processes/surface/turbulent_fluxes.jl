@@ -74,11 +74,13 @@ end
 Computes the difference in specific humidity between a saturated surface at temperature `T` [°C]
 and the atmosphere, defined by its specific humidity `q_air` [kg/kg] and pressure `p` [Pa].
 """
-function specific_humidity_difference(c::ThermodynamicConstants, p, q_air, T)
-    T_K = celsius_to_kelvin(c, T)
+function specific_humidity_difference(c::ThermodynamicConstants{NF}, p, q_air, T) where {NF}
+    # Bound T from below at absolute zero to prevent nonphysical thermodynamics
+    T_C = max(T, NF(-273))
+    T_K = celsius_to_kelvin(c, T_C)
     # TODO: should use surface air density for better accuracy
     ρₐ = Thermodynamics.air_density(c, T_K, p, q_air)
-    q_sat = saturation_specific_humidity_vapor(c, T, ρₐ)
+    q_sat = saturation_specific_humidity_vapor(c, T_C, ρₐ)
     Δq = q_sat - q_air
     return Δq
 end
@@ -101,11 +103,8 @@ function compute_auxiliary!(
     )
     skinT = seb.skin_temperature
     out = auxiliary_fields(state, tur)
-    fields = get_fields(state, tur, skinT, atmos; except = out)
-    launch!(
-        grid, XY, compute_auxiliary_kernel!, out, fields,
-        tur, skinT, constants, atmos
-    )
+    fields = get_fields(state, tur, skinT, atmos, args...; except = out)
+    launch!(grid, XY, compute_auxiliary_kernel!, out, fields, tur, skinT, constants, atmos, args...)
     return nothing
 end
 
@@ -150,11 +149,11 @@ Compute the sensible heat flux at `i, j` based on the current skin temperature a
     rₐ = aerodynamic_resistance(i, j, grid, fields, atmos) # aerodynamic resistance
     Tₛ = skin_temperature(i, j, grid, fields, skinT) # skin temperature
     Tₐ = air_temperature(i, j, grid, fields, atmos) # air temperature
-    pres = air_pressure(i, j, grid, fields, atmos)
-    q_air = specific_humidity(i, j, grid, fields, atmos)
-    cₐ = specific_heat_capacity_moist_air(constants.thermodynamics, q_air) # specific heat capacity of moist air
+    pₐ = air_pressure(i, j, grid, fields, atmos)
+    qₐ = specific_humidity(i, j, grid, fields, atmos)
+    cₐ = specific_heat_capacity_moist_air(constants.thermodynamics, qₐ) # specific heat capacity of moist air
     # TODO: density should be evaluated at surface temperature for better accuracy
-    ρₐ = Thermodynamics.air_density(constants.thermodynamics, celsius_to_kelvin(constants.thermodynamics, Tₐ), pres, q_air)
+    ρₐ = Thermodynamics.air_density(constants.thermodynamics, celsius_to_kelvin(constants.thermodynamics, Tₐ), pₐ, qₐ)
     Q_T = (Tₛ - Tₐ) / rₐ  # bulk aerodynamic temperature-gradient
     # Calculate sensible heat flux (positive upwards)
     Hₛ = compute_sensible_heat_flux(tur, Q_T, ρₐ, cₐ)
@@ -174,14 +173,14 @@ snow-covered fraction sublimates from the snowpack (latent heat of sublimation, 
 """
 @inline function compute_latent_heat_flux(
         i, j, grid, fields,
-        tur::DiagnosedTurbulentFluxes,
+        tur::DiagnosedTurbulentFluxes{NF},
         skinT::AbstractSkinTemperature,
         constants::PhysicalConstants,
         atmos::AbstractAtmosphere,
-        evtr::Optional{AbstractEvapotranspiration} = nothing,
+        surface_hydrology::Optional{AbstractSurfaceHydrology} = nothing,
         snow::Optional{AbstractSnow} = nothing,
-    )
-    Q_h = if isnothing(evtr)
+    ) where {NF}
+    Q_h = if isnothing(surface_hydrology)
         # Direct calculation of evaporative flux without ET coupling
         Tₛ = skin_temperature(i, j, grid, fields, skinT)
         rₐ = aerodynamic_resistance(i, j, grid, fields, atmos) # aerodynamic resistance
@@ -189,27 +188,25 @@ snow-covered fraction sublimates from the snowpack (latent heat of sublimation, 
         Δq / rₐ  # simplified humidity flux w/o separate ET
     else
         # Compute humidity flux using the given ET scheme
+        evtr = get_evapotranspiration(surface_hydrology)
         compute_surface_humidity_flux(i, j, grid, fields, evtr, constants, atmos)
     end
 
-    # Get atmospheric variables and constants
-    Tₐ = air_temperature(i, j, grid, fields, atmos)
-    pres = air_pressure(i, j, grid, fields, atmos)
-    q_air = specific_humidity(i, j, grid, fields, atmos)
+    # Get atmospheric variables and snow cover fraction
     # TODO: density should be evaluated at surface temperature for better accuracy
-    ρₐ = Thermodynamics.air_density(constants.thermodynamics, celsius_to_kelvin(constants.thermodynamics, Tₐ), pres, q_air)
+    ρₐ = air_density(i, j, grid, fields, atmos, constants)
+    f = snow_cover_fraction(i, j, grid, fields, snow)
+    # Retrieve constants
     L_lv = constants.thermodynamics.latent_heat_vaporization
     L_sg = constants.thermodynamics.latent_heat_sublimation
     ρ_w = constants.material.density_water
-
-    # Partition by snow-covered fraction: ground/canopy evaporation over (1 − f_snow), snow sublimation over
-    # f_snow. `E_subl` is already area-weighted by f_snow (see `compute_snow_sublimation_flux`), so the snow
-    # term is not scaled again here.
-    f = snow_cover_fraction(i, j, grid, fields, snow)  # zero without snow
-    E_subl = compute_snow_sublimation_flux(i, j, grid, fields, snow, atmos, constants, skinT)
+    # Compute latent heat flux for bare ground and snow sublimation flux
     Hₗ_ground = compute_latent_heat_flux(tur, Q_h, ρₐ, L_lv)
+    E_subl = compute_snow_sublimation_flux(i, j, grid, fields, snow, atmos, constants, skinT)
     Hₗ_snow = ρ_w * L_sg * E_subl
-    return (one(f) - f) * Hₗ_ground + Hₗ_snow
+    # Compute area-weighted total latent heat flux (bare ground + snow sublimation)
+    Hₗ = (NF(1) - f) * Hₗ_ground + f * Hₗ_snow
+    return Hₗ
 end
 
 # Kernels
@@ -230,9 +227,9 @@ end
 Compute the turbulent (sensible and latent) heat fluxes from the current skin temperature and store
 them into the auxiliary output fields `out`.
 """
-@propagate_inbounds function compute_turbulent_fluxes!(out, i, j, grid, fields, tur::DiagnosedTurbulentFluxes, skinT, constants, atmos, evtr, snow)
+@propagate_inbounds function compute_turbulent_fluxes!(out, i, j, grid, fields, tur::DiagnosedTurbulentFluxes, skinT, constants, atmos, hydrology, snow)
     out.sensible_heat_flux[i, j, 1] = compute_sensible_heat_flux(i, j, grid, fields, tur, skinT, constants, atmos)
-    out.latent_heat_flux[i, j, 1] = compute_latent_heat_flux(i, j, grid, fields, tur, skinT, constants, atmos, evtr, snow)
+    out.latent_heat_flux[i, j, 1] = compute_latent_heat_flux(i, j, grid, fields, tur, skinT, constants, atmos, hydrology, snow)
     return nothing
 end
 

@@ -24,12 +24,10 @@ NF = Float32
 
 # ## Grid and land mask
 # As in the [global soil heat example](@ref soil_heat_global), we build a masked
-# [`ColumnRingGrid`](@ref) at ~1° resolution (72 Gaussian rings), keeping only grid points with
-# >50% land cover. The land-sea mask is loaded from the ERA5-Land invariants asset and regridded
-# onto the model grid.
-land_sea_frac_native = RingGrids.Field(arch, ERA5LandInvariants(), "lsm"; NF)
-model_rings = on_architecture(arch, RingGrids.FullGaussianGrid(72))
-land_sea_frac = RingGrids.interpolate(model_rings, land_sea_frac_native)
+# [`ColumnRingGrid`](@ref) at the native ~10km resolution of ERA5-Land, keeping only grid points with
+# >50% land cover.
+land_sea_frac = RingGrids.Field(arch, ERA5LandInvariants(), "lsm"; NF)
+model_rings = land_sea_frac.grid
 land_mask = land_sea_frac .> 0.5
 grid = ColumnRingGrid(arch, NF, ExponentialSpacing(N = 10), land_mask.grid, land_mask)
 
@@ -46,31 +44,29 @@ lai_highveg = convert.(NF, replace_missing(lai_raster[:lai_hv], zero(NF)))
 lai_input = InputSource(grid, lai_highveg; source_grid = Terrarium.native_grid(lai_asset), name = :leaf_area_index, cycle = true)
 
 # ## Vegetation model
-# We build a [`VegetationCarbonCycle`](@ref) with the [`PrescribedPhenology`](@ref) scheme. Prescribed
-# phenology imposes LAI externally rather than deriving it from a prognostic carbon pool, so we disable
-# the prognostic vegetation-fraction dynamics (`vegetation_dynamics = nothing`).
+# Here we set up a [`PrescribedVegetation`](@ref) model which uses [`PrescribedPhenology`](@ref) to take LAI as a prescribed input.
+# Photosynthesis and stomatal conductance are still simulated but are not used by the standalone [`VegetationModel`](@ref).
+# We provide the LAI climatology to the model via `inputs = lai_input`.
 vegetation = PrescribedVegetation(NF)
 model = VegetationModel(grid; vegetation)
 integrator = initialize(model; inputs = lai_input)
 
-# Helper to plot a horizontal field on the ring grid.
+# Now we'll define a small helper function to plot a horizontal field on the ring grid:
 plot_field(field; kwargs...) = heatmap(RingGrids.Field(arch, interior(field), grid)[:, 1, 1]; kwargs...)
 
-# The initial (mid-January) prescribed LAI and derived phenology factor:
-fig = plot_field(integrator.state.leaf_area_index, title = "Leaf area index (Jan)", colorrange = (0, 6))
+# Before starting the simulation, let's first take a look at the initial prescribed LAI for the month of January:
+fig = plot_field(integrator.state.leaf_area_index, title = "Leaf area index", colorrange = (0, 6))
 DisplayAs.PNG(fig) #hide
 
-# ## Run through the growing season
-# We advance the simulation for six months with a daily timestep. The cyclic LAI input drives the
-# seasonal evolution of the phenology factor.
-@time run!(integrator, period = Day(180), Δt = 24 * 3600.0)
+# ## Running the simulation
+# We advance the simulation for three months with a daily timestep. By default, the [`PrescribedAtmosphere`](@ref)
+# for [`VegetationModel`](@ref) uses globally constant values, so we shouldn't expect realistic daily values. However,
+# we can still check that the cyclic LAI input drives the seasonal evolution of downstream variables like gross primary
+# production (GPP). Note that this simulation is currently quite slow due to I/O overhead, but this will improve in the near future.
+@time run!(integrator, period = Month(3), Δt = Day(1), show_progress = true)
 
-# The mid-summer LAI after half a year:
-fig = plot_field(integrator.state.leaf_area_index, title = "Leaf area index (Jul)", colorrange = (0, 6))
+fig_LAI = plot_field(integrator.state.leaf_area_index, title = "Leaf area index", colorrange = (0, 6))
 DisplayAs.PNG(fig) #hide
 
-
-# The mid-summer Gross Primary Product (GPP) in kg C / m² / day:
-GPP = Field(on_architecture(CPU(), integrator.state.gross_primary_production) * 24 * 3600)
-fig = plot_field(GPP, title = "Gross Primary Production (Jul)")
+fig_GPP = plot_field(integrator.state.gross_primary_production * 24 * 3600, title = "Gross Primary Production", colorrange = (0, 6))
 DisplayAs.PNG(fig) #hide

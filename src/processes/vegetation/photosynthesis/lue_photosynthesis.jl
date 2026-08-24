@@ -291,6 +291,7 @@ function compute_respiration_assimilation(
 
     # Minimum light and temperature thresholds for photosynthesis
     # No photosynthesis occurs below -3°C or without incident shortwave radiation
+    # TODO: Move this threshold parameter to the struct
     if swdown > zero(NF) && T_air > NF(-3.0)
         # Compute kinetic parameters: Rubisco specificity τ, and Michaelis-Menten constants Kc, Ko
         τ, Kc, Ko = compute_kinetic_parameters(photo, T_air)

@@ -22,6 +22,9 @@ that will be soon be replaced will full support for PFTs and other trait paramet
 
     "Snow-free canopy albedo for broadband shortwave radiation"
     @param albedo::NF = 0.15 (bounds = UnitInterval,)
+
+    "Snow-free canopy emissivity for broadband longwave radiation (default value from PALADYN: 0.96)"
+    @param emissivity::NF = 0.96 (bounds = UnitInterval,)
 end
 
 PlantTraits(::Type{NF}; kwargs...) where {NF} = PlantTraits{NF}(; kwargs...)

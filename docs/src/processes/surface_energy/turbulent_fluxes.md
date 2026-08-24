@@ -105,11 +105,7 @@ compute_sensible_heat_flux
 The latent heat flux is computed via a unified interface for both standalone flux calculations as well as coupling with [`evapotranpsiration`](@ref "Evapotranspiration"):
 
 ```@docs; canonical = false
-compute_latent_heat_flux(i, j, grid, fields, tur::DiagnosedTurbulentFluxes, skinT::AbstractSkinTemperature, constants::PhysicalConstants, atmos::AbstractAtmosphere, evtr::Optional{AbstractEvapotranspiration})
-```
-
-```@docs; canonical = false
-compute_latent_heat_flux(::DiagnosedTurbulentFluxes, Q_h, ρₐ, L)
+compute_latent_heat_flux
 ```
 
 ```@docs; canonical = false

@@ -112,6 +112,10 @@ function Oceananigans.Simulations.run!(
         show_progress = false
     ) where {NF}
     Δt = convert_dt(NF, Δt)
+    if !isnothing(period) && convert_dt(NF, period) < Δt
+        @warn "Reducing Δt from $Δt to match length of given period: $period"
+        Δt = min(Δt, convert_dt(NF, period))
+    end
     steps = get_steps(steps, period, Δt)
     # Run for the specified number of time steps
     run_timesteps!(integrator, Δt, steps, checkpointing; show_progress)
@@ -207,7 +211,7 @@ Trait-dispatched single-timestepper step: forward the prognostic variable names 
 function timestep!(integrator::ModelIntegrator, timestepper::AbstractTimeStepper, ::Timestepping, Δt)
     # a single time stepper integrates all prognostic variables
     names = prognostic_names(integrator.state)
-    isempty(names) || timestep!(integrator, timestepper, Δt, names)
+    timestep!(integrator, timestepper, Δt, names)
     # advance the clock once for the entire step
     tick!(integrator.state.clock, Δt)
     return nothing
@@ -280,7 +284,7 @@ function initialize(
     return integrator
 end
 
-get_steps(steps::Nothing, period::Period, Δt::Real) = div(Second(period).value, Δt)
+get_steps(steps::Nothing, period::Period, Δt::Real) = div(convert_dt(Second, period).value, Δt)
 get_steps(steps::Int, period::Nothing, Δt::Real) = steps
 get_steps(steps::Nothing, period::Nothing, Δt::Real) = throw(ArgumentError("either `steps` or `period` must be specified"))
 get_steps(steps::Int, period::Period, Δt::Real) = throw(ArgumentError("both `steps` and `period` cannot be specified"))

@@ -106,7 +106,7 @@ end
     end
 
     function residual_with_derivative!(x)
-        h = cbrt(eps(NF)) * (1 + abs(x))
+        h = sqrt(eps(NF)) * (1 + abs(x))
         r = residual!(x)
         drdx = (residual!(x + h) - r) / h
         return r, drdx

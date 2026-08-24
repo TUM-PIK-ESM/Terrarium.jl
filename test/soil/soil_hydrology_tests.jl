@@ -113,13 +113,13 @@ end
     compute!(∫sat_deficit)
     Terrarium.adjust_saturation_profile!(state, grid, hydrology)
     ∫sat₁ = compute!(∫sat)[1, 1, 1]
-    @test all(state.saturation_water_ice .>= hydraulic_properties.residual)
+    @test all(state.saturation_water_ice .>= hydraulic_properties.residual_saturation)
     @test ∫sat₁ ≈ ∫sat₀
 
     # Case 3: Completely dry with negative saturation near surface
     set!(state.saturation_water_ice, (x, z) -> min(-0.1 - z, 0.0))
     Terrarium.adjust_saturation_profile!(state, grid, hydrology)
-    @test all(state.saturation_water_ice .≈ hydraulic_properties.residual)
+    @test all(state.saturation_water_ice .≈ hydraulic_properties.residual_saturation)
 end
 
 @testset "SoilHydrology: Richardson-Richards' equation" begin

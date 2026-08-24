@@ -9,7 +9,7 @@ so that it integrates directly with [Thermodynamics.jl](https://github.com/CliMA
 
 ```jldoctest
 julia> show(ThermodynamicConstants(Float64))
-ThermodynamicConstants{Float64}(1004.5, 2070.0, 4181.0, 1859.0, 333550.0, 2.5008e6, 2.83435e6, 273.16, 273.15, 273.16, 611.657, 287.0, 461.5)
+ThermodynamicConstants{Float64}(1004.5, 2070.0, 4181.0, 1859.0, 333550.0, 2.5008e6, 2.83435e6, 273.16, 273.15, 273.16, 611.657, 287.05, 461.52)
 ```
 
 Properties:
@@ -50,10 +50,10 @@ $FIELDS
     pressure_water_triple_point::NF = 611.657
 
     "Specific gas constant of dry air in J/(kg*K)"
-    gas_constant_dry_air::NF = 287.0
+    gas_constant_dry_air::NF = 287.05
 
     "Specific gas constant of water vapor in J/(kg*K)"
-    gas_constant_water_vapor::NF = 461.5
+    gas_constant_water_vapor::NF = 461.52
 end
 
 ThermodynamicConstants(::Type{NF}; kwargs...) where {NF} = ThermodynamicConstants{NF}(; kwargs...)
@@ -70,7 +70,7 @@ and vegetation process implementations.
 
 ```jldoctest
 julia> show(MaterialConstants(Float64))
-MaterialConstants{Float64}(1000.0, 916.7, 12.0)
+MaterialConstants{Float64}(1000.0, 916.7, 12.0, 28.9647)
 ```
 
 Properties:
@@ -83,8 +83,11 @@ $FIELDS
     "Density of ice in kg/m^3"
     density_ice::NF = 916.7
 
-    "Atomic mass of carbon [gC/mol]"
+    "Atomic mass of carbon in gC/mol"
     atomic_weight_carbon::NF = 12.0
+
+    "Molecular weight of dry air in g/mol"
+    molecular_weight_dry_air::NF = 28.9647
 end
 
 MaterialConstants(::Type{NF}; kwargs...) where {NF} = MaterialConstants{NF}(; kwargs...)
@@ -138,7 +141,7 @@ sub-structs by category:
 
 ```jldoctest
 julia> show(PhysicalConstants())
-PhysicalConstants{Float64}(ThermodynamicConstants{Float64}(1004.5, 2070.0, 4181.0, 1859.0, 333550.0, 2.5008e6, 2.83435e6, 273.16, 273.15, 273.16, 611.657, 287.0, 461.5), MaterialConstants{Float64}(1000.0, 916.7, 12.0), UniversalConstants{Float64}(9.80665, 5.6704e-8, 0.4))
+PhysicalConstants{Float64}(ThermodynamicConstants{Float64}(1004.5, 2070.0, 4181.0, 1859.0, 333550.0, 2.5008e6, 2.83435e6, 273.16, 273.15, 273.16, 611.657, 287.05, 461.52), MaterialConstants{Float64}(1000.0, 916.7, 12.0, 28.9647), UniversalConstants{Float64}(9.80665, 5.6704e-8, 0.4))
 ```
 
 To override individual constants, pass a customised sub-struct:
