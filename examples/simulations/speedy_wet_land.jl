@@ -138,7 +138,7 @@ Speedy.add!(primitive_wet_coupled.output, Speedy.AlbedoOutput())
 
 # Initialize the coupled simulation
 @info "Initializing coupled simulation"
-sim_coupled = @time Speedy.initialize!(primitive_wet_coupled)
+sim_coupled = @time Speedy.initialize!(primitive_wet_coupled; time = initial_date)
 
 # The Terrarium state lives inside SpeedyWeather's Variables tree.
 land_state = sim_coupled.variables.prognostic.land.terrarium
