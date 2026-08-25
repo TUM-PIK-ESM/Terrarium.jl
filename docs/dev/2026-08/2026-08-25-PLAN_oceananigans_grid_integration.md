@@ -6,7 +6,7 @@ Date of initial draft: 2026-08-25
 
 Base revision: 4f3841955af84ac6cb4a6f88b04538fc0dd7d658
 
-Sign-off: Brian Groenke (Revision 3)
+Approval: Brian Groenke (Revision 3)
 
 ## Originating prompt
 
