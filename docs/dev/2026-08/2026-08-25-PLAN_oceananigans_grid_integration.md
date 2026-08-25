@@ -6,6 +6,8 @@ Date of initial draft: 2026-08-25
 
 Base revision: 4f3841955af84ac6cb4a6f88b04538fc0dd7d658
 
+Sign-off: Brian Groenke (Revision 3)
+
 ## Originating prompt
 
 > Please review the Oceananigans `AbstractGrid` interface and grid implementations. Then review the current Terrarium `AbstractLandGrid`s and draft a plan for how to integrate the two interfaces. The general idea is that `AbstractLandGrid` should be a valid subtype of `AbstractGrid`, but implementations of `AbstractLandGrid` should allow for separate vertical discretizations in three domains: Ground, Snow, and Canopy. The existing column grids should still be based on `RectilinearGrid`, but there will need to be a new more generic `LandGrid` that wraps an underlying Oceananigans grid and creates three instances, one for each domain. Review the instructions in AGENTS.md for drafting plans and stop to ask any clarifying questions that are necessary.
@@ -20,7 +22,11 @@ Base revision: 4f3841955af84ac6cb4a6f88b04538fc0dd7d658
 
 ## Revision log
 
-> 2026-08-25: Initial draft created with clarifications from user feedback. Key decisions: fixed domain boundaries, no backward compatibility, Ground-first priority, LandGrid as generic Oceananigans grid wrapper.
+> Revision 0 (2026-08-25): Initial draft created with clarifications from user feedback. Key decisions: fixed domain boundaries, no backward compatibility, Ground-first priority, LandGrid as generic Oceananigans grid wrapper.
+>
+> Revision 1 (2026-08-26): Simplified plan. Phase 1 is now just making existing grids implement the `AbstractGrid` interface by forwarding to the underlying `RectilinearGrid` — no new types. `DomainGrid` removed; per-domain grids in `LandGrid` are simply separate `RectilinearGrid` instances.
+>
+> Revision 3 (2026-08-26): Further simplified to 3 phases. Phase 2 combines type renaming with multi-domain support and `VarDomain` additions. Phase 3 introduces generic `LandGrid`. Phase 4 removed — no Oceananigans upstream changes.
 
 ## Problem description
 
@@ -78,185 +84,57 @@ Each domain has:
 
 ## Summary of changes
 
-### 1. Redefine AbstractLandGrid hierarchy
+### Phase 1: Make existing grids implement `AbstractGrid`
+
+Add topology type parameters to `AbstractLandGrid` and forward interface methods to the underlying grid. No new types needed.
 
 ```julia
-# Make AbstractLandGrid a subtype of AbstractGrid with topology parameters
-abstract type AbstractLandGrid{NF, TX, TY, Arch} <: Oceananigans.AbstractGrid{NF, TX, TY, Flat, Arch} end
+# Before
+abstract type AbstractLandGrid{NF, Arch} end
+
+# After
+abstract type AbstractLandGrid{NF, TX, TY, TZ, Arch} <: Oceananigans.AbstractGrid{NF, TX, TY, TZ, Arch} end
 ```
 
-### 2. Create LandGrid as generic Oceananigans grid wrapper
+Forwarded methods (delegate to `get_field_grid(grid)`): `size`, `halo_size`, `nodes`, `architecture`, `isrectilinear`.
 
-`LandGrid` wraps **any** Oceananigans grid (not just `RectilinearGrid`), enabling multi-domain vertical discretizations:
+### Phase 2: Rename grid types and add multi-domain support with `VarDomain`
 
-```julia
-"""
-    LandGrid{NF, TX, TY, Arch, UnderlyingGrid} <: AbstractLandGrid{NF, TX, TY, Arch}
+Rename existing grid types (e.g., `ColumnGrid` → `ColumnLandGrid`) and add separate domain grids for Ground, Snow, and Canopy. Introduce `VarDomain` type for the variable system to tag variables with their domain. Detailed design to be specified separately.
 
-Wraps any Oceananigans grid and creates three domain-specific vertical discretizations
-for Ground, Snow, and Canopy with independent vertical layering.
+### Phase 3: Implement generic `LandGrid` supporting all Oceananigans grids
 
-Domain boundaries are **fixed** (pre-computed offsets) for GPU/Reactant compatibility.
-"""
-struct LandGrid{NF, TX, TY, Arch, UnderlyingGrid<:Oceananigans.AbstractGrid} <: AbstractLandGrid{NF, TX, TY, Arch}
-    "Underlying Oceananigans grid for horizontal discretization"
-    horizontal_grid::UnderlyingGrid
-    
-    "Ground domain vertical discretization"
-    ground_vert::AbstractVerticalSpacing{NF}
-    
-    "Snow domain vertical discretization (may be empty/nothing)"
-    snow_vert::Union{Nothing, AbstractVerticalSpacing{NF}}
-    
-    "Canopy domain vertical discretization (may be empty/nothing)"
-    canopy_vert::Union{Nothing, AbstractVerticalSpacing{NF}}
-    
-    "Pre-computed domain offsets for indexing (fixed boundaries)"
-    ground_offset::Int
-    snow_offset::Int  
-    canopy_offset::Int
-    
-    "Cached domain-specific grids (lazy initialization)"
-    ground_grid::Union{Nothing, DomainGrid}
-    snow_grid::Union{Nothing, DomainGrid}
-    canopy_grid::Union{Nothing, DomainGrid}
-end
-```
-
-### 3. Define DomainGrid type for domain-specific views
-
-```julia
-"""
-    DomainGrid{NF, TX, TY, Arch} <: AbstractLandGrid{NF, TX, TY, Arch}
-
-Represents a single domain (Ground/Snow/Canopy) within a LandGrid,
-providing a view with domain-specific vertical extent and discretization.
-"""
-struct DomainGrid{NF, TX, TY, Arch, ParentGrid<:LandGrid} <: AbstractLandGrid{NF, TX, TY, Arch}
-    parent::ParentGrid
-    domain::Symbol  # :ground, :snow, :canopy
-    vertical_start::Int
-    vertical_end::Int
-    vertical_spacing::AbstractVerticalSpacing{NF}
-end
-```
-
-### 4. Transform ColumnGrid to ColumnLandGrid
-
-`ColumnLandGrid` is a **sibling** of `LandGrid`, not a wrapper around it:
-
-```julia
-"""
-    ColumnLandGrid{NF, Arch} <: AbstractLandGrid{NF, Periodic, Flat, Arch}
-
-Represents a set of laterally independent vertical columns with multi-domain
-vertical discretizations. This is the 1D column grid implementation.
-"""
-struct ColumnLandGrid{NF, Arch, UnderlyingGrid<:Oceananigans.AbstractGrid} <: AbstractLandGrid{NF, Periodic, Flat, Arch}
-    "Underlying Oceananigans rectilinear grid"
-    grid::UnderlyingGrid
-    
-    "Vertical discretization (Ground domain)"
-    vertical_spacing::AbstractVerticalSpacing{NF}
-    
-    "Domain this grid represents (default: :ground)"
-    domain::Symbol
-end
-```
-
-Existing `ColumnGrid` and `ColumnRingGrid` will be replaced by `ColumnLandGrid`.
-No backward compatibility layer — all user code must update to new API.
-
-### 5. Implement AbstractGrid interface for AbstractLandGrid
-
-Required methods (type-stable, allocation-free where possible):
-- `Base.size(grid::AbstractLandGrid)` → returns total `(Nx, Ny, Nz_total)`
-- `Base.size(grid::AbstractLandGrid, dim)` → size in dimension `dim`
-- `topology(grid::AbstractLandGrid)` → `(TX, TY, Flat)`
-- `architecture(grid::AbstractLandGrid)` → `Arch`
-- `halo_size(grid::AbstractLandGrid)` → `(Hx, Hy, Hz_total)`
-- `nodes(grid::AbstractLandGrid, location)` → coordinate arrays
-- `eltype(grid::AbstractLandGrid)` → `NF`
-- `isrectilinear(grid::AbstractLandGrid)` → `isrectilinear(grid.horizontal_grid)`
-
-Domain-specific dispatch (fixed offsets, pre-computed):
-- `size(grid::LandGrid, domain::Symbol)` → domain-specific `(Nx, Ny, Nz_domain)`
-- `nodes(grid::LandGrid, domain::Symbol, location)` → domain-specific coordinates
-- `get_domain_grid(grid::LandGrid, ::Val{:ground})` → cached `DomainGrid`
-
-### 6. Update Field construction and kernel launching
-
-Modify `grids/grid_utils.jl`:
-- `Field(grid::AbstractLandGrid, dims, ...)` → default to Ground domain
-- `Field(grid::LandGrid, domain::Symbol, dims, ...)` → domain-specific field
-- `launch!(grid::AbstractLandGrid, workspec, ...)` → launch on full grid
-- `launch!(grid::LandGrid, domain::Symbol, workspec, ...)` → launch on domain slice
-
-### 7. Domain-aware state variables
-
-- State variables tagged with domain: `PrognosticVariable(:soil_temperature, domain=:ground, ...)`
-- Initializers dispatch on domain: `initialize!(state, grid, ::Val{:ground})`
-- Default domain is `:ground` for single-domain grids
+`LandGrid{NF, TX, TY, TZ, Arch, G<:AbstractGrid}` holds three domain grids of type `G`, where `G` can be any Oceananigans grid type. Constructor builds each domain grid from shared horizontal discretization + per-domain `AbstractVerticalSpacing`. Domain access via `get_domain_grid(grid, Val(:ground))`. Update `Field` and `launch!` to dispatch on domain grid.
 
 ## Testing and verification
 
-### Unit tests
+### Phase 1 unit tests
 
-1. **Grid construction tests** (`test/grids/land_grid_construction.jl`):
-   - Create `LandGrid` with three independent vertical discretizations
-   - Verify `size()`, `topology()`, `architecture()` methods
-   - Test domain-specific size queries
-   - Verify offset calculations
+1. **AbstractGrid interface** (`test/grids/abstract_grid_interface.jl`):
+   - `AbstractLandGrid <: Oceananigans.AbstractGrid`
+   - `size`, `halo_size`, `topology`, `architecture`, `eltype` on `ColumnGrid` and `ColumnRingGrid`
+   - `nodes`, `xnodes`, `ynodes`, `znodes` forward correctly
+   - `isrectilinear` returns correct value
+   - CPU and GPU
 
-2. **AbstractGrid interface tests** (`test/grids/abstract_grid_interface.jl`):
-   - Verify `AbstractLandGrid` is subtype of `AbstractGrid`
-   - Test `nodes()` for each domain
-   - Test `halo_size()` computation
-   - Verify `eltype()` propagation
+2. **No regression**: all existing model tests pass unchanged
 
-3. **Field construction tests** (`test/grids/field_construction.jl`):
-   - Create fields on `LandGrid` (default domain)
-   - Create fields on specific domains: `Field(grid, :snow, ...)`
-   - Verify field grid associations
-   - Test boundary condition application per domain
+### Phase 2 unit tests
 
-4. **Kernel launching tests** (`test/grids/kernel_launching.jl`):
-   - Launch kernels on full grid
-   - Launch kernels on specific domains
-   - Verify index mapping (global vs domain-local)
-   - Test GPU architecture compatibility
-
-### 4. Backward compatibility tests
-
-**No backward compatibility layer** — all existing code must be updated to use the new API.
-This is a breaking change that simplifies the refactoring:
-- Old `ColumnGrid` → replaced by `ColumnLandGrid`
-- Old `ColumnRingGrid` → replaced by `ColumnLandGrid` with ring grid support
-- All examples and tests must be updated
+3. **LandGrid construction** (`test/grids/land_grid.jl`):
+   - Construct with ground-only, then ground+snow, then all three domains
+   - `get_domain_grid` returns the correct `RectilinearGrid` per domain
+   - `Field(grid, Val(:snow), dims)` creates field on the snow grid
 
 ### Integration tests
 
-1. **Multi-domain simulation** (`test/models/multi_domain_land_model.jl`):
-   - Run `LandModel` with all three domains active
-   - Verify coupling at domain interfaces
-   - Test energy/mass conservation across domains
-
-2. **Snow dynamics test** (`test/models/snow_with_ground.jl`):
-   - Ground + Snow domains
-   - Snow accumulation/melt
-   - Ground heat flux through snow
-
-3. **Canopy-atmosphere coupling** (`test/models/canopy_tests.jl`):
-   - Canopy + Ground domains
-   - Vegetation transpiration
-   - Canopy energy balance
+4. **Multi-domain simulation** (`test/models/multi_domain_land_model.jl`):
+   - `LandModel` with Ground + Snow domains active
+   - Energy conservation across domain interface
 
 ### Differentiability tests
 
-Ensure Reactant/Enzyme compatibility:
-- `test/reactant/land_grid_ad.jl`: Differentiate through multi-domain initialization
-- Verify no throw paths in domain indexing kernels
-- Test gradient computation across domain boundaries
+5. Reactant/Enzyme: differentiate through multi-domain initialization; verify no throw paths in domain dispatch
 
 ## Documentation changes
 
@@ -298,61 +176,35 @@ Ensure Reactant/Enzyme compatibility:
 ## Known limitations
 
 1. **Performance overhead**: Domain offset calculations add indirection; may impact GPU performance if not inlined properly
-2. **Memory usage**: Cached `DomainGrid` instances increase memory footprint (mitigated by lazy initialization)
+2. **Memory usage**: Three separate grid instances increase memory footprint
 3. **Complexity**: Multi-domain indexing is more error-prone than single-domain
 4. **Breaking changes**: All existing user code must be updated — no backward compatibility
-5. **RingGrid integration**: `ColumnLandGrid` multi-domain support requires careful handling of ring grid masks per domain
-
-## Future work
-
-### Phase 2: Dynamic domain activation
-- Snow domain appears/disappears based on snow water equivalent
-- Canopy domain seasonal activation
-- Dynamic grid resizing (challenging for GPU)
-
-### Phase 3: Lateral heterogeneity
-- Different vertical discretizations per column
-- Terrain-following coordinates for ground
-- Adaptive vertical refinement
-
-### Phase 4: Oceananigans upstream contributions
-- Propose `MultiDomainGrid` abstraction to Oceananigans
-- Contribute land-specific grid optimizations
-- Share RingGrid integration patterns
-
-### Phase 5: 2D/3D horizontal grids
-- Extend beyond column grids to full 2D horizontal discretizations
-- Integrate with Oceananigans `LatitudeLongitudeGrid`
-- Support for unstructured horizontal grids
 
 ## Implementation steps (phased approach)
 
-**Timeline: Paper submission in 1-2 months**
+### Phase 1: Make existing grids implement `AbstractGrid`
+1. Add topology type parameters to `AbstractLandGrid{NF, TX, TY, TZ, Arch}`
+2. Update `ColumnGrid` and `ColumnRingGrid` to extract topology from their underlying grids
+3. Forward `AbstractGrid` interface methods (`size`, `halo_size`, `nodes`, `architecture`, etc.) to the underlying grid
+4. Unit tests verifying `AbstractLandGrid <: AbstractGrid` and all forwarded methods
+5. GPU tests on existing models with no functional change
 
-### Phase 1: Core infrastructure + Ground domain (2 weeks)
-1. Define `LandGrid` and `DomainGrid` types with Ground-only support initially
-2. Implement `AbstractGrid` interface methods for `AbstractLandGrid`
-3. Add unit tests for grid construction and queries (CPU + GPU)
-4. Ensure CPU kernel launching works on Ground domain
-5. **Milestone**: Paper can use single-domain (Ground) implementation
+### Phase 2: Rename grid types and add multi-domain support with `VarDomain`
+1. Rename `ColumnGrid` → `ColumnLandGrid` (or similar clearer name)
+2. Add separate domain grids for Ground, Snow, and Canopy within the renamed grid type
+3. Introduce `VarDomain` type for the variable system to tag variables with their domain
+4. Update state variables, initializers, and tendency kernels to dispatch on domain
+5. Tests for multi-domain grid construction and domain-aware field creation
+6. **Note**: Detailed design of `VarDomain` and domain dispatch to be specified in a separate plan revision
 
-### Phase 2: Snow domain integration (1 week)
-1. Add Snow domain vertical discretization to `LandGrid`
-2. Implement domain-aware field construction for Snow
-3. Test snow-ground coupling at interface
-4. GPU compatibility testing for multi-domain kernels
-
-### Phase 3: Canopy domain + full integration (1 week)
-1. Add Canopy domain vertical discretization
-2. Full three-domain simulation tests
-3. Performance benchmarking (CPU + GPU)
-4. Reactant/Enzyme differentiability tests
-
-### Phase 4: Cleanup and documentation (1 week)
-1. Complete API documentation with multi-domain examples
-2. Update all existing examples to new API
-3. Code review and refactoring
-4. Final integration tests before paper submission
+### Phase 3: Implement generic `LandGrid` supporting all Oceananigans grids
+1. `LandGrid{NF, TX, TY, TZ, Arch, G<:AbstractGrid}` holds three domain grids of type `G`
+2. `G` can be any Oceananigans grid type (`RectilinearGrid`, `LatitudeLongitudeGrid`, `CubedSphereGrid`, etc.)
+3. Constructor builds each domain grid from shared horizontal discretization + per-domain `AbstractVerticalSpacing`
+4. Domain access via `get_domain_grid(grid, Val(:ground))`
+5. Update `Field` and `launch!` to dispatch on domain grid
+6. Integration tests with full multi-domain simulations
+7. Reactant/Enzyme differentiability tests
 
 ## Clarifying questions (resolved)
 
@@ -371,7 +223,6 @@ Ensure Reactant/Enzyme compatibility:
 
 1. **Field location semantics**: Can fields exist at domain interfaces (e.g., snow-ground boundary)? Should we support `Face` locations that span domains?
 2. **Snow depth variation**: With fixed boundaries, how do we handle seasonal snow accumulation/melt? Pre-allocate max snow layers and use masking?
-3. **Horizontal grid types**: Which Oceananigans grid types should `LandGrid` initially support? All of them, or just `RectilinearGrid` + `LatitudeLongitudeGrid`?
 
 ## Dependencies and prerequisites
 
