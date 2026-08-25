@@ -53,8 +53,8 @@ end
 function StateVariables(
         model::LandModel{NF};
         clock = Clock(time = zero(NF)),
-        boundary_conditions = (;),
         fields = (;),
+        boundary_conditions = (;),
         input_variables = ()
     ) where {NF}
     grid = get_grid(model)
@@ -62,13 +62,13 @@ function StateVariables(
     # Snow adds a blended `soil_heat_flux` coupling auxiliary to the state when present
     vars = Variables(variables(model)..., interface_vars..., input_variables...)
     # Initialize BC fields for coupling
-    ground_heat_flux = initialize(vars.auxiliary.ground_heat_flux, grid, clock, boundary_conditions, fields)
-    infiltration = initialize(vars.auxiliary.infiltration, grid, clock, boundary_conditions, fields)
+    ground_heat_flux = initialize(vars.ground_heat_flux, grid, clock, fields, boundary_conditions)
+    infiltration = initialize(vars.infiltration, grid, clock, fields, boundary_conditions)
     # Initialize soil heat flux
     soil_heat_flux = if isnothing(model.snow)
         ground_heat_flux
     else
-        initialize(vars.auxiliary.soil_heat_flux, grid, clock, boundary_conditions, fields)
+        initialize(vars.soil_heat_flux, grid, clock, fields, boundary_conditions)
     end
     soil_heat_flux_bc = SoilHeatFlux(soil_heat_flux)
     # Note that the hydrology module computes infiltration as positive so we need to negate it here
@@ -109,9 +109,18 @@ function compute_auxiliary!(state, model::LandModel)
     compute_auxiliary!(state, grid, model.snow, model.constants)
     compute_auxiliary!(state, grid, model.vegetation, model.constants, model.atmosphere, model.soil)
     compute_auxiliary!(state, grid, model.surface_hydrology, model.constants, model.atmosphere, model.soil, model.vegetation, model.snow)
-    compute_auxiliary!(state, grid, model.surface_energy_balance, model.constants, model.atmosphere, model.surface_hydrology, model.vegetation, model.snow)
+    compute_auxiliary!(state, grid, model.surface_energy_balance, model.vegetation, model.snow)
+    return nothing
+end
+
+function compute_boundary_conditions!(state, model::LandModel)
+    grid = get_grid(model)
+    # Compute surface energy fluxes by solving the SEB
+    solve_surface_energy_balance!(state, grid, model.surface_energy_balance, model.constants, model.atmosphere, model.surface_hydrology, model.snow)
     # Diagnose the snow↔soil coupling fluxes (soil-top heat blend + sublimation) after the SEB; no-op without snow
     compute_snow_interface_fluxes!(state, grid, model.snow, model.surface_energy_balance, model.soil, model.constants, model.atmosphere)
+    # Now that the soil/snow atmosphere and snow-ground fluxes are updated, we can compute the soil BCs
+    compute_boundary_conditions!(state, grid, model.soil)
     return nothing
 end
 

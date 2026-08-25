@@ -18,7 +18,7 @@ using Test
     vars = variables(src)
     @test length(vars) == 1 && isa(vars[1], Namespace)
     @test varname(vars[1]) == :ns1
-    @test vars[1].vars[1] == Terrarium.input(:x, XY())
+    @test first(variables(vars[1])) == Terrarium.input(:x, XY())
 
     # initialize state with a root input :x and two namespaces both declaring :x
     all_vars = Variables(

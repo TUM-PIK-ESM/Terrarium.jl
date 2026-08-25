@@ -1,9 +1,13 @@
 """
+    $SIGNATURES
+
 Return the number of seconds per day in the given number format.
 """
 seconds_per_day(::Type{NF}) where {NF} = ustrip(u"s", NF(1)u"d")
 
 """
+    $SIGNATURES
+
 Return the number of seconds per hour in the given number format.
 """
 seconds_per_hour(::Type{NF}) where {NF} = ustrip(u"s", NF(1)u"hr")
@@ -11,7 +15,14 @@ seconds_per_hour(::Type{NF}) where {NF} = ustrip(u"s", NF(1)u"hr")
 """
     $SIGNATURES
 
-Compute partial pressure of oxygen from surface pressure in Pa.
+Convert a concentration `c` in parts-per-million (PPM) to mole fraction.
+"""
+ppm_to_mole_fraction(c::NF) where {NF} = c * NF(1.0e-6)
+
+"""
+    $SIGNATURES
+
+Compute partial pressure of O₂ (Pa) from surface pressure.
 """
 @inline function partial_pressure_O2(pres::NF) where {NF}
     # TODO Shouldn't this be in physical constants?
@@ -22,7 +33,7 @@ end
 """
     $SIGNATURES
 
-Compute partial pressure of CO2 from surface pressure and CO2 concentration in Pa.
+Compute partial pressure of CO₂ (Pa) from surface pressure and CO₂ concentration.
 """
 @inline function partial_pressure_CO2(pres::NF, conc_co2::NF) where {NF}
     pres_co2 = conc_co2 * NF(1.0e-6) * pres

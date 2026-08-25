@@ -43,15 +43,27 @@ Base revision: e015a29db9d97090edfd112a5eea165640134404
   CPU suite. The soil+snow half of this plan is complete.
 - 2026-08-14: blocker #3's local workaround was reverted (`dcae39485`, "revert to set!"), on the
   assumption that Oceananigans' upstream `set!` improvements (unrelated to blocker #5) had also fixed
-  this case. They had not: `set!(state.skin_temperature, state.ground_temperature)` still fails with
-  the same `pointer` error on `ConcretePJRTArray`. Root-caused to an upstream bug in
+  this case. They had not (yet — see below): `set!(state.skin_temperature, state.ground_temperature)`
+  still failed with the same `pointer` error on `ConcretePJRTArray`. Root-caused to an upstream bug in
   `OceananigansReactantExt.Fields.broadcastable_dimension`, which is asymmetric and misclassifies this
   location-`Nothing`-vs-windowed-`Center` pair as non-broadcastable, sending `set!` into a
   CPU-interpolation branch that itself hits a missing Reactant.jl `copyto!` overload
   (`SubArray{Array} ← SubArray{ConcretePJRTArray}`, device → host). Reproduced in a Terrarium-free MWE;
-  see `2026-08-14-oceananigans_broadcastable_dimension_issue.md` and the accompanying MWE script. The
-  local workaround (`interior(u) .= interior(v)`) was re-applied in
-  `src/processes/surface/skin_temperature.jl` pending the upstream fix.
+  see `2026-08-14-oceananigans_broadcastable_dimension_issue.md` and the accompanying MWE script.
+- 2026-08-14: **fixed upstream, on Oceananigans branch `glw/copyable-fields-predicate`** (commit
+  `b9ff6dcd`, unifying the base `set!` predicate and the Reactant extension's predicate). Not yet merged
+  to `main` or released. `test/reactant/Project.toml` now pins Oceananigans to this branch via
+  `[sources]` (previously that section didn't exist in this file at all — only the *root*
+  `Project.toml` had a source override, so the test environment silently ignored it and every prior
+  local test in `test/reactant` had been running against the plain registry release regardless of any
+  branch pin declared elsewhere). The same fix added a `Terrarium = {path = "../.."}` source, since that
+  was *also* missing and caused `test/reactant` to resolve `Terrarium` from a stale package-cache
+  snapshot rather than the live working tree (silently invalidating local `src/` edits tested through
+  that environment, including `NewtonSolver`, which was `UndefVarError` there until fixed). With both
+  sources correctly pinned and a from-scratch re-instantiate, blocker #3's local workaround is
+  unnecessary: `skin_temperature.jl`'s `initialize!` is back to plain `set!`, and `:land_soil_snow`
+  passes 57/57 fields (~7 min). Full details in
+  `2026-08-14-oceananigans_broadcastable_dimension_issue.md`.
 
 ## Problem description
 
@@ -111,11 +123,15 @@ Oceananigans' interpolating fallback, which detours through the CPU and calls `p
 ERROR: conversion to pointer not defined for ConcretePJRTArray{Float32, 3, 1}
 ```
 
-**Fix**: copy the interiors directly. They are the same size, so a plain broadcast is both correct and
-traceable. Note: this was reverted on 2026-08-14 under the (incorrect) assumption that an unrelated
-upstream `set!` fix covered it, then re-applied once the actual root cause — an upstream
-`broadcastable_dimension` asymmetry, unrelated to blocker #5 — was identified; see
-`2026-08-14-oceananigans_broadcastable_dimension_issue.md`.
+**Status: fixed upstream, unreleased**, on Oceananigans branch `glw/copyable-fields-predicate`. The
+root cause was an asymmetric `broadcastable_dimension` check in
+`OceananigansReactantExt.Fields`, unrelated to blocker #5, that misclassified this
+location-`Nothing`-vs-windowed-`Center` pair as non-broadcastable. With the branch pinned via
+`test/reactant/Project.toml`'s `[sources]`, plain `set!` works with no Terrarium-side workaround; the
+earlier interior-broadcast workaround was tried, reverted, and finally found unnecessary once the
+branch was actually exercised (see the revision log and
+`2026-08-14-oceananigans_broadcastable_dimension_issue.md` for the full story, including why the branch
+initially *appeared* not to fix it).
 
 ### 4. Solvers writing a `Field` with a 2D index
 

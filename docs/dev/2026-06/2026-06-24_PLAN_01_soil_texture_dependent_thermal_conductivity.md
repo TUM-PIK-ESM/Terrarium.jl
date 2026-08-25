@@ -71,7 +71,7 @@ The constituent conductivities `κs = (water, ice, air, mineral, organic)` are m
 key against `volumetric_fractions(soil) = (water, ice, air, organic, mineral)` (the `fastmap`
 over `NamedTuple`s is key-based, so ordering is irrelevant). The texture is reachable from the
 soil volume via `mineral_texture(soil)` → `soil.solid.texture` (a `SoilTexture` with `.sand`,
-`.silt`, `.clay`); see [`soil_volume.jl`](../../src/processes/soil/stratigraphy/soil_volume.jl).
+`.silt`, `.clay`); see [`soil_composition.jl`](../../src/processes/soil/stratigraphy/soil_composition.jl).
 
 **Heat capacity is left untouched.** Mineral grain volumetric heat capacity is nearly
 texture-independent (~2.0 MJ m⁻³ K⁻¹ across sand/silt/clay), so the meaningful texture signal

@@ -62,6 +62,13 @@ function compute_auxiliary!(
 end
 
 """ $TYPEDSIGNATURES """
+function compute_boundary_conditions!(state, grid, ::SoilHydrology{NF, RichardsEq}) where {NF}
+    fill_halo_regions!(state.pressure_head, state)
+    compute_z_bcs!(state.tendencies.saturation_water_ice, state.saturation_water_ice, grid, state)
+    return nothing
+end
+
+""" $TYPEDSIGNATURES """
 function compute_tendencies!(
         state, grid,
         hydrology::SoilHydrology{NF, RichardsEq},
@@ -102,11 +109,11 @@ is thus not the same as the saturation tendency.
     field_grid = get_field_grid(grid)
 
     # Compute divergence of water fluxes
-    # ∂θ∂t = ∇⋅K(θ)∇Ψ + forcing, where Ψ = ψₘ + ψₕ + ψz, and "forcing" represents sources and sinks such as ET losses
+    # ∂θ∂t = ∇⋅K(θ)∇Ψ + S, where Ψ = ψₘ + ψₕ + ψz, and S is a forcing term for sources and sinks such as ET losses
     ∂θ∂t = (
-        - ∂zᵃᵃᶜ(i, j, k, field_grid, darcy_flux, fields.pressure_head, fields.hydraulic_conductivity)
-            + forcing(i, j, k, grid, clock, fields, evapotranspiration, hydrology, constants) # ET forcing
-            + forcing(i, j, k, grid, clock, fields, hydrology.vwc_forcing, hydrology) # generic user-defined forcing
+        - ∂zᵃᵃᶜ(i, j, k, field_grid, darcy_flux, fields.pressure_head, fields.hydraulic_conductivity)  # Darcy flux
+            + forcing(i, j, k, grid, clock, fields, evapotranspiration, hydrology, constants)          # ET source/sink
+            + forcing(i, j, k, grid, clock, fields, hydrology.vwc_forcing, hydrology)                  # generic user-defined forcing
     )
     return ∂θ∂t
 end
@@ -141,7 +148,7 @@ Compute the hydraulic conductivity at the center of the grid cell `i, j, k`.
         strat::AbstractStratigraphy,
         bgc::AbstractSoilBiogeochemistry
     )
-    soil = soil_volume(i, j, k, grid, fields, strat, hydrology, bgc)
+    soil = soil_composition(i, j, k, grid, fields, strat, hydrology, bgc)
     return hydraulic_conductivity(hydrology.hydraulic_properties, soil)
 end
 

@@ -1,7 +1,7 @@
 name = "Terrarium"
 uuid = "80418d68-07fa-499d-ae2b-c12e531f5cd8"
 authors = ["Brian Groenke <brian.groenke@pik-potsdam.de>", "Maximillian Gelbrecht <gelbrecht@pik-potsdam.de>", "Maha Badri <maha.badri@pik-potsdam.de>", "Terrarium Contributors"]
-version = "0.1.5"
+version = "0.1.6"
 
 [deps]
 Adapt = "79e6a3ab-5dfb-504d-930d-738a2a938a0e"
@@ -36,9 +36,6 @@ TerrariumCheckpointingExt = "Checkpointing"
 TerrariumRastersExt = "Rasters"
 TerrariumReactantExt = "Reactant"
 
-[sources]
-Oceananigans = { url = "https://github.com/CliMA/Oceananigans.jl.git", rev = "glw/copyable-fields-predicate" }
-
 [compat]
 Adapt = "4"
 Checkpointing = "0.11"
@@ -60,7 +57,7 @@ ProgressMeter = "1.11"
 Reactant = "0.2"
 RingGrids = "0.1"
 RootSolvers = "1"
-SpeedyWeatherInternals = "0.2.1"
+SpeedyWeatherInternals = "0.2.2, 0.2.3"
 Thermodynamics = "1"
 Unitful = "1"
 julia = "1.10, 1.12"

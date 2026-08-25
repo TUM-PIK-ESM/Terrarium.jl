@@ -2,6 +2,8 @@
 abstract type FileFormat end
 struct NetCDF <: FileFormat end
 
+@enum AssetGrid native N72
+
 """$(TYPEDSIGNATURES)
 File extension (including the leading dot) used by files of the given [`FileFormat`](@ref).
 """
@@ -52,13 +54,19 @@ Leaf area index daily climatology for 1980-2010 from ERA5-Land at the native 0.1
 | `lai_lv` | Leaf area index, low vegetation | m²/m² |
 | `lai_hv` | Leaf area index, high vegetation | m²/m² |
 """
-struct ERA5LandLeafAreaIndex <: AbstractLandAsset end
+struct ERA5LandLeafAreaIndex{grid} <: AbstractLandAsset end
 
-artifact_name(::ERA5LandLeafAreaIndex) = "era5-land-leaf-area-index"
+ERA5LandLeafAreaIndex(resolution::AssetGrid = native) = ERA5LandLeafAreaIndex{resolution}()
+
+artifact_name(::ERA5LandLeafAreaIndex{native}) = "era5-land-leaf-area-index"
+native_grid(::ERA5LandLeafAreaIndex{native}) = RingGrids.FullClenshawGrid(900)
+
+artifact_name(::ERA5LandLeafAreaIndex{N72}) = "era5-land-leaf-area-index-N72"
+native_grid(::ERA5LandLeafAreaIndex{N72}) = RingGrids.FullGaussianGrid(72)
+
 varnames(::ERA5LandLeafAreaIndex) = ["lai_lv", "lai_hv"]
 format(::ERA5LandLeafAreaIndex) = NetCDF()
 indices(::ERA5LandLeafAreaIndex) = (:, :, :)
-native_grid(::ERA5LandLeafAreaIndex) = RingGrids.FullClenshawGrid(900)
 
 """
     $TYPEDEF

@@ -139,7 +139,11 @@ Base type for coupled surface hydrology processes.
 """
 abstract type AbstractSurfaceHydrology{NF} <: AbstractCoupledProcesses{NF} end
 
+@inline get_canopy_interception(hydrology::AbstractSurfaceHydrology) = hydrology.canopy_interception
+
 @inline get_evapotranspiration(hydrology::AbstractSurfaceHydrology) = hydrology.evapotranspiration
+
+@inline get_runoff(hydrology::AbstractSurfaceHydrology) = hydrology.runoff
 
 include("canopy_interception/abstract_types.jl")
 include("evapotranspiration/abstract_types.jl")

@@ -70,7 +70,7 @@ Construct the default solver for the implicit skin temperature: a Newton root-fi
 """
 function default_skin_temperature_solver(::Type{NF}) where {NF}
     # Default to a Newton root-finder (via RootSolvers.jl) with a small iteration budget
-    return RootSolver(NF; max_iterations = 5)
+    return RootSolver(NF; max_iterations = 10)
 end
 
 """
@@ -104,7 +104,7 @@ of the medium directly beneath the skin, its thermal conductivity, and the half-
 snow (`snow === nothing`) these are the uppermost ground layer's `ground_temperature`, the assumed
 surface conductivity `κₛ`, and the top ground cell thickness — i.e. the snow-free behavior is unchanged.
 """
-@propagate_inbounds function ground_thermal_interface(i, j, grid, fields, skinT::ImplicitSkinTemperature, snow::Nothing, constants = nothing)
+@propagate_inbounds function ground_thermal_interface(i, j, grid, fields, skinT::ImplicitSkinTemperature, args...)
     field_grid = get_field_grid(grid)
     Δz₁ = Δzᵃᵃᶜ(i, j, field_grid.Nz, field_grid)
     Tg = fields.ground_temperature[i, j]
@@ -122,7 +122,7 @@ conductivity, and half-cell thickness.
     field_grid = get_field_grid(grid)
     Δz_ground = Δzᵃᵃᶜ(i, j, field_grid.Nz, field_grid)
     f = snow_cover_fraction(i, j, grid, fields, snow)
-    # bulk snow thermal conductivity recovered lazily from the density scheme (not stored as a field)
+    # bulk snow thermal conductivity recovered lazily from the density scheme
     ρ_snow = compute_snow_density(i, j, grid, fields, snow.density)
     κ_snow = compute_thermal_conductivity(snow, constants.material, ρ_snow)
     Tg = (one(f) - f) * fields.ground_temperature[i, j] + f * snow_temperature(i, j, grid, fields, snow)
@@ -217,7 +217,8 @@ conduction.
     )
     Tg, κ, Δz = ground_thermal_interface(i, j, grid, fields, skinT, snow, constants)
     G = fields.ground_heat_flux[i, j]
-    return compute_skin_temperature(skinT, Tg, G, Δz, κ)
+    Ts = compute_skin_temperature(skinT, Tg, G, Δz, κ)
+    return Ts
 end
 
 """
@@ -265,8 +266,8 @@ based on the resulting ground heat flux.
         seb_args...
     )
     # Compute all fluxes based on current skin temperature (this includes ground heat flux already);
-    # `snow` (after evtr = nothing) partitions the latent flux by snow-covered fraction
-    compute_surface_energy_fluxes!(out, i, j, grid, fields, seb, constants, seb_args..., nothing, snow)
+    # `snow` partitions the latent flux by snow-covered fraction
+    compute_surface_energy_fluxes!(out, i, j, grid, fields, seb, constants, seb_args..., snow)
     out.skin_temperature[i, j, 1] = compute_skin_temperature(i, j, grid, fields, skinT, constants, snow)
     return nothing
 end
@@ -282,12 +283,12 @@ Same as [`compute_skin_temperature!`](@ref) but returns the residual instead of 
         seb::AbstractSurfaceEnergyBalance,
         constants::PhysicalConstants,
         atmos::AbstractAtmosphere,
-        evtr::Optional{AbstractEvapotranspiration} = nothing,
+        hydrology::Optional{AbstractSurfaceHydrology} = nothing,
         snow::Optional{AbstractSnow} = nothing
     )
     # Compute all fluxes based on current skin temperature (this includes ground heat flux already);
-    # `snow` (after evtr = nothing) partitions the latent flux by snow-covered fraction
-    compute_surface_energy_fluxes!(out, i, j, grid, fields, seb, constants, atmos, evtr, snow)
+    # `snow` partitions the latent flux by snow-covered fraction
+    compute_surface_energy_fluxes!(out, i, j, grid, fields, seb, constants, atmos, hydrology, snow)
     # Compute skin temperature using the (optionally snow-aware) conduction target
     Ts_implicit = compute_skin_temperature(i, j, grid, fields, skinT, constants, snow)
     Ts_prev = out.skin_temperature[i, j, 1]
@@ -306,8 +307,8 @@ Run a full nonlinear solve to determine the `skin_temperature` at grid cell `i, 
         args...
     )
     objective = ObjectiveFunction(compute_skin_temperature_residual!, :skin_temperature)
-    # `snow` is forwarded (after `seb`) so the residual's conduction target can be snow-aware
-    return solve!(out, (i, j), grid, fields, objective, skinT.solver, skinT, seb, args...)
+    Ts = solve!(out, (i, j), grid, fields, objective, skinT.solver, skinT, seb, args...)
+    return Ts
 end
 
 # Kernels

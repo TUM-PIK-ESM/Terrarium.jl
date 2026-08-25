@@ -15,6 +15,7 @@ ModelParameters = "4744a3fa-6c31-4707-899e-a3298e4618ad"
 NCDatasets = "85f8d34a-cbdd-5861-8df4-14fed0d494ab"
 NumericalEarth = "904d977b-046a-4731-8b86-9235c0d1ef02"
 Oceananigans = "9e8cae18-63c1-5223-a75c-80ca9d6e9a09"
+ProgressMeter = "92933f4c-e287-5a05-a399-4b506db050ca"
 Rasters = "a3a2b9e3-a471-40c9-b274-f788e487c689"
 RingGrids = "d1845624-ad4f-453b-8ff4-a8db365bf3a7"
 SpeedyTransforms = "ed023a3f-7a3c-42dd-bab6-68c21c8c3105"
@@ -26,7 +27,7 @@ Terrarium = "80418d68-07fa-499d-ae2b-c12e531f5cd8"
 Thermodynamics = "b60c26fb-14c3-4610-9d3e-2d17fe7ff00c"
 
 [compat]
-SpeedyWeather = "0.21"
+SpeedyWeather = "0.21, 0.22"
 
 [sources.NumericalEarth]
 rev = "main"

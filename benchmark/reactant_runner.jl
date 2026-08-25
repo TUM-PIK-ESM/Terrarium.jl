@@ -11,7 +11,6 @@
 # allow the compiled call to be handed over directly without redefining this here
 
 function build_runner(::ReactantState, integrator, Δt, nsteps)
-    Δt = Terrarium.convert_dt(Δt)
     compile_time = @elapsed compiled_run! = @compile raise = true raise_first = true sync = true run_timesteps!(integrator, Δt, nsteps, false)
     @info @sprintf("     compiled the %d-step loop in %.1f s", nsteps, compile_time)
     ## The compiled program has a fixed step count, so the warm-up is a full run. `sync = true` makes

@@ -4,11 +4,14 @@ using Oceananigans
 
 invs = @snoop_invalidations using Terrarium;
 
-using SnoopCompile, AbstractTrees, ProfileView
+using SnoopCompile, AbstractTrees
+
+import ProfileView
+
 trees = invalidation_trees(invs);
 for (i, tree) in enumerate(trees)
-    println("=== INVALIDATION TREE $i/$(length(trees)) ===")
-    display(tree)
+    # println("=== INVALIDATION TREE $i/$(length(trees)) ===")
+    # display(tree)
 end
 
 # check if any of the invalidated methods are from Terrarium
@@ -25,15 +28,18 @@ function build_model(arch = CPU())
     soil = SoilEnergyWaterCarbon(eltype(grid); hydrology)
     vegetation = VegetationCarbonCycle(eltype(grid))
     # Construct coupled model
-    land = LandModel(grid; soil, vegetation, initializer)
+    land = LandModel(grid; soil, vegetation)
     return land
 end
 
-vegsoil = build_model()
+model = build_model()
 # Variably saturated with water table at roughly 5 m depth
 initializers = (saturation_water_ice = (x, z) -> min(1, 0.5 - 0.1 * z),)
-tinf = @snoop_inference initialize(vegsoil; initializers)
-# print_tree(tinf, maxdepth=100)
-ProfileView.view(flamegraph(tinf))
+integrator = @time initialize(model; initializers);
+# tinf = @time @snoop_inference initialize(model; initializers);
+# open("scratch/land_model_initialize_inference_tree.txt", "w+") do f
+#     print_tree(f, tinf, maxdepth = 100)
+# end
+# ProfileView.view(flamegraph(tinf))
 Δt = 60.0
 @time timestep!(integrator, Δt)

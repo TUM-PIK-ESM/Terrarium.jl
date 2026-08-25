@@ -71,6 +71,13 @@ end
 compute_auxiliary!(state, grid, energy::SoilThermodynamics, soil::AbstractSoil, args...) = nothing
 
 """ $TYPEDSIGNATURES """
+function compute_boundary_conditions!(state, grid, ::SoilThermodynamics)
+    fill_halo_regions!(state.temperature, state)
+    compute_z_bcs!(state.tendencies.internal_energy, state.internal_energy, grid, state)
+    return nothing
+end
+
+""" $TYPEDSIGNATURES """
 function compute_tendencies!(
         state, grid,
         energy::SoilThermodynamics,
@@ -107,7 +114,7 @@ end
         strat::AbstractStratigraphy,
         bgc::AbstractSoilBiogeochemistry
     )
-    soil = soil_volume(i, j, k, grid, fields, strat, hydrology, bgc)
+    soil = soil_composition(i, j, k, grid, fields, strat, hydrology, bgc)
     return compute_thermal_conductivity(energy.thermal_properties, soil)
 end
 

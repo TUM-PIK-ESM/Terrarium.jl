@@ -67,7 +67,9 @@ surface energy balance uses for the latent-flux partition).
         constants::PhysicalConstants,
         atmos::AbstractAtmosphere
     )
-    out.sublimation[i, j, 1] = compute_snow_sublimation_flux(i, j, grid, fields, snow, atmos, constants, seb.skin_temperature)
+    f = snow_cover_fraction(i, j, grid, fields, snow)
+    E_subl = compute_snow_sublimation_flux(i, j, grid, fields, snow, atmos, constants, seb.skin_temperature)
+    out.sublimation[i, j, 1] = f * E_subl
     out.basal_heat_flux[i, j, 1] = compute_snow_soil_heat_flux(i, j, grid, fields, snow, constants, soil)
     return nothing
 end

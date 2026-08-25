@@ -8,7 +8,7 @@ using Test
     photo = LUEPhotosynthesis()
     # Test kinetic parameters should be positive
     T_air = 20.0 # °C
-    τ, Kc, Ko, = compute_kinetic_parameters(photo, T_air)
+    τ, Kc, Ko = compute_kinetic_parameters(photo, T_air)
     @test isfinite(τ) && τ > 0
     @test isfinite(Kc) && Kc > 0
     @test isfinite(Ko) && Ko > 0

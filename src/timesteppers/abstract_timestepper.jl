@@ -148,10 +148,6 @@ function explicit_step!(state, grid::AbstractLandGrid, timestepper::AbstractTime
     # step only this namespace's prognostic variables that are also selected in `names`
     fastiterate(prognostic_names(state)) do name
         if name ∈ names
-            # apply flux BCs, if present
-            compute_z_bcs!(state.tendencies[name], state.prognostic[name], grid, state)
-            # debug site post-BC
-            debugsite!(explicit_step!, state.tendencies[name], name)
             # update prognostic state variable
             explicit_step!(state.prognostic[name], state.tendencies[name], grid, timestepper, Δt)
             # debug site post-step
@@ -173,11 +169,12 @@ timestepping schemes as needed.
 function explicit_step!(
         field::AbstractField{LX, LY, LZ},
         tendency::AbstractField{LX, LY, LZ},
-        grid::AbstractLandGrid,
+        grid::AbstractLandGrid{NF},
         timestepper::AbstractTimeStepper,
         Δt,
         args...
-    ) where {LX, LY, LZ}
+    ) where {LX, LY, LZ, NF}
+    Δt = convert_dt(NF, Δt)
     launch!(
         grid, XYZ, explicit_step_xyz_kernel!,
         field, tendency, timestepper, Δt, args...

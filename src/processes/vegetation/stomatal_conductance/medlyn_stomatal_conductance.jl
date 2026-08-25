@@ -21,6 +21,9 @@ $TYPEDFIELDS
 
     "Minimum stomatal conductance parameter"
     @param g_min::NF = 0.5 (units = u"mm/s", bounds = Positive)
+
+    "Diffusivity ratio of water to CO₂"
+    diffusivity_ratio_water_co2::NF = 1.6
 end
 
 MedlynStomatalConductance(::Type{NF}; kwargs...) where {NF} = MedlynStomatalConductance{NF}(; kwargs...)
@@ -47,14 +50,35 @@ Includes minimum conductance and light extinction effects based on LAI, scaled b
 @inline function compute_stomatal_conductance(
         stomcond::MedlynStomatalConductance{NF},
         traits::PlantTraits{NF},
-        vpd, An, co2, LAI, β
+        constants::PhysicalConstants{NF},
+        vpd, T_air, pres, co2_ppm, An, LAI, β
     ) where {NF}
     # Compute stomatal conductance g_stm
-    let g_min = stomcond.g_min / 1000 # convert mm/s to m/s
+    let g_min = stomcond.g_min / NF(1.0e3) # convert mm/s to m/s
         g₁ = stomcond.g₁
+        D = stomcond.diffusivity_ratio_water_co2
         k_ext = traits.extinction_coefficient
-        g₀ = g_min * (1 - exp(-k_ext * LAI)) * β
-        g_stm = g₀ + NF(1.6) * (1 + g₁ / sqrt(vpd)) * An / co2 * NF(1.0e6)
+        # We clamp VPD from below at 10 Pa (0.01 kPa) for numerical stability (division by zero risk)
+        vpd = max(vpd, NF(10.0))
+        # We similarly clamp net assimilation from below at zero;
+        # this assumes that the stomata are closed during respiration (An < 0) and ensures that
+        # stomatal conductance remains nonnegative
+        An = max(An, NF(0))
+        cₐ = ppm_to_mole_fraction(co2_ppm) # convert CO₂ concentration to mole fraction
+        # Compute minimum conductance g₀ from g_min and LAI
+        g₀ = g_min * (1 - exp(-k_ext * LAI)) * β # m/s
+        # Collect constants for An conversion factor
+        M_C = constants.material.atomic_weight_carbon # atomic weight of carbon in gC/mol
+        M_air = constants.material.molecular_weight_dry_air / NF(1.0e3)
+        R = constants.thermodynamics.gas_constant_dry_air * M_air # Universal gas constant in J/(mol·K)
+        T_K = celsius_to_kelvin(constants.thermodynamics, T_air)
+        # Compute ideal gas conversion factor in m³/mol
+        F = R * T_K / pres
+        # Dimensionless scaling coefficient (from Medlyn model)
+        b = D * (1 + g₁ / sqrt(vpd))
+        # Stomatal conductance [m/s] as g₀ [m/s] + b * An / cₐ [gC/m²/s] / M_C [gC/mol] × F [m³/mol]
+        # An is converted from gC/m²/s → mol C/m²/s, then to m/s via ideal gas law
+        g_stm = g₀ + b * An / cₐ / M_C * F
         return g_stm
     end
 end
@@ -72,7 +96,10 @@ derived from the optimal stomatal conductance model ([medlynReconcilingOptimalEm
 * [willeitPALADYNV10Comprehensive2016](@cite) Willeit & Ganopolski, Geoscientific Model Development (2016)
 """
 @inline function compute_λc(stomcond::MedlynStomatalConductance{NF}, vpd) where {NF}
-    λc = NF(1.0) - NF(1.0) / (NF(1.0) + stomcond.g₁ / sqrt(vpd * NF(1.0e-3)))
+    # here we allow zero VPD since lim x⁻¹ as x → ∞ ≈ 0
+    g₁ = stomcond.g₁
+    D = stomcond.diffusivity_ratio_water_co2
+    λc = NF(1.0) - D / (NF(1.0) + g₁ / sqrt(vpd * NF(1.0e-3)))
     return λc
 end
 
@@ -114,12 +141,14 @@ Returns tuple (g_stm, λc) for use in photosynthesis and transpiration calculati
     CO2 = fields.CO2[i, j]
     LAI = fields.leaf_area_index[i, j]
     β = fields.soil_moisture_limiting_factor[i, j]
+    Tair = air_temperature(i, j, grid, fields, atmos)
+    pres = air_pressure(i, j, grid, fields, atmos)
 
     # Compute vpd [Pa]
     vpd = compute_vapor_pressure_deficit(i, j, grid, fields, atmos, constants)
 
     # Compute conductance g_stm and internal CO2 ratio λc
-    g_stm = compute_stomatal_conductance(stomcond, traits, vpd, An, CO2, LAI, β)
+    g_stm = compute_stomatal_conductance(stomcond, traits, constants, vpd, Tair, pres, CO2, An, LAI, β)
 
     return g_stm
 end

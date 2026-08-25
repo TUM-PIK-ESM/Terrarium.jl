@@ -1,17 +1,189 @@
 using Terrarium
-using Terrarium: compute_λc
+using Terrarium: compute_stomatal_conductance, compute_λc
 using Test
 
-@testset "λc test" begin
+# ── λc (leaf-internal / air CO₂ ratio) tests ────────────────────────────────
+
+@testset "λc sanity checks" begin
     stomcond = MedlynStomatalConductance()
-    # Test vpd near zero (λc should be close to 1)
-    vpd = eps()
+
+    # VPD = 0 → λc ≈ 1 (no drawdown)
+    vpd = 0.0
     λc = compute_λc(stomcond, vpd)
     @test λc ≈ 1.0
 
-    # Test λc should be between 0 and 1 for a realistic positive vpd
-    # TODO for very high VPD λc can become negative
-    vpd = 1000 # Pa
+    # Realistic VPD: λc ∈ (0, 1)
+    vpd = 1000.0 # Pa
     λc = compute_λc(stomcond, vpd)
     @test 0.0 < λc < 1.0
+end
+
+@testset "λc monotonicity with VPD" begin
+    stomcond = MedlynStomatalConductance()
+    vpds = [0.0, 50.0, 100.0, 200.0, 500.0, 1000.0, 2000.0]
+    prev_λc = Inf
+    for vpd in vpds
+        λc = compute_λc(stomcond, vpd)
+        @test λc ≤ prev_λc + eps(Float64) * 10 # non-increasing (allow tiny tolerance)
+        prev_λc = λc
+    end
+end
+
+@testset "λc sensitivity to g₁" begin
+    vpd = 500.0 # Pa
+    g₁_low = MedlynStomatalConductance(g₁ = 1.0)
+    g₁_high = MedlynStomatalConductance(g₁ = 4.0)
+    λc_low = compute_λc(g₁_low, vpd)
+    λc_high = compute_λc(g₁_high, vpd)
+    # Larger g₁ → larger denominator in 1/(1+g₁/√vpd) → smaller subtraction → larger λc
+    @test λc_high > λc_low
+end
+
+# ── Stomatal conductance tests ─────────────────────────────────────────────
+
+@testset "compute_stomatal_conductance sanity checks" begin
+    stomcond = MedlynStomatalConductance()
+    traits = PlantTraits()
+    constants = PhysicalConstants()
+    # Typical midday conditions (leaf-level rates)
+    vpd = 800.0      # Pa
+    T_air = 20.0     # °C
+    pres = 101325.0  # Pa
+    An = 1.0e-4      # gC m⁻² s⁻¹ (≈ 25 μmol CO₂/m²/s, typical midday C3 leaf rate)
+    co2 = 415.0      # ppm
+    LAI = 3.0        # m²/m²
+    β = 1.0          # no soil moisture stress
+    g_stm = compute_stomatal_conductance(stomcond, traits, constants, vpd, T_air, pres, co2, An, LAI, β)
+    @test isfinite(g_stm) && g_stm > 0
+end
+
+@testset "compute_stomatal_conductance: LAI dependence" begin
+    stomcond = MedlynStomatalConductance()
+    traits = PlantTraits()
+    constants = PhysicalConstants()
+    vpd = 800.0      # Pa
+    T_air = 20.0     # °C
+    pres = 101325.0  # Pa
+    An = 1.0e-4      # gC m⁻² s⁻¹
+    co2 = 415.0      # ppm
+    β = 1.0
+    g_low = compute_stomatal_conductance(stomcond, traits, constants, vpd, T_air, pres, co2, An, 0.5, β)
+    g_high = compute_stomatal_conductance(stomcond, traits, constants, vpd, T_air, pres, co2, An, 5.0, β)
+    # Higher LAI → larger minimum-conductance contribution (light extinction term)
+    @test g_high > g_low
+end
+
+@testset "compute_stomatal_conductance: soil moisture stress" begin
+    stomcond = MedlynStomatalConductance()
+    traits = PlantTraits()
+    constants = PhysicalConstants()
+    vpd = 800.0      # Pa
+    T_air = 20.0     # °C
+    pres = 101325.0  # Pa
+    An = 1.0e-4      # gC m⁻² s⁻¹
+    co2 = 415.0      # ppm
+    LAI = 3.0        # m²/m²
+    g_no_stress = compute_stomatal_conductance(stomcond, traits, constants, vpd, T_air, pres, co2, An, LAI, 1.0)
+    g_stressed = compute_stomatal_conductance(stomcond, traits, constants, vpd, T_air, pres, co2, An, LAI, 0.3)
+    @test g_stressed < g_no_stress
+end
+
+@testset "compute_stomatal_conductance: VPD response" begin
+    stomcond = MedlynStomatalConductance()
+    traits = PlantTraits()
+    constants = PhysicalConstants()
+    T_air = 20.0     # °C
+    pres = 101325.0  # Pa
+    An = 1.0e-4      # gC m⁻² s⁻¹
+    co2 = 415.0      # ppm
+    LAI = 3.0        # m²/m²
+    β = 1.0
+    g_low_vpd = compute_stomatal_conductance(stomcond, traits, constants, 200.0, T_air, pres, co2, An, LAI, β)
+    g_high_vpd = compute_stomatal_conductance(stomcond, traits, constants, 2000.0, T_air, pres, co2, An, LAI, β)
+    # Higher VPD → smaller conductance (1/√VPD term)
+    @test g_low_vpd > g_high_vpd
+end
+
+@testset "compute_stomatal_conductance: assimilation scaling" begin
+    stomcond = MedlynStomatalConductance()
+    traits = PlantTraits()
+    constants = PhysicalConstants()
+    vpd = 800.0      # Pa
+    T_air = 20.0     # °C
+    pres = 101325.0  # Pa
+    co2 = 415.0      # ppm
+    LAI = 3.0        # m²/m²
+    β = 1.0
+    g_low_A = compute_stomatal_conductance(stomcond, traits, constants, vpd, T_air, pres, co2, 5.0e-5, LAI, β)
+    g_high_A = compute_stomatal_conductance(stomcond, traits, constants, vpd, T_air, pres, co2, 4.0e-4, LAI, β)
+    # Higher assimilation → higher conductance (quasi-linear relationship)
+    @test g_high_A > g_low_A
+end
+
+@testset "compute_stomatal_conductance: CO₂ dependence" begin
+    stomcond = MedlynStomatalConductance()
+    traits = PlantTraits()
+    constants = PhysicalConstants()
+    vpd = 800.0      # Pa
+    T_air = 20.0     # °C
+    pres = 101325.0  # Pa
+    An = 1.0e-4      # gC m⁻² s⁻¹
+    LAI = 3.0        # m²/m²
+    β = 1.0
+    g_low_co2 = compute_stomatal_conductance(stomcond, traits, constants, vpd, T_air, pres, 350.0, An, LAI, β)
+    g_high_co2 = compute_stomatal_conductance(stomcond, traits, constants, vpd, T_air, pres, 500.0, An, LAI, β)
+    # Higher CO₂ → lower conductance (An/CO₂ ratio decreases)
+    @test g_low_co2 > g_high_co2
+end
+
+@testset "compute_stomatal_conductance: zero assimilation" begin
+    stomcond = MedlynStomatalConductance()
+    traits = PlantTraits()
+    constants = PhysicalConstants()
+    vpd = 800.0      # Pa
+    T_air = 20.0     # °C
+    pres = 101325.0  # Pa
+    co2 = 415.0      # ppm
+    LAI = 3.0        # m²/m²
+    β = 1.0
+    g_zero = compute_stomatal_conductance(stomcond, traits, constants, vpd, T_air, pres, co2, 0.0, LAI, β)
+    # With An = 0 only the minimum-conductance term remains (positive)
+    @test isfinite(g_zero) && g_zero > 0
+end
+
+@testset "compute_stomatal_conductance: minimum conductance contribution" begin
+    stomcond = MedlynStomatalConductance()
+    traits = PlantTraits()
+    constants = PhysicalConstants()
+    vpd = 800.0      # Pa
+    T_air = 20.0     # °C
+    pres = 101325.0  # Pa
+    co2 = 415.0      # ppm
+    LAI = 3.0        # m²/m²
+    An = 0.0         # net assimilation
+    β = 1.0
+    # g_min = 0.5 mm/s → 0.5e-3 m/s; with LAI = 3 the extinction term is (1 - exp(-k*LAI))
+    g_zero_A = compute_stomatal_conductance(stomcond, traits, constants, vpd, T_air, pres, co2, 0.0, LAI, β)
+    # The minimum-conductance term should be positive and finite
+    @test isfinite(g_zero_A) && g_zero_A > 0
+    # It should scale with g_min
+    stomcond_high_gmin = MedlynStomatalConductance(g_min = 2.0)
+    g_high_gmin = compute_stomatal_conductance(stomcond_high_gmin, traits, constants, vpd, T_air, pres, co2, An, LAI, β)
+    @test g_high_gmin > g_zero_A
+end
+
+@testset "compute_stomatal_conductance: physically realistic magnitude" begin
+    stomcond = MedlynStomatalConductance()
+    traits = PlantTraits()
+    constants = PhysicalConstants()
+    vpd = 800.0      # Pa
+    T_air = 20.0     # °C
+    pres = 101325.0  # Pa
+    An = 1.0e-4      # gC m⁻² s⁻¹ (typical midday C3 rate)
+    co2 = 415.0      # ppm
+    LAI = 3.0        # m²/m²
+    β = 1.0
+    g_stm = compute_stomatal_conductance(stomcond, traits, constants, vpd, T_air, pres, co2, An, LAI, β)
+    # Canopy-level conductance can exceed leaf-level values; ~0.001–0.2 m/s is reasonable
+    @test 1.0e-4 < g_stm < 0.2
 end
