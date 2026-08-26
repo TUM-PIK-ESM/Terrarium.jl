@@ -92,7 +92,7 @@ end
 
 @adapt_structure ColumnRingGrid
 
-get_field_grid(grid::ColumnRingGrid) = grid.grid
+get_field_grid(grid::ColumnRingGrid) = getfield(grid, :grid)
 
 """
     $SIGNATURES

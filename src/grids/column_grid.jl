@@ -45,7 +45,7 @@ end
 
 Return the underlying Oceananigans `grid` stored in `ColumnGrid`.
 """
-@inline get_field_grid(grid::ColumnGrid) = grid.grid
+@inline get_field_grid(grid::ColumnGrid) = getfield(grid, :grid)
 
 Architectures.architecture(grid::ColumnGrid) = architecture(grid.grid)
 
