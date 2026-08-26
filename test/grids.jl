@@ -1,9 +1,28 @@
 using Terrarium
 using Test
 
-import Oceananigans.Grids: RectilinearGrid, z_domain
+import Oceananigans
+import Oceananigans.Grids: RectilinearGrid, z_domain, halo_size, nodes, xnodes, znodes, isrectilinear
 import Terrarium.RingGrids
 import Terrarium.RingGrids: FullHEALPixGrid, get_npoints
+
+@testset "AbstractGrid interface" begin
+    grid = ColumnGrid(UniformSpacing(Δz = 0.1f0, N = 5), 2)
+    @test grid isa Oceananigans.AbstractGrid
+    @test eltype(grid) == Float32
+    @test size(grid) == (2, 1, 5)
+    @test Oceananigans.Grids.topology(grid) == (Oceananigans.Grids.Periodic, Oceananigans.Grids.Flat, Oceananigans.Grids.Bounded)
+    @test halo_size(grid) == halo_size(get_field_grid(grid))
+    @test isrectilinear(grid)
+    @test znodes(grid, Oceananigans.Center()) ≈ znodes(get_field_grid(grid), Oceananigans.Center())
+
+    ring_grid = FullHEALPixGrid(4)
+    col_ring_grid = ColumnRingGrid(UniformSpacing(Δz = 0.5f0, N = 3), ring_grid)
+    @test col_ring_grid isa Oceananigans.AbstractGrid
+    @test eltype(col_ring_grid) == Float32
+    @test halo_size(col_ring_grid) == halo_size(get_field_grid(col_ring_grid))
+    @test isrectilinear(col_ring_grid)
+end
 
 @testset "Vertical discretizations" begin
     # Uniform spacing

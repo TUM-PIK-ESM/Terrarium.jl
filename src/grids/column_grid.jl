@@ -1,7 +1,7 @@
-abstract type AbstractColumnGrid{NF, Arch} <: AbstractLandGrid{NF, Arch} end
+abstract type AbstractColumnGrid{NF, Arch} <: AbstractLandGrid{NF, Periodic, Flat, Bounded, Arch} end
 
 """
-    ColumnGrid{NF, Arch<:AbstractArchitecture, RectGrid<:Oceananigans.Grids.RectilinearGrid} <: AbstractLandGrid
+    ColumnGrid{NF, TX, TY, TZ, Arch, RectGrid<:Oceananigans.Grids.RectilinearGrid} <: AbstractLandGrid
 
 Represents a set of laterally independent vertical columns with dimensions (x, y, z)
 where `x` is the column dimension, `y=1` is constant, and `z` is the vertical axis.

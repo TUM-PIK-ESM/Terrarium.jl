@@ -23,10 +23,10 @@ struct ColumnRingGrid{
     function ColumnRingGrid(
             rings::RingGrids.AbstractGrid,
             mask::AbstractArray,
-            grid::Oceananigans.Grids.RectilinearGrid
-        )
+            grid::Oceananigans.Grids.RectilinearGrid{NF}
+        ) where {NF}
         arch = architecture(grid)
-        return new{eltype(grid), typeof(arch), typeof(rings), typeof(grid), typeof(mask)}(rings, mask, grid)
+        return new{NF, typeof(arch), typeof(rings), typeof(grid), typeof(mask)}(rings, mask, grid)
     end
 
     """
