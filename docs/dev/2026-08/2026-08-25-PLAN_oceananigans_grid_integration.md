@@ -6,8 +6,6 @@ Date of initial draft: 2026-08-25
 
 Base revision: 4f3841955af84ac6cb4a6f88b04538fc0dd7d658
 
-Approval: Brian Groenke (Revision 3)
-
 ## Originating prompt
 
 > Please review the Oceananigans `AbstractGrid` interface and grid implementations. Then review the current Terrarium `AbstractLandGrid`s and draft a plan for how to integrate the two interfaces. The general idea is that `AbstractLandGrid` should be a valid subtype of `AbstractGrid`, but implementations of `AbstractLandGrid` should allow for separate vertical discretizations in three domains: Ground, Snow, and Canopy. The existing column grids should still be based on `RectilinearGrid`, but there will need to be a new more generic `LandGrid` that wraps an underlying Oceananigans grid and creates three instances, one for each domain. Review the instructions in AGENTS.md for drafting plans and stop to ask any clarifying questions that are necessary.
@@ -18,7 +16,6 @@ Approval: Brian Groenke (Revision 3)
 > - Backward compatibility: **None** — breaking changes are acceptable
 > - Priority: **Ground domain first**, then Snow and Canopy incrementally
 > - GPU testing: Available for validation
-> - Timeline: Paper submission in 1-2 months
 
 ## Revision log
 

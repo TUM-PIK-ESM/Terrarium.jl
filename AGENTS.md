@@ -248,9 +248,7 @@ Follow [ColPrac](https://github.com/SciML/ColPrac). Feature branches, descriptiv
 
 ## Implementation plans
 
-All major feature additions, bug fixes, or refactoring that requires substantial changes to the existing code must be prefaced with an **implementation plan** that is **reviewed and signed off by a human**. These plan documents should be organized by date and stored in `docs/dev/YYYY-MM`.
-
-You are **ABSOLUTELY REQUIRED** to get the explicit approval of a human developer before executing the implementation. The human developer must type their name after **Approval** along with the revision number. Old plans prior the addition of this provision are not subject to this policy.
+All major feature additions, bug fixes, or refactoring that requires substantial changes to the existing code must be prefaced with an **implementation plan** that is **reviewed and signed off by a human**. These plan documents should be organized by date and stored in `docs/dev/YYYY-MM`. You are **ABSOLUTELY REQUIRED** to get the explicit approval of a human developer before executing the implementation.
 
 Each document should be prefaced by the following template:
 
@@ -262,8 +260,6 @@ Each document should be prefaced by the following template:
 Date of initial draft: YYYY-MM-dd
 
 Base revision: <SHA1 of HEAD when plan was drafted>
-
-Approval: PENDING
 
 ## Originating prompt
 
