@@ -28,6 +28,19 @@ Oceananigans.Grids.isrectilinear(grid::AbstractLandGrid) = Oceananigans.Grids.is
 @inline Oceananigans.Grids.ynodes(grid::AbstractLandGrid, args...; kwargs...) = ynodes(get_field_grid(grid), args...; kwargs...)
 @inline Oceananigans.Grids.znodes(grid::AbstractLandGrid, args...; kwargs...) = znodes(get_field_grid(grid), args...; kwargs...)
 
+# Oceananigans (and downstream packages such as NumericalEarth) access grid dimensions and
+# discretization data as struct fields (`grid.Nx`, `grid.Ny`, `grid.Nz`, `grid.Hx`, coordinate
+# arrays, etc.) rather than through accessor methods. Land grids do not store these directly, so
+# forward any property that is not one of the wrapper's own fields to the underlying field grid.
+# Follows the `Val`-dispatch idiom used by Oceananigans' `ImmersedBoundaryGrid` so each access
+# specializes and constant-folds (no runtime branch inside kernels).
+@inline Base.getproperty(grid::AbstractLandGrid, name::Symbol) = get_land_grid_property(grid, Val(name))
+@inline function get_land_grid_property(grid::AbstractLandGrid, ::Val{name}) where {name}
+    return hasfield(typeof(grid), name) ? getfield(grid, name) : getproperty(get_field_grid(grid), name)
+end
+
+Base.propertynames(grid::AbstractLandGrid) = (fieldnames(typeof(grid))..., propertynames(get_field_grid(grid))...)
+
 include("grid_utils.jl")
 
 include("column_grid.jl")
