@@ -43,6 +43,12 @@ Base revision: 99c748b79711e295e99a5a6370d386853652cf06
   turned out differently from the draft: the data-dependent `if`/`else` in the photosynthesis kernel is
   *not* a blocker (see the retitled section below), and the one Terrarium-side defect found was in the
   *test harness*, not the model.
+- 2026-08-25: the out-of-scope time-varying LAI path was tested anyway, to confirm the assumption it
+  rests on. It does fail, and the failure is now reduced to a Terrarium-free reproducer in
+  `2026-08-25-OCEANANIGANS_fts_time_interpolation_issue.md` /
+  `2026-08-25-oceananigans_fts_time_interpolation_mwe.jl`. Three blockers, none of them the temporal
+  interpolation arithmetic itself (which traces correctly): a data-dependent branch and an `::Int`-only
+  snapshot index upstream, and a hard `convert` of the traced clock in our own `convert_dt`.
 
 ## Problem description
 
@@ -419,7 +425,12 @@ docstrings remain accurate.
 ## Known limitations
 
 - **Time-varying LAI remains unsupported** — the `InputSource` interpolation path does not trace. This
-  is the motivating restriction for this step, not an incidental one.
+  is the motivating restriction for this step, not an incidental one. Confirmed by running, and reduced
+  to a Terrarium-free reproducer, on 2026-08-25: see
+  `2026-08-25-OCEANANIGANS_fts_time_interpolation_issue.md`. There are three separate blockers — two
+  upstream (`getindex(fts, ::Time)` branches on a traced `n₁ == n₂`; snapshot indexing is restricted to
+  `n::Int`) and one of ours (`convert_dt` hard-converts the traced `clock.time`) — and they affect every
+  `FieldTimeSeries`-backed input, not just LAI.
 - **The test is static** — see the caveat under Testing and verification.
 - **The traced step does not cover the lazy reductions.** With `soil === nothing`, both
   `root_fraction` and `soil_moisture_limiting_factor` are touched only at initialization, which is
@@ -434,7 +445,9 @@ docstrings remain accurate.
 ## Future work
 
 - Reactant support for interpolated/time-varying `InputSource`s, which would let the ERA5-Land LAI
-  climatology in `examples/simulations/vegetation_global.jl` run under Reactant.
+  climatology in `examples/simulations/vegetation_global.jl` run under Reactant. Blockers are now
+  enumerated in `2026-08-25-OCEANANIGANS_fts_time_interpolation_issue.md`; the Terrarium-side one
+  (`convert_dt`) is independent of upstream and can be fixed now.
 - Extend to `VegetationCarbonCycle` (prognostic carbon pool, `PaladynPhenology`, autotrophic
   respiration, vegetation dynamics), which has real tendencies and would give a meaningful dynamical
   Reactant test.
