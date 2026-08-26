@@ -12,6 +12,8 @@ using Oceananigans: interior, architecture, on_architecture
 using Oceananigans.Architectures: CPU
 using Oceananigans.Fields: AbstractField
 
+const ReactantExt = Base.get_extension(Terrarium, :TerrariumReactantExt)
+
 # --- scalar/array materialization to plain CPU ------------------------------------------
 #
 # Field/array data crosses architectures via `on_architecture(CPU(), …)` — Terrarium's canonical
@@ -137,6 +139,13 @@ function test_model(config::Symbol; nsteps = NSTEPS, rtol = RTOL, atol = ATOL, N
     rea = build_integrator(Val(config), ReactantState(), NF)
 
     @testset "$name" begin
+        # Regression guard: Test that the Reactant model and grid types are correct
+        @testset "Reactant model and grid types" begin
+            @test typeof(Terrarium.get_grid(rea.model)) <: ReactantExt.ReactantLandGrid
+            @test typeof(rea.model) <: ReactantExt.ReactantModel
+            @test typeof(rea) <: ReactantExt.ReactantIntegrator
+        end
+
         @testset "initialization" begin
             # The device clock must be `ConcreteRNumber`-backed, so that it's traced correctly
             rea_clock = getfield(rea.state, :clock)
