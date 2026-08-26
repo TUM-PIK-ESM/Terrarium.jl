@@ -147,6 +147,11 @@ function test_model(config::Symbol; nsteps = NSTEPS, rtol = RTOL, atol = ATOL, N
         end
 
         @testset "initialization" begin
+            # The device clock must be `ConcreteRNumber`-backed, so that it's traced correctly
+            rea_clock = getfield(rea.state, :clock)
+            @test rea_clock.time isa Reactant.ConcreteRNumber
+            @test rea_clock.iteration isa Reactant.ConcreteRNumber
+
             init = compare_states(cpu.state, rea.state; rtol, atol)
             report(init; label = "Initial state diffs:")
             for (_, r) in init
