@@ -2,10 +2,11 @@
     $TYPEDSIGNATURES
 
 Launch [`compute_snow_interface_fluxes!`](@ref) to diagnose the snow↔surface/soil coupling fluxes from the
-snow state and the surface energy balance outputs: the blended soil-top heat flux (`soil_heat_flux`) and
-the snow surface sublimation rate (`sublimation`, the snow-fraction bulk-aerodynamic vapor flux at the
-converged skin temperature). Must run after the surface energy balance (which sets `ground_heat_flux` and
-the skin temperature). No-op when there is no snowpack (`snow === nothing`).
+snow state and the surface energy balance outputs: the blended soil-top heat flux (`soil_heat_flux`), the
+snow-top conductive flux (`surface_heat_flux`, drives the snowpack's own energy tendency), and the snow
+surface sublimation rate (`sublimation`, the snow-fraction bulk-aerodynamic vapor flux at the converged
+skin temperature). Must run after the surface energy balance (which sets `ground_heat_flux` and the skin
+temperature). No-op when there is no snowpack (`snow === nothing`).
 """
 compute_snow_interface_fluxes!(state, grid, ::Nothing, args...) = nothing
 function compute_snow_interface_fluxes!(
@@ -20,6 +21,7 @@ function compute_snow_interface_fluxes!(
     out = (
         sublimation = state.sublimation,
         basal_heat_flux = state.basal_heat_flux,
+        surface_heat_flux = state.surface_heat_flux,
     )
     fields = get_fields(state, snow, seb, soil, atmos)
     launch!(grid, XY, compute_snow_interface_fluxes_kernel!, out, fields, snow, seb, soil, constants, atmos)
@@ -30,9 +32,11 @@ end
     $TYPEDSIGNATURES
 
 Blended soil-top heat flux [W/m²] at grid cell `i, j`: the snow-cover-fraction-weighted combination of
-the snow→soil basal conductive flux `Q_base` and the bare-ground surface energy balance closure flux `G`
-(`ground_heat_flux`), `f_snow·Q_base + (1 − f_snow)·G`. The bulk snow thermal conductivity entering
-`Q_base` is recovered lazily from the density scheme rather than stored.
+the snow→soil basal conductive flux `Q_base` and the *explicit* bare-ground conductive flux `G`
+(`ground_heat_flux`, already the unblended per-bare-ground-area quantity — see the
+`ImplicitSkinTemperature`-specific `compute_ground_heat_flux` in `skin_temperature.jl`),
+`f_snow·Q_base + (1 − f_snow)·G`. The bulk snow thermal conductivity entering `Q_base` is recovered
+lazily from the density scheme rather than stored.
 """
 @propagate_inbounds function compute_snow_soil_heat_flux(
         i, j, grid, fields,
@@ -54,10 +58,32 @@ end
 """
     $TYPEDSIGNATURES
 
+Snow-top conductive heat flux [W/m²] at grid cell `i, j` (positive upward, i.e. energy leaving the snow
+top into the skin), `S = 2κ_snow(T_snow − T_skin)/max(d_snow, d_min)` — the same unblended snow
+conduction target the skin-temperature solve closes against (see
+[`Terrarium.snow_conduction_interface`](@ref)). This is the per-unit-snow-area flux that drives the
+snowpack's own top-of-pack energy tendency ([`compute_snow_energy_tendency`](@ref)'s `Q_top`); it replaces
+a previous unweighted alias to the whole-grid-cell `ground_heat_flux`, which forced the entire snowpack
+with a flux sized for the whole cell regardless of how small the snow-covered fraction actually was.
+"""
+@propagate_inbounds function compute_snow_surface_heat_flux(
+        i, j, grid, fields,
+        snow::SingleLayerSnow,
+        constants::PhysicalConstants
+    )
+    T_snow, κ_snow, d_snow = snow_conduction_interface(i, j, grid, fields, snow, constants)
+    Ts = fields.skin_temperature[i, j]
+    return 2 * κ_snow * (T_snow - Ts) / d_snow
+end
+
+"""
+    $TYPEDSIGNATURES
+
 Diagnose the snow↔surface/soil coupling fluxes at grid cell `i, j`, run after the surface energy balance:
-the blended soil-top heat flux (see [`compute_snow_soil_heat_flux`](@ref)) and the snow surface
-sublimation rate (see [`compute_snow_sublimation_flux`](@ref), the same snow-fraction vapor flux the
-surface energy balance uses for the latent-flux partition).
+the blended soil-top heat flux (see [`compute_snow_soil_heat_flux`](@ref)), the snow-top conductive flux
+(see [`compute_snow_surface_heat_flux`](@ref)), and the snow surface sublimation rate (see
+[`compute_snow_sublimation_flux`](@ref), the same snow-fraction vapor flux the surface energy balance uses
+for the latent-flux partition).
 """
 @propagate_inbounds function compute_snow_interface_fluxes!(
         out, i, j, grid, fields,
@@ -71,6 +97,7 @@ surface energy balance uses for the latent-flux partition).
     E_subl = compute_snow_sublimation_flux(i, j, grid, fields, snow, atmos, constants, seb.skin_temperature)
     out.sublimation[i, j, 1] = f * E_subl
     out.basal_heat_flux[i, j, 1] = compute_snow_soil_heat_flux(i, j, grid, fields, snow, constants, soil)
+    out.surface_heat_flux[i, j, 1] = compute_snow_surface_heat_flux(i, j, grid, fields, snow, constants)
     return nothing
 end
 

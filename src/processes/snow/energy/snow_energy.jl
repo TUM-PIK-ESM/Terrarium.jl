@@ -75,6 +75,17 @@ carried by the departing vapor.
 Note that no explicit *meltwater* energy term appears because meltwater drains as liquid water at 0 °C,
 which is the zero-enthalpy reference (`U = 0`) of the `FreeWater` closure, so it carries no enthalpy
 out of the snowpack.
+
+The conductive/sublimation terms `Q_base - Q_top + Q_subl` are gated to zero when the pack is empty at
+the *start* of the step (`W == 0`), since they are otherwise evaluated against a degenerate zero-depth
+layer (`Q_top`/`Q_base` conduction targets floored at `min_conduction_thickness`, giving an arbitrarily
+large flux relative to a genuinely-thin pack's tiny heat capacity). `Q_prcp` is *not* gated: it is a pure
+source term from the precipitation rate alone, well-defined regardless of the existing pack depth. Gating
+it too — as a previous implementation did, multiplying the whole `dUdt` including `Q_prcp` by `W > 0` —
+zeroed the energy input on the very first step any snow accumulates onto bare ground (`W` is read before
+that step's mass increment), leaving the freshly-fallen, physically cold snow with zero recorded
+enthalpy. Under the `FreeWater` closure (`U = 0` ≡ liquid water at 0 °C) that reads as instantaneously
+fully melted, triggering spurious immediate Darcy drainage regardless of how cold the air actually was.
 """
 @propagate_inbounds function compute_snow_energy_tendency(
         i, j, grid, fields,
@@ -95,8 +106,8 @@ out of the snowpack.
     R_snow = f_snow * R
     Q_prcp = compute_snow_precip_heat_flux(snow, constants, P_s, R_snow, T_air)
     Q_subl = ρ_w * L_sl * E_subl # correction to account for enthalpy of lost ice
-    dUdt = Q_base - Q_top + Q_prcp + Q_subl
-    return dUdt * (W > 0) # the W > 0 gate *should* be unnecessary but is included just in case
+    dUdt = (Q_base - Q_top + Q_subl) * (W > 0) + Q_prcp
+    return dUdt
 end
 
 # Helper functions

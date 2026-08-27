@@ -41,13 +41,21 @@ variables(::PrescribedSkinTemperature) = (
 
 Scheme for an implicit skin temperature ``T_s`` satisfying:
 ```math
-R_{\\text{net}}(T_s) + H_s(T_s) + H_l(T_s) - G(T_s, T_g) = 0 
+R_{\\text{net}}(T_s) + H_s(T_s) + H_l(T_s) - (1 - f_{\\text{snow}})\\, G(T_s, T_g) - f_{\\text{snow}}\\, S(T_s, T_{\\text{snow}}) = 0
 ```
 where ``R_{\\text{net}}`` is the net radiation budget, ``H_s`` is the sensible heat flux, ``H_l`` is the latent
-heat flux from sublimation and evapotranspiration, ``G`` is the ground heat flux, and ``T_g`` is the ground
-temperature, or temperature of the uppermost subsurface (soil or snow) layer. All fluxes follow the positive upwards 
-convention. For ``G``, this means from the deeper soil towards the surface is positive. For the other fluxes, this 
-means from the surface towards the atmosphere is positive. 
+heat flux from sublimation and evapotranspiration, ``G`` is the conductive flux from the skin into the
+snow-free ground (``T_g`` its temperature), ``S`` is the conductive flux from the skin into the top of the
+snowpack over the snow-covered fraction (``T_{\\text{snow}}`` its temperature), and ``f_{\\text{snow}}``
+is the snow-covered area fraction (``f_{\\text{snow}} = 0`` and ``S`` absent without snow). ``G`` and
+``S`` are each computed from their own *unblended* conduction target (see
+[`ground_thermal_interface`](@ref) and [`snow_conduction_interface`](@ref)) rather than a single
+cover-fraction-weighted blend of ground and snow properties — this keeps the flux delivered to the
+snow-covered fraction from being diluted (or, for small ``f_{\\text{snow}}``, from being replaced
+outright) by the bare-ground share when computing the snowpack's own top-of-pack energy tendency (see
+[`compute_skin_temperature_residual!`](@ref)). All fluxes follow the positive upwards convention: for
+``G`` and ``S``, this means from the medium below towards the surface is positive; for the other fluxes,
+this means from the surface towards the atmosphere is positive.
 
 Properties:
 $FIELDS
@@ -87,24 +95,12 @@ end
 """
     $TYPEDSIGNATURES
 
-Compute the implicit update of the skin temperature from the sub-surface temperature `Tg`, ground heat
-flux `G`, half-cell distance `Δz`, and effective conductivity `κ`, by equating `G` to the half-cell
-conductive flux `2κ(Tg − Ts)/Δz`.
+Return the conduction target `(Tg, κ, Δz)` for the snow-free ground: the uppermost ground layer's
+`ground_temperature`, the assumed surface conductivity `κₛ`, and the top ground cell thickness. This is
+always the *unblended* ground-only target, used both when there is no snow and (weighted by
+`1 - f_snow`) for the bare-ground share of the skin-temperature solve when there is.
 """
-@inline function compute_skin_temperature(::ImplicitSkinTemperature, Tg, G, Δz, κ)
-    Ts = Tg - G * Δz / (2 * κ)
-    return Ts
-end
-
-"""
-    $TYPEDSIGNATURES
-
-Return the effective conduction target `(Tg, κ, Δz)` seen by the skin-temperature solve: the temperature
-of the medium directly beneath the skin, its thermal conductivity, and the half-cell thickness. Without
-snow (`snow === nothing`) these are the uppermost ground layer's `ground_temperature`, the assumed
-surface conductivity `κₛ`, and the top ground cell thickness — i.e. the snow-free behavior is unchanged.
-"""
-@propagate_inbounds function ground_thermal_interface(i, j, grid, fields, skinT::ImplicitSkinTemperature, args...)
+@propagate_inbounds function ground_thermal_interface(i, j, grid, fields, skinT::ImplicitSkinTemperature)
     field_grid = get_field_grid(grid)
     Δz₁ = Δzᵃᵃᶜ(i, j, field_grid.Nz, field_grid)
     Tg = fields.ground_temperature[i, j]
@@ -114,21 +110,21 @@ end
 """
     $TYPEDSIGNATURES
 
-Snow-covered variant: the conduction target is the snow-cover-fraction-weighted blend of the snow layer
-and the underlying ground, `x_eff = (1 − f_snow)·x_ground + f_snow·x_snow` for the temperature,
-conductivity, and half-cell thickness.
+Return the conduction target `(Tsnow, κsnow, dsnow)` for the snow-covered fraction: the snow's own
+(bulk) temperature, its thermal conductivity recovered from the density scheme, and its depth floored at
+`min_conduction_thickness` (avoids a `0/0` conductance as the pack vanishes — the same floor already used
+for the snow-base flux, see [`compute_snow_basal_heat_flux`](@ref)). Without snow (`snow === nothing`)
+returns a finite placeholder (`κsnow = 0`) so the always-zero `f_snow` weight in
+[`compute_skin_temperature_residual!`](@ref) eliminates this term without risking `0 * Inf = NaN`.
 """
-@propagate_inbounds function ground_thermal_interface(i, j, grid, fields, skinT::ImplicitSkinTemperature, snow::AbstractSnow, constants::PhysicalConstants)
-    field_grid = get_field_grid(grid)
-    Δz_ground = Δzᵃᵃᶜ(i, j, field_grid.Nz, field_grid)
-    f = snow_cover_fraction(i, j, grid, fields, snow)
-    # bulk snow thermal conductivity recovered lazily from the density scheme
+@propagate_inbounds snow_conduction_interface(i, j, grid, fields, ::Nothing, constants::PhysicalConstants) =
+    (zero(eltype(grid)), zero(eltype(grid)), one(eltype(grid)))
+@propagate_inbounds function snow_conduction_interface(i, j, grid, fields, snow::AbstractSnow, constants::PhysicalConstants)
     ρ_snow = compute_snow_density(i, j, grid, fields, snow.density)
     κ_snow = compute_thermal_conductivity(snow, constants.material, ρ_snow)
-    Tg = (one(f) - f) * fields.ground_temperature[i, j] + f * snow_temperature(i, j, grid, fields, snow)
-    κ = (one(f) - f) * skinT.κₛ + f * κ_snow
-    Δz = (one(f) - f) * Δz_ground + f * snow_depth(i, j, grid, fields, snow)
-    return (Tg, κ, Δz)
+    T_snow = snow_temperature(i, j, grid, fields, snow)
+    d_snow = max(snow_depth(i, j, grid, fields, snow), snow.min_conduction_thickness)
+    return (T_snow, κ_snow, d_snow)
 end
 
 """
@@ -165,27 +161,6 @@ end
 """
     $TYPEDSIGNATURES
 
-Compute `skin_temperature` from the current `ground_heat_flux` using the (optionally snow-aware)
-conduction target. `constants` supplies the material properties for the conduction blend; passing a
-`snow` component (default `nothing`) selects the snow-covered [`ground_thermal_interface`](@ref), while
-`snow === nothing` recovers the snow-free soil conduction.
-"""
-function compute_skin_temperature!(
-        state, grid,
-        skinT::ImplicitSkinTemperature,
-        constants::PhysicalConstants,
-        snow::Optional{AbstractSnow} = nothing,
-    )
-    out = prognostic_fields(state, skinT)
-    # merge the (optional) snow thermal auxiliaries so the snow-aware conduction target can be evaluated
-    fields = merge(get_fields(state, skinT; except = out), get_fields(state, snow))
-    launch!(grid, XY, compute_skin_temperature_kernel!, out, fields, skinT, constants, snow)
-    return nothing
-end
-
-"""
-    $TYPEDSIGNATURES
-
 Compute `ground_heat_flux` as the residual ``R_\\text{net} + H_s + H_l`` (all fluxes positive upward).
 """
 function compute_ground_heat_flux!(
@@ -204,27 +179,13 @@ end
 """
     $TYPEDSIGNATURES
 
-Estimate the skin temperature from the current `ground_heat_flux` at grid cell `i, j`, using the
-effective conduction target of the medium below the skin. The optional `snow` argument enables the
-snow-covered blend (see [`ground_thermal_interface`](@ref)); with `snow === nothing` this is the snow-free soil
-conduction.
-"""
-@propagate_inbounds function compute_skin_temperature(
-        i, j, grid, fields,
-        skinT::ImplicitSkinTemperature,
-        constants::PhysicalConstants,
-        snow::Optional{AbstractSnow} = nothing
-    )
-    Tg, κ, Δz = ground_thermal_interface(i, j, grid, fields, skinT, snow, constants)
-    G = fields.ground_heat_flux[i, j]
-    Ts = compute_skin_temperature(skinT, Tg, G, Δz, κ)
-    return Ts
-end
-
-"""
-    $TYPEDSIGNATURES
-
-Compute the ground heat flux from the surface net radiation and sensible/latent heat flux at grid cell `i, j`.
+Compute the ground heat flux from the surface net radiation and sensible/latent heat flux at grid cell
+`i, j`: the flux the atmosphere-side physics *demands* of the surface, `G = R_net + H_s + H_l`. This is
+the generic definition used directly by [`PrescribedSkinTemperature`](@ref) (which has no separate
+conduction target to solve against, so the demanded and stored fluxes coincide by construction) and,
+internally, as the atmosphere-side term of the [`ImplicitSkinTemperature`](@ref) residual (see
+[`compute_skin_temperature_residual!`](@ref)) — but *not* as `ImplicitSkinTemperature`'s own
+`ground_heat_flux` (see the more specific method below).
 """
 @propagate_inbounds function compute_ground_heat_flux(
         i, j, grid, fields,
@@ -243,6 +204,28 @@ end
 """
     $TYPEDSIGNATURES
 
+`ImplicitSkinTemperature`'s `ground_heat_flux` is the *explicit* snow-free-ground conductive flux
+`G = 2κg(Tg − Ts)/Δzg`, evaluated directly from the current `skin_temperature` (whatever value the state
+holds — a Newton iterate mid-solve, or the converged value) via [`ground_thermal_interface`](@ref). This
+overrides the generic `R_net + H_s + H_l` method above: computing `G` explicitly from conduction (rather
+than deriving it by algebraically inverting the atmosphere-side demand, as a previous implementation did)
+keeps it an unambiguous, always-consistent per-bare-ground-area quantity at every iterate — not only in
+the limit of exact convergence, and not conflated with the whole-cell atmosphere-side demand once a
+separate snow-top conductive term also exists (see [`compute_skin_temperature_residual!`](@ref)).
+"""
+@propagate_inbounds function compute_ground_heat_flux(
+        i, j, grid, fields,
+        skinT::ImplicitSkinTemperature,
+        ::AbstractSurfaceEnergyBalance
+    )
+    Tg, κg, Δzg = ground_thermal_interface(i, j, grid, fields, skinT)
+    Ts = fields.skin_temperature[i, j]
+    return 2 * κg * (Tg - Ts) / Δzg
+end
+
+"""
+    $TYPEDSIGNATURES
+
 Per-cell mutating variant used by the fused surface-energy-balance kernel: store the ground heat flux
 into the auxiliary output field `out`.
 """
@@ -254,28 +237,36 @@ end
 """
     $TYPEDSIGNATURES
 
-Recompute surface energy fluxes using [`compute_surface_energy_fluxes!`](@ref) and update the skin temperature
-based on the resulting ground heat flux.
+Invert the (linear) area-weighted conduction relation for the implicit skin temperature `Ts` given the
+atmosphere-side demanded flux `G` (`= R_net + H_s + H_l`), by equating `G` to the area-weighted sum of the
+*unblended* ground and snow-top conductive fluxes,
+`(1 − f_snow)·2κg(Tg − Ts)/Δzg + f_snow·2κsnow(Tsnow − Ts)/dsnow`. Since both conductive terms are affine
+in `Ts` (only `G`, via `R_net`/`H`/`LE`, is nonlinear), this closed form is an *exact* solve of the
+conduction side, not an approximation — the same linear-inversion structure used before the `G`/`S` split
+(see [`compute_skin_temperature_residual!`](@ref)), just with the ground and snow terms kept unblended
+rather than combined into a single cover-fraction-weighted conduction target. Without snow (`f_snow = 0`;
+`κsnow`/`Tsnow` unused since their term is weighted out) this reduces exactly to `Ts = Tg − G·Δzg/(2κg)`.
 """
-@propagate_inbounds function compute_skin_temperature!(
-        out, i, j, grid, fields,
-        skinT::ImplicitSkinTemperature,
-        seb::AbstractSurfaceEnergyBalance,
-        constants::PhysicalConstants,
-        snow::Optional{AbstractSnow} = nothing,
-        seb_args...
-    )
-    # Compute all fluxes based on current skin temperature (this includes ground heat flux already);
-    # `snow` partitions the latent flux by snow-covered fraction
-    compute_surface_energy_fluxes!(out, i, j, grid, fields, seb, constants, seb_args..., snow)
-    out.skin_temperature[i, j, 1] = compute_skin_temperature(i, j, grid, fields, skinT, constants, snow)
-    return nothing
+@inline function compute_skin_temperature(::ImplicitSkinTemperature, G, Tg, κg, Δzg, f_snow, Tsnow, κsnow, dsnow)
+    Ag = 2 * κg / Δzg
+    As = 2 * κsnow / dsnow
+    A = (one(f_snow) - f_snow) * Ag + f_snow * As
+    B = (one(f_snow) - f_snow) * Ag * Tg + f_snow * As * Tsnow
+    Ts = (B - G) / A
+    return Ts
 end
 
 """
     $TYPEDSIGNATURES
 
-Same as [`compute_skin_temperature!`](@ref) but returns the residual instead of updating the `skin_temperature` `Field`.
+Surface-energy-balance residual at grid cell `i, j`, in temperature space: `Ts_prev − Ts_implicit`, where
+`Ts_implicit` is the exact conduction-side inverse (see [`compute_skin_temperature`](@ref)) of the
+atmosphere-side demanded flux `G_demand = R_net(Ts_prev) + H(Ts_prev) + LE(Ts_prev)`. This keeps the
+solver mechanics (and its tolerance semantics) unchanged from before the `G`/`S` split — the demanded flux
+is recomputed here rather than read back from `ground_heat_flux`, because that field now stores the
+*explicit* bare-ground conductive flux at the current `Ts` (see the `ImplicitSkinTemperature`-specific
+[`compute_ground_heat_flux`](@ref)), not the atmosphere-side demand; the two coincide only at
+convergence. `snow` also partitions the latent flux by area (see [`compute_surface_energy_fluxes!`](@ref)).
 """
 @propagate_inbounds function compute_skin_temperature_residual!(
         out, i, j, grid, fields,
@@ -286,11 +277,17 @@ Same as [`compute_skin_temperature!`](@ref) but returns the residual instead of 
         hydrology::Optional{AbstractSurfaceHydrology} = nothing,
         snow::Optional{AbstractSnow} = nothing
     )
-    # Compute all fluxes based on current skin temperature (this includes ground heat flux already);
-    # `snow` partitions the latent flux by snow-covered fraction
+    # Compute all fluxes at the current Ts (this includes the explicit ground-conduction flux, stored
+    # into `ground_heat_flux`); `snow` partitions the latent flux by snow-covered fraction
     compute_surface_energy_fluxes!(out, i, j, grid, fields, seb, constants, atmos, hydrology, snow)
-    # Compute skin temperature using the (optionally snow-aware) conduction target
-    Ts_implicit = compute_skin_temperature(i, j, grid, fields, skinT, constants, snow)
+    R_net = out.surface_net_radiation[i, j, 1]
+    H_s = out.sensible_heat_flux[i, j, 1]
+    H_l = out.latent_heat_flux[i, j, 1]
+    G_demand = compute_ground_heat_flux(skinT, R_net, H_s, H_l)
+    Tg, κg, Δzg = ground_thermal_interface(i, j, grid, fields, skinT)
+    f = snow_cover_fraction(i, j, grid, fields, snow)
+    Tsnow, κsnow, dsnow = snow_conduction_interface(i, j, grid, fields, snow, constants)
+    Ts_implicit = compute_skin_temperature(skinT, G_demand, Tg, κg, Δzg, f, Tsnow, κsnow, dsnow)
     Ts_prev = out.skin_temperature[i, j, 1]
     return Ts_prev - Ts_implicit
 end
@@ -312,12 +309,6 @@ Run a full nonlinear solve to determine the `skin_temperature` at grid cell `i, 
 end
 
 # Kernels
-
-@kernel function compute_skin_temperature_kernel!(out, grid, fields, skinT::ImplicitSkinTemperature, args...)
-    i, j = @index(Global, NTuple)
-
-    out.skin_temperature[i, j, 1] = compute_skin_temperature(i, j, grid, fields, skinT, args...)
-end
 
 @kernel function compute_ground_heat_flux_kernel!(out, grid, fields, skinT::AbstractSkinTemperature, args...)
     i, j = @index(Global, NTuple)
