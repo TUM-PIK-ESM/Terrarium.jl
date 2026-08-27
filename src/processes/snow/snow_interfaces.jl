@@ -61,7 +61,7 @@ end
 Snow-top conductive heat flux [W/m²] at grid cell `i, j` (positive upward, i.e. energy leaving the snow
 top into the skin), `S = 2κ_snow(T_snow − T_skin)/max(d_snow, d_min)` — the same unblended snow
 conduction target the skin-temperature solve closes against (see
-[`Terrarium.snow_conduction_interface`](@ref)). This is the per-unit-snow-area flux that drives the
+[`Terrarium.snow_thermal_interface`](@ref)). This is the per-unit-snow-area flux that drives the
 snowpack's own top-of-pack energy tendency ([`compute_snow_energy_tendency`](@ref)'s `Q_top`); it replaces
 a previous unweighted alias to the whole-grid-cell `ground_heat_flux`, which forced the entire snowpack
 with a flux sized for the whole cell regardless of how small the snow-covered fraction actually was.
@@ -71,7 +71,7 @@ with a flux sized for the whole cell regardless of how small the snow-covered fr
         snow::SingleLayerSnow,
         constants::PhysicalConstants
     )
-    T_snow, κ_snow, d_snow = snow_conduction_interface(i, j, grid, fields, snow, constants)
+    T_snow, κ_snow, d_snow = snow_thermal_interface(i, j, grid, fields, snow, constants)
     Ts = fields.skin_temperature[i, j]
     return 2 * κ_snow * (T_snow - Ts) / d_snow
 end
