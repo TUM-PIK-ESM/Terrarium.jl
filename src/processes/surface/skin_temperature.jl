@@ -95,14 +95,14 @@ end
 
 Return the conduction target `(Tsnow, κsnow, dsnow)` for the snow-covered fraction: the snow's own
 (bulk) temperature, its thermal conductivity recovered from the density scheme, and its depth floored at
-`min_conduction_thickness`. Without snow (`snow === nothing`), returns a placeholders with `κsnow = 0`
-such that the snow conductive heat flux reduces to zero.
+[`min_snow_conduction_thickness`](@ref). Without snow (`snow === nothing`), returns a placeholders with
+`κsnow = 0` such that the snow conductive heat flux reduces to zero.
 """
 @propagate_inbounds function snow_thermal_interface(i, j, grid, fields, snow::AbstractSnow, constants::PhysicalConstants)
     ρ_snow = compute_snow_density(i, j, grid, fields, snow.density)
     κ_snow = compute_thermal_conductivity(snow, constants.material, ρ_snow)
     T_snow = snow_temperature(i, j, grid, fields, snow)
-    d_snow = max(snow_depth(i, j, grid, fields, snow), snow.min_conduction_thickness)
+    d_snow = max(snow_depth(i, j, grid, fields, snow), min_snow_conduction_thickness(i, j, grid, fields, snow))
     return (T_snow, κ_snow, d_snow)
 end
 # Fallback for case where snow == nothing

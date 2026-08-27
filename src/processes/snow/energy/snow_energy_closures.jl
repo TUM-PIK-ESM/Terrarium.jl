@@ -114,7 +114,7 @@ Recover the snow temperature and liquid water fraction from the depth-integrated
     # the fully-melted (0°C, all-liquid) reference, i.e. the positive part `U_snow > 0`, is not stored; it
     # is derived on demand where needed to determine snow melt.
     C_snow = compute_snow_volumetric_heat_capacity(snow, constants, ρ_snow, liq)
-    U_snow = compute_snow_volumetric_energy(Ū_snow, d_snow, snow.min_conduction_thickness)
+    U_snow = compute_snow_volumetric_energy(Ū_snow, d_snow, min_snow_conduction_thickness(i, j, grid, fields, snow))
     T = energy_to_temperature(FreeWater(), U_snow, ρLθ, C_snow)
     out.snow_temperature[i, j, 1] = min(T, zero(T))
     return nothing
