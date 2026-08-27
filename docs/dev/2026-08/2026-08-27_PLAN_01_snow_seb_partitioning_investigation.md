@@ -1,11 +1,11 @@
 # Investigation: insufficient high-latitude winter snow accumulation (SEB/snow-fraction coupling)
 
-> Status: **completed** (pending final CI/doc-build check). Three independent bugs identified and fixed:
-> (1) the SEB `G`/`S` blending issue (Fix B, as planned), (2) a snow-energy-tendency gate that zeroed
-> cold-snow advection on the very first accumulation step, (3) a `min_conduction_thickness` floor that
-> diluted a thin pack's liquid-fraction diagnosis toward "melted". All three were needed to actually
-> resolve the reported symptom — Fix B alone did not (see Rev 4/5 below). Full regression suite
-> (snow/coupled-model/skin-temperature tests, 7776-case stress sweep) passes.
+> Status: **in progress**. Three independent bugs from the original investigation identified and fixed
+> (Fix B `G`/`S` blending, the accumulation-onset energy gate, the liquid-fraction floor dilution — see
+> Rev 4/5). A residual bug then surfaced in a real coupled SpeedyWeather+Terrarium run (Rev 6): the
+> snow-top conductive flux is explicit-Euler *numerically unstable* at the default
+> `min_conduction_thickness`, causing spurious full-Darcy-drainage events that still suppress winter
+> accumulation. Rev 6 fix (three parts) approved, not yet implemented.
 
 Date of initial draft: 2026-08-27
 
@@ -72,6 +72,20 @@ still sees an unrealistic radiation budget.
   `d_snow * C_snow` — were each checked and corrected before landing on the final form; see the file's
   current state for the settled implementation). Full regression suite re-run and passes. Diagnostic
   re-run after all three fixes: pathological all-or-nothing oscillation gone (`f_snow` and `T_snow` now
+- Rev 6 (2026-08-27): a coupled SpeedyWeather+Terrarium year-long run (`outputs/run_0005`) still showed
+  near-zero NH winter SWE and spurious summer spikes. A targeted single-column diagnostic
+  (`scratch/debugging/snow_mass_leak_investigation.jl`, cold Siberian-winter forcing) traced this to a
+  fourth, independent issue: `compute_snow_surface_heat_flux`'s conductive term
+  `2κ_snow(T_snow − T_s)/max(d_snow, min_conduction_thickness)` is *explicit-Euler numerically unstable*
+  at the default `min_conduction_thickness = 5mm` and the land model's `Δt = 300s` — the implied
+  relaxation timescale `τ = C_snow·d_min²/(2κ_snow) ≈ 30s` is ~9× shorter than `Δt`, so `T_snow` overshoots
+  and oscillates every step between ≈0°C and ≈−70°C. When it lands on the warm side, the depth-integrated
+  energy swings positive, `snow_liquid_fraction` snaps to 1.0, and the Darcy meltwater term fires at its
+  fully-saturated rate, wiping out accumulated SWE in a single step. Confirmed both the mechanism (direct
+  per-step trace of `Qtop`, `U`, `liq`) and a candidate fix empirically: setting
+  `min_conduction_thickness = 0.02` (pushing `τ` above `Δt`) eliminates the oscillation, `liq` stays 0,
+  and SWE accumulates ~100% of forced snowfall over a 30-day cold run (vs. ~0% before). Author approved
+  three follow-up changes (not yet implemented), scoped below under "Rev 6 fix — approved, in progress".
   vary smoothly/physically instead of pinning at exactly `0`/`0°C` every other step); the diagnostic's own
   weak synthetic forcing (fixed longwave, minimal solar, no realistic winter energy balance) still yields
   low net retention in that toy scenario, which is a forcing-realism limitation of the reproducer, not the
@@ -243,6 +257,34 @@ confirmation is cheap and de-risks the implementation); step 3 is out of scope. 
 limitation (point 4 of the Background section) is accepted as a known limitation for this PR, with
 **Fix B+** (post-hoc dual-albedo `R_net`) or full tiling (**Fix C**) as candidate future work if step 2 of
 the investigation shows it's still a significant residual error after B.
+
+## Rev 6 fix — approved, in progress
+
+Root cause is a fixed, too-small `min_conduction_thickness` making the explicit snow-top conduction
+update numerically unstable at the model's `Δt`. Approved fix (three parts):
+
+1. **Remove `min_conduction_thickness` as a `SingleLayerSnow` struct field.** Replace every read of
+   `snow.min_conduction_thickness` (`skin_temperature.jl:105`, `snow_energy_closures.jl:117`, and the
+   basal-flux call site moved per item 3) with a dynamically-computed value: half the thickness of the
+   uppermost soil grid cell, via `Δzᵃᵃᶜ(i, j, field_grid.Nz, field_grid) / 2` (same
+   `get_field_grid(grid)` pattern already used in `ground_thermal_interface`). This scales the floor with
+   the actual grid resolution instead of a fixed constant, and ties it to the same length scale already
+   used for the ground conduction target. `NF` remains pinned in the struct via `<: AbstractSnow{NF}`
+   (verified — Julia permits the "phantom" type parameter; no other struct/constructor change needed
+   beyond dropping the field and kwarg).
+2. **Add `cell_diffusion_timescale` for snow**, mirroring
+   `src/processes/soil/soil_diffusion_timescales.jl`'s pattern (`τ = Δz²C/κ` via
+   `KernelFunctionOperation` + `minimum(τ)`, `Inf` fallback where not applicable). Wire it into
+   `LandModel`'s `cell_diffusion_timescale(state, model::LandModel)` (currently soil-only,
+   `timesteppers/cell_diffusion_timescale.jl`) as `min(soil_τ, snow_τ)`, so `TimeStepWizard` respects the
+   snow conduction stability limit directly instead of relying on a hand-tuned floor.
+3. **Fix `compute_snow_basal_heat_flux` to include the soil-side resistance.** Currently
+   `Q_base = 2κ_snow(T_soil − T_snow)/max(d_snow, d_min)` (`snow_energy.jl:142-143`) omits the soil
+   half-cell's own resistance (`Δz_soil/(2κ_soil)`), implicitly assuming it's negligible next to the
+   snow's — invalid once `d_snow`/the floor is comparable to `Δz_soil/2`. Move the function from
+   `snow_energy.jl` to `snow_interfaces.jl` (its only caller, `compute_snow_soil_heat_flux`, already lives
+   there and already takes `soil`; `snow_energy.jl` stays soil-independent) and change it to a proper
+   series-resistance formula, `Q_base = (T_soil − T_snow) / (Δz_soil/(2κ_soil) + d_snow/(2κ_snow))`.
 
 ## Summary of changes
 
