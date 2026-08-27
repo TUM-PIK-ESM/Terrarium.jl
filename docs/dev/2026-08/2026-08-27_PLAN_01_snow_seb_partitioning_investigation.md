@@ -1,11 +1,15 @@
 # Investigation: insufficient high-latitude winter snow accumulation (SEB/snow-fraction coupling)
 
-> Status: **in progress**. Three independent bugs from the original investigation identified and fixed
+> Status: **completed**. Four independent bugs from the original investigation identified and fixed
 > (Fix B `G`/`S` blending, the accumulation-onset energy gate, the liquid-fraction floor dilution — see
-> Rev 4/5). A residual bug then surfaced in a real coupled SpeedyWeather+Terrarium run (Rev 6): the
-> snow-top conductive flux is explicit-Euler *numerically unstable* at the default
-> `min_conduction_thickness`, causing spurious full-Darcy-drainage events that still suppress winter
-> accumulation. Rev 6 fix (three parts) approved, not yet implemented.
+> Rev 4/5 — and the Rev 6 explicit-Euler snow-top-conduction instability, see Rev 6/7/8 below). All fixes
+> verified in a real coupled SpeedyWeather+Terrarium run: a 1-year run (`outputs/run_0008`) shows a
+> physically correct seasonal snow cycle at representative mid/high-latitude NH sites — winter
+> accumulation, spring peak, full summer melt-out tracking skin temperature crossing 0°C, autumn
+> re-accumulation — with zero single-step drainage-wipeout events anywhere on the globe over the full
+> year (Rev 8). The differentiability CI failure on the new soil-dependent `compute_snow_basal_heat_flux`
+> is fixed and confirmed passing (Rev 9): full `test/differentiability/snow_model_diff.jl` run, all
+> testsets pass including the rewritten "Snow basal heat flux: differentiability" (4/4).
 
 Date of initial draft: 2026-08-27
 
@@ -85,11 +89,61 @@ still sees an unrealistic radiation budget.
   per-step trace of `Qtop`, `U`, `liq`) and a candidate fix empirically: setting
   `min_conduction_thickness = 0.02` (pushing `τ` above `Δt`) eliminates the oscillation, `liq` stays 0,
   and SWE accumulates ~100% of forced snowfall over a 30-day cold run (vs. ~0% before). Author approved
-  three follow-up changes (not yet implemented), scoped below under "Rev 6 fix — approved, in progress".
+  three follow-up changes, scoped below under "Rev 6 fix — approved, in progress".
   vary smoothly/physically instead of pinning at exactly `0`/`0°C` every other step); the diagnostic's own
   weak synthetic forcing (fixed longwave, minimal solar, no realistic winter energy balance) still yields
   low net retention in that toy scenario, which is a forcing-realism limitation of the reproducer, not the
   bug pattern under investigation.
+- Rev 7 (2026-08-27): implemented the three Rev 6 fixes. During implementation, two corrections from the
+  author refined the design: (1) the new `min_snow_conduction_thickness(i, j, grid, fields, ::SingleLayerSnow)`
+  helper belongs in `snow_single_layer.jl` (snow code), not `skin_temperature.jl`, since it is also needed
+  by the volumetric snow energy closure; (2) its signature was made consistent with the general snow-accessor
+  convention (`i, j, grid, fields, ::SingleLayerSnow`) rather than a bare `(i, j, grid)`. A third correction
+  fixed the new `cell_diffusion_timescale` for snow to use `max(snow_depth(...), min_snow_conduction_thickness(...))`
+  for `d_snow`, matching the floor pattern used everywhere else, rather than the floor alone. Verified: the
+  rewritten `test/snow/snow_energy_tests.jl` basal-flux testset (24/24, checks both thick and vanishing-SWE
+  cases against an independently-reimplemented series-resistance formula); a broader regression run across
+  `test/snow/*`, `test/coupled_models/land_model_tests.jl`, `test/surface/*` (7902/7902 pass); a targeted
+  ad-hoc check of `cell_diffusion_timescale` across SWE = 0, 1e-6, 0.05, 0.5 m confirming it stays finite,
+  floors correctly at the minimum thickness for a vanishing pack, grows quadratically with depth, and that
+  `LandModel`'s combined `min(soil_τ, snow_τ)` dispatch behaves correctly; and a clean local doc build
+  (fixed one incidental broken `@ref` — `[`soil_diffusion_timescales.jl`](@ref)` doesn't resolve to a
+  documented symbol — introduced by the new docstring, changed to reference `[`cell_diffusion_timescale`](@ref)`
+  instead). Not yet done: re-running the coupled SpeedyWeather+Terrarium scenario (`outputs/run_0005`-style)
+  to confirm the original reported NH-winter-SWE symptom is actually resolved end-to-end.
+- Rev 8 (2026-08-27): re-ran the coupled SpeedyWeather+Terrarium scenario with the Rev 6/7 fixes in place,
+  first a 3-month run (`outputs/run_0006`, Jan–Mar) then a full 1-year run (`outputs/run_0008`), analyzed
+  via `xarray`/Python (`geo` conda env, per author preference). `run_0006`: NH (50–90°N) snow depth grows
+  smoothly and monotonically over the winter (mean 0→0.014 m, frac-of-cell->1mm-SWE 0%→62%), a Siberian
+  point (65°N, 90°E) increases every single output step with the largest single-step change over the whole
+  run being 1.5e-5 m (vs. the old pathology's full-pack wipeout every step); zero single-step drops >5mm
+  anywhere in that point series. `run_0008` (full year): a naive zonal-mean check of the 50–90°N band
+  showed net monotonic growth across the *entire* year including NH summer — initially flagged as a
+  possible regression (no seasonal decline) — but resolved by checking individual mid/high-latitude
+  seasonal-snow sites directly (S. Siberia/Mongolia 50°N, US Great Plains 45°N, Scandinavia 60°N): each
+  shows a textbook seasonal cycle — winter accumulation, spring peak, full summer melt-out tightly tracking
+  skin temperature crossing 0°C (e.g. Great Plains: SWE 0.023 m in March → ~5e-7 m by July as skin
+  temperature rises from −6.7°C to +13.5°C), then autumn re-accumulation. The zonal-mean band average is
+  dominated by the permanent high Arctic (75–90°N, real-world firn/glacier accumulation zone that would not
+  be expected to melt out within a single year even in reality), so its monotonic growth is not itself
+  evidence of a bug — same explanation for the analogous SH 50–90°S (Antarctica) pattern. Globally over the
+  full year: zero (time, lat, lon) grid cells with a >20 mm single-step drop — the old drainage-wipeout
+  signature is completely absent. Original reported symptom (near-zero NH winter SWE, sporadic summer
+  spikes) confirmed resolved.
+- Rev 9 (2026-08-27): GitHub CI's Enzyme differentiability job failed —
+  `test/differentiability/snow_model_diff.jl`'s "Snow basal heat flux: differentiability" testset called
+  the removed pure-scalar `compute_snow_basal_heat_flux(κ, T_soil, T_snow, d_snow, d_min)` signature (an
+  artifact of Rev 7 moving the function to a field-based `(i, j, grid, fields, snow, soil, constants)`
+  interface without updating this test). Rewritten to differentiate the real function directly via
+  `Duplicated(state, dstate)` (mirroring the `closure!`-differentiation pattern already used in
+  `soil_hydrology_diff.jl`), checking `∂Q_base/∂T_soil` and `∂Q_base/∂T_snow` are finite and satisfy the
+  closed-form relation (equal, opposite sign, since `Q_base` is linear in both temperatures). First attempt
+  differentiated a full `LandModel` `timestep!` (mirroring the file's own "Snow model: timestep!" pattern);
+  author redirected to keep the test focused specifically on `compute_snow_basal_heat_flux` rather than the
+  whole coupled step. Confirmed passing: full standalone run of `test/differentiability/snow_model_diff.jl`,
+  all testsets pass, including the rewritten "Snow basal heat flux: differentiability" (4/4, 1m22s) and the
+  pre-existing "Snow model: timestep!" (4/4, 24m17s — long Enzyme compilation of the full snow-model
+  reverse-mode call graph, expected and unaffected by this change).
 
 ## Problem description
 
@@ -258,7 +312,7 @@ limitation (point 4 of the Background section) is accepted as a known limitation
 **Fix B+** (post-hoc dual-albedo `R_net`) or full tiling (**Fix C**) as candidate future work if step 2 of
 the investigation shows it's still a significant residual error after B.
 
-## Rev 6 fix — approved, in progress
+## Rev 6 fix — implemented and verified (Rev 7)
 
 Root cause is a fixed, too-small `min_conduction_thickness` making the explicit snow-top conduction
 update numerically unstable at the model's `Δt`. Approved fix (three parts):
@@ -356,6 +410,44 @@ Not yet performed (recommended before merge):
 - A realistic (ERA5-forced) end-to-end regression at a northern-latitude site, since the diagnostic
   script's synthetic forcing was not tuned to validate actual peak-SWE/season-length magnitudes — only
   to reproduce and check the specific oscillation pathology.
+
+Rev 6/7 fix (grid-derived `min_conduction_thickness`, snow `cell_diffusion_timescale`, soil-inclusive
+basal-flux series resistance) — performed:
+- `test/snow/snow_energy_tests.jl` rewritten basal-flux testset: **24/24 pass**, covering both thick
+  (`W=0.5`) and vanishing/zero SWE (`W ∈ {0, 1e-9, 1e-6}`) cases against an independently-reimplemented
+  series-resistance formula.
+- Broader regression: `test/snow/*`, `test/coupled_models/land_model_tests.jl`, `test/surface/*` —
+  **7902/7902 pass**.
+- Ad-hoc `cell_diffusion_timescale` sanity check (single-column `LandModel`, SWE = 0, 1e-6, 0.05, 0.5 m):
+  stays finite and positive throughout; floors correctly (identical τ at W=0 and W=1e-6, both far below
+  the grid-derived minimum thickness); grows quadratically with snow depth once past the floor
+  (τ ≈ 1.98e3 s → 1.27e5 s → 1.27e7 s across W = 0/1e-6 → 0.05 → 0.5); `LandModel`'s
+  `min(soil_τ, snow_τ)` combination dispatch behaves correctly (soil, at ≈1090 s, dominates whenever
+  snow is thin/absent).
+- Clean local doc build (`julia --project=docs docs/make.jl --local --draft`, exit 0): fixed one
+  incidental broken `@ref` introduced by the new `cell_diffusion_timescale` docstring
+  (`[`soil_diffusion_timescales.jl`](@ref)` doesn't resolve — filenames aren't `@ref` targets — changed to
+  `[`cell_diffusion_timescale`](@ref)`); no other new warnings versus the pre-existing baseline.
+
+Rev 8 (coupled-run confirmation) — performed:
+- 3-month coupled run (`outputs/run_0006`, Jan–Mar): smooth monotonic NH winter accumulation, no
+  single-step oscillation/drainage; see Rev 8 revision-log entry for full figures.
+- 1-year coupled run (`outputs/run_0008`): individual seasonal-snow sites (S. Siberia/Mongolia 50°N,
+  US Great Plains 45°N, Scandinavia 60°N) each show a correct full accumulation → peak → melt-out → 
+  re-accumulation annual cycle tracking skin temperature; zero single-step drops >20mm anywhere on the
+  globe over the full year. Original reported symptom (near-zero NH winter SWE, sporadic summer spikes)
+  confirmed resolved end-to-end, not just in the single-column diagnostic.
+
+Rev 9 (differentiability) — performed:
+- GitHub CI's Enzyme job failed on the stale `compute_snow_basal_heat_flux` scalar-signature test (see
+  Rev 9 revision-log entry). Rewritten to differentiate the real field-based function via
+  `Duplicated(state, dstate)`; standalone run of `test/differentiability/snow_model_diff.jl` **passes in
+  full** (all testsets, including the rewritten one, 4/4).
+
+Still not yet performed (recommended before merge):
+- Differentiability re-check for `cell_diffusion_timescale`/`min_snow_conduction_thickness` specifically
+  (distinct from the `compute_snow_basal_heat_flux` test above) and `test/reactant/autodiff.jl` coverage
+  for any of the Rev 6/7 changes.
 
 ## Documentation changes
 
