@@ -92,16 +92,13 @@ function test_skin_temperature_solve!(
     skinT = model.surface_energy_balance.skin_temperature
     snow = hasproperty(model, :snow) ? model.snow : nothing
     Tg, κg, Δzg = Terrarium.ground_thermal_interface(1, 1, grid, state, skinT)
-    f = isnothing(snow) ? zero(NF) : state.snow_cover_fraction[1, 1]
-    Tsnow, κsnow, dsnow = Terrarium.snow_conduction_interface(1, 1, grid, state, snow, model.constants)
     Ts = state.skin_temperature[1, 1]
     G = state.ground_heat_flux[1, 1]
     G_gradient = 2 * κg * (Tg - Ts) / Δzg
     R_net = state.surface_net_radiation[1, 1]
     H_s = state.sensible_heat_flux[1, 1]
     H_l = state.latent_heat_flux[1, 1]
-    G_demand = R_net + H_s + H_l
-    Ts_implicit = Terrarium.compute_skin_temperature(skinT, G_demand, Tg, κg, Δzg, f, Tsnow, κsnow, dsnow)
+    Ts_implicit = Terrarium.compute_skin_temperature(1, 1, grid, state, skinT, model.constants, snow)
     Ts_residual = Ts - Ts_implicit
     G_residual = G - G_gradient
 

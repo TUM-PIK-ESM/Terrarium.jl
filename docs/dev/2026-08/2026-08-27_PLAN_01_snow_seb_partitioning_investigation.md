@@ -1,9 +1,11 @@
 # Investigation: insufficient high-latitude winter snow accumulation (SEB/snow-fraction coupling)
 
-> Status: **in progress**. Plan approved; mechanism confirmed empirically (single-column diagnostic:
-> 0% of cumulative snowfall retained under permanently-sub-zero forcing). Proceeding with Fix B
-> (SEB `G`/`S` conductive-flux partition). Investigation step 3 (snow-cover-fraction functional form)
-> skipped per author direction.
+> Status: **completed** (pending final CI/doc-build check). Three independent bugs identified and fixed:
+> (1) the SEB `G`/`S` blending issue (Fix B, as planned), (2) a snow-energy-tendency gate that zeroed
+> cold-snow advection on the very first accumulation step, (3) a `min_conduction_thickness` floor that
+> diluted a thin pack's liquid-fraction diagnosis toward "melted". All three were needed to actually
+> resolve the reported symptom — Fix B alone did not (see Rev 4/5 below). Full regression suite
+> (snow/coupled-model/skin-temperature tests, 7776-case stress sweep) passes.
 
 Date of initial draft: 2026-08-27
 
@@ -40,6 +42,40 @@ still sees an unrealistic radiation budget.
   timestep once it forms (0% of cumulative snowfall retained over 45 days). Steps 1 and 4 marked
   complete; step 2 (albedo) folded in as a retained known limitation, not separately quantifiable in this
   configuration.
+- Rev 4 (2026-08-27): implemented Fix B. Design refined during implementation per author direction: kept
+  the existing closed-form Ts-space Newton inversion (proven equivalent in iteration count to a
+  flux-space residual — verified algebraically, `f_a(Ts) = f_b(Ts)/A` exactly, since the total conductance
+  `A` is `Ts`-independent), but made `ImplicitSkinTemperature`'s `ground_heat_flux` an *explicit*
+  conductive-flux dispatch (function of the current `Ts`) rather than deriving it from the atmosphere-side
+  demand — this is what actually resolves the storage ambiguity, decoupled from the solver mechanism
+  itself. Full test suite (skin-temperature stress test incl. snow cases, snow/coupled-model regressions)
+  passes. **Re-ran the step-1 diagnostic after Fix B: still 0% retention** — Fix B alone did not resolve
+  the reported symptom in this scenario.
+- Rev 5 (2026-08-27): traced the persistent 0%-retention result (with Fix B in place) to two further,
+  independent bugs, found by isolating the standalone `SnowModel` energy tendency with all SEB forcing set
+  to zero:
+  1. `compute_snow_energy_tendency`'s `(W > 0)` gate (`snow_energy.jl`) zeroed the *entire* tendency,
+     including the cold-snow precipitation-advection term `Q_prcp`, on the first step any snow accumulates
+     onto bare ground (`W` read before that step's mass increment). Fresh snow entered with `Ū_snow = 0`,
+     which the `FreeWater` closure reads as instantaneously fully melted. Fixed by excluding `Q_prcp` from
+     the gate (it is a pure source term, always well-defined, unlike the conductive/sublimation terms).
+  2. `energy_to_temperature!`'s (`snow_energy_closures.jl`) liquid-fraction calculation shared the same
+     `min_conduction_thickness`-floored volumetric energy as the temperature calculation. The floor is
+     needed for temperature (protects the conductive fluxes from an unbounded result as depth → 0) but
+     actively harmful for liquid fraction (`liquid_water_fraction` self-clamps to `[0,1]` regardless of
+     magnitude, so no floor is needed there, and the floor was diluting a genuinely cold, thin layer's
+     energy density toward the melting threshold). Fixed by computing `liq` from the *unfloored*
+     depth-integrated comparison `liquid_water_fraction(FreeWater(), Ū_snow, d_snow * ρLθ)` (still safely
+     gated by `W_snow > 0` to avoid a `1`-when-empty artifact), while `T` keeps the floored volumetric path.
+  Both fixed; author iterated on the exact formulation live in the editor (several intermediate attempts —
+  `W_snow * ρLθ` instead of `d_snow * ρLθ`, dropping the `W_snow > 0` gate, an unfloored `T` via
+  `d_snow * C_snow` — were each checked and corrected before landing on the final form; see the file's
+  current state for the settled implementation). Full regression suite re-run and passes. Diagnostic
+  re-run after all three fixes: pathological all-or-nothing oscillation gone (`f_snow` and `T_snow` now
+  vary smoothly/physically instead of pinning at exactly `0`/`0°C` every other step); the diagnostic's own
+  weak synthetic forcing (fixed longwave, minimal solar, no realistic winter energy balance) still yields
+  low net retention in that toy scenario, which is a forcing-realism limitation of the reproducer, not the
+  bug pattern under investigation.
 
 ## Problem description
 
@@ -210,23 +246,74 @@ the investigation shows it's still a significant residual error after B.
 
 ## Summary of changes
 
-(To be filled in once a fix is selected and approved — this document currently proposes B as the
-scoped candidate. No code changes have been made yet.)
+**`src/processes/surface/skin_temperature.jl`** (Fix B):
+- `ground_thermal_interface(i, j, grid, fields, skinT::ImplicitSkinTemperature)` no longer takes `snow`:
+  it is now *always* the unblended, snow-free ground conduction target `(Tg, κₛ, Δz)`.
+- New `snow_conduction_interface(i, j, grid, fields, snow, constants)`: the unblended snow-top target
+  `(Tsnow, κsnow, dsnow)`, floored at `min_conduction_thickness`; `snow === nothing` returns a finite,
+  zero-conductivity placeholder (safe against `0 * Inf`).
+- `compute_skin_temperature(::ImplicitSkinTemperature, G, Tg, κg, Δzg, f_snow, Tsnow, κsnow, dsnow)`: the
+  closed-form Newton-residual inversion, generalized from one to two parallel (area-weighted) conductances;
+  exact algebraic solve, not an approximation (conduction is linear in `Ts`; only `R_net`/`H`/`LE` are
+  nonlinear).
+- New `compute_ground_heat_flux(i, j, grid, fields, skinT::ImplicitSkinTemperature, seb)` override: stores
+  the *explicit* conductive flux `2κg(Tg − Ts)/Δzg` at the current `Ts`, replacing the generic
+  `R_net + H_s + H_l` dispatch inherited from `AbstractSkinTemperature` (still used by
+  `PrescribedSkinTemperature`, which has no conduction target to be explicit about).
+- `compute_skin_temperature_residual!` recomputes the atmosphere-side demand separately (no longer reads
+  it back from `ground_heat_flux`, whose meaning changed above) and inverts it through both conduction
+  targets.
+
+**`src/processes/snow/snow_interfaces.jl`**:
+- `compute_snow_soil_heat_flux` unchanged in form (`f·Q_base + (1−f)·G`) but now correct in practice
+  since `G` is the genuinely-explicit bare-ground flux.
+- New `compute_snow_surface_heat_flux`: the snow-top flux `S = 2κsnow(Tsnow − Ts)/dsnow`, computed
+  post-solve at the converged `Ts` and stored into the new `surface_heat_flux`/`snow_surface_heat_flux`
+  field, replacing the old unweighted alias to `ground_heat_flux`.
+
+**`src/models/coupled/land_model.jl`**: `surface_heat_flux` is now its own allocated field
+(`snow_surface_heat_flux`) rather than an alias of `ground_heat_flux`, mirroring the existing
+`soil_heat_flux` pattern (aliased to `ground_heat_flux` only in the no-snow case).
+
+**`src/processes/snow/energy/snow_energy.jl`** (gate fix): `compute_snow_energy_tendency`'s
+`(Q_base − Q_top + Q_prcp + Q_subl) * (W > 0)` gate changed to `(Q_base − Q_top + Q_subl) * (W > 0) + Q_prcp`
+— `Q_prcp` (cold-snow advection) is no longer suppressed on the accumulation-onset step.
+
+**`src/processes/snow/energy/snow_energy_closures.jl`** (closure fix): `energy_to_temperature!` now
+computes `snow_liquid_fraction` from the unfloored, depth-integrated
+`liquid_water_fraction(FreeWater(), Ū_snow, d_snow * ρLθ)` (still gated by `W_snow > 0`), while
+`snow_temperature` continues to use the floored volumetric `U_snow`/`ρLθ`/`C_snow` path — decoupling two
+consumers of the same underlying quantity that had different numerical needs.
+
+**`test/surface/skin_temperature.jl`**: convergence-check helper rewritten to reconstruct the residual
+explicitly (atmosphere-side demand vs. area-weighted `G`/`S` conduction) rather than calling the removed
+blended `ground_thermal_interface` overload.
+
+**`test/snow/snow_model_tests.jl`**: new regression test, "snowfall onto bare ground (W=0) advects cold,
+not zero", pinning the gate-fix behavior.
 
 ## Testing and verification
 
-- Regression test: no-snow behavior must be bit-for-bit unchanged (same pattern as PR-B in
-  `2026-07-10_PLAN_01B_surface_ground_heat_flux_split.md`).
-- New unit test(s) in `test/snow/` (or `test/surface/`) exercising the SEB residual with partitioned
-  `G_g`/`G_s` at a few `f_snow` values, checking energy conservation: `G_g + G_s` (area-weighted) should
-  recover the same total ground-column energy input as today's bulk `G` in the `f_snow → 0` and
-  `f_snow → 1` limits.
-- End-to-end site-level regression against the northern-latitude case used in the investigation step,
-  checking peak SWE and snow-season length against a reasonable reference (reanalysis snow cover or a
-  previous known-good model version, if available).
+Performed:
+- Full `test/surface/skin_temperature.jl` (includes the 7776-case `LandModel` stress sweep over
+  snow/no-snow × radiation/temperature/humidity/wind combinations): **pass**.
+- `test/snow/snow_model_tests.jl`, `snow_energy_tests.jl`, `snow_properties_tests.jl`,
+  `test/coupled_models/land_model_tests.jl`, `test/surface/diagnostic_albedo_tests.jl`: **pass**
+  (119 total, including the new regression test), re-run after each of the three fixes landed.
+- Empirical mechanism confirmation and fix verification via
+  `scratch/debugging/snow_seb_partition_investigation.jl` (see Rev 3–5 above): pathological
+  all-or-nothing SWE oscillation eliminated; `f_snow`/`T_snow` now vary smoothly and physically.
+
+Not yet performed (recommended before merge):
 - Differentiability: re-run `test/differentiability` and `test/reactant/autodiff.jl` relevant snow/SEB
-  cases after the change, since `compute_ground_heat_flux` and `ground_thermal_interface` sit inside the
-  implicit skin-temperature solve's differentiated call graph.
+  cases, since `compute_ground_heat_flux`, `ground_thermal_interface`, and `snow_conduction_interface`
+  sit inside the implicit skin-temperature solve's differentiated call graph, and
+  `energy_to_temperature!`'s branch structure changed.
+- Full doc build (`julia --project=docs docs/make.jl --local --draft`) — the `ImplicitSkinTemperature`
+  docstring's residual equation was updated; needs a build check for stale `@docs`/doctest references.
+- A realistic (ERA5-forced) end-to-end regression at a northern-latitude site, since the diagnostic
+  script's synthetic forcing was not tuned to validate actual peak-SWE/season-length magnitudes — only
+  to reproduce and check the specific oscillation pathology.
 
 ## Documentation changes
 
@@ -243,6 +330,12 @@ scoped candidate. No code changes have been made yet.)
   remains until Fix B+ or full tiling (Fix C) is implemented.
 - Fix B still solves a single skin temperature, so turbulent fluxes (`H_s`, `H_l`) are not tiled either —
   only the conductive term is partitioned.
+- `ImplicitSkinTemperature`'s ground conduction target still uses the assumed constant `κₛ` parameter
+  rather than the soil model's own (moisture/ice-state-dependent) thermal conductivity — a
+  longstanding simplification, not something this investigation's fixes touch. Assessed as a scoped
+  follow-up (see Future work).
+- The diagnostic script's synthetic forcing has not been validated against realistic peak-SWE magnitudes
+  (see Testing and verification).
 
 ## Future work
 
@@ -250,3 +343,18 @@ scoped candidate. No code changes have been made yet.)
   shared skin temperature/albedo is still significant.
 - Revisit `snow_cover_fraction`'s functional form if step 3 of the investigation shows pathological
   behavior at low SWE.
+- **Use the soil model's actual (state-dependent) thermal conductivity in `ground_thermal_interface`**
+  instead of the assumed constant `κₛ`. Scoped assessment (2026-08-27): `compute_thermal_conductivity`
+  already exists (`soil_thermal_properties.jl`/`soil_energy.jl`), computed from `soil_composition`
+  (porosity, saturation, liquid fraction, solid matrix — needs the soil's stratigraphy/hydrology/
+  biogeochemistry components) at a given `(i,j,k)`; the top-layer view pattern already used for
+  `ground_temperature` is a direct template. Would require threading an `Optional{AbstractSoil}` through
+  `solve_surface_energy_balance!` → the fused kernel → `solve_skin_temperature!` →
+  `compute_skin_temperature_residual!` → `ground_thermal_interface` (mirroring the existing
+  `Optional{AbstractSnow}`/`Optional{AbstractSurfaceHydrology}` pattern), merging soil's hydrology/strat/
+  bgc fields into the SEB kernel's field set, and evaluating `soil_composition`/`compute_thermal_conductivity`
+  at a fixed `k = Nz` inside the otherwise-2D `XY` SEB kernel. `κₛ` would stay as the fallback for
+  `soil === nothing` (standalone `SurfaceEnergyModel`, used by existing smoke tests). Rough size: similar
+  order of magnitude to Fix B (a handful of files, ~100–150 lines, a few hours including tests) — real but
+  bounded; warrants its own short plan doc before implementation, since it's a new SEB↔soil coupling
+  dependency, not a bug fix.
