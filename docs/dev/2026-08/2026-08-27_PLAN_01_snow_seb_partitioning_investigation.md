@@ -1,7 +1,9 @@
 # Investigation: insufficient high-latitude winter snow accumulation (SEB/snow-fraction coupling)
 
-> Status: **planned**. Investigation + candidate fixes for the reported bug (SWE < 0.001 m at northern
-> latitudes in winter, likely from excessive melt).
+> Status: **in progress**. Plan approved; mechanism confirmed empirically (single-column diagnostic:
+> 0% of cumulative snowfall retained under permanently-sub-zero forcing). Proceeding with Fix B
+> (SEB `G`/`S` conductive-flux partition). Investigation step 3 (snow-cover-fraction functional form)
+> skipped per author direction.
 
 Date of initial draft: 2026-08-27
 
@@ -29,6 +31,15 @@ still sees an unrealistic radiation budget.
 
 - Rev 1 (2026-08-27): initial draft from code review of `skin_temperature.jl`, `surface_energy_balance.jl`,
   `snow_energy.jl`, `snow_interfaces.jl`, `albedo.jl`, and `land_model.jl`.
+- Rev 2 (2026-08-27): approved by author. Fix B selected as the target implementation. Investigation
+  step 3 (`snow_cover_fraction` functional-form check) dropped from scope; steps 1, 2, and 4 remain.
+  Author clarified Fix B's `S` (formerly `G_s`) is the skin→snow-top conductive flux, distinct from
+  the existing snow-base→soil flux `Q_base`; Fix B section rewritten accordingly.
+- Rev 3 (2026-08-27): ran the step-1 diagnostic (single-column `LandModel`, permanently sub-zero forcing).
+  Confirmed the unweighted `surface_heat_flux = ground_heat_flux` alias destroys the snowpack every
+  timestep once it forms (0% of cumulative snowfall retained over 45 days). Steps 1 and 4 marked
+  complete; step 2 (albedo) folded in as a retained known limitation, not separately quantifiable in this
+  configuration.
 
 ## Problem description
 
@@ -91,14 +102,52 @@ peak SWE.
    absorbed shortwave increases from blended vs. snow-only albedo at representative small-`f_snow` values,
    to judge whether fixing point 2 alone (without touching albedo) would be enough, or whether point 4
    also needs addressing per the issue's closing concern.
-3. **Check `snow_cover_fraction`'s functional form** ([`snow_cover.jl`](../../src/processes/snow/mass/snow_cover.jl))
-   — if it saturates slowly (small `f_snow` for a wide range of low SWE), the zero-weighting bug in point 2
-   would bite hardest exactly during accumulation onset, which matches "not enough snow accumulating."
+3. **(Skipped per author direction, rev 2.)** ~~Check `snow_cover_fraction`'s functional form~~ — out of
+   scope for this investigation.
 4. **Rule out independent causes** before attributing the whole deficit to SEB coupling: verify
    snowfall-phase partitioning (rain/snow split by `T_air`), sublimation magnitude
    ([`compute_snow_sublimation_flux`](../../src/processes/snow/mass/snow_mass.jl#L13-L29)), and the
    `min_conduction_thickness` floor behavior for very thin packs (already flagged as thermally transient by
    design — worth confirming it isn't itself injecting spurious heat during pack initiation).
+
+### Step 1 result: mechanism confirmed empirically (rev 2)
+
+Ran a minimal single-column `LandModel` diagnostic
+([`scratch/debugging/snow_seb_partition_investigation.jl`](../../scratch/debugging/snow_seb_partition_investigation.jl),
+log in `/tmp/snow_seb_investigation2.log`): `ColumnGrid` with `SoilEnergyWaterCarbon` + `SingleLayerSnow`
++ `DiagnosticAlbedo` (the `LandModel` default is actually `ConstantAlbedo`, not snow-aware — switched to
+`DiagnosticAlbedo` so the run also exercises point 4), forced with constant light snowfall
+(`1e-7 m/s SWE`), zero rain, air temperature fixed at −8 °C (no diurnal/seasonal cycle — genuine
+air-temperature-driven melt is structurally impossible in this setup), 230 W/m² longwave-down, and zero
+shortwave (polar-night limit). Soil/snow started frozen at −8 °C, `W_swe = 0`.
+
+Per-step trace (`Δt = 300 s`, single column, `f_snow = W/(W + 0.01)`):
+
+```
+step 1: W=2.9999999999999997e-5 f_snow=0.00299 d_snow=0.00012  G(bulk)=42.20  snow_energy=0.0   T_snow=0.0  θ_liq=1.0
+step 2: W=0.0                    f_snow=0.0     d_snow=0.0     G(bulk)=41.06  snow_energy=-0.0  T_snow=0.0  θ_liq=0.0
+step 3: W=2.9999999999999997e-5 f_snow=0.00299  d_snow=0.00012  G(bulk)=39.93  snow_energy=0.0   T_snow=0.0  θ_liq=1.0
+step 4: W=0.0                    f_snow=0.0     d_snow=0.0     G(bulk)=39.37  snow_energy=-0.0  T_snow=0.0  θ_liq=0.0
+```
+
+Within the **same timestep** that a sliver of snow first accumulates (`f_snow ≈ 0.3%`), the pack is
+diagnosed as fully melted (`T_snow = 0 °C`, `θ_liq = 1.0`) and drains completely via the Darcy meltwater
+flux — then the cycle repeats every step for the full 45-day run. Over the whole run: **0.00% of the
+cumulative snowfall input (0.389 m SWE) is retained** (see the script's summary output) — this
+reproduces the `< 0.001 m SWE` symptom directly, with air temperature held permanently sub-zero the
+entire time, ruling out a genuine warm-air melt explanation. This directly implicates the unweighted
+`surface_heat_flux = ground_heat_flux` alias (`land_model.jl:81`): the bulk `G` (~40 W/m², sized for the
+whole cell) is applied unmediated to a snowpack thermal mass bounded by `min_conduction_thickness`
+(5 mm), which cannot absorb a cell-scale flux without being driven straight to (and past) its melting
+point in one step.
+
+Step 1 investigation is considered complete; step 2 (isolating the albedo contribution specifically) is
+superseded in practice by this result — the melt is total and immediate even before the albedo blend has
+a chance to matter over multiple steps, so albedo's marginal contribution is not separable from noise in
+this configuration. It remains a real, distinct problem (per Background point 4) and is retained as a
+known limitation of Fix B. Step 4 (independent causes) is satisfied by construction: air temperature is
+fixed and always sub-zero, so rain-phase partitioning is irrelevant, and sublimation cannot be the melt
+mechanism (`θ_liq` rises with the pack still frozen).
 
 ## Candidate fixes (in increasing order of scope)
 
@@ -111,16 +160,34 @@ not simply separable into "the snow's share" — this needs care, not just multi
 already-distorted flux). This is the smallest change but only partially matches the issue's own proposed
 interim fix.
 
-**Fix B — issue's proposed interim fix: fix `ground_heat_flux` to the true ground interface and
-explicitly partition `G_g`/`G_s` in the SEB residual.** Redefine the skin-temperature residual as
-`R_net(Ts) + H(Ts) + LE(Ts) - G_g(Ts) - G_s(Ts) = 0`, where `G_g` uses the snow-free conduction target
-(pure ground) and `G_s` uses the pure-snow conduction target, each weighted by `(1-f_snow)`/`f_snow`
-respectively (no blending of `Tg`/`κ`/`Δz` themselves — only the two resulting fluxes are combined).
-`G_s` (or `G_s/f_snow`, the per-area snow flux) then drives the snowpack tendency directly, replacing the
-current unweighted alias. This directly fixes point 2 and is a bounded, well-specified change to
-`skin_temperature.jl` (new `compute_ground_heat_flux` partition), `land_model.jl` (wire `surface_heat_flux`
-to the new `G_s`-derived field instead of raw `ground_heat_flux`), and `snow_interfaces.jl` (`Q_base` blend
-becomes consistent with `G_s`'s ground-facing counterpart, avoiding double-counting). Leaves the
+**Fix B — issue's proposed interim fix: partition the SEB residual into a ground-conduction term and a
+snow-top-conduction term.** Redefine the skin-temperature residual as
+`R_net(Ts) + H(Ts) + LE(Ts) - G(Ts) - S(Ts) = 0`, where both `G` and `S` are conductive fluxes *from the
+single shared skin temperature `Ts` downward*, not flux-into-soil terms:
+- `G` = `(1-f_snow)·2κₛ(Ts - T_ground)/Δz_ground` — conduction from the skin into the *snow-free ground*
+  (unchanged meaning from today's no-snow case; this is what already drives the soil BC directly when
+  there is no snow).
+- `S` = `f_snow·2κ_snow(Ts - T_snow)/d_snow` — conduction from the skin into the *top of the snowpack*.
+  This is a new quantity: today there is no separate flux terminating at the snow top at all, only the
+  single blended `G` from the blended conduction target in `ground_thermal_interface`.
+
+Critically, `S` (not `G`, and not blended with it) becomes the field that drives the snowpack's own
+top-of-pack energy tendency (`surface_heat_flux`, read as `Q_top` in
+[`compute_snow_energy_tendency`](../../src/processes/snow/energy/snow_energy.jl#L79-L100)), replacing
+today's unweighted `surface_heat_flux = ground_heat_flux` alias
+([`land_model.jl:81`](../../src/models/coupled/land_model.jl#L81)). `G` continues to drive the soil
+directly over the snow-free fraction, and is *unrelated* to the existing snow→soil basal flux `Q_base`
+(the already-correct [`compute_snow_soil_heat_flux`](../../src/processes/snow/snow_interfaces.jl#L37-L52)
+blend `f_snow·Q_base + (1-f_snow)·G`, which conducts from the snow *base* down into the soil under the
+snow, and is untouched by this fix). So under snow, three distinct conductive fluxes coexist: `G`
+(skin → bare ground, snow-free fraction), `S` (skin → snow top, snow-covered fraction), and `Q_base`
+(snow base → soil top, snow-covered fraction) — Fix B only adds `S` and rewires the snow-tendency
+consumer to use it; `G` and `Q_base` keep their present roles and definitions.
+
+This directly fixes point 2 and is a bounded, well-specified change to `skin_temperature.jl` (the residual
+gains an `S` term computed from an unblended pure-snow conduction target, alongside the existing
+unblended pure-ground `G`), `land_model.jl` (wire `surface_heat_flux` to the new `S` field instead of raw
+`ground_heat_flux`), and no change to `snow_interfaces.jl`'s `Q_base` blend. Leaves the
 single-albedo/single-`Ts` limitation (point 4) unresolved, as the issue itself notes.
 
 **Fix C — full tiling.** Solve the SEB independently for the snow-covered and snow-free sub-fractions
@@ -135,14 +202,11 @@ about GPU/Reactant kernel cost of two solves per cell.
 
 ## Recommendation
 
-Run the investigation steps first (mechanism confirmation is cheap and will validate whether Fix B alone
-is sufficient before committing to the much larger Fix C). Given the issue author's own framing ("another
-interim solution" for B, deferred judgement on tiling pending their own investigation), propose starting
-with **Fix B** as a scoped, physically-motivated interim PR, explicitly flagging the residual
-single-albedo limitation as known-limitation / future-work (candidate follow-up: apply the same `G_g`/`G_s`
-partition idea to albedo, i.e. compute `R_net` twice with `α_ground`/`α_snow` and combine post-hoc, without
-going all the way to full turbulent-flux tiling — worth scoping as **Fix B+** if the investigation shows
-albedo blending is still a significant residual error after B).
+**Decision (rev 2): Fix B**, approved by the author. Run investigation steps 1, 2, and 4 first (mechanism
+confirmation is cheap and de-risks the implementation); step 3 is out of scope. The residual single-albedo
+limitation (point 4 of the Background section) is accepted as a known limitation for this PR, with
+**Fix B+** (post-hoc dual-albedo `R_net`) or full tiling (**Fix C**) as candidate future work if step 2 of
+the investigation shows it's still a significant residual error after B.
 
 ## Summary of changes
 
