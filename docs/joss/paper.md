@@ -51,60 +51,43 @@ Most existing ESM land components, such as those involved in the international C
 
 # State of the field
 
-Terrarium.jl represents a significant step towards filling this need, though it should be noted that it is not the first. There have been recent efforts towards implementing modern land surface models in Python/JAX, such as DifferLand [@fangDifferentiableLandModel2026] and JAX-CanVeg [@jiangJAXCanVegDifferentiableLand2025], both of which enable GPU-accelerated and AD-compatible land modeling in Python. Similarly, recent work by the Climate Modeling Alliance (CliMA) on ClimaLand.jl [@deckClimaLandLandSurface2026] has demonstrated the promise of GPU-accelerated land modeling in Julia as part of the Clima projects efforts to build a new, CMIP-class ESM capable of being automatically calibrated using global observational datasets. In contrast, Terrarium.jl enables not only GPU-accelerated, global land simulations but also full comaptibility with both forward- and reverse-mode AD via Enzyme.jl and Reactant.jl [@mosesInsteadRewritingForeign2020; mosesDJ4EarthDifferentiablePerformancePortable2026]. In addition, Terrarium.jl is designed to allow for fast and efficient coupling with other global or regional, GPU-accelerated ESM components such as the SpeedyWeather.jl [@klowerSpeedyWeatherjlReinventingAtmospheric2024] and Breeze.jl (REF) atmosphere models.
+Terrarium.jl represents a significant step towards filling this need, t
+hough it should be noted that it is not the first. There have been recent efforts towards implementing modern land surface models in Python/JAX, such as DifferLand [@fangDifferentiableLandModel2026] and JAX-CanVeg [@jiangJAXCanVegDifferentiableLand2025], both of which enable GPU-accelerated and AD-compatible land modeling in Python. Similarly, recent work by the Climate Modeling Alliance (CliMA) on ClimaLand.jl [@deckClimaLandLandSurface2026] has demonstrated the promise of GPU-accelerated land modeling in Julia as part of the Clima projects efforts to build a new, CMIP-class ESM capable of being automatically calibrated using global observational datasets. In contrast, Terrarium.jl enables not only GPU-accelerated, global land simulations but also full comaptibility with both forward- and reverse-mode AD via Enzyme.jl and Reactant.jl [@mosesInsteadRewritingForeign2020; mosesDJ4EarthDifferentiablePerformancePortable2026]. In addition, Terrarium.jl is designed to allow for fast and efficient coupling with other global or regional, GPU-accelerated ESM components such as the SpeedyWeather.jl [@klowerSpeedyWeatherjlReinventingAtmospheric2024] and Breeze.jl (REF) atmosphere models.
 
 # Software design
 
-Terrarium.jl is designed to be highly modular, providing a framework for constructing a multitude of different land model configurations rather than implementing a single, monolithic model design. This allows Terrarium to serve as a common set of numerical tools and physical process implementations which can serve as the basis for a wide range of land and ecosystem models, spanning both highly detailed local-scale simulations with prescribed boundary conditions and intermediate-complexity global-scale simulations as part of a coupled Earth system model. Terrarium models are composed of four basic components: one or more `Process`es (subtyping `AbstractProcess`) implementing specific physical relationship and governing equations, a `grid` that describes the discretization of the underlying spatial domain, a `timestepper` that determines how the prognosic variables of the model are advanced in time, and an `initializer` that specifies how the initial state of the prognostic variables is determined. Each `Process` is required to implement the following interface:
+Terrarium.jl is designed to be highly modular, acting as a framework for constructing a multitude of different land model configurations rather than implementing a single, monolithic model. This allows Terrarium to serve as a common set of numerical tools and physical process implementations which can serve as the basis for a wide range of land and ecosystem models, spanning both highly detailed local-scale simulations with prescribed boundary conditions and intermediate-complexity global-scale simulations as part of a coupled Earth system model. Terrarium models are composed of four basic components: one or more `Process`es (subtyping `AbstractProcess`) implementing specific physical relationship and governing equations, a `grid` that describes the discretization of the underlying spatial domain, a `timestepper` that determines how the prognosic variables of the model are advanced in time, and an `initializer` that specifies how the initial state of the prognostic variables is determined.
+
+Terrarium currently provides four user-facing model types:
+- `SoilModel`: A standalone model of energy, water, and carbon transport within a finite soil volume. Currently, only vertical transport is considered; however, the `grid` abstraction is designed such that this assumption can be easily relaxed in the future.
+- `VegetationModel`: A standalone model of the vegetation carbon cycle given prescribed atmosphere and soil inputs. This model can be used to test and evaluate vegetation processes in idealized simulations or when appropriate forcing inputs are available.
+- `SnowModel`: A standalone model of snow accumulation and melt given prescribed atmosphere and soil inputs.
+- `LandModel`: An integrated model that couples together soil, snow, vegetation, and surface hydrology processes given some prescribed atmospheric inputs. This is the primary model type used for realistic, global-scale land simulations.
+
+Each of the above model types represent different combinations of `Process`es orchestrated together to serve distinct use cases. Users can also extend this interface by implementing their models based on Terrarium's `AbstractModel` interface. Similarly, custom `Process`es can also be implemented based on the `AbstractProcess` interface. Each `Process` is then required to implement the following:
 - A method `variables(::Process)` that returns a tuple of state variables required by the `Process`. Each variable must be declared as `prognostic`, `auxiliary`, or `input`,
 - A method `compute_auxiliary!(state, grid, ::Process, args...)` which computes all `auxiliary` variables based on the current prognostic state,
 - A method `compute_tendencies!(state, grid, ::Process, args...)` which computes the tendencies of the `prognostic` variables at the current time step.
 This interface helps to enforce a mathematically consistent model design whereby the state is fully specified by the prognostic variables and all other "auxiliary" variables are derived from them. Each `Process` type is free to specify additional arguments (here represented by `args...`) corresponding to other `Process` or helper types on which they are dependent. Terrarium therefore relies heavily on Julia's system for multiple dispatch to choose the correct method implementation at runtime based on the types of the given arguments.
 
-While the modular design of Terrarium.jl is highly convenient for mixing and matching various process implementations and parameterizations, it also comes with some important trade-offs. Terrarium also prioritizes support for multi-architecture parallelization via KernelAbstractions.jl and automatic differentiation via Enzyme.jl and Reactant.jl. Maximizing modularity would necessitate each `Process` launching its own GPU kernel, which can incur significant overhead in models that involve coupling together several different highly interdependent physical processes. To balance modularity with efficient parallelization, Terrarium `Process`es are typically implemented at three different levels of abstraction: a top-level interface (`compute_auxiliary!` and `compute_tendencies!`) which can be used to evaluate and test each `Process` type standalone, a grid-aware kernel function interface (e.g. `compute_energy_tendency(i, j, k, grid, fields, ::Process, args...)`) called at the given grid indices `i, j, k` within a device-agnostic compute kernel, and primitive functions (e.g. `physical_quantity(::Process, args...)`) that implement scalar equations independent of any particular spatial grid. This pattern allows for most of the actual physics code (defined at the kernel level) to be reused across different kernels. Terrarium makes use of this in so-called `CoupledProcess` types which define fused kernels that bundle multiple `Process`es into a single component. This allows develoeprs to balance modularity with GPU efficiency at the cost of some additional boilerplate incurred by the need to split functions across the different abstraction levels.
+While the modular design of Terrarium.jl provides a powerful framework for mixing and matching various process implementations, it also comes with some important trade-offs. Terrarium simultaneously prioritizes support for multi-architecture parallelization via KernelAbstractions.jl and automatic differentiation via Enzyme.jl and Reactant.jl. Maximizing modularity would necessitate each `Process` launching its own GPU kernel, which can incur significant overhead in models that involve coupling together several different highly interdependent physical processes. To balance modularity with efficient parallelization, Terrarium `Process`es are typically implemented at three different levels of abstraction: a top-level interface (`compute_auxiliary!` and `compute_tendencies!`) which can be used to evaluate and test each `Process` type standalone, a grid-aware kernel function interface (e.g. `compute_energy_tendency(i, j, k, grid, fields, ::Process, args...)`) called at the given grid indices `i, j, k` within a device-agnostic compute kernel, and primitive functions (e.g. `physical_quantity(::Process, args...)`) that implement scalar equations independent of any particular spatial grid. This pattern allows for most of the actual physics code (defined at the kernel level) to be reused across different kernels. Terrarium makes use of this in "coupled*" `Process` types which define fused kernels that bundle multiple `Process`es into a single component. This allows develoeprs to balance modularity with GPU efficiency, at the cost of some additional boilerplate incurred by the need to split functions across the different abstraction levels.
 
 # Research impact statement
 
-WIP
+Terrarium.jl's modular design, GPU-compatibility, and first-class support for AD make it an ideal testbed for cutting edge research on so-called "hybrid" land-atmosphere modeling, which aims to combine data-driven components, such as neural networks, with physics-based simulation. Terrarium is being actively used to develop and evaluate the capabilities of such methods to improve the fidelity of global land and climate simulations. This has the potential to help geoscientific researchers move beyond existing workflows where physics-based simulations are used only to generate training and validation data for machine learning models, towards a new generation of scientific models that are capable of learning from data while still respecting physical laws.
 
-Terrarium.jl's modular design, GPU-compatibility, and first-class support for AD make it an ideal testbed for cutting edge research on so-called "hybrid" land-atmosphere modeling, which aims to combine data-driven components, such as neural networks, with physics-based simulation.
-
-
-Terrarium simulations can be plugged into a NumericalEarth `EarthSystemModel`, which provides a unified coupling interface for atmosphere, ocean, land, and sea ice models. In addition, Terrarium directly couples with the SpeedyWeather.jl atmosphere model [@klowerSpeedyWeatherjlReinventingAtmospheric2024], allowing for coupled land-atmosphere simulations using SpeedyWeather's native interface. 
-
-We believe that such a tool will empower geoscientific researchers to move beyond traditional workflows that rely on physical simulations only to generate training and validation data for machine learning models, towards a new generation of scientific models that are capable of learning from data while still respecting physical laws.
-
-# Citations
-
-Citations to entries in paper.bib should be in
-[rMarkdown](http://rmarkdown.rstudio.com/authoring_bibliographies_and_citations.html)
-format.
-
-If you want to cite a software repository URL (e.g. something on GitHub without a preferred
-citation) then you can do it with the example BibTeX entry below for @fidgit.
-
-For a quick reference, the following citation commands can be used:
-- `@author:2001`  ->  "Author et al. (2001)"
-- `[@author:2001]` -> "(Author et al., 2001)"
-- `[@author1:2001; @author2:2001]` -> "(Author1 et al., 2001; Author2 et al., 2002)"
-
-# Figures
-
-Figures can be included like this:
-![Caption for example figure.\label{fig:example}](figure.png)
-and referenced from text using \autoref{fig:example}.
-
-Figure sizes can be customized by adding an optional second parameter:
-![Caption for example figure.](figure.png){ width=20% }
+Terrarium.jl is also being developed as part of a larger effort to build a new generation of hybrid data- and physics-driven ESMs. As such, we maintain an extension module in NumericalEarth.jl that allows Terrarium simulations to be plugged in as a land component in `EarthSystemModel`, which represetns a unified coupling interface for atmosphere, ocean, land, and sea ice models. In addition, Terrarium supports direct coupling with the SpeedyWeather.jl atmosphere model [@klowerSpeedyWeatherjlReinventingAtmospheric2024], allowing for coupled land-atmosphere simulations using SpeedyWeather's native simulation interface. These coupling interfaces will allow Terrarium.jl to directly contribute to ongoing research applying cutting-edge computational technologies to advance the frontiers of Earth system modeling.
 
 # AI usage disclosure
 
-No generative AI was used in the preparation of this manuscript. The software itself is developed with limited AI assistance and strict human oversight. All pull requests are reviewed and signed off by human developers.
+No generative AI was used in the preparation of this manuscript. Some parts of the software, including tests and documentation, are developed with limited AI assistance under strict human oversight. All pull requests are reviewed and signed off by human developers.
 
 
 # Acknowledgements
 
+BG acknowledges the support of the Past2Future (P2F) project; The Past to Future (P2F) project has received funding from the European Union’s Horizon Europe research and innovation programme under grant agreement No.
+101184070.
 
+Funded by the European Union. Views and opinions expressed are however those of the author(s) only and do not necessarily reflect those of the European Union or the European Climate, Infrastructure and Environment Executive Agency (CINEA). Neither the European Union nor the granting authority can be held responsible for them.
 
 # References
-
