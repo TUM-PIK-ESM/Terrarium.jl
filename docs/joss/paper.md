@@ -51,22 +51,28 @@ Most existing ESM land components, such as those involved in the international C
 
 # State of the field
 
-Terrarium.jl represents a significant step towards filling this need, t
-hough it should be noted that it is not the first. There have been recent efforts towards implementing modern land surface models in Python/JAX, such as DifferLand [@fangDifferentiableLandModel2026] and JAX-CanVeg [@jiangJAXCanVegDifferentiableLand2025], both of which enable GPU-accelerated and AD-compatible land modeling in Python. Similarly, recent work by the Climate Modeling Alliance (CliMA) on ClimaLand.jl [@deckClimaLandLandSurface2026] has demonstrated the promise of GPU-accelerated land modeling in Julia as part of the Clima projects efforts to build a new, CMIP-class ESM capable of being automatically calibrated using global observational datasets. In contrast, Terrarium.jl enables not only GPU-accelerated, global land simulations but also full comaptibility with both forward- and reverse-mode AD via Enzyme.jl and Reactant.jl [@mosesInsteadRewritingForeign2020; mosesDJ4EarthDifferentiablePerformancePortable2026]. In addition, Terrarium.jl is designed to allow for fast and efficient coupling with other global or regional, GPU-accelerated ESM components such as the SpeedyWeather.jl [@klowerSpeedyWeatherjlReinventingAtmospheric2024] and Breeze.jl (REF) atmosphere models.
+Terrarium.jl represents a significant step towards modernizing physics-based land modeling, and it is not alone in doing so. There have been numerous recent efforts to reinvent land models in modern programming languages, such as DifferLand [@fangDifferentiableLandModel2026] and JAX-CanVeg [@jiangJAXCanVegDifferentiableLand2025], both of which enable GPU-accelerated and AD-compatible land modeling using Python/JAX. Similarly, recent work by the Climate Modeling Alliance (CliMA) on ClimaLand.jl [@deckClimaLandLandSurface2026] has demonstrated the promise of GPU-accelerated land modeling in Julia as part of the Clima projects efforts to build a new, CMIP-class ESM capable of being automatically calibrated using global observational datasets. In contrast, Terrarium.jl enables not only GPU-accelerated, global land simulations but also full comaptibility with both forward- and reverse-mode AD via Enzyme.jl and Reactant.jl [@mosesInsteadRewritingForeign2020; @mosesDJ4EarthDifferentiablePerformancePortable2026]. In addition, Terrarium.jl is designed to allow for fast and efficient coupling with other global or regional, GPU-accelerated ESM components such as the SpeedyWeather.jl [@klowerSpeedyWeatherjlReinventingAtmospheric2024] and Breeze.jl [@wagnerBreezejl2026] atmosphere models.
 
 # Software design
 
 Terrarium.jl is designed to be highly modular, acting as a framework for constructing a multitude of different land model configurations rather than implementing a single, monolithic model. This allows Terrarium to serve as a common set of numerical tools and physical process implementations which can serve as the basis for a wide range of land and ecosystem models, spanning both highly detailed local-scale simulations with prescribed boundary conditions and intermediate-complexity global-scale simulations as part of a coupled Earth system model. Terrarium models are composed of four basic components: one or more `Process`es (subtyping `AbstractProcess`) implementing specific physical relationship and governing equations, a `grid` that describes the discretization of the underlying spatial domain, a `timestepper` that determines how the prognosic variables of the model are advanced in time, and an `initializer` that specifies how the initial state of the prognostic variables is determined.
 
 Terrarium currently provides four user-facing model types:
+
 - `SoilModel`: A standalone model of energy, water, and carbon transport within a finite soil volume. Currently, only vertical transport is considered; however, the `grid` abstraction is designed such that this assumption can be easily relaxed in the future.
+
 - `VegetationModel`: A standalone model of the vegetation carbon cycle given prescribed atmosphere and soil inputs. This model can be used to test and evaluate vegetation processes in idealized simulations or when appropriate forcing inputs are available.
+
 - `SnowModel`: A standalone model of snow accumulation and melt given prescribed atmosphere and soil inputs.
+
 - `LandModel`: An integrated model that couples together soil, snow, vegetation, and surface hydrology processes given some prescribed atmospheric inputs. This is the primary model type used for realistic, global-scale land simulations.
 
 Each of the above model types represent different combinations of `Process`es orchestrated together to serve distinct use cases. Users can also extend this interface by implementing their models based on Terrarium's `AbstractModel` interface. Similarly, custom `Process`es can also be implemented based on the `AbstractProcess` interface. Each `Process` is then required to implement the following:
+
 - A method `variables(::Process)` that returns a tuple of state variables required by the `Process`. Each variable must be declared as `prognostic`, `auxiliary`, or `input`,
+
 - A method `compute_auxiliary!(state, grid, ::Process, args...)` which computes all `auxiliary` variables based on the current prognostic state,
+
 - A method `compute_tendencies!(state, grid, ::Process, args...)` which computes the tendencies of the `prognostic` variables at the current time step.
 This interface helps to enforce a mathematically consistent model design whereby the state is fully specified by the prognostic variables and all other "auxiliary" variables are derived from them. Each `Process` type is free to specify additional arguments (here represented by `args...`) corresponding to other `Process` or helper types on which they are dependent. Terrarium therefore relies heavily on Julia's system for multiple dispatch to choose the correct method implementation at runtime based on the types of the given arguments.
 
