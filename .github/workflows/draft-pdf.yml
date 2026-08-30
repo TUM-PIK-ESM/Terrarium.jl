@@ -3,6 +3,7 @@ on: [push]
 
 jobs:
   paper:
+    if: contains(github.event.pull_request.labels.*.name, 'joss')
     runs-on: ubuntu-latest
     name: Paper Draft
     steps:
