@@ -52,19 +52,18 @@ function diagnose_evaporation_flux(
         atmos::AbstractAtmosphere,
         snow::Optional{AbstractSnow} = nothing
     )
-    return kernel_operation2D(evaporation_flux, state, model.grid, evapotranspiration, constants, atmos, snow)
-end
-
-function evaporation_flux(
-        i, j, grid, fields,
-        evapotranspiration::AbstractEvapotranspiration,
-        constants::PhysicalConstants,
-        atmos::AbstractAtmosphere,
-        snow::Optional{AbstractSnow}
-    )
-    Qh = compute_surface_humidity_flux(i, j, grid, fields, evapotranspiration, constants, atmos)
-    ρ_a = air_density(i, j, grid, fields, atmos, constants)
-    ρ_w = constants.material.density_water
-    f_snow = snow_cover_fraction(i, j, grid, fields, snow)
-    return (1 - f_snow) * Qh * ρ_a / ρ_w
+    function surface_evapotranspiration_flux(
+            i, j, grid, fields,
+            evapotranspiration::AbstractEvapotranspiration,
+            constants::PhysicalConstants,
+            atmos::AbstractAtmosphere,
+            snow::Optional{AbstractSnow}
+        )
+        Qh = compute_surface_humidity_flux(i, j, grid, fields, evapotranspiration, constants, atmos)
+        ρ_a = air_density(i, j, grid, fields, atmos, constants)
+        ρ_w = constants.material.density_water
+        f_snow = snow_cover_fraction(i, j, grid, fields, snow)
+        return (1 - f_snow) * Qh * ρ_a / ρ_w
+    end
+    return kernel_operation2D(surface_evapotranspiration_flux, state, model.grid, evapotranspiration, constants, atmos, snow)
 end
