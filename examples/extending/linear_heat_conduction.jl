@@ -241,5 +241,7 @@ let fig = Figure(),
     lines!(ax, T_init, z; color = :gray, linestyle = :dash, label = "Initial (t = 0)")
     lines!(ax, T_final, z; label = "Final (t = 2 days)")
     axislegend(ax, position = :rb)
-    fig
+    save(joinpath(@__DIR__, "linear_heat_conduction_profile.png"), fig)
 end
+
+# ![Temperature profile](linear_heat_conduction_profile.png)
