@@ -23,7 +23,7 @@ authors:
   - family-names: Bonte
     given-names: Olivier
     orcid: 'https://orcid.org/0000-0003-1806-7572'
-    affiliation: 'University of Ghent'
+    affiliation: 'Ghent University'
 identifiers:
   - type: doi
     value: 10.5281/zenodo.22082749
