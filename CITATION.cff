@@ -10,7 +10,7 @@ type: software
 authors:
   - family-names: Groenke
     given-names: Brian R.
-    orcid: 'https://orcid.org/0000-0003-2570-9342
+    orcid: 'https://orcid.org/0000-0003-2570-9342'
     affiliation: 'Potsdam Institute for Climate Impact Research (PIK)'
   - family-names: Gelbrecht
     given-names: Maximilian
