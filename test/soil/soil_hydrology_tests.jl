@@ -1,5 +1,5 @@
 using Terrarium
-using Terrarium: forcing, compute_volumetric_water_content_tendency, hydraulic_conductivity
+using Terrarium: forcing, compute_volumetric_water_content_tendency, hydraulic_conductivity, Variables
 using Test
 
 using FreezeCurves
@@ -97,13 +97,22 @@ end
     hydrology = SoilHydrology(eltype(grid), RichardsEq(); hydraulic_properties)
     state = StateVariables(hydrology, grid)
 
-    # Case 1: Oversaturation at surface
+    # Case 1: Oversaturation at surface. Standalone soil hydrology (no runoff process to receive it)
+    # discards excess water reaching the surface, so only the clamped saturation profile is checked here.
     set!(state.saturation_water_ice, (x, z) -> max(1.1 + z, 1.0))
-    ∫sat_excess = Field(Integral(state.saturation_water_ice - 1, dims = 3))
-    compute!(∫sat_excess)
     Terrarium.adjust_saturation_profile!(state, grid, hydrology)
     @test all(state.saturation_water_ice .≈ 1)
-    @test all(state.surface_excess_water .≈ ∫sat_excess)
+
+    # Case 1b: With a runoff process passed as an optional dependency, the excess water removed from the
+    # oversaturated surface is routed into the runoff-owned `surface_excess_water` pool instead of discarded.
+    runoff = DirectSurfaceRunoff(Float64)
+    coupled_state = StateVariables(merge(Variables(hydrology), Variables(runoff)), grid)
+    set!(coupled_state.saturation_water_ice, (x, z) -> max(1.1 + z, 1.0))
+    ∫sat_excess = Field(Integral(coupled_state.saturation_water_ice - 1, dims = 3))
+    compute!(∫sat_excess)
+    Terrarium.adjust_saturation_profile!(coupled_state, grid, hydrology, runoff)
+    @test all(coupled_state.saturation_water_ice .≈ 1)
+    @test all(coupled_state.surface_excess_water .≈ ∫sat_excess)
 
     # Case 2: Undersaturation at surface
     set!(state.saturation_water_ice, (x, z) -> min(-0.1 - z, 1.0))

@@ -136,14 +136,16 @@ end
 
 function closure!(state, model::LandModel)
     grid = get_grid(model)
-    closure!(state, grid, model.soil, model.constants)
+    # Pass the surface runoff process so excess water removed from an oversaturated soil surface is
+    # routed into the runoff-owned `surface_excess_water` pool (which the runoff tendency then drains).
+    closure!(state, grid, model.soil, model.constants, model.surface_hydrology.surface_runoff)
     closure!(state, grid, model.snow, model.constants)
     return nothing
 end
 
 function invclosure!(state, model::LandModel)
     grid = get_grid(model)
-    invclosure!(state, grid, model.soil, model.constants)
+    invclosure!(state, grid, model.soil, model.constants, model.surface_hydrology.surface_runoff)
     invclosure!(state, grid, model.snow, model.constants)
     return nothing
 end

@@ -1,6 +1,6 @@
 # Fused kernel launches for coupled soil, surface, and vegetation processes
 
-> Status: **planned** (rev 4, pending sign-off on the rev 4 correction below). Replace the per-process
+> Status: **in progress** (approved; Phase 1 implemented, Phases 2–4 planned). Replace the per-process
 > `compute_auxiliary!` / `compute_tendencies!` kernel launches inside the coupled process types
 > (`SoilEnergyWaterCarbon`, `SurfaceHydrology`, `VegetationCarbonCycle`) with a single fused kernel
 > each, following the pattern established for `SurfaceEnergyBalance` (commit `2fc7af72a`). Per-process
@@ -82,6 +82,26 @@ Base revision: b005a836aa2c26b305cc0faa304ba7748e1e4476
 >   change" section and the Phase 1 test plan below are updated accordingly: the new regression test
 >   must exercise the coupled `LandModel` `timestep!` path, since that is the path that was silently
 >   broken (unbounded pool growth) and is what most needs protection against regressing.
+>
+> 2026-08-31 (rev 5) — **Phase 1 implemented** after sign-off. Deviations from the plan text, all
+> confirmed during implementation/review:
+> - **Tendency sign.** The plan wrote the tendency as `min(∂S∂t, S)`, which is ambiguous on sign. Since
+>   `explicit_step!` uses `u += tendency·Δt` and `compute_surface_drainage` returns a *positive* rate
+>   `D = S/τ_r` (also consumed by the auxiliary `compute_surface_runoff = F + D − I`), the tendency is
+>   implemented as the negative removal `-min(D, S)` so the pool is drawn down. `compute_surface_drainage`
+>   keeps its positive-drainage convention (the sign lives in the tendency, not the drainage).
+> - **`redistribute_saturation_profile!`.** The per-cell `adjust_saturation_profile!` was factored into a
+>   shared `redistribute_saturation_profile!(sat, i, j, grid, hydrology)` that returns the surface excess
+>   as a water depth, plus two thin dispatch methods (`::Nothing` discards, `::AbstractSurfaceRunoff`
+>   writes the pool) — no short-circuit branch inside the kernel.
+> - **Type annotations.** All threaded `runoff` arguments use `Optional{AbstractSurfaceRunoff}`; the
+>   per-cell dispatch methods use concrete `::Nothing` / `::AbstractSurfaceRunoff`.
+> - **Test adjustment (review).** Rather than only deleting the standalone pool assertion in
+>   `soil_hydrology_tests.jl`, the test now *keeps* pool coverage at the soil level: a combined
+>   `StateVariables(merge(Variables(hydrology), Variables(runoff)), grid)` state checks that passing a
+>   runoff routes the excess into the pool (Case 1b), while the standalone call still discards.
+>   Plus standalone runoff-tendency tests (`-min(D, S)`, cap binding, empty pool) and the coupled
+>   `LandModel` `timestep!` regression test (pool decays as `S₀(1 − Δt/τ)ⁿ`).
 
 ## Problem description
 

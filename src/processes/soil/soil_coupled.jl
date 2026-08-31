@@ -106,13 +106,18 @@ end
     $TYPEDSIGNATURES
 
 Compute the forward closure mapping for soil hydrology and energy, in that order.
+
+An optional `runoff` process may be supplied (by the coupled `LandModel`) so that excess water
+removed from an oversaturated soil surface is routed into the runoff-owned `surface_excess_water`
+pool. Without it (standalone soil), the excess is discarded.
 """
 function closure!(
         state, grid,
         soil::SoilEnergyWaterCarbon,
-        constants::PhysicalConstants
+        constants::PhysicalConstants,
+        runoff::Optional{AbstractSurfaceRunoff} = nothing
     )
-    closure!(state, grid, get_closure(soil.hydrology), soil.hydrology, soil)
+    closure!(state, grid, get_closure(soil.hydrology), soil.hydrology, soil, runoff)
     closure!(state, grid, get_closure(soil.energy), soil.energy, soil, constants)
     return nothing
 end
@@ -121,13 +126,16 @@ end
     $TYPEDSIGNATURES
 
 Compute the inverse closure mapping for soil hydrology and energy, in that order.
+
+See [`closure!`](@ref) for the role of the optional `runoff` process.
 """
 function invclosure!(
         state, grid,
         soil::SoilEnergyWaterCarbon,
-        constants::PhysicalConstants
+        constants::PhysicalConstants,
+        runoff::Optional{AbstractSurfaceRunoff} = nothing
     )
-    invclosure!(state, grid, get_closure(soil.hydrology), soil.hydrology, soil)
+    invclosure!(state, grid, get_closure(soil.hydrology), soil.hydrology, soil, runoff)
     invclosure!(state, grid, get_closure(soil.energy), soil.energy, soil, constants)
     return nothing
 end

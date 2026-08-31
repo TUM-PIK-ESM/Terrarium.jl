@@ -197,3 +197,35 @@ end
     @test all(T_snow .>= -60)
     @test all(T_snow .<= 0)
 end
+
+@testset "LandModel: surface excess water pool is drained" begin
+    # Regression test for the wiring gap that left the runoff-owned `surface_excess_water` pool with no
+    # sink in the coupled model: `adjust_saturation_profile!` filled it every step but nothing drained it,
+    # so it grew without bound. Now that `SurfaceHydrology.compute_tendencies!` calls the runoff tendency,
+    # the pool must be drawn down over a `timestep!` at the surface drainage rate.
+    grid = ColumnGrid(CPU(), ExponentialSpacing(Δz_max = 1.0, N = 50))
+    soil = SoilEnergyWaterCarbon(eltype(grid); hydrology = SoilHydrology(eltype(grid), RichardsEq()))
+    land = LandModel(grid; soil, vegetation = nothing)
+    integrator = initialize(
+        land; initializers = (
+            temperature = (x, z) -> 5.0 - 0.02 * z,
+            saturation_water_ice = (x, z) -> 0.5,
+        )
+    )
+    state = integrator.state
+    τ = land.surface_hydrology.surface_runoff.τ_r
+    Δt = 60.0
+    S₀ = 0.1
+    set!(state.surface_excess_water, S₀)
+    pools = Float64[Array(state.surface_excess_water)[1, 1, 1]]
+    for _ in 1:5
+        timestep!(integrator, Δt)
+        push!(pools, Array(state.surface_excess_water)[1, 1, 1])
+    end
+    # The pool is monotonically drawn down (never grows) ...
+    @test all(diff(pools) .< 0)
+    # ... and follows the forward-Euler decay Sₙ = S₀ (1 − Δt/τ)ⁿ implied by ∂S∂t = −S/τ.
+    analytic = [S₀ * (1 - Δt / τ)^n for n in 0:5]
+    @test all(isapprox.(pools, analytic; rtol = 1.0e-9))
+    @test all(isfinite.(state.saturation_water_ice))
+end
