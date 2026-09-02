@@ -1,5 +1,5 @@
 using Terrarium
-using Terrarium: forcing, compute_volumetric_water_content_tendency, hydraulic_conductivity, Variables
+using Terrarium: forcing, compute_volumetric_water_content_tendency, hydraulic_conductivity, Variables, auxiliary, get_closure
 using Test
 
 using FreezeCurves
@@ -197,44 +197,53 @@ end
     @test ∫sat₀[1, 1, 1] ≈ ∫sat₁[1, 1, 1] ≈ ∫sat₂[1, 1, 1]
 end
 
-@testset "SoilHydrology: saturation_infiltration boundary condition" begin
+@testset "SoilHydrology: saturation_infiltration_bc" begin
     # `saturation_water_ice` is dimensionless (VWC / porosity), so a physical infiltration flux
     # (m/s of water depth) must be normalized by porosity before it can drive that field's top
-    # boundary condition; see `saturation_infiltration` and `porosity_top`.
+    # boundary condition; see `saturation_infiltration_bc`, `InfiltrationFlux`, and `porosity_top`.
     grid = ColumnGrid(UniformSpacing(Δz = 0.1, N = 10))
     mineral_porosity = 0.4
     porosity_scheme = ConstantSoilPorosity(eltype(grid); mineral_porosity)
     strat = HomogeneousSoilStratigraphy(eltype(grid); porosity = porosity_scheme)
     biogeochem = ConstantSoilCarbonDensity(eltype(grid); ρ_soc = 0.0) # zero SOC -> pure mineral porosity
-    hydrology = SoilHydrology(eltype(grid), RichardsEq())
-    soil = SoilEnergyWaterCarbon(eltype(grid); strat, hydrology, biogeochem)
 
+    # Unit check: the discrete BC function itself equals -infiltration / porosity pointwise. `fields`
+    # only needs an (empty) `:soil` namespace entry since the default `ConstantSoilHorizon` declares
+    # no variables of its own; `clock` is unused by this particular condition.
     fgrid = get_field_grid(grid)
     infiltration = Field{Center, Center, Nothing}(fgrid)
     set!(infiltration, 2.0e-7)
+    fields = (; infiltration, soil = (;))
+    parameters = (; strat, bgc = biogeochem)
+    value = Terrarium.saturation_infiltration_bc(1, 1, fgrid, nothing, fields, parameters)
+    @test value ≈ -2.0e-7 / mineral_porosity
 
-    # The operation itself should equal -infiltration / porosity pointwise
-    sat_infiltration_flux = Terrarium.saturation_infiltration(infiltration, grid, (;), hydrology, strat, biogeochem)
-    sat_infiltration_field = compute!(Field(sat_infiltration_flux))
-    @test all(sat_infiltration_field .≈ -2.0e-7 / mineral_porosity)
-
-    # Constructing the BC from `saturation_infiltration` should scale the tendency contribution
-    # from the top flux BC by exactly 1/porosity relative to using the raw (unscaled) infiltration
-    # flux directly, confirming the fix is actually applied where the tendency is computed.
-    function top_saturation_tendency(bcs)
-        model = SoilModel(grid; soil, boundary_conditions = bcs)
-        integrator = initialize(model; initializers = (saturation_water_ice = 0.5,))
-        state = integrator.state
-        compute_auxiliary!(state, model)
+    # End-to-end check, at the `SoilHydrology` level (no full model needed): the top-cell
+    # `saturation_water_ice` tendency contributed by `InfiltrationFlux` scales by exactly
+    # `1/porosity`.
+    function top_saturation_tendency(mineral_porosity)
+        grid = ColumnGrid(CPU(), ExponentialSpacing(Δz_max = 1.0, N = 50))
+        strat = HomogeneousSoilStratigraphy(eltype(grid); porosity = ConstantSoilPorosity(eltype(grid); mineral_porosity))
+        bgc = ConstantSoilCarbonDensity(eltype(grid))
+        hydrology = SoilHydrology(eltype(grid), RichardsEq())
+        infiltration_var = auxiliary(:infiltration, XY(), units = u"m/s", desc = "Infiltration flux")
+        # `strat`'s own variables (the per-horizon namespace `porosity_top` reaches into) must be part
+        # of the state too, not just `hydrology`'s.
+        vars = merge(Variables(hydrology), Variables(strat), Variables((infiltration_var,)))
+        state = StateVariables(vars, grid; boundary_conditions = InfiltrationFlux(strat, bgc))
+        soil = SoilEnergyWaterCarbon(eltype(grid); strat, hydrology, biogeochem = bgc)
+        set!(state.saturation_water_ice, (x, z) -> min(1, 0.8 - 0.05 * z))
+        set!(state.infiltration, 2.0e-7)
+        Terrarium.closure!(state, grid, get_closure(hydrology), hydrology, soil)
         fill!(parent(state.tendencies.saturation_water_ice), 0)
-        compute_boundary_conditions!(state, model)
+        compute_boundary_conditions!(state, grid, hydrology, strat, bgc)
         return Array(interior(state.tendencies.saturation_water_ice))[1, 1, end]
     end
 
-    scaled_tendency = top_saturation_tendency(InfiltrationFlux(sat_infiltration_flux))
-    unscaled_tendency = top_saturation_tendency(InfiltrationFlux(-infiltration))
-    @test !iszero(unscaled_tendency)
-    @test scaled_tendency ≈ unscaled_tendency / mineral_porosity
+    tendency_lo_porosity = top_saturation_tendency(0.4)
+    tendency_hi_porosity = top_saturation_tendency(0.8)
+    @test !iszero(tendency_hi_porosity)
+    @test tendency_lo_porosity ≈ 2 * tendency_hi_porosity
 end
 
 @testset "Soil moisture forcing (source/sink)" begin
