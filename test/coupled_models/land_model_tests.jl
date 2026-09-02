@@ -19,11 +19,13 @@ using Oceananigans.BoundaryConditions: BoundaryCondition, Flux
         saturation_water_ice = (x, z) -> min(1, 0.8 - 0.05 * z),
     )
     integrator = initialize(land; initializers)
-    # Check that infiltration is correctly coupled to soil hydrology
+    # Check that infiltration is correctly coupled to soil hydrology, normalized by the (default,
+    # constant) porosity of 0.49 since saturation_water_ice is dimensionless (VWC / porosity) while
+    # infiltration is a physical water-depth flux (m/s)
     set!(integrator.state.infiltration, 1.0e-8)
     sat_top_bc = integrator.state.saturation_water_ice.boundary_conditions.top
     @test isa(sat_top_bc, BoundaryCondition{<:Flux})
-    @test all(Field(sat_top_bc.condition) .≈ -1.0e-8) # note the negative sign
+    @test all(Field(sat_top_bc.condition) .≈ -1.0e-8 / 0.49) # note the negative sign
     # Check that ground heat flux is coupled to soil energy
     energy_top_bc = integrator.state.internal_energy.boundary_conditions.top
     @test isa(energy_top_bc, BoundaryCondition{<:Flux})
@@ -52,11 +54,13 @@ end
         carbon_vegetation = 0.1,
     )
     integrator = initialize(land; initializers)
-    # Check that infiltration is correctly coupled to soil hydrology
+    # Check that infiltration is correctly coupled to soil hydrology, normalized by the (default,
+    # constant) porosity of 0.49 since saturation_water_ice is dimensionless (VWC / porosity) while
+    # infiltration is a physical water-depth flux (m/s)
     set!(integrator.state.infiltration, 1.0e-8)
     sat_top_bc = integrator.state.saturation_water_ice.boundary_conditions.top
     @test isa(sat_top_bc, BoundaryCondition{<:Flux})
-    @test all(Field(sat_top_bc.condition) .≈ -1.0e-8) # note the negative sign
+    @test all(Field(sat_top_bc.condition) .≈ -1.0e-8 / 0.49) # note the negative sign
     # Check that ground heat flux is coupled to soil energy
     energy_top_bc = integrator.state.internal_energy.boundary_conditions.top
     @test isa(energy_top_bc, BoundaryCondition{<:Flux})
