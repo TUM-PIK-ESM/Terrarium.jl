@@ -71,9 +71,13 @@ function StateVariables(
         initialize(vars.soil_heat_flux, grid, clock, fields, boundary_conditions)
     end
     soil_heat_flux_bc = SoilHeatFlux(soil_heat_flux)
-    # Note that the hydrology module computes infiltration as positive so we need to negate it here
-    # since fluxes are by convention positive upwards
-    infiltration_bc = InfiltrationFlux(-infiltration)
+    # Note that saturation_water_ice is dimensionless (VWC/porosity), so the physical infiltration
+    # flux (m/s of water depth) must be normalized by the top-layer porosity before it can be used
+    # as a flux boundary condition on saturation_water_ice. This is a discrete-form boundary
+    # condition (see `saturation_infiltration_bc`) evaluated fresh against the live state at every
+    # step, rather than a value/operation captured now — the full state (including the per-horizon
+    # field namespace `porosity_top` needs) does not exist yet at this point in construction.
+    infiltration_bc = InfiltrationFlux(get_stratigraphy(model.soil), get_biogeochemistry(model.soil))
     bcs = merge_boundary_conditions(boundary_conditions, soil_heat_flux_bc, infiltration_bc)
     # The snow-top conductive flux (drives the snowpack's own energy tendency) is a genuinely distinct
     # quantity from the bare-ground `ground_heat_flux` once snow is present (see `skin_temperature.jl`'s
@@ -145,14 +149,14 @@ end
 
 function closure!(state, model::LandModel)
     grid = get_grid(model)
-    closure!(state, grid, model.soil, model.constants)
+    closure!(state, grid, model.soil, model.constants, model.surface_hydrology)
     closure!(state, grid, model.snow, model.constants)
     return nothing
 end
 
 function invclosure!(state, model::LandModel)
     grid = get_grid(model)
-    invclosure!(state, grid, model.soil, model.constants)
+    invclosure!(state, grid, model.soil, model.constants, model.surface_hydrology)
     invclosure!(state, grid, model.snow, model.constants)
     return nothing
 end
