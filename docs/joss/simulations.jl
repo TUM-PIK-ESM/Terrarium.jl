@@ -130,6 +130,6 @@ sim_coupled = @time Speedy.initialize!(primitive_wet_coupled; time = initial_dat
 land_state = sim_coupled.variables.prognostic.land.terrarium
 Terrarium.checkfinite!(land_state.prognostic)
 
-period = Year(1)
+period = Year(2)
 @info "Running simulation for $period"
 @time Speedy.run!(sim_coupled; period, output = true)
