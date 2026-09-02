@@ -61,10 +61,27 @@ function compute_auxiliary!(
     return nothing
 end
 
-""" $TYPEDSIGNATURES """
-function compute_boundary_conditions!(state, grid, ::SoilHydrology{NF, RichardsEq}) where {NF}
+"""
+    $TYPEDSIGNATURES
+
+Fill the `pressure_head` halo and apply the top/bottom flux boundary conditions for
+`saturation_water_ice`. The `fields` passed to those boundary conditions are built explicitly here
+(rather than using `state.inputs`, which only carries declared `input` variables) so that a
+discrete-form condition like [`saturation_infiltration_bc`](@ref) can read auxiliary fields
+(`infiltration`) and per-horizon namespaces (via `strat`/`bgc`) that only exist once the full
+`state` does. `infiltration` is only merged in when present, since standalone (non-`LandModel`)
+configurations may not declare it at all.
+"""
+function compute_boundary_conditions!(
+        state, grid,
+        hydrology::SoilHydrology{NF, RichardsEq},
+        strat::AbstractStratigraphy,
+        bgc::AbstractSoilBiogeochemistry
+    ) where {NF}
     fill_halo_regions!(state.pressure_head, state)
-    compute_z_bcs!(state.tendencies.saturation_water_ice, state.saturation_water_ice, grid, state)
+    infiltration_field = hasproperty(state, :infiltration) ? (; infiltration = state.infiltration) : (;)
+    fields = merge(get_fields(state, hydrology, strat, bgc), infiltration_field)
+    compute_z_bcs!(state.tendencies.saturation_water_ice, state.saturation_water_ice, grid, state.clock, fields)
     return nothing
 end
 

@@ -82,25 +82,6 @@ variables(hydrology::SoilHydrology{NF}) where {NF} = (
     input(:liquid_water_fraction, XYZ(), default = 1, bounds = UnitInterval, desc = "Fraction of unfrozen water in the pore space"),
 )
 
-"""
-    $TYPEDSIGNATURES
-
-Return an `AbstractOperation` computing `-infiltration / por`, where `infiltration` is a `Field`
-(or another operation) representing the physical infiltration flux (m/s of water depth, positive
-downward) and `por` is the porosity of the topmost soil layer, lazily recomputed from `strat`/`bgc`
-via [`porosity_top`](@ref). `saturation_water_ice` is the dimensionless saturation (VWC /
-porosity), not a water depth, so the flux crossing the top boundary must be normalized by porosity
-to be dimensionally consistent with the interior Richards tendency, which divides by porosity for
-the same reason (see `compute_saturation_tendency!`). Note that the hydrology module computes
-infiltration as positive downward, so it is negated here since fluxes are by convention positive
-upward.
-"""
-function saturation_infiltration(infiltration, grid, fields, ::SoilHydrology, strat::AbstractStratigraphy, bgc::AbstractSoilBiogeochemistry)
-    fgrid = get_field_grid(grid)
-    por = KernelFunctionOperation{Center, Center, Nothing}(porosity_top, fgrid, fields, strat, bgc)
-    return -infiltration / por
-end
-
 function compute_water_table!(state, grid, hydrology::SoilHydrology)
     launch!(
         grid, XY, compute_water_table_kernel!,
@@ -160,6 +141,22 @@ end
 @propagate_inbounds water_table(i, j, grid, fields, ::SoilHydrology) = fields.water_table[i, j]
 
 @propagate_inbounds surface_excess_water(i, j, grid, fields, ::SoilHydrology{NF}) where {NF} = zero(NF)
+
+"""
+    $TYPEDSIGNATURES
+
+Discrete-form boundary-condition function (see [`InfiltrationFlux`](@ref)) computing `-infiltration
+/ por` at column `i, j`, where `infiltration` is the physical infiltration flux (m/s of water depth,
+positive downward) and `por` is the porosity of the topmost soil layer ([`porosity_top`](@ref)).
+`saturation_water_ice` is the dimensionless saturation (VWC / porosity) so the flux crossing the top
+boundary must be normalized by porosity to be dimensionally consistent with the interior Richards tendency,
+which divides by porosity for the same reason (see `compute_saturation_tendency!`). Note that the hydrology
+,odule computes infiltration as positive downward, so it is negated here since fluxes are by convention positive upward.
+"""
+@propagate_inbounds function saturation_infiltration_bc(i, j, grid, clock, fields, parameters)
+    por = porosity_top(i, j, grid, fields, parameters.strat, parameters.bgc)
+    return -fields.infiltration[i, j] / por
+end
 
 """
     $TYPEDSIGNATURES
