@@ -74,7 +74,10 @@ function StateVariables(
     # Note that saturation_water_ice is dimensionless (VWC/porosity), so the physical infiltration
     # flux (m/s of water depth) must be normalized by the top-layer porosity before it can be used
     # as a flux boundary condition on saturation_water_ice; see `saturation_infiltration`.
-    sat_infiltration_flux = saturation_infiltration(infiltration, grid, fields, model.soil.hydrology, model.soil.strat, model.soil.biogeochem)
+    sat_infiltration_flux = saturation_infiltration(
+        infiltration, grid, fields,
+        get_hydrology(model.soil), get_stratigraphy(model.soil), get_biogeochemistry(model.soil)
+    )
     infiltration_bc = InfiltrationFlux(sat_infiltration_flux)
     bcs = merge_boundary_conditions(boundary_conditions, soil_heat_flux_bc, infiltration_bc)
     # The snow-top conductive flux (drives the snowpack's own energy tendency) is a genuinely distinct
@@ -147,16 +150,14 @@ end
 
 function closure!(state, model::LandModel)
     grid = get_grid(model)
-    # Pass the surface runoff process so excess water removed from an oversaturated soil surface is
-    # routed into the runoff-owned `surface_excess_water` pool (which the runoff tendency then drains).
-    closure!(state, grid, model.soil, model.constants, model.surface_hydrology.surface_runoff)
+    closure!(state, grid, model.soil, model.constants, model.surface_hydrology)
     closure!(state, grid, model.snow, model.constants)
     return nothing
 end
 
 function invclosure!(state, model::LandModel)
     grid = get_grid(model)
-    invclosure!(state, grid, model.soil, model.constants, model.surface_hydrology.surface_runoff)
+    invclosure!(state, grid, model.soil, model.constants, model.surface_hydrology)
     invclosure!(state, grid, model.snow, model.constants)
     return nothing
 end
