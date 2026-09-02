@@ -197,6 +197,46 @@ end
     @test ∫sat₀[1, 1, 1] ≈ ∫sat₁[1, 1, 1] ≈ ∫sat₂[1, 1, 1]
 end
 
+@testset "SoilHydrology: saturation_infiltration boundary condition" begin
+    # `saturation_water_ice` is dimensionless (VWC / porosity), so a physical infiltration flux
+    # (m/s of water depth) must be normalized by porosity before it can drive that field's top
+    # boundary condition; see `saturation_infiltration` and `porosity_top`.
+    grid = ColumnGrid(UniformSpacing(Δz = 0.1, N = 10))
+    mineral_porosity = 0.4
+    porosity_scheme = ConstantSoilPorosity(eltype(grid); mineral_porosity)
+    strat = HomogeneousSoilStratigraphy(eltype(grid); porosity = porosity_scheme)
+    biogeochem = ConstantSoilCarbonDensity(eltype(grid); ρ_soc = 0.0) # zero SOC -> pure mineral porosity
+    hydrology = SoilHydrology(eltype(grid), RichardsEq())
+    soil = SoilEnergyWaterCarbon(eltype(grid); strat, hydrology, biogeochem)
+
+    fgrid = get_field_grid(grid)
+    infiltration = Field{Center, Center, Nothing}(fgrid)
+    set!(infiltration, 2.0e-7)
+
+    # The operation itself should equal -infiltration / porosity pointwise
+    sat_infiltration_flux = Terrarium.saturation_infiltration(infiltration, grid, (;), hydrology, strat, biogeochem)
+    sat_infiltration_field = compute!(Field(sat_infiltration_flux))
+    @test all(sat_infiltration_field .≈ -2.0e-7 / mineral_porosity)
+
+    # Constructing the BC from `saturation_infiltration` should scale the tendency contribution
+    # from the top flux BC by exactly 1/porosity relative to using the raw (unscaled) infiltration
+    # flux directly, confirming the fix is actually applied where the tendency is computed.
+    function top_saturation_tendency(bcs)
+        model = SoilModel(grid; soil, boundary_conditions = bcs)
+        integrator = initialize(model; initializers = (saturation_water_ice = 0.5,))
+        state = integrator.state
+        compute_auxiliary!(state, model)
+        fill!(parent(state.tendencies.saturation_water_ice), 0)
+        compute_boundary_conditions!(state, model)
+        return Array(interior(state.tendencies.saturation_water_ice))[1, 1, end]
+    end
+
+    scaled_tendency = top_saturation_tendency(InfiltrationFlux(sat_infiltration_flux))
+    unscaled_tendency = top_saturation_tendency(InfiltrationFlux(-infiltration))
+    @test !iszero(unscaled_tendency)
+    @test scaled_tendency ≈ unscaled_tendency / mineral_porosity
+end
+
 @testset "Soil moisture forcing (source/sink)" begin
     mutable struct ForcingValue{NF}
         value::NF
