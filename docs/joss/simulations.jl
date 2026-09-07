@@ -122,6 +122,11 @@ Speedy.add!(primitive_wet_coupled.output, Speedy.PrecipitationOutput())
 Speedy.add!(primitive_wet_coupled.output, Speedy.SurfaceSensibleHeatFluxOutput())
 Speedy.add!(primitive_wet_coupled.output, Speedy.SurfaceHumidityFluxOutput())
 Speedy.add!(primitive_wet_coupled.output, Speedy.AlbedoOutput())
+Speedy.add!(primitive_wet_coupled.output, Speedy.TerrariumOutput(terrarium_model, :evaporation_ground))
+Speedy.add!(primitive_wet_coupled.output, Speedy.TerrariumOutput(terrarium_model, :evaporation_canopy))
+Speedy.add!(primitive_wet_coupled.output, Speedy.TerrariumOutput(terrarium_model, :transpiration))
+Speedy.add!(primitive_wet_coupled.output, Speedy.TerrariumOutput(terrarium_model, :sublimation))
+Speedy.add!(primitive_wet_coupled.output, Speedy.TerrariumOutput(terrarium_model, :gross_primary_production))
 
 # Initialize the coupled simulation
 @info "Initializing coupled simulation"
