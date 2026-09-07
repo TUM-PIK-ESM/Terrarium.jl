@@ -6,21 +6,19 @@ using NumericalEarth
 using NumericalEarth.DataWrangling
 using NumericalEarth.DataWrangling.SoilGrids
 using Oceananigans.Units: day
+using ProgressMeter
 using Rasters, NCDatasets
 using Statistics
-
-using CairoMakie, GeoMakie
-using ProgressMeter
 
 import RingGrids
 import SpeedyWeather as Speedy
 
 # Choose architecture based on available hardware
 arch = CUDA.functional() ? GPU() : CPU()
-
 speedy_arch = RingGrids.Architectures.architecture(arch)
 spectral_grid = Speedy.SpectralGrid(truncation = 64, architecture = speedy_arch)
 ring_grid = spectral_grid.grid
+@info "Setting up simulation on grid $(ring_grid)"
 
 mean_annual_temperature(lat) = 20 - abs(40 * sin(lat)) # maximum at equator
 
@@ -72,7 +70,6 @@ end
 Nz = 30
 land_sea_mask = Speedy.EarthLandSeaMask(spectral_grid)
 Speedy.load_mask!(land_sea_mask)
-Makie.heatmap(on_architecture(CPU(), land_sea_mask.land_fraction))
 land_grid = ColumnRingGrid(arch, Float32, ExponentialSpacing(; N = Nz), land_sea_mask.land_fraction .> 0)
 porosity = SoilPorositySURFEX(eltype(land_grid))
 strat = SoilGridsStratigraphy(eltype(land_grid); porosity)
